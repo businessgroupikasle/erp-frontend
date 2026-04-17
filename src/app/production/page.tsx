@@ -54,7 +54,7 @@ const STATUS_STYLES: Record<string, string> = {
 export default function ProductionPage() {
   const [batches, setBatches] = useState<ProductionBatch[]>(INITIAL_BATCHES);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ item: "", qty: 0, unit: "kg", stage: "raw" as const });
+  const [form, setForm] = useState({ item: "", qty: 0, unit: "kg", stage: "raw" as ProductionBatch["stage"] });
 
   const stats = {
     inProgress: batches.filter((b) => b.status === "in-progress").length,
