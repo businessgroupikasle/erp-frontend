@@ -1,0 +1,173 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Light Mode Design Tokens ─────────────────────────────── */
+:root {
+  /* Surfaces */
+  --background:        30 30% 98%;
+  --surface:           0 0% 100%;
+  --card:              0 0% 100%;
+  --card-foreground:   222 47% 11%;
+  --popover:           0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+
+  /* Text */
+  --foreground:        222 47% 11%;
+  --foreground-muted:  215 16% 47%;
+
+  /* Brand – Orange primary */
+  --primary:           30 91% 54%;
+  --primary-foreground: 0 0% 100%;
+
+  /* Secondary – Green */
+  --secondary:         137 44% 21%;
+  --secondary-foreground: 0 0% 100%;
+
+  /* Semantic */
+  --muted:             30 15% 95%;
+  --muted-foreground:  215 16% 47%;
+  --accent:            30 15% 95%;
+  --accent-foreground: 222 47% 11%;
+  --destructive:       0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --success:           142 72% 29%;
+  --warning:           38 92% 50%;
+
+  /* UI Chrome */
+  --border:            30 20% 90%;
+  --input:             30 20% 90%;
+  --ring:              30 91% 54%;
+
+  /* Sidebar tokens */
+  --sidebar-bg:        0 0% 100%;
+  --sidebar-border:    30 20% 91%;
+  --sidebar-active-bg: 30 100% 97%;
+  --sidebar-hover-bg:  30 15% 97%;
+
+  /* Shape */
+  --radius: 0.75rem;
+}
+
+/* ─── Dark Mode Design Tokens ───────────────────────────────── */
+.dark {
+  --background:        220 20% 8%;
+  --surface:           220 20% 11%;
+  --card:              220 20% 12%;
+  --card-foreground:   210 40% 98%;
+  --popover:           220 20% 12%;
+  --popover-foreground: 210 40% 98%;
+
+  --foreground:        210 40% 98%;
+  --foreground-muted:  215 20% 65%;
+
+  --primary:           30 91% 60%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary:         137 44% 35%;
+  --secondary-foreground: 0 0% 100%;
+
+  --muted:             220 15% 17%;
+  --muted-foreground:  215 20% 65%;
+  --accent:            220 15% 17%;
+  --accent-foreground: 210 40% 98%;
+  --destructive:       0 62% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --success:           142 69% 50%;
+  --warning:           38 92% 58%;
+
+  --border:            220 15% 17%;
+  --input:             220 15% 17%;
+  --ring:              30 91% 60%;
+
+  --sidebar-bg:        220 20% 9%;
+  --sidebar-border:    220 15% 14%;
+  --sidebar-active-bg: 30 91% 13%;
+  --sidebar-hover-bg:  220 15% 12%;
+}
+
+/* ─── Base ──────────────────────────────────────────────────── */
+body {
+  @apply bg-background text-foreground transition-colors duration-300;
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────── */
+.custom-scrollbar::-webkit-scrollbar        { width: 4px; height: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track  { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb  { @apply bg-border rounded-full; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/40; }
+
+/* Hide scrollbar but keep scroll */
+.hide-scrollbar                             { scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar          { display: none; }
+
+/* ─── Utility Classes ───────────────────────────────────────── */
+.glass-card {
+  @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/5;
+}
+
+.card-hover {
+  @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg;
+}
+
+.gradient-brand {
+  background: linear-gradient(135deg, hsl(30 91% 54%) 0%, hsl(20 91% 48%) 100%);
+}
+
+.gradient-success {
+  background: linear-gradient(135deg, hsl(137 44% 21%) 0%, hsl(150 44% 28%) 100%);
+}
+
+.gradient-orange {
+  background: linear-gradient(135deg, #F58220 0%, #e8720f 50%, #d4630a 100%);
+}
+
+.gradient-food-hero {
+  background: linear-gradient(135deg, #F58220 0%, #FF8C42 50%, #1E4D2B 100%);
+}
+
+/* ─── Sidebar transition ────────────────────────────────────── */
+.sidebar-transition {
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Tooltip ───────────────────────────────────────────────── */
+.tooltip-right {
+  @apply absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[200] pointer-events-none;
+}
+.tooltip-right > div {
+  @apply bg-gray-900 dark:bg-slate-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap;
+}
+
+/* ─── Status colors ─────────────────────────────────────────── */
+.status-paid    { @apply bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/30; }
+.status-pending { @apply bg-amber-50  text-amber-700  border-amber-200  dark:bg-amber-900/20  dark:text-amber-400  dark:border-amber-800/30; }
+.status-overdue { @apply bg-red-50    text-red-700    border-red-200    dark:bg-red-900/20    dark:text-red-400    dark:border-red-800/30; }
+.status-draft   { @apply bg-gray-50   text-gray-600   border-gray-200   dark:bg-gray-800/40   dark:text-gray-400   dark:border-gray-700/50; }
+
+/* ─── Page header ───────────────────────────────────────────── */
+.page-header {
+  @apply flex items-center justify-between mb-6;
+}
+.page-title {
+  @apply text-xl font-bold text-gray-900 dark:text-white;
+}
+.page-subtitle {
+  @apply text-sm text-muted-foreground mt-0.5;
+}
+
+/* ─── Food KPI Cards ──────────────────────────────────────── */
+.kpi-card {
+  @apply bg-white dark:bg-card rounded-2xl border border-orange-100 dark:border-white/5 p-5 shadow-sm hover:shadow-md transition-all duration-200;
+}
+
+/* ─── Badge pill ─────────────────────────────────────────── */
+.badge-new {
+  @apply px-1.5 py-0.5 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-[9px] font-bold uppercase tracking-wider border border-orange-100 dark:border-orange-800/30;
+}
+
+.badge-hot {
+  @apply px-1.5 py-0.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-[9px] font-bold uppercase tracking-wider border border-red-100 dark:border-red-800/30;
+}

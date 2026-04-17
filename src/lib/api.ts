@@ -1,0 +1,131 @@
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request Interceptor: Attach Access Token
+api.interceptors.request.use((config) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => Promise.reject(error));
+
+// Response Interceptor: Handle Token Refresh
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If error is 401 and we haven't retried yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null;
+
+      if (refreshToken) {
+        try {
+          console.log('🔄 Attempting token refresh...');
+          const response = await axios.post(`${api.defaults.baseURL}/api/auth/refresh`, { refreshToken });
+          
+          const { accessToken, refreshToken: newRefreshToken } = response.data;
+          
+          localStorage.setItem('access_token', accessToken);
+          localStorage.setItem('refresh_token', newRefreshToken);
+
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          return api(originalRequest);
+        } catch (refreshError) {
+          console.error('❌ Refresh token invalid or expired');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
+          if (typeof window !== 'undefined') window.location.href = '/login';
+        }
+      } else {
+        if (typeof window !== 'undefined') window.location.href = '/login';
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+
+// --- Auth Services ---
+export const authApi = {
+  login: (data: any) => api.post('/api/auth/login', data),
+  logout: (refreshToken: string) => api.post('/api/auth/logout', { refreshToken }),
+  me: () => api.get('/api/auth/me'),
+};
+
+// --- User Management ---
+export const usersApi = {
+  getAll: (skip = 0, take = 20) => api.get(`/api/users?skip=${skip}&take=${take}`),
+  getById: (id: string) => api.get(`/api/users/${id}`),
+  create: (data: any) => api.post('/api/users', data),
+  update: (id: string, data: any) => api.patch(`/api/users/${id}`, data),
+  delete: (id: string) => api.delete(`/api/users/${id}`),
+};
+
+// --- Billing & POS ---
+export const posApi = {
+  checkout: (data: any) => api.post('/api/orders', data),
+  getOrders: (params: any = {}) => api.get('/api/orders', { params }),
+  getOrderById: (id: string) => api.get(`/api/orders/${id}`),
+  getInvoice: (orderId: string) => api.get(`/api/invoices/${orderId}`),
+  updateStatus: (id: string, status: string) => api.patch(`/api/orders/${id}/status`, { status }),
+  addPayment: (id: string, data: any) => api.post(`/api/orders/${id}/payment`, data),
+};
+
+// --- Products & Recipes ---
+export const productsApi = {
+  getAll: (params: any = {}) => api.get('/api/products', { params }),
+  create: (data: any) => api.post('/api/products', data),
+};
+
+export const recipesApi = {
+  getAll: () => api.get('/api/recipes'),
+  getById: (id: string) => api.get(`/api/recipes/${id}`),
+  getByProduct: (productId: string) => api.get(`/api/recipes/product/${productId}`),
+  upsert: (data: any) => api.post('/api/recipes', data),
+  calculateCost: (id: string) => api.post(`/api/recipes/${id}/cost`),
+  delete: (id: string) => api.delete(`/api/recipes/${id}`),
+};
+
+// --- Production Workflow ---
+export const productionApi = {
+  getHistory: (franchiseId?: string) => api.get('/api/production/history', { params: { franchiseId } }),
+  startBatch: (data: any) => api.post('/api/production/batch', data),
+  updateStatus: (id: string, status: string) => api.patch(`/api/production/${id}/status`, { status }),
+};
+
+// --- Logistics & Transfers ---
+export const logisticsApi = {
+  getRequests: (params: any = {}) => api.get('/api/logistics/requests', { params }),
+  createRequest: (data: any) => api.post('/api/logistics/requests', data),
+  approveRequest: (id: string, approvedItems: any[]) => 
+    api.patch(`/api/logistics/requests/${id}/approve`, { approvedItems }),
+  
+  getTransfers: (params: any = {}) => api.get('/api/logistics/transfers', { params }),
+  initiateTransfer: (data: any) => api.post('/api/logistics/transfers', data),
+  completeTransfer: (id: string) => api.patch(`/api/logistics/transfers/${id}/complete`),
+};
+
+export const inventoryApi = {
+  getInventory: (franchiseId: string) => api.get(`/api/inventory?franchiseId=${franchiseId}`),
+  getItem: (id: string) => api.get(`/api/inventory/items/${id}`),
+  createItem: (data: any) => api.post('/api/inventory/items', data),
+  stockIn: (data: { itemId: string, quantity: number, type: string, note?: string }) => 
+    api.post('/api/inventory/stock-in', data),
+  stockOut: (data: { itemId: string, quantity: number, type: string, note?: string }) => 
+    api.post('/api/inventory/stock-out', data),
+  adjustment: (data: { itemId: string, newQuantity: number, note?: string }) => 
+    api.post('/api/inventory/adjustment', data),
+  getMovements: (params?: any) => api.get('/api/inventory/movements', { params }),
+};
