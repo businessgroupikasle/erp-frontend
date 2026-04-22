@@ -37,7 +37,8 @@ import {
   PackagePlus,
   Receipt,
   ChevronDown,
-  Landmark
+  Landmark,
+  LayoutDashboard
 } from "lucide-react";
 import { 
   AreaChart, 
@@ -342,8 +343,14 @@ export default function Dashboard() {
            </div>
 
            {/* Quick Action Dock */}
-           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               {[
+                { 
+                  label: 'Franchise DB', 
+                  icon: LayoutDashboard, 
+                  href: selectedBranch === 'all' ? '/franchise/dashboard' : `/franchise/dashboard?id=${selectedBranch}`, 
+                  color: 'bg-rose-500' 
+                },
                 { label: 'New Lead', icon: Users, href: '/crm/leads', color: 'bg-indigo-500' },
                 { label: 'Raise Ticket', icon: Activity, href: '/service/tickets', color: 'bg-amber-500' },
                 { label: 'Stock Audit', icon: Package, href: '/inventory/stock', color: 'bg-emerald-500' },

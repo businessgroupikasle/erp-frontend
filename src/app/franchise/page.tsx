@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import {
-  Building2, Plus, X, MapPin, User, Phone, Edit2, Trash2,
-  RefreshCw, Search, Shield, Key, Eye, EyeOff, MoreVertical
+import { Modal } from "@/components/ui/Modal";
+import { 
+  Building2, Plus, X, MapPin, User, Phone, Edit2, Trash2, 
+  RefreshCw, Search, Shield, Key, Eye, EyeOff, MoreVertical,
+  AlertTriangle, CheckCircle2, Info, Power, Terminal
 } from "lucide-react";
 import { clsx } from "clsx";
 import { franchiseApi, userGovernanceApi, default as api } from "@/lib/api";
@@ -41,9 +43,13 @@ export default function FranchisePage() {
   
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'users'>('info');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedFranchiseUsers, setSelectedFranchiseUsers] = useState<any[]>([]);
+  const [notification, setNotification] = useState<{ type: 'error' | 'success' | 'info', title: string, message: string } | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<any>(null);
+  const [resettingPassword, setResettingPassword] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
   
   const [showAddUser, setShowAddUser] = useState(false);
   const [userForm, setUserForm] = useState({ fullName: "", email: "", password: "", roleId: "FRANCHISEE" });
@@ -116,8 +122,17 @@ export default function FranchisePage() {
       }
       setShowForm(false);
       fetchFranchises();
+      setNotification({
+        type: 'success',
+        title: editing ? 'Update Successful' : 'Franchise Created',
+        message: `${form.name} has been ${editing ? 'updated' : 'registered'} successfully.`
+      });
     } catch (e: any) { 
-      alert(e.response?.data?.error || "Failed to save franchise");
+      setNotification({
+        type: 'error',
+        title: 'Save Failed',
+        message: e.response?.data?.error || "Failed to save franchise"
+      });
     }
     finally { setSaving(false); }
   };
@@ -128,8 +143,17 @@ export default function FranchisePage() {
       await franchiseApi.delete(confirmDelete.id);
       setConfirmDelete(null);
       fetchFranchises();
+      setNotification({
+        type: 'success',
+        title: 'Franchise Deleted',
+        message: 'The franchise record has been permanently removed.'
+      });
     } catch (e: any) {
-      alert(e?.response?.data?.error ?? "Failed to delete franchise");
+      setNotification({
+        type: 'error',
+        title: 'Deletion Error',
+        message: e?.response?.data?.error ?? "Failed to delete franchise"
+      });
     }
   };
 
@@ -141,21 +165,62 @@ export default function FranchisePage() {
       setShowAddUser(false);
       setUserForm({ fullName: "", email: "", password: "", roleId: "FRANCHISEE" });
       fetchUsers(editing.id);
+      setNotification({
+        type: 'success',
+        title: 'Admin Added',
+        message: `Account for ${userForm.fullName} has been created.`
+      });
     } catch (e: any) {
-      alert(e.response?.data?.error || "Failed to create user");
+      setNotification({
+        type: 'error',
+        title: 'Creation Failed',
+        message: e.response?.data?.error || "Failed to create user"
+      });
     } finally {
       setSaving(false);
     }
   };
+  
+  const handleToggleStatus = async (f: any) => {
+    const newStatus = f.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    try {
+      await franchiseApi.update(f.id, { status: newStatus });
+      fetchFranchises();
+      setNotification({
+        type: 'success',
+        title: 'Status Updated',
+        message: `${f.name} is now ${newStatus.toLowerCase()}.`
+      });
+    } catch (e: any) {
+      setNotification({
+        type: 'error',
+        title: 'Toggle Failed',
+        message: e.response?.data?.error || "Failed to update status"
+      });
+    }
+  };
 
   const handlePasswordReset = async (userId: string) => {
-    const newPass = prompt("Enter new password for this user:");
-    if (!newPass) return;
+    if (!newPassword) return;
+    setSaving(true);
     try {
-      await userGovernanceApi.resetPassword(userId, { password: newPass });
-      alert("Password updated successfully!");
+      await userGovernanceApi.resetPassword(userId, { password: newPassword });
+      setResettingPassword(null);
+      setNewPassword("");
+      setNotification({
+        type: 'success',
+        title: 'Password Reset',
+        message: 'User password has been updated successfully.'
+      });
     } catch (e: any) {
-      alert(e.response?.data?.error || "Failed to reset password");
+      const errorMsg = e.response?.data?.error || e.response?.data?.message || "Failed to reset password";
+      setNotification({
+        type: 'error',
+        title: 'Reset Failed',
+        message: errorMsg
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -176,11 +241,11 @@ export default function FranchisePage() {
               <Building2 size={24} className="text-[#FF6B00]" />
             </div>
             <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-              Franchise Governance
+              Franchise Management
             </h1>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">
-            God-Mode: Monitor branches, manage owners, and maintain access credentials.
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
+            Master Oversight: Create branches and manage their primary administrators from here.
           </p>
         </div>
         <div className="flex gap-3">
@@ -196,10 +261,10 @@ export default function FranchisePage() {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Branches", val: franchises.length, color: "bg-blue-500" },
-          { label: "Active Nodes", val: franchises.filter(f => f.status === 'ACTIVE').length, color: "bg-[#FF6B00]" },
-          { label: "Pending Setup", val: franchises.filter(f => f.status === 'PENDING').length, color: "bg-amber-500" },
-          { label: "Administrative Users", val: franchises.reduce((acc, f) => acc + (f._count?.users || 0), 0), color: "bg-purple-500" },
+          { label: "Total Outlets", val: franchises.length, color: "bg-blue-500" },
+          { label: "Active Branches", val: franchises.filter(f => f.status === 'ACTIVE').length, color: "bg-[#FF6B00]" },
+          { label: "Planned Setup", val: franchises.filter(f => f.status === 'PENDING').length, color: "bg-amber-500" },
+          { label: "Branch Administrators", val: franchises.reduce((acc, f) => acc + (f._count?.users || 0), 0), color: "bg-purple-500" },
         ].map((stat, i) => (
           <div key={i} className="bg-white dark:bg-card rounded-2xl border border-slate-100 dark:border-white/5 p-6 shadow-sm">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
@@ -226,7 +291,7 @@ export default function FranchisePage() {
       {loading ? (
         <div className="py-32 flex flex-col items-center justify-center space-y-4">
           <div className="w-12 h-12 border-4 border-[#FF6B00]/20 border-t-[#FF6B00] rounded-full animate-spin" />
-          <p className="text-slate-400 text-sm font-bold tracking-widest uppercase">Synchronizing Data...</p>
+          <p className="text-slate-400 text-sm font-bold tracking-widest uppercase">Fetching Data...</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-32 text-center bg-slate-50 dark:bg-white/[0.02] rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-white/5">
@@ -236,38 +301,76 @@ export default function FranchisePage() {
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((f) => (
-            <div key={f.id} className="group bg-white dark:bg-card rounded-[2rem] border border-slate-100 dark:border-white/5 p-6 hover:shadow-2xl hover:shadow-orange-500/10 transition-all duration-300 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-orange-500/5 to-transparent rounded-bl-[4rem]" />
-              
-              <div className="flex items-start justify-between relative z-10 mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF6B00] to-[#FF8C33] flex items-center justify-center shadow-lg shadow-orange-500/20">
-                  <Building2 size={24} className="text-white" />
-                </div>
-                <div className="flex gap-1">
-                  <Link 
-                    href={`/franchise/dashboard?id=${f.id}`}
-                    className="p-2 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-[#FF6B00] hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all"
-                    title="Monitor Activity"
-                  >
-                    <Eye size={16} />
-                  </Link>
-                  <button onClick={() => openEdit(f)} className="p-2 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-[#FF6B00] hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all">
-                    <Edit2 size={16} />
-                  </button>
-                    {(currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN") && (
+          {filtered.map((f) => {
+            const isHQ = f.name === "Kiddos Food Headquarters" || f.id === 'hq-001';
+            const isActive = f.status === 'ACTIVE';
+
+            return (
+              <div 
+                key={f.id} 
+                className={clsx(
+                  "group rounded-[2rem] border p-6 transition-all duration-500 relative overflow-hidden",
+                  isHQ 
+                    ? "bg-gradient-to-br from-orange-50/50 to-white border-orange-500/30 shadow-2xl shadow-orange-500/20" 
+                    : "bg-white border-slate-100 hover:shadow-2xl hover:shadow-orange-500/10"
+                )}
+              >
+                {/* Visual Flair */}
+                <div className={clsx(
+                  "absolute top-0 right-0 w-32 h-32 rounded-bl-[5rem] transition-all duration-700",
+                  isHQ 
+                    ? "bg-orange-500/10" 
+                    : "bg-orange-500/5 opacity-0 group-hover:opacity-100"
+                )} />
+                
+                {/* Header Actions */}
+                <div className="flex items-start justify-between relative z-10 mb-6">
+                  <div className={clsx(
+                    "w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110",
+                    "bg-gradient-to-br from-[#FF6B00] to-[#FF8C33] shadow-orange-500/20"
+                  )}>
+                    {isHQ ? <Terminal size={24} className="text-white" /> : <Building2 size={24} className="text-white" />}
+                  </div>
+                  
+                  <div className="flex gap-1.5 p-1 bg-slate-50 border border-slate-200 rounded-2xl backdrop-blur-sm">
+                    <button 
+                      onClick={() => handleToggleStatus(f)}
+                      className={clsx(
+                        "p-2 rounded-xl transition-all active:scale-90",
+                        isActive 
+                          ? "text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20" 
+                          : "text-red-500 bg-red-500/10 hover:bg-red-500/20"
+                      )}
+                      title={isActive ? "Deactivate Branch" : "Activate Branch"}
+                    >
+                      <Power size={14} />
+                    </button>
+                    <Link 
+                      href={`/franchise/dashboard?id=${f.id}`}
+                      className="p-2 rounded-xl text-slate-400 hover:text-[#FF6B00] transition-all active:scale-90"
+                      title="Monitor Activity"
+                    >
+                      <Eye size={16} />
+                    </Link>
+                    <button 
+                      onClick={() => openEdit(f)} 
+                      className="p-2 rounded-xl text-slate-400 hover:text-[#FF6B00] transition-all active:scale-90"
+                      title="Settings"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    {(currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN") && !isHQ && (
                       <button 
                         onClick={() => setConfirmDelete(f)} 
-                        disabled={f.name === "Kiddos Food Headquarters" || f.status === 'ACTIVE' || (f._count?.inventory || 0) > 0}
+                        disabled={f.status === 'ACTIVE' || (f._count?.inventory || 0) > 0}
                         className={clsx(
-                          "p-2 rounded-xl transition-all",
-                          f.name === "Kiddos Food Headquarters" || f.status === 'ACTIVE' || (f._count?.inventory || 0) > 0
-                            ? "bg-slate-100 dark:bg-white/5 text-slate-300 cursor-not-allowed"
-                            : "bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          "p-2 rounded-xl transition-all active:scale-90",
+                          f.status === 'ACTIVE' || (f._count?.inventory || 0) > 0
+                            ? "text-slate-300 cursor-not-allowed"
+                            : "text-slate-400 hover:text-red-500 hover:bg-red-50"
                         )}
                         title={
-                          f.name === "Kiddos Food Headquarters" ? "System Protected Node" :
-                          f.status === 'ACTIVE' ? "Set to Inactive to Delete" : 
+                          f.status === 'ACTIVE' ? "Deactivate to Delete" : 
                           f._count?.inventory > 0 ? "Clear stock to delete" : 
                           "Delete Franchise"
                         }
@@ -275,41 +378,77 @@ export default function FranchisePage() {
                         <Trash2 size={16} />
                       </button>
                     )}
-                </div>
-              </div>
-
-              <div className="space-y-4 relative z-10">
-                <div>
-                  <h3 className="font-black text-gray-900 dark:text-white text-lg tracking-tight group-hover:text-[#FF6B00] transition-colors">{f.name}</h3>
-                  <div className="flex items-center gap-1.5 mt-1 text-slate-400 font-bold text-xs uppercase tracking-tighter">
-                    <MapPin size={12} className="text-[#FF6B00]" /> {f.location}
                   </div>
                 </div>
 
-                <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <User size={14} className="text-slate-400" />
-                    <span className="text-slate-600 dark:text-slate-300 font-bold">{f.ownerName}</span>
+                {/* Content */}
+                <div className="space-y-4 relative z-10">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className={clsx(
+                        "font-black text-lg tracking-tight transition-colors text-slate-900 group-hover:text-[#FF6B00]"
+                      )}>
+                        {f.name}
+                      </h3>
+                      {isHQ && (
+                        <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 text-[8px] font-black uppercase tracking-widest border border-orange-500/20">
+                          Master
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-400 font-bold text-[10px] uppercase tracking-wider">
+                      <MapPin size={12} className="text-orange-500" /> {f.location}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Phone size={14} className="text-slate-400" />
-                    <span>{f.contactNum}</span>
-                  </div>
-                </div>
 
-                <div className="pt-4 flex items-center justify-between">
-                  <span className={clsx("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest", STATUS_STYLES[f.status ?? "ACTIVE"] ?? STATUS_STYLES.ACTIVE)}>
-                    {f.status ?? "ACTIVE"}
-                  </span>
-                  <div className="flex items-center -space-x-2">
-                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 border-2 border-white dark:border-card flex items-center justify-center text-[10px] font-black">
-                      +{f._count?.users || 0}
+                  <div className={clsx(
+                    "p-4 rounded-2xl space-y-2.5 transition-all duration-500 border border-slate-100 bg-slate-50/50"
+                  )}>
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="w-6 h-6 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                        <User size={12} className="text-orange-500" />
+                      </div>
+                      <span className="font-bold text-slate-700">{f.ownerName}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                        <Phone size={12} className="text-blue-500" />
+                      </div>
+                      <span className="text-slate-500 font-medium">{f.contactNum}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+                    <span className={clsx(
+                      "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] shadow-sm transform transition-transform group-hover:scale-105",
+                      STATUS_STYLES[f.status ?? "ACTIVE"] ?? STATUS_STYLES.ACTIVE
+                    )}>
+                      {f.status ?? "ACTIVE"}
+                    </span>
+                    
+                    <div className="flex items-center gap-2">
+                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Operators</span>
+                       <div className="flex items-center -space-x-2">
+                        {[...Array(Math.min(3, f._count?.users || 0))].map((_, i) => (
+                          <div key={i} className="w-7 h-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center">
+                             <User size={10} className="text-slate-500" />
+                          </div>
+                        ))}
+                        {f._count?.users > 0 && (
+                          <div className={clsx(
+                            "w-7 h-7 rounded-full border-2 flex items-center justify-center text-[8px] font-black",
+                            isHQ ? "bg-orange-500 text-white border-white" : "bg-slate-200 border-white text-slate-600"
+                          )}>
+                            {f._count?.users}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -321,10 +460,10 @@ export default function FranchisePage() {
             <div className="p-8 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-black text-gray-900 dark:text-white">
-                  {editing ? "Branch Architecture" : "Branch Registration"}
+                  {editing ? "Franchise Settings" : "Add New Franchise"}
                 </h2>
                 <p className="text-sm text-slate-500 font-medium mt-1">
-                  {editing ? "Configure branch metadata and access nodes." : "Initialize a new franchise node in the network."}
+                  {editing ? "Update details and manage branch administrators." : "Register a new outlet and its primary admin account."}
                 </p>
               </div>
               <button onClick={() => setShowForm(false)} className="p-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 rounded-2xl transition-all">
@@ -334,19 +473,19 @@ export default function FranchisePage() {
 
             {/* Modal Body */}
             <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-              <div className="flex gap-4 mb-8">
-                <button 
-                  onClick={() => setActiveTab('info')}
-                  className={clsx(
-                    "flex-1 py-3 rounded-2xl text-sm font-black transition-all border",
-                    activeTab === 'info' 
-                      ? "bg-orange-50 dark:bg-orange-900/20 border-[#FF6B00] text-[#FF6B00]" 
-                      : "bg-slate-50 dark:bg-white/5 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                  )}
-                >
-                  Branch Metadata
-                </button>
-                {editing && (
+              {editing && (
+                <div className="flex gap-4 mb-8">
+                  <button 
+                    onClick={() => setActiveTab('info')}
+                    className={clsx(
+                      "flex-1 py-3 rounded-2xl text-sm font-black transition-all border",
+                      activeTab === 'info' 
+                        ? "bg-orange-50 dark:bg-orange-900/20 border-[#FF6B00] text-[#FF6B00]" 
+                        : "bg-slate-50 dark:bg-white/5 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    )}
+                  >
+                    Franchise Details
+                  </button>
                   <button 
                     onClick={() => setActiveTab('users')}
                     className={clsx(
@@ -356,63 +495,95 @@ export default function FranchisePage() {
                         : "bg-slate-50 dark:bg-white/5 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                     )}
                   >
-                    User Management
+                    Admins
                   </button>
-                )}
-              </div>
+                </div>
+              )}
 
               {activeTab === 'info' ? (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Franchise Name</label>
-                      <input 
-                        value={form.name}
-                        onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-                        placeholder="e.g. Kiddos Jaipur Main"
-                        className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all font-bold" 
-                      />
+                      <div className="relative group">
+                        <Building2 size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                        <input 
+                          value={form.name}
+                          onChange={(e) => {
+                            if (e.target.value === "" || /^[a-zA-Z\s]*$/.test(e.target.value)) {
+                              setForm(f => ({ ...f, name: e.target.value }));
+                            }
+                          }}
+                          placeholder="e.g. Kiddos Jaipur Main"
+                          className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all font-bold" 
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Location / Zone</label>
-                      <input 
-                        value={form.location}
-                        onChange={(e) => setForm(f => ({ ...f, location: e.target.value }))}
-                        placeholder="e.g. Rajasthan"
-                        className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all font-bold" 
-                      />
+                      <div className="relative group">
+                        <MapPin size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                        <input 
+                          value={form.location}
+                          onChange={(e) => setForm(f => ({ ...f, location: e.target.value }))}
+                          placeholder="e.g. Rajasthan"
+                          className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all font-bold" 
+                        />
+                      </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Operational Status</label>
-                      <select 
-                        value={form.status}
-                        onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
-                        className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all font-bold appearance-none"
-                      >
-                        <option value="ACTIVE">Active Node</option>
-                        <option value="PENDING">Pending Configuration</option>
-                        <option value="INACTIVE">Deactivated</option>
-                      </select>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Status</label>
+                      <div className="relative group">
+                        <RefreshCw size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors pointer-events-none" />
+                        <select 
+                          value={form.status}
+                          onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
+                          className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all font-bold appearance-none text-slate-900 dark:text-white"
+                        >
+                          <option value="ACTIVE">Active</option>
+                          <option value="PENDING">Planned</option>
+                          <option value="INACTIVE">Deactivated</option>
+                        </select>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Owner Name</label>
-                      <input 
-                        value={form.ownerName}
-                        onChange={(e) => setForm(f => ({ ...f, ownerName: e.target.value }))}
-                        placeholder="e.g. Aryan Khan"
-                        className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all font-bold" 
-                      />
+                      <div className="relative group">
+                        <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                        <input 
+                          value={form.ownerName}
+                          onChange={(e) => {
+                            if (e.target.value === "" || /^[a-zA-Z\s]*$/.test(e.target.value)) {
+                              setForm(f => ({ ...f, ownerName: e.target.value }));
+                            }
+                          }}
+                          placeholder="e.g. Aryan Khan"
+                          className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all font-bold" 
+                        />
+                      </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Contact Priority</label>
-                      <input 
-                        value={form.contactNum}
-                        onChange={(e) => setForm(f => ({ ...f, contactNum: e.target.value }))}
-                        placeholder="+91 000 000 0000"
-                        className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all font-bold" 
-                      />
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Phone Number</label>
+                      <div className="relative group">
+                        <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                        <input 
+                          value={form.contactNum}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, "");
+                            if (val.length <= 10) {
+                              setForm(f => ({ ...f, contactNum: val }));
+                            }
+                          }}
+                          placeholder="10-digit mobile number"
+                          maxLength={10}
+                          className={clsx(
+                            "w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-white/5 border rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all font-bold",
+                            form.contactNum && form.contactNum.length !== 10 && form.contactNum.length > 0
+                              ? "border-amber-500 text-amber-600 focus:border-amber-500" 
+                              : "border-slate-200 dark:border-white/10 focus:border-[#FF6B00]"
+                          )}
+                        />
+                      </div>
                     </div>
-                  </div>
 
                   {!editing && (
                     <div className="mt-8 p-6 bg-slate-50 dark:bg-white/5 rounded-3xl border border-slate-200 dark:border-white/10">
@@ -420,42 +591,53 @@ export default function FranchisePage() {
                         <div className="p-2 bg-orange-500 rounded-lg shadow-lg shadow-orange-500/40">
                           <Shield size={16} className="text-white" />
                         </div>
-                        <h4 className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wider">Initial Administrator Node</h4>
+                        <h4 className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wider">Primary Admin Account</h4>
                       </div>
                       
                       <div className="space-y-4">
                         <div>
                           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Admin Full Name</label>
-                          <input 
-                            value={form.adminUser.fullName}
-                            onChange={(e) => setForm(f => ({ ...f, adminUser: { ...f.adminUser, fullName: e.target.value } }))}
-                            placeholder="e.g. Branch Supervisor"
-                            className="w-full px-5 py-3.5 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
-                          />
+                          <div className="relative group">
+                            <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                            <input 
+                              value={form.adminUser.fullName}
+                              onChange={(e) => {
+                                if (e.target.value === "" || /^[a-zA-Z\s]*$/.test(e.target.value)) {
+                                  setForm(f => ({ ...f, adminUser: { ...f.adminUser, fullName: e.target.value } }));
+                                }
+                              }}
+                              placeholder="e.g. Branch Supervisor"
+                              className="w-full pl-10 pr-5 py-3.5 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
+                            />
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Login Email</label>
-                            <input 
-                              value={form.adminUser.email}
-                              onChange={(e) => setForm(f => ({ ...f, adminUser: { ...f.adminUser, email: e.target.value } }))}
-                              placeholder="admin@branch.com"
-                              className="w-full px-5 py-3.5 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
-                            />
+                            <div className="relative group">
+                              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                              <input 
+                                value={form.adminUser.email}
+                                onChange={(e) => setForm(f => ({ ...f, adminUser: { ...f.adminUser, email: e.target.value } }))}
+                                placeholder="admin@branch.com"
+                                className="w-full pl-10 pr-5 py-3.5 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
+                              />
+                            </div>
                           </div>
                           <div>
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Primary Access Key</label>
-                            <div className="relative">
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Login Password</label>
+                            <div className="relative group">
+                              <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
                               <input 
                                 type={showPassword ? "text" : "password"}
                                 value={form.adminUser.password}
                                 onChange={(e) => setForm(f => ({ ...f, adminUser: { ...f.adminUser, password: e.target.value } }))}
                                 placeholder="••••••••"
-                                className="w-full px-5 py-3.5 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
+                                className="w-full pl-10 pr-12 py-3.5 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
                               />
                               <button 
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                               >
                                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                               </button>
@@ -489,31 +671,44 @@ export default function FranchisePage() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
                           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Full Name</label>
-                          <input 
-                            value={userForm.fullName}
-                            onChange={(e) => setUserForm(u => ({ ...u, fullName: e.target.value }))}
-                            className="w-full px-4 py-3 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
-                            placeholder="e.g. David Smith"
-                          />
+                          <div className="relative group">
+                            <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                            <input 
+                              value={userForm.fullName}
+                              onChange={(e) => {
+                                if (e.target.value === "" || /^[a-zA-Z\s]*$/.test(e.target.value)) {
+                                  setUserForm(u => ({ ...u, fullName: e.target.value }));
+                                }
+                              }}
+                              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
+                              placeholder="e.g. David Smith"
+                            />
+                          </div>
                         </div>
                         <div>
                           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Email</label>
-                          <input 
-                            value={userForm.email}
-                            onChange={(e) => setUserForm(u => ({ ...u, email: e.target.value }))}
-                            className="w-full px-4 py-3 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
-                            placeholder="david@branch.com"
-                          />
+                          <div className="relative group">
+                            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                            <input 
+                              value={userForm.email}
+                              onChange={(e) => setUserForm(u => ({ ...u, email: e.target.value }))}
+                              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
+                              placeholder="david@branch.com"
+                            />
+                          </div>
                         </div>
                         <div>
                           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Password</label>
-                          <input 
-                            type="password"
-                            value={userForm.password}
-                            onChange={(e) => setUserForm(u => ({ ...u, password: e.target.value }))}
-                            className="w-full px-4 py-3 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
-                            placeholder="••••••••"
-                          />
+                          <div className="relative group">
+                            <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                            <input 
+                              type="password"
+                              value={userForm.password}
+                              onChange={(e) => setUserForm(u => ({ ...u, password: e.target.value }))}
+                              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
+                              placeholder="••••••••"
+                            />
+                          </div>
                         </div>
                         <div className="col-span-2">
                           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Role Type</label>
@@ -550,39 +745,75 @@ export default function FranchisePage() {
                   ) : (
                     <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                       {selectedFranchiseUsers.map((u) => (
-                        <div key={u.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-transparent hover:border-orange-500/30 transition-all group">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-[#FF6B00]">
-                              <User size={18} />
+                        <div key={u.id}>
+                          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-transparent hover:border-orange-500/30 transition-all group">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-[#FF6B00]">
+                                <User size={18} />
+                              </div>
+                              <div>
+                                <p className="font-black text-slate-900 dark:text-white text-sm">{u.fullName}</p>
+                                <p className="text-xs text-slate-500 font-medium">{u.email} • <span className="text-[#FF6B00] font-black text-[10px] tracking-widest uppercase">{u.role?.name || "Member"}</span></p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-black text-slate-900 dark:text-white text-sm">{u.fullName}</p>
-                              <p className="text-xs text-slate-500 font-medium">{u.email} • <span className="text-[#FF6B00] font-black text-[10px] tracking-widest uppercase">{u.role?.name || "Member"}</span></p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                             <button 
-                              onClick={() => handlePasswordReset(u.id)}
-                              className="p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-[#FF6B00] transition-all shadow-sm"
-                              title="Reset Password"
-                            >
-                              <Key size={14} />
-                            </button>
-                            {currentUser?.role === "SUPER_ADMIN" && editing?.name !== "Kiddos Food Headquarters" && (
-                              <button 
-                                onClick={async () => {
-                                  if (confirm(`Delete user ${u.fullName}?`)) {
-                                    await userGovernanceApi.delete(u.id);
-                                    fetchUsers(editing.id);
+                            <div className="flex items-center gap-2">
+                               <button 
+                                onClick={() => {
+                                  if (resettingPassword === u.id) {
+                                    setResettingPassword(null);
+                                    setNewPassword("");
+                                  } else {
+                                    setResettingPassword(u.id);
+                                    setNewPassword("");
                                   }
                                 }}
-                                className="p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 transition-all shadow-sm"
-                                title="Delete User"
+                                className={clsx("p-2 rounded-xl transition-all shadow-sm", resettingPassword === u.id ? "bg-orange-500 text-white" : "bg-white dark:bg-slate-800 text-slate-400 hover:text-[#FF6B00]")}
+                                title="Reset Password"
                               >
-                                <Trash2 size={14} />
+                                <Key size={14} />
                               </button>
-                            )}
+                              {currentUser?.role === "SUPER_ADMIN" && editing?.name !== "Kiddos Food Headquarters" && (
+                                <button 
+                                  onClick={async () => {
+                                    if (confirm(`Delete user ${u.fullName}?`)) {
+                                      await userGovernanceApi.delete(u.id);
+                                      fetchUsers(editing.id);
+                                    }
+                                  }}
+                                  className="p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 transition-all shadow-sm"
+                                  title="Delete User"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
                           </div>
+                          {resettingPassword === u.id && (
+                            <div className="p-4 bg-orange-50 dark:bg-orange-900/10 rounded-2xl border border-orange-500/20 mt-2 mb-4 animate-in slide-in-from-top-2 duration-200">
+                               <div className="flex gap-2">
+                                 <input 
+                                   type="text"
+                                   value={newPassword}
+                                   onChange={(e) => setNewPassword(e.target.value)}
+                                   placeholder="Enter new password"
+                                   className="flex-1 px-4 py-2 bg-white dark:bg-slate-900 border border-orange-500/30 rounded-xl focus:outline-none text-sm font-bold"
+                                 />
+                                 <button 
+                                   onClick={() => handlePasswordReset(u.id)}
+                                   disabled={!newPassword || saving}
+                                   className="px-4 py-2 bg-orange-500 text-white rounded-xl text-xs font-black hover:bg-orange-600 disabled:opacity-50"
+                                 >
+                                   {saving ? '...' : 'Save'}
+                                 </button>
+                                 <button 
+                                   onClick={() => setResettingPassword(null)}
+                                   className="px-3 py-2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                                 >
+                                   Cancel
+                                 </button>
+                               </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -597,14 +828,14 @@ export default function FranchisePage() {
                 onClick={() => setShowForm(false)} 
                 className="px-6 py-3 rounded-2xl text-sm font-black text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10 transition-all"
               >
-                Dismiss
+                Cancel
               </button>
               <button 
                 onClick={handleSave} 
-                disabled={saving || !form.name || !form.location}
+                disabled={saving || !form.name || !form.location || (form.contactNum.length !== 10)}
                 className="px-10 py-3 bg-[#FF6B00] hover:bg-[#e66000] disabled:opacity-50 text-white rounded-2xl text-sm font-black shadow-xl shadow-orange-500/20 transition-all active:scale-95"
               >
-                {saving ? "Processing..." : editing ? "Update Architecture" : "Execute Registration"}
+                {saving ? "Processing..." : editing ? "Update Settings" : "Create Franchise"}
               </button>
             </div>
           </div>
@@ -618,28 +849,64 @@ export default function FranchisePage() {
             <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
               <Trash2 size={40} />
             </div>
-            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Final Confirmation</h2>
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Confirm Delete</h2>
             <p className="text-slate-500 dark:text-slate-400 font-medium mb-8">
-              Are you sure you want to decommission the <span className="text-[#FF6B00] font-bold">"{confirmDelete.name}"</span> node? 
-              This will deactivate all access and mark it as deleted in the system.
+              Are you sure you want to delete the franchise <span className="text-[#FF6B00] font-bold">"{confirmDelete.name}"</span>? 
+              This will remove all access and data for this branch.
             </p>
             <div className="flex gap-3">
               <button 
                 onClick={() => setConfirmDelete(null)} 
                 className="flex-1 px-6 py-4 rounded-2xl text-sm font-black text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
               >
-                Abort
+                Cancel
               </button>
               <button 
                 onClick={handleDelete}
                 className="flex-1 px-6 py-4 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-sm font-black shadow-xl shadow-red-500/20 transition-all active:scale-95"
               >
-                Yes, Delete
+                Delete Now
               </button>
             </div>
           </div>
         </div>
       )}
+      {/* Notification Modal */}
+      <Modal
+        isOpen={!!notification}
+        onClose={() => setNotification(null)}
+        title={notification?.title || "Notification"}
+        size="sm"
+      >
+        <div className="flex flex-col items-center text-center space-y-6 py-4">
+          <div className={clsx(
+            "w-20 h-20 rounded-full flex items-center justify-center animate-in zoom-in-50 duration-500",
+            notification?.type === 'success' ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20" : 
+            notification?.type === 'error' ? "bg-red-100 text-red-600 dark:bg-red-900/20" :
+            "bg-blue-100 text-blue-600 dark:bg-blue-900/20"
+          )}>
+            {notification?.type === 'success' && <CheckCircle2 size={40} />}
+            {notification?.type === 'error' && <AlertTriangle size={40} />}
+            {notification?.type === 'info' && <Info size={40} />}
+          </div>
+          <div>
+            <p className="text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
+              {notification?.message}
+            </p>
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className={clsx(
+              "w-full py-4 rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95",
+              notification?.type === 'success' ? "bg-emerald-600 text-white shadow-emerald-500/20" :
+              notification?.type === 'error' ? "bg-red-600 text-white shadow-red-500/20" :
+              "bg-slate-900 dark:bg-white text-white dark:text-slate-900"
+            )}
+          >
+            I Understand
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

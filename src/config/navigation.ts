@@ -108,6 +108,12 @@ export const menuSections: MenuSection[] = [
     emoji: "🏪",
     items: [
       {
+        icon: LayoutDashboard,
+        label: "Franchise Dashboard",
+        href: "/franchise/dashboard",
+        roles: ADMIN_ROLES,
+      },
+      {
         icon: Building2,
         label: "Manage Franchises",
         href: "/franchise",
