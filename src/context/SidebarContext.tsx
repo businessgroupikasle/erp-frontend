@@ -10,7 +10,7 @@ interface SidebarContextType {
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [isCollapsed, setIsCollapsed] = useState(true); // collapsed by default like Refrens
+  const [isCollapsed, setIsCollapsed] = useState(false); // expanded by default
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");

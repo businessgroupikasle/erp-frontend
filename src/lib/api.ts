@@ -118,14 +118,111 @@ export const logisticsApi = {
 };
 
 export const inventoryApi = {
-  getInventory: (franchiseId: string) => api.get(`/api/inventory?franchiseId=${franchiseId}`),
+  getInventory: (franchiseId?: string) => api.get('/api/inventory', { params: { franchiseId } }),
   getItem: (id: string) => api.get(`/api/inventory/items/${id}`),
   createItem: (data: any) => api.post('/api/inventory/items', data),
-  stockIn: (data: { itemId: string, quantity: number, type: string, note?: string }) => 
+  stockIn: (data: { itemId: string, quantity: number, type: string, note?: string }) =>
     api.post('/api/inventory/stock-in', data),
-  stockOut: (data: { itemId: string, quantity: number, type: string, note?: string }) => 
+  stockOut: (data: { itemId: string, quantity: number, type: string, note?: string }) =>
     api.post('/api/inventory/stock-out', data),
-  adjustment: (data: { itemId: string, newQuantity: number, note?: string }) => 
+  adjustment: (data: { itemId: string, newQuantity: number, note?: string }) =>
     api.post('/api/inventory/adjustment', data),
   getMovements: (params?: any) => api.get('/api/inventory/movements', { params }),
+  getAlerts: () => api.get('/api/inventory/alerts'),
 };
+
+// --- Franchise Management & Governance ---
+export const franchiseApi = {
+  getAll: () => api.get('/api/franchise'),
+  getById: (id: string) => api.get(`/api/franchise/${id}`),
+  create: (data: any) => api.post('/api/franchise', data),
+  update: (id: string, data: any) => api.patch(`/api/franchise/${id}`, data),
+  delete: (id: string) => api.delete(`/api/franchise/${id}`),
+  
+  // User Management within Franchise
+  getUsers: (id: string) => api.get(`/api/franchise/${id}/users`),
+  
+  // Logistics Compatibility
+  getRequests: (params?: any) => api.get('/api/logistics/requests', { params }),
+  createRequest: (data: any) => api.post('/api/logistics/requests', data),
+  approveRequest: (id: string, approvedItems: any[]) =>
+    api.patch(`/api/logistics/requests/${id}/approve`, { approvedItems }),
+  getTransfers: (params?: any) => api.get('/api/logistics/transfers', { params }),
+  initiateTransfer: (data: any) => api.post('/api/logistics/transfers', data),
+  completeTransfer: (id: string) => api.patch(`/api/logistics/transfers/${id}/complete`),
+};
+
+// --- User Governance (Admin Only) ---
+export const userGovernanceApi = {
+  getAll: (skip = 0, take = 20) => api.get(`/api/users?skip=${skip}&take=${take}`),
+  create: (data: any) => api.post('/api/users', data),
+  update: (id: string, data: any) => api.patch(`/api/users/${id}`, data),
+  resetPassword: (id: string, data: { password: string }) => 
+    api.patch(`/api/users/${id}/reset-password`, data),
+  delete: (id: string) => api.delete(`/api/users/${id}`),
+};
+
+// --- Customer Management ---
+export const customersApi = {
+  getAll: (params: any = {}) => api.get('/api/customers', { params }),
+  getById: (id: string) => api.get(`/api/customers/${id}`),
+  search: (query: string) => api.get(`/api/customers`, { params: { search: query } }),
+  create: (data: any) => api.post('/api/customers', data),
+  update: (id: string, data: any) => api.patch(`/api/customers/${id}`, data),
+  delete: (id: string) => api.delete(`/api/customers/${id}`),
+};
+
+// --- Dashboard ---
+export const dashboardApi = {
+  getSummary: (params?: any) => api.get('/api/dashboard/summary', { params }),
+};
+
+// --- Products (full CRUD) ---
+export const productsFullApi = {
+  getAll: (params: any = {}) => api.get('/api/products', { params }),
+  getById: (id: string) => api.get(`/api/products/${id}`),
+  create: (data: any) => api.post('/api/products', data),
+  update: (id: string, data: any) => api.patch(`/api/products/${id}`, data),
+  delete: (id: string) => api.delete(`/api/products/${id}`),
+};
+
+// --- Vendors ---
+export const vendorsApi = {
+  getAll: () => api.get('/api/vendors'),
+  getById: (id: string) => api.get(`/api/vendors/${id}`),
+  create: (data: any) => api.post('/api/vendors', data),
+  update: (id: string, data: any) => api.patch(`/api/vendors/${id}`, data),
+  delete: (id: string) => api.delete(`/api/vendors/${id}`),
+};
+
+// --- Purchase Orders (with advance/balance tracking) ---
+export const purchaseOrdersApi = {
+  getAll: () => api.get('/api/purchase-orders'),
+  getById: (id: string) => api.get(`/api/purchase-orders/${id}`),
+  create: (data: { vendorId: string; advancePaid?: number; items: { inventoryItemId: string; quantity: number; price: number }[] }) =>
+    api.post('/api/purchase-orders', data),
+  receive: (id: string) => api.post(`/api/purchase-orders/${id}/receive`),
+  recordAdvance: (id: string, advancePaid: number) =>
+    api.patch(`/api/purchase-orders/${id}/advance`, { advancePaid }),
+  cancel: (id: string) => api.patch(`/api/purchase-orders/${id}/cancel`),
+  delete: (id: string) => api.delete(`/api/purchase-orders/${id}`),
+};
+
+// --- Raw Materials ---
+export const rawMaterialsApi = {
+  getAll: () => api.get('/api/raw-materials'),
+  create: (data: any) => api.post('/api/raw-materials', data),
+  update: (id: string, data: any) => api.patch(`/api/raw-materials/${id}`, data),
+  delete: (id: string) => api.delete(`/api/raw-materials/${id}`),
+};
+
+// --- Franchise Product Requests (franchise → home house) ---
+export const franchiseProductRequestsApi = {
+  getAll: () => api.get('/api/franchise/product-requests'),
+  create: (data: { franchiseId: string; products: { productId?: string; productName: string; quantity: number; unit: string }[] }) =>
+    api.post('/api/franchise/product-requests', data),
+  update: (id: string, data: { status: string; adminResponse?: string }) =>
+    api.patch(`/api/franchise/product-requests/${id}`, data),
+  delete: (id: string) => api.delete(`/api/franchise/product-requests/${id}`),
+};
+

@@ -15,7 +15,7 @@ module.exports = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#F58220", // Kiddos Orange
+          DEFAULT: "#FF6B00", // Enterprise Orange
           foreground: "#FFFFFF",
         },
         secondary: {
@@ -39,7 +39,7 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
         },
         brand: {
-          orange: "#F58220",
+          orange: "#FF6B00",
           green: "#1E4D2B",
           dark: "#020617",
         }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
   ShoppingCart,
@@ -21,364 +22,398 @@ import {
   Star,
   Zap,
   BarChart3,
+  Loader2,
+  RotateCcw,
+  Calendar,
+  Layers,
+  Activity,
+  ArrowDownRight,
+  ArrowUpRight,
+  Search,
+  Plus,
+  Wallet,
+  CreditCard,
+  QrCode,
+  PackagePlus,
+  Receipt,
+  ChevronDown,
+  Landmark
 } from "lucide-react";
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  LineChart,
+  Line
+} from "recharts";
 import { clsx } from "clsx";
-
-const KPI_CARDS = [
-  {
-    label: "Today's Revenue",
-    value: "₹24,860",
-    change: "+12.4%",
-    up: true,
-    sub: "vs yesterday ₹22,120",
-    icon: IndianRupee,
-    color: "orange",
-    bg: "bg-orange-50 dark:bg-orange-900/10",
-    iconBg: "bg-orange-500",
-    border: "border-orange-100 dark:border-orange-900/20",
-  },
-  {
-    label: "Orders Today",
-    value: "47",
-    change: "+8",
-    up: true,
-    sub: "39 yesterday",
-    icon: ShoppingCart,
-    color: "blue",
-    bg: "bg-blue-50 dark:bg-blue-900/10",
-    iconBg: "bg-blue-500",
-    border: "border-blue-100 dark:border-blue-900/20",
-  },
-  {
-    label: "Kitchen Queue",
-    value: "8",
-    change: "-3",
-    up: false,
-    sub: "active orders pending",
-    icon: Clock,
-    color: "amber",
-    bg: "bg-amber-50 dark:bg-amber-900/10",
-    iconBg: "bg-amber-500",
-    border: "border-amber-100 dark:border-amber-900/20",
-  },
-  {
-    label: "Low Stock Alerts",
-    value: "5",
-    change: "+2",
-    up: false,
-    sub: "items need restocking",
-    icon: AlertTriangle,
-    color: "red",
-    bg: "bg-red-50 dark:bg-red-900/10",
-    iconBg: "bg-red-500",
-    border: "border-red-100 dark:border-red-900/20",
-  },
-];
-
-const QUICK_MODULES = [
-  { label: "Billing & POS", sub: "Create orders & accept payments", href: "/pos", icon: ShoppingCart, color: "from-orange-400 to-orange-600", shadow: "shadow-orange-200 dark:shadow-orange-900/30" },
-  { label: "Kitchen Display", sub: "Live kitchen order queue", href: "/kds", icon: Tv, color: "from-emerald-400 to-emerald-600", shadow: "shadow-emerald-200 dark:shadow-emerald-900/30" },
-  { label: "Menu Management", sub: "Add & manage food items", href: "/menu", icon: UtensilsCrossed, color: "from-violet-400 to-violet-600", shadow: "shadow-violet-200 dark:shadow-violet-900/30" },
-  { label: "Recipe Builder", sub: "Map ingredients to dishes", href: "/recipes", icon: ChefHat, color: "from-pink-400 to-pink-600", shadow: "shadow-pink-200 dark:shadow-pink-900/30" },
-  { label: "Production", sub: "Kitchen batch management", href: "/production", icon: Factory, color: "from-cyan-400 to-cyan-600", shadow: "shadow-cyan-200 dark:shadow-cyan-900/30" },
-  { label: "Raw Materials", sub: "Track ingredient stock", href: "/inventory/items", icon: Package, color: "from-teal-400 to-teal-600", shadow: "shadow-teal-200 dark:shadow-teal-900/30" },
-  { label: "Waste & Loss", sub: "Track food wastage", href: "/waste", icon: Trash2, color: "from-rose-400 to-rose-600", shadow: "shadow-rose-200 dark:shadow-rose-900/30" },
-  { label: "Customers", sub: "CRM & loyalty rewards", href: "/customers", icon: Users, color: "from-indigo-400 to-indigo-600", shadow: "shadow-indigo-200 dark:shadow-indigo-900/30" },
-  { label: "Real-Time Alerts", sub: "Live business alerts", href: "/alerts", icon: Bell, color: "from-amber-400 to-amber-600", shadow: "shadow-amber-200 dark:shadow-amber-900/30" },
-];
-
-const RECENT_ORDERS = [
-  { id: "ORD-047", table: "Table 5", items: "Biryani x2, Lassi x2", amount: "₹840", status: "completed", time: "2m ago" },
-  { id: "ORD-046", table: "Takeaway", items: "Pizza x1, Fries x2, Cola x2", amount: "₹680", status: "preparing", time: "8m ago" },
-  { id: "ORD-045", table: "Table 2", items: "Thali x3", amount: "₹450", status: "ready", time: "12m ago" },
-  { id: "ORD-044", table: "Table 8", items: "Dosa x2, Filter Coffee x2", amount: "₹280", status: "completed", time: "18m ago" },
-  { id: "ORD-043", table: "Delivery", items: "Paneer Butter Masala, Naan x4", amount: "₹560", status: "completed", time: "25m ago" },
-];
-
-const LOW_STOCK = [
-  { name: "Chicken Breast", current: "1.8 kg", min: "3 kg", severity: "critical" },
-  { name: "Basmati Rice", current: "4 kg", min: "5 kg", severity: "warning" },
-  { name: "Paneer", current: "800g", min: "1.5 kg", severity: "critical" },
-  { name: "Cooking Oil", current: "2.1 L", min: "3 L", severity: "warning" },
-  { name: "Onions", current: "2.5 kg", min: "3 kg", severity: "warning" },
-];
-
-const TOP_SELLERS = [
-  { name: "Chicken Biryani", count: 18, revenue: "₹7,200", pct: 90 },
-  { name: "Paneer Tikka", count: 12, revenue: "₹4,200", pct: 60 },
-  { name: "Veg Thali", count: 9, revenue: "₹2,700", pct: 45 },
-  { name: "Masala Dosa", count: 8, revenue: "₹1,200", pct: 40 },
-];
-
-const WEEKLY_SALES = [
-  { day: "Mon", value: 18400, height: 65 },
-  { day: "Tue", value: 22100, height: 78 },
-  { day: "Wed", value: 19800, height: 70 },
-  { day: "Thu", value: 26400, height: 93 },
-  { day: "Fri", value: 28200, height: 100 },
-  { day: "Sat", value: 24860, height: 88 },
-  { day: "Sun", value: 0, height: 0 },
-];
+import { dashboardApi, franchiseApi } from "@/lib/api";
 
 const STATUS_STYLES: Record<string, string> = {
-  completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
-  preparing: "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
-  ready: "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
+  completed: "bg-emerald-50 text-emerald-600 border-emerald-100",
+  preparing: "bg-amber-50 text-amber-600 border-amber-100",
+  ready:     "bg-blue-50 text-blue-600 border-blue-100",
+  pending:   "bg-slate-50 text-slate-500 border-slate-100",
+  cancelled: "bg-rose-50 text-rose-600 border-rose-100",
 };
 
+function fmt(amount: number) {
+  return "₹" + Math.round(amount).toLocaleString("en-IN");
+}
+
+function Skeleton({ className }: { className?: string }) {
+  return <div className={clsx("animate-pulse bg-gray-100 dark:bg-white/5 rounded-lg", className)} />;
+}
+
 export default function Dashboard() {
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-  const dateStr = now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month'>('today');
+  const [data, setData] = useState<any>(null);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchBranches = useCallback(async () => {
+    try {
+      const res = await franchiseApi.getAll();
+      setBranches(res.data);
+    } catch (err) {
+      console.error("Failed to load branches", err);
+    }
+  }, []);
+
+  const fetchDashboard = useCallback(() => {
+    setLoading(true);
+    setError(null);
+
+    const periodEnd = new Date();
+    const periodStart = new Date();
+    periodStart.setHours(0,0,0,0);
+
+    if (dateFilter === 'week') {
+      periodStart.setDate(periodEnd.getDate() - 7);
+    } else if (dateFilter === 'month') {
+      periodStart.setMonth(periodEnd.getMonth() - 1);
+    }
+
+    dashboardApi.getSummary({ 
+      startDate: periodStart.toISOString(), 
+      endDate: periodEnd.toISOString(),
+      franchiseId: selectedBranch === "all" ? undefined : selectedBranch
+    })
+      .then((res) => {
+        setData(res.data);
+      })
+      .catch((err) => setError(err.response?.data?.error || "Failed to load dashboard"))
+      .finally(() => setLoading(false));
+  }, [dateFilter, selectedBranch]);
+
+  useEffect(() => {
+    fetchBranches();
+  }, [fetchBranches]);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  if (error && !data) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] bg-white dark:bg-[#0f1117] rounded-3xl border border-red-100 dark:border-white/5 shadow-sm p-8 text-center animate-in fade-in zoom-in-95 duration-500">
+        <div className="w-20 h-20 bg-red-50 dark:bg-red-900/10 rounded-full flex items-center justify-center mb-6 shadow-sm ring-8 ring-red-50 dark:ring-red-900/5">
+          <AlertTriangle size={36} className="text-red-500" />
+        </div>
+        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">System Offline</h2>
+        <p className="text-gray-500 dark:text-slate-400 mb-8 max-w-sm">Synchronizing with enterprise cloud...</p>
+        <button onClick={fetchDashboard} className="flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg">
+          <RotateCcw size={18} /> Retry Connection
+        </button>
+      </div>
+    );
+  }
+
+  const stats = data?.stats;
+  const recentOrders: any[] = data?.recentOrders || [];
+  const weeklySales: any[] = data?.weeklySales || [];
+  
+  const revenueChange = parseFloat(stats?.revenueChangePct || "0");
+  const isRevenueUp = revenueChange >= 0;
 
   return (
-    <div className="min-h-full bg-white dark:bg-[#0f1117] rounded-3xl overflow-hidden border border-orange-100 dark:border-white/5 shadow-sm">
-      <div className="max-w-[1500px] mx-auto px-6 py-6 space-y-8">
-
-        {/* ── Hero Header ─────────────────────────────── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
-              Good {now.getHours() < 12 ? "Morning" : now.getHours() < 17 ? "Afternoon" : "Evening"} 👋
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{dateStr} · {timeStr}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/alerts"
-              className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-red-600 dark:text-red-400 rounded-xl px-4 py-2 text-sm font-semibold hover:bg-red-100 transition-all"
+    <div className="min-h-full bg-[#F8FAFC] dark:bg-[#090a0f] p-4 md:p-6 space-y-6">
+      
+      {/* ── 🥇 TOP CONTROL BAR ────────────────────────── */}
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-[#12141c] p-4 rounded-2xl border border-slate-200/60 dark:border-white/5 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="relative group">
+            <select 
+              value={selectedBranch}
+              onChange={(e) => setSelectedBranch(e.target.value)}
+              className="appearance-none bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 pr-10 text-sm font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-500/20 transition-all cursor-pointer"
             >
-              <AlertTriangle size={15} />
-              5 Alerts
-            </Link>
-            <Link
-              href="/pos"
-              className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-white rounded-xl px-5 py-2.5 text-sm font-bold shadow-md shadow-orange-200 dark:shadow-orange-900/30 transition-all active:scale-95"
-            >
-              <ShoppingCart size={16} />
-              New Order
-            </Link>
+              <option value="all">🌐 All Operations</option>
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           </div>
-        </div>
 
-        {/* ── KPI Cards ────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {KPI_CARDS.map((kpi) => (
-            <div key={kpi.label} className={clsx("rounded-2xl border p-5 bg-white dark:bg-card shadow-sm hover:shadow-md transition-all duration-200", kpi.border)}>
-              <div className="flex items-start justify-between mb-3">
-                <div className={clsx("w-9 h-9 rounded-xl flex items-center justify-center", kpi.iconBg)}>
-                  <kpi.icon size={18} className="text-white" />
-                </div>
-                <span className={clsx("flex items-center gap-0.5 text-xs font-bold", kpi.up ? "text-emerald-600" : "text-red-500")}>
-                  {kpi.up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                  {kpi.change}
-                </span>
-              </div>
-              <p className="text-2xl font-black text-gray-900 dark:text-white">{kpi.value}</p>
-              <p className="text-[11px] font-semibold text-gray-500 dark:text-slate-400 mt-1">{kpi.label}</p>
-              <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-0.5">{kpi.sub}</p>
-            </div>
-          ))}
-        </div>
+          <div className="h-8 w-px bg-slate-200 dark:bg-white/10 hidden sm:block" />
 
-        {/* ── Quick Module Access ───────────────────────── */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
-              <Zap size={14} className="text-orange-500" /> Quick Access
-            </h2>
-          </div>
-          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3">
-            {QUICK_MODULES.map((mod) => (
-              <Link
-                key={mod.href}
-                href={mod.href}
-                className="group flex flex-col items-center gap-2 p-3 bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+          <div className="flex items-center bg-slate-50 dark:bg-white/5 rounded-xl p-1 border border-slate-200 dark:border-white/10">
+            {(['today', 'week', 'month'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setDateFilter(f)}
+                className={clsx(
+                  "px-4 py-1.5 text-xs font-bold rounded-lg transition-all capitalize",
+                  dateFilter === f 
+                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm" 
+                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                )}
               >
-                <div className={clsx("w-11 h-11 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-md", mod.color, mod.shadow)}>
-                  <mod.icon size={20} className="text-white" />
-                </div>
-                <span className="text-[10px] font-bold text-gray-600 dark:text-slate-400 text-center leading-tight group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                  {mod.label}
-                </span>
-              </Link>
+                {f}
+              </button>
             ))}
           </div>
         </div>
 
-        {/* ── Main Content Grid ─────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="flex items-center gap-3">
+          <div className="hidden md:block text-right">
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Global Status</p>
+            <div className="text-xs font-bold text-emerald-500 flex items-center justify-end gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Operational
+            </div>
+          </div>
+          <button className="relative w-10 h-10 flex items-center justify-center bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 transition-all">
+            <Bell size={20} />
+            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-indigo-500 rounded-full border-2 border-white dark:border-[#12141c]" />
+          </button>
+          <div className="w-10 h-10 rounded-xl bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 font-black text-xs shadow-lg cursor-pointer hover:scale-105 transition-transform uppercase">
+            SA
+          </div>
+        </div>
+      </header>
 
-          {/* Recent Orders */}
-          <div className="lg:col-span-2 bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50 dark:border-white/5">
+      {/* ── 🥈 MODULE OVERVIEW ───────────────────────── */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Revenue */}
+        <div className="bg-white dark:bg-[#12141c] rounded-3xl p-6 border border-slate-200/60 dark:border-white/5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                <BarChart3 size={20} />
+              </div>
+              <span className={clsx(
+                "text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wider",
+                isRevenueUp ? "text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" : "text-rose-500 bg-rose-50 dark:bg-rose-500/10"
+              )}>
+                 {isRevenueUp ? '+' : ''}{revenueChange}%
+              </span>
+            </div>
+            <div>
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Total Sales</p>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">
+                  {loading ? <Skeleton className="h-8 w-32" /> : fmt(stats?.revenueToday || 0)}
+                </div>
+            </div>
+        </div>
+
+        {/* Lead Conversion */}
+        <div className="bg-white dark:bg-[#12141c] rounded-3xl p-6 border border-slate-200/60 dark:border-white/5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                <Users size={20} />
+              </div>
+              <span className="text-[10px] font-black text-slate-400 bg-slate-50 dark:bg-white/5 px-2 py-1 rounded-lg uppercase tracking-wider">
+                 CRM Active
+              </span>
+            </div>
+            <div>
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Sales Leads</p>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">24</div>
+            </div>
+        </div>
+
+        {/* Inventory Value */}
+        <div className="bg-white dark:bg-[#12141c] rounded-3xl p-6 border border-slate-200/60 dark:border-white/5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                <Package size={20} />
+              </div>
+              <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">
+                 Optimized
+              </span>
+            </div>
+            <div>
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Stock Portfolio</p>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">1.2k Items</div>
+            </div>
+        </div>
+
+        {/* HR/Workforce */}
+        <div className="bg-white dark:bg-[#12141c] rounded-3xl p-6 border border-slate-200/60 dark:border-white/5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                <Clock size={20} />
+              </div>
+              <span className="text-[10px] font-black text-rose-500 bg-rose-50 dark:bg-rose-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">
+                 84% Present
+              </span>
+            </div>
+            <div>
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Total Workforce</p>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">158</div>
+            </div>
+        </div>
+      </section>
+
+      {/* ── 🥉 CORE WORKFLOWS ───────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Main Analytics (8 Columns) */}
+        <div className="lg:col-span-8 space-y-6">
+           {/* Section Header */}
+           <div className="flex items-center justify-between">
+              <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-3">
+                 <div className="w-1.5 h-6 bg-slate-900 dark:bg-white rounded-full" />
+                 Operational Intelligence
+              </h2>
               <div className="flex items-center gap-2">
-                <ShoppingCart size={16} className="text-orange-500" />
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Recent Orders</h3>
+                 <button className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-all">
+                    <Activity size={18} className="text-slate-400" />
+                 </button>
               </div>
-              <Link href="/pos" className="text-[11px] text-orange-500 font-semibold hover:underline flex items-center gap-1">
-                View All <ArrowRight size={11} />
-              </Link>
-            </div>
-            <div className="divide-y divide-gray-50 dark:divide-white/5">
-              {RECENT_ORDERS.map((order) => (
-                <div key={order.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-orange-50/30 dark:hover:bg-white/5 transition-colors">
-                  <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0">
-                    <ShoppingCart size={15} className="text-orange-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
+           </div>
+
+           <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] border border-slate-200/60 dark:border-white/5 shadow-sm p-8">
+              <div className="flex items-center justify-between mb-10">
+                 <div>
+                    <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter mb-1">Growth Matrix</h3>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest italic">Quarterly performance vs projections</p>
+                 </div>
+                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-bold text-gray-900 dark:text-white">{order.id}</span>
-                      <span className="text-[11px] text-gray-500">· {order.table}</span>
+                       <div className="w-3 h-3 rounded-full bg-slate-900 dark:bg-white" />
+                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Actual Revenue</span>
                     </div>
-                    <p className="text-[11px] text-gray-400 dark:text-slate-500 truncate mt-0.5">{order.items}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[13px] font-black text-gray-900 dark:text-white">{order.amount}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{order.time}</p>
-                  </div>
-                  <span className={clsx("px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shrink-0", STATUS_STYLES[order.status])}>
-                    {order.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+                    <div className="flex items-center gap-2">
+                       <div className="w-3 h-3 rounded-full bg-slate-900/10 dark:bg-white/10" />
+                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Projection</span>
+                    </div>
+                 </div>
+              </div>
+              
+              <div className="h-[350px] w-full">
+                 <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={weeklySales}>
+                       <defs>
+                          <linearGradient id="nexusGradient" x1="0" y1="0" x2="0" y2="1">
+                             <stop offset="5%" stopColor="#000" stopOpacity={0.1}/>
+                             <stop offset="95%" stopColor="#000" stopOpacity={0}/>
+                          </linearGradient>
+                       </defs>
+                       <XAxis 
+                         dataKey="day" 
+                         axisLine={false} 
+                         tickLine={false} 
+                         tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} 
+                         dy={15}
+                       />
+                       <YAxis hide />
+                       <Tooltip 
+                         contentStyle={{ borderRadius: '24px', border: 'none', background: '#000', color: '#fff', padding: '16px' }}
+                         itemStyle={{ fontSize: '14px', fontWeight: 900 }}
+                         labelStyle={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}
+                       />
+                       <Area 
+                         type="monotone" 
+                         dataKey="value" 
+                         stroke="#000" 
+                         strokeWidth={4} 
+                         fill="url(#nexusGradient)" 
+                         isAnimationActive={!loading}
+                       />
+                    </AreaChart>
+                 </ResponsiveContainer>
+              </div>
+           </div>
 
-          {/* Right Column */}
-          <div className="space-y-6">
-
-            {/* Low Stock Alerts */}
-            <div className="bg-white dark:bg-card rounded-2xl border border-red-100 dark:border-red-900/20 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-red-50 dark:border-red-900/10">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle size={15} className="text-red-500" />
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">Low Stock</h3>
-                </div>
-                <Link href="/alerts" className="text-[11px] text-red-500 font-semibold hover:underline">
-                  View All
+           {/* Quick Action Dock */}
+           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'New Lead', icon: Users, href: '/crm/leads', color: 'bg-indigo-500' },
+                { label: 'Raise Ticket', icon: Activity, href: '/service/tickets', color: 'bg-amber-500' },
+                { label: 'Stock Audit', icon: Package, href: '/inventory/stock', color: 'bg-emerald-500' },
+                { label: 'Run Payroll', icon: Landmark, href: '/hr/payroll', color: 'bg-slate-900' },
+              ].map((action) => (
+                <Link key={action.label} href={action.href} className="bg-white dark:bg-[#12141c] p-6 rounded-[2rem] border border-slate-200/60 dark:border-white/5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col items-center text-center gap-3">
+                   <div className={clsx("w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform", action.color)}>
+                      <action.icon size={24} />
+                   </div>
+                   <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">{action.label}</p>
                 </Link>
-              </div>
-              <div className="divide-y divide-red-50 dark:divide-red-900/10">
-                {LOW_STOCK.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between px-5 py-2.5">
-                    <div>
-                      <p className="text-[12px] font-semibold text-gray-800 dark:text-slate-200">{item.name}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">
-                        {item.current} / min {item.min}
-                      </p>
-                    </div>
-                    <span className={clsx(
-                      "w-2 h-2 rounded-full shrink-0",
-                      item.severity === "critical" ? "bg-red-500" : "bg-amber-400"
-                    )} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Top Sellers */}
-            <div className="bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-50 dark:border-white/5">
-                <Star size={15} className="text-orange-500" />
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Top Sellers Today</h3>
-              </div>
-              <div className="px-5 py-3 space-y-3">
-                {TOP_SELLERS.map((item) => (
-                  <div key={item.name}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[12px] font-semibold text-gray-700 dark:text-slate-300">{item.name}</span>
-                      <span className="text-[11px] text-gray-500">{item.count} orders · {item.revenue}</span>
-                    </div>
-                    <div className="h-1.5 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-orange-400 to-orange-500 rounded-full"
-                        style={{ width: `${item.pct}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+              ))}
+           </div>
         </div>
 
-        {/* ── Weekly Revenue Chart ──────────────────────── */}
-        <div className="bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <BarChart3 size={16} className="text-orange-500" />
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Weekly Revenue</h3>
-            </div>
-            <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 rounded-lg px-2.5 py-1">
-              <TrendingUp size={12} className="text-emerald-600" />
-              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">+18.2% this week</span>
-            </div>
-          </div>
-          <div className="flex items-end gap-3 h-32">
-            {WEEKLY_SALES.map((d) => (
-              <div key={d.day} className="flex-1 flex flex-col items-center gap-2">
-                <div className="w-full flex items-end justify-center" style={{ height: "96px" }}>
-                  <div
-                    className={clsx(
-                      "w-full rounded-t-lg transition-all",
-                      d.day === "Sat"
-                        ? "bg-gradient-to-t from-orange-500 to-orange-400"
-                        : d.height === 0
-                        ? "bg-gray-100 dark:bg-white/5"
-                        : "bg-gradient-to-t from-orange-200 to-orange-100 dark:from-orange-900/40 dark:to-orange-900/20"
-                    )}
-                    style={{ height: `${Math.max(d.height, 4)}%` }}
-                  />
-                </div>
-                <span className={clsx("text-[10px] font-bold", d.day === "Sat" ? "text-orange-500" : "text-gray-400 dark:text-slate-500")}>
-                  {d.day}
-                </span>
+        {/* Side Info (4 Columns) */}
+        <div className="lg:col-span-4 space-y-6">
+           
+           {/* Enterprise Health Score */}
+           <div className="bg-slate-900 text-white rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
+              <div className="relative z-10 flex flex-col gap-6">
+                 <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Enterprise Health Score</h3>
+                 <div className="flex items-baseline gap-2">
+                    <span className="text-7xl font-black tracking-tighter">94</span>
+                    <span className="text-xl font-bold text-emerald-400">/100</span>
+                 </div>
+                 <div className="space-y-4">
+                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                       <span>Compliance</span>
+                       <span className="text-emerald-400">100%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                       <div className="h-full bg-white rounded-full w-[94%]" />
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-medium leading-relaxed italic">
+                      Performance is optimal. 0 compliance issues detected. 2 invoices pending approval in Accounts.
+                    </p>
+                 </div>
               </div>
-            ))}
-          </div>
-          <div className="mt-4 pt-4 border-t border-gray-50 dark:border-white/5 grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">This Week</p>
-              <p className="text-lg font-black text-gray-900 dark:text-white">₹1,39,760</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Avg / Day</p>
-              <p className="text-lg font-black text-gray-900 dark:text-white">₹23,293</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Best Day</p>
-              <p className="text-lg font-black text-orange-500">Friday · ₹28,200</p>
-            </div>
-          </div>
-        </div>
+              <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-white/5 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700" />
+           </div>
 
-        {/* ── Modules Overview ─────────────────────────── */}
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <CheckCircle2 size={15} className="text-orange-500" />
-            <h2 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">All Modules</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {QUICK_MODULES.map((mod) => (
-              <Link
-                key={mod.href}
-                href={mod.href}
-                className="group flex items-center gap-4 bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-              >
-                <div className={clsx("w-12 h-12 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-md shrink-0", mod.color, mod.shadow)}>
-                  <mod.icon size={22} className="text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-gray-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">{mod.label}</p>
-                  <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-0.5">{mod.sub}</p>
-                </div>
-                <ArrowRight size={14} className="text-gray-300 dark:text-slate-600 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+           {/* Recent Transactions / Tickets */}
+           <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] border border-slate-200/60 dark:border-white/5 shadow-sm overflow-hidden">
+              <div className="px-8 py-6 border-b border-slate-200/60 dark:border-white/5 flex items-center justify-between">
+                 <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">Active Queue</h3>
+                 <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+              </div>
+              <div className="divide-y divide-slate-100 dark:divide-white/5">
+                 {[
+                   { ref: 'TKT-892', type: 'SUPPORT', status: 'Priority', desc: 'SLA breach risk: Vendor A inquiry' },
+                   { ref: 'SO-4421', type: 'SALES', status: 'Pending', desc: 'Quotation accepted by Client X' },
+                   { ref: 'LEAD-90', type: 'CRM', status: 'New', desc: 'High-value lead from Website' },
+                   { ref: 'EMP-012', type: 'HR', status: 'Review', desc: 'Leave request: Sarah J.' },
+                 ].map((item, idx) => (
+                   <div key={idx} className="p-6 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer group">
+                      <div className="flex items-center justify-between mb-2">
+                         <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-400/10 px-2 py-0.5 rounded uppercase tracking-tighter">{item.type}</span>
+                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.ref}</span>
+                      </div>
+                      <p className="text-xs font-black text-slate-900 dark:text-white mb-1 group-hover:text-indigo-600 transition-colors uppercase">{item.status}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium italic">{item.desc}</p>
+                   </div>
+                 ))}
+              </div>
+              <Link href="/reports" className="w-full py-5 bg-slate-50 dark:bg-white/[0.02] text-center text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] hover:text-slate-950 transition-colors block border-t border-slate-100 dark:border-white/5">
+                 View Full Intelligence Report
               </Link>
-            ))}
-          </div>
+           </div>
         </div>
-
       </div>
     </div>
   );

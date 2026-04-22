@@ -15,13 +15,15 @@ import {
   AlertTriangle,
   TrendingUp,
   ChefHat,
+  Store,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { clsx } from "clsx";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useSidebar } from "@/context/SidebarContext";
-import { menuItems } from "@/config/navigation";
+import { menuSections } from "@/config/navigation";
+import Link from "next/link";
 
 interface Notification {
   id: string;
@@ -65,7 +67,7 @@ function HBtn({
     <button
       title={title}
       onClick={onClick}
-      className="relative p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:bg-orange-50 dark:hover:bg-white/5 hover:text-orange-500 dark:hover:text-orange-400 transition-all duration-150"
+      className="relative p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:bg-[#FF6B00]/5 dark:hover:bg-white/5 hover:text-[#FF6B00] transition-all duration-150"
     >
       {children}
       {badge !== undefined && (
@@ -158,22 +160,24 @@ export default function RefrensHeader() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
   const initials =
-    user?.fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "KF";
+    user?.fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "NX";
 
   const markAllRead = () => setNotifications((p) => p.map((n) => ({ ...n, read: true })));
   const markRead = (id: string) =>
     setNotifications((p) => p.map((n) => (n.id === id ? { ...n, read: true } : n)));
 
   const getPageTitle = () => {
-    for (const item of menuItems) {
-      if (item.href === pathname) return item.label;
-      if (item.children) {
-        const child = item.children.find((c) => c.href === pathname);
-        if (child) return child.label;
+    for (const section of menuSections) {
+      for (const item of section.items) {
+        if (item.href === pathname) return item.label;
+        if (item.children) {
+          const child = item.children.find((c) => c.href === pathname);
+          if (child) return child.label;
+        }
       }
     }
     // Fallback for special cases or home
-    if (pathname === "/") return "Dashboard";
+    if (pathname === "/") return "Overview";
     return "";
   };
 
@@ -192,61 +196,47 @@ export default function RefrensHeader() {
     <>
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
 
-      <header className="w-full h-14 bg-white dark:bg-[#0f1117] border-b border-orange-100 dark:border-white/5 flex items-center px-4 gap-3 sticky top-0 z-40 shadow-sm">
+      <header className="w-full h-14 bg-white dark:bg-[#0f1117] border-b border-slate-100 dark:border-white/5 flex items-center px-4 gap-3 sticky top-0 z-40 shadow-sm">
 
         {/* ── Left: Hamburger + Logo ──────────────────── */}
-        <button
-          onClick={toggleCollapsed}
-          className="p-2 -ml-2 rounded-xl text-gray-500 dark:text-slate-400 hover:bg-orange-50 dark:hover:bg-white/5 hover:text-orange-500 transition-all"
-          aria-label="Toggle sidebar"
-        >
-          <Menu size={20} strokeWidth={1.8} />
-        </button>
+        {/* Sidebar Toggle removed as per icon removal and layout simplification */}
 
         {/* Dynamic Page Title */}
         {pageTitle && (
           <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
-            <div className="w-px h-5 bg-orange-200 dark:bg-white/10 hidden sm:block" />
-            <h1 className="text-[15px] font-black text-gray-900 dark:text-white tracking-tight">
+            <div className="w-px h-5 bg-slate-200 dark:bg-white/10 hidden sm:block" />
+            <h1 className="text-[15px] font-black text-gray-900 dark:text-white tracking-tight uppercase">
               {pageTitle}
             </h1>
-            {pageTitle === "Billing & POS" && (
-              <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 rounded-full px-2.5 py-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Live</span>
-              </div>
-            )}
           </div>
         )}
+
+        {/* ── Operation Node ──────────────────────────── */}
+        <div className="hidden md:flex ml-4">
+          <div className="flex items-center gap-2 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl px-3 py-1.5 cursor-pointer hover:border-slate-900/30 transition-all group">
+            <Store size={14} className="text-gray-400 group-hover:text-slate-900" />
+            <div className="flex flex-col">
+              <span className="text-[10px] text-gray-400 font-bold uppercase leading-none">NODE</span>
+              <span className="text-[12px] font-bold text-gray-700 dark:text-white leading-tight">Master Control</span>
+            </div>
+            <ChevronDown size={12} className="text-gray-400 ml-1" />
+          </div>
+        </div>
 
         <div className="flex-1" />
 
         {/* ── Right Actions ──────────────────────────── */}
         <div className="flex items-center gap-1">
 
-          {/* Today's quick stats */}
-          <div className="hidden lg:flex items-center gap-3 border border-orange-100 dark:border-white/10 bg-orange-50/50 dark:bg-white/5 rounded-xl px-3 py-1.5 mr-2">
-            <div className="flex items-center gap-1.5">
-              <TrendingUp size={13} className="text-orange-500" />
-              <span className="text-[11px] font-bold text-gray-700 dark:text-slate-300">₹24,860</span>
-              <span className="text-[10px] text-gray-400">today</span>
-            </div>
-            <div className="w-px h-3 bg-orange-200 dark:bg-white/10" />
-            <div className="flex items-center gap-1.5">
-              <ShoppingCart size={12} className="text-orange-500" />
-              <span className="text-[11px] font-bold text-gray-700 dark:text-slate-300">47 orders</span>
-            </div>
-          </div>
-
           {/* Search */}
-          <HBtn title="Search (Ctrl+K)" onClick={() => setShowSearch(true)}>
+          <HBtn title="Omni Search (Ctrl+K)" onClick={() => setShowSearch(true)}>
             <Search size={18} strokeWidth={1.8} />
           </HBtn>
 
           {/* Notifications */}
           <div className="relative" ref={notifRef}>
             <HBtn
-              title="Notifications"
+              title="System Alerts"
               badge={unreadCount > 0 ? unreadCount : undefined}
               onClick={() => { setShowNotifications((v) => !v); setShowProfile(false); }}
             >
@@ -254,47 +244,47 @@ export default function RefrensHeader() {
             </HBtn>
 
             {showNotifications && (
-              <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-[#0f1117] rounded-2xl border border-orange-100 dark:border-white/10 shadow-2xl shadow-black/10 overflow-hidden z-50">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-orange-50 dark:border-white/5">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-                    Alerts
+              <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-[#0f1117] rounded-2xl border border-slate-100 dark:border-white/10 shadow-2xl shadow-black/10 overflow-hidden z-50">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-50 dark:border-white/5">
+                  <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest">
+                    Telemetry
                     {unreadCount > 0 && (
-                      <span className="ml-2 px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-[10px] font-bold rounded-full">
+                      <span className="ml-2 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-[10px] font-bold rounded-full">
                         {unreadCount}
                       </span>
                     )}
                   </h3>
                   {unreadCount > 0 && (
-                    <button onClick={markAllRead} className="text-[11px] text-orange-500 hover:underline font-semibold">
-                      Mark all read
+                    <button onClick={markAllRead} className="text-[10px] font-black uppercase text-indigo-500 hover:underline">
+                      Acknowledge All
                     </button>
                   )}
                 </div>
-                <div className="max-h-72 overflow-y-auto hide-scrollbar divide-y divide-orange-50 dark:divide-white/5">
+                <div className="max-h-72 overflow-y-auto hide-scrollbar divide-y divide-slate-50 dark:divide-white/5">
                   {notifications.map((n) => (
                     <button
                       key={n.id}
                       onClick={() => markRead(n.id)}
                       className={clsx(
-                        "w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-orange-50/50 dark:hover:bg-white/5 transition-colors",
-                        !n.read && "bg-orange-50/40 dark:bg-orange-900/10"
+                        "w-full flex items-start gap-4 px-4 py-4 text-left hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors",
+                        !n.read && "bg-slate-50/40 dark:bg-indigo-900/5"
                       )}
                     >
                       <div className="mt-0.5"><NIcon type={n.type} /></div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-gray-900 dark:text-white leading-tight">
+                        <p className="text-[12px] font-bold text-gray-900 dark:text-white leading-tight uppercase tracking-tight">
                           {n.title}
-                          {!n.read && <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-orange-500 align-middle" />}
+                          {!n.read && <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-indigo-500 align-middle" />}
                         </p>
-                        <p className="text-[12px] text-gray-500 dark:text-slate-400 mt-0.5">{n.message}</p>
-                        <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-1">{n.time}</p>
+                        <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-1 italic leading-snug">{n.message}</p>
+                        <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2 font-black uppercase tracking-tighter">{n.time}</p>
                       </div>
                     </button>
                   ))}
                 </div>
-                <div className="px-4 py-2.5 border-t border-orange-50 dark:border-white/5">
-                  <a href="/alerts" className="w-full text-[12px] text-orange-500 font-semibold hover:underline text-center block">
-                    View all alerts →
+                <div className="px-4 py-2.5 border-t border-slate-50 dark:border-white/5">
+                  <a href="/alerts" className="w-full text-[10px] text-indigo-500 font-black uppercase hover:underline text-center block tracking-widest">
+                    All System Logs →
                   </a>
                 </div>
               </div>
@@ -305,10 +295,10 @@ export default function RefrensHeader() {
           <div className="relative ml-1" ref={profileRef}>
             <button
               onClick={() => { setShowProfile((v) => !v); setShowNotifications(false); }}
-              className="flex items-center gap-1.5 pl-2 border-l border-orange-100 dark:border-white/5 group"
-              aria-label="Open profile menu"
+              className="flex items-center gap-1.5 pl-2 border-l border-slate-100 dark:border-white/5 group"
+              aria-label="Account Settings"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-sm group-hover:scale-105 transition-all ring-2 ring-white dark:ring-[#0f1117] shadow-md">
+              <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 font-black text-sm group-hover:scale-105 transition-all ring-2 ring-white dark:ring-[#0f1117] shadow-md uppercase">
                 {initials}
               </div>
               <ChevronDown
@@ -322,40 +312,40 @@ export default function RefrensHeader() {
             </button>
 
             {showProfile && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#0f1117] rounded-2xl border border-orange-100 dark:border-white/10 shadow-2xl shadow-black/10 overflow-hidden z-50">
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#0f1117] rounded-2xl border border-slate-100 dark:border-white/10 shadow-2xl shadow-black/10 overflow-hidden z-50">
                 <div className="flex items-center gap-3 px-4 py-4">
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-base shrink-0 shadow-lg border-2 border-white dark:border-[#0f1117]">
+                    <div className="w-12 h-12 rounded-full bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 font-black text-base shrink-0 shadow-lg border-2 border-white dark:border-[#0f1117] uppercase">
                       {initials}
                     </div>
                     <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-[#0f1117] shadow-sm" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-bold text-gray-900 dark:text-white truncate">
-                      {user?.fullName || "Kiddos Food Business"}
+                    <p className="text-[13px] font-bold text-gray-900 dark:text-white truncate uppercase tracking-tighter">
+                      {user?.fullName || "Kiddos Admin"}
                     </p>
                     <p className="text-[11px] text-gray-500 dark:text-slate-400 truncate mt-0.5">
-                      {user?.email || "businessgroupikasle@gmail.com"}
+                      {user?.email || "admin@kiddosfood.com"}
                     </p>
                   </div>
                 </div>
 
-                <div className="mx-4 border-t border-orange-50 dark:border-white/5" />
+                <div className="mx-4 border-t border-slate-100 dark:border-white/5" />
 
                 <div className="py-1.5">
-                  <a
+                  <Link
                     href="/settings/general"
-                    className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-700 dark:text-slate-300 hover:bg-orange-50 dark:hover:bg-white/5 hover:text-orange-600 transition-colors"
+                    className="flex items-center gap-3 px-4 py-2.5 text-[11px] font-black uppercase text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-950 transition-colors tracking-widest"
                   >
                     <Settings size={15} className="text-gray-400 shrink-0" />
-                    Business Settings
-                  </a>
+                    Global Config
+                  </Link>
                   <button
                     onClick={logout}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-700 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-[11px] font-black uppercase text-gray-700 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 transition-colors tracking-widest"
                   >
                     <LogOut size={15} className="text-gray-400 shrink-0" />
-                    Logout
+                    Terminate Session
                   </button>
                 </div>
               </div>

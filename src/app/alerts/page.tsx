@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { inventoryApi } from "@/lib/api";
 import {
   Bell,
   AlertTriangle,
@@ -34,22 +35,22 @@ interface Alert {
 }
 
 const INITIAL_ALERTS: Alert[] = [
-  { id: "1",  type: "stock",    severity: "critical", title: "Critical: Chicken Stock Very Low",    message: "Chicken breast only 1.8 kg remaining. Minimum threshold is 3 kg. Reorder immediately.",      time: "5 min ago",  read: false, actionLabel: "Reorder", actionHref: "/purchases" },
-  { id: "2",  type: "kitchen",  severity: "warning",  title: "Order #46 Delayed",                   message: "Order #46 has been in kitchen queue for 22 minutes. Expected time was 15 minutes.",           time: "8 min ago",  read: false, actionLabel: "View KDS", actionHref: "/kds" },
-  { id: "3",  type: "stock",    severity: "warning",  title: "Paneer Stock Low",                    message: "Paneer at 800g. Minimum is 1.5 kg. Consider restocking before evening service.",              time: "12 min ago", read: false, actionLabel: "Reorder", actionHref: "/purchases" },
-  { id: "4",  type: "sales",    severity: "success",  title: "🎉 Daily Target Achieved!",            message: "Today's revenue hit ₹25,000 target at 6:42 PM. Current total: ₹26,480. Keep it up!",          time: "1h ago",     read: false },
-  { id: "5",  type: "stock",    severity: "warning",  title: "Basmati Rice Running Low",            message: "Basmati rice at 4 kg. Minimum threshold: 5 kg. Plan restock for tomorrow.",                   time: "2h ago",     read: true  },
-  { id: "6",  type: "security", severity: "warning",  title: "Unusual Discount Applied",            message: "100% discount applied to Order #44 (₹840 waived) by user: cashier01. Please verify.",        time: "2h ago",     read: true,  actionLabel: "Review", actionHref: "/reports" },
-  { id: "7",  type: "sales",    severity: "info",     title: "Peak Hour Starting",                  message: "Historical data shows 7-9 PM is peak. Current kitchen has 8 pending orders.",                 time: "3h ago",     read: true  },
-  { id: "8",  type: "system",   severity: "info",     title: "KDS Connection Restored",             message: "Kitchen Display System reconnected after brief network interruption at 3:12 PM.",              time: "4h ago",     read: true  },
-  { id: "9",  type: "stock",    severity: "critical", title: "Cooking Oil Almost Empty",            message: "Cooking oil at 2.1 litres. Minimum is 3 litres. Cannot complete evening service without restock.", time: "4h ago", read: true, actionLabel: "Reorder", actionHref: "/purchases" },
-  { id: "10", type: "sales",    severity: "success",  title: "Biryani Sales Record",                message: "Chicken Biryani sold 18 plates today — new daily record! Previous record was 15 plates.",      time: "5h ago",     read: true  },
+  { id: "1",  type: "stock",    severity: "critical", title: "Critical: Dry Red Chilli Stock Very Low",    message: "Dry Red Chilli at 12 kg remaining. Minimum threshold is 50 kg. Reorder from Spice Valley Suppliers immediately.", time: "5 min ago",  read: false, actionLabel: "Reorder", actionHref: "/purchases" },
+  { id: "2",  type: "kitchen",  severity: "warning",  title: "Production Batch #B-204 Delayed",            message: "Garam Masala Blend batch B-204 is 40 minutes behind schedule. Review production floor status.",               time: "8 min ago",  read: false, actionLabel: "View Production", actionHref: "/production" },
+  { id: "3",  type: "stock",    severity: "warning",  title: "Urad Dal Running Low",                       message: "Urad Dal at 80 kg. Minimum is 100 kg. Batter production will be affected. Restock before next batch.",        time: "12 min ago", read: false, actionLabel: "Reorder", actionHref: "/purchases" },
+  { id: "4",  type: "sales",    severity: "success",  title: "Daily Dispatch Target Achieved!",            message: "Today's dispatch value hit ₹1,20,000 target. Current total: ₹1,28,750. All franchises performing well.",        time: "1h ago",     read: false },
+  { id: "5",  type: "stock",    severity: "warning",  title: "Glass Jars (500g) Low",                      message: "Glass jars at 380 pcs. Minimum threshold: 400 pcs. Pickle packing will be delayed if not restocked.",         time: "2h ago",     read: true,  actionLabel: "Reorder", actionHref: "/purchases" },
+  { id: "6",  type: "security", severity: "warning",  title: "Unusual Discount on Wholesale Order",        message: "35% discount applied to Wholesale Order #W-112 (₹4,200 waived) by user: sales01. Please verify.",            time: "2h ago",     read: true,  actionLabel: "Review", actionHref: "/reports" },
+  { id: "7",  type: "sales",    severity: "info",     title: "Franchise B Restock Request Pending",        message: "Distribution Centre B has placed a stock request for 200kg Chilli Powder and 150L Groundnut Oil. Approve now.", time: "3h ago",     read: true,  actionLabel: "Approve", actionHref: "/franchise" },
+  { id: "8",  type: "system",   severity: "info",     title: "Production Module Sync Restored",            message: "Production tracking module reconnected after brief server interruption at 3:12 PM. All data is in sync.",       time: "4h ago",     read: true  },
+  { id: "9",  type: "stock",    severity: "critical", title: "PET Bottles (500ml) Almost Empty",           message: "PET bottles at 210 pcs. Minimum is 500 pcs. Oil bottling line will halt without immediate restock.",           time: "4h ago",     read: true,  actionLabel: "Reorder", actionHref: "/purchases" },
+  { id: "10", type: "sales",    severity: "success",  title: "Mango Pickle Sales Record",                  message: "Raw Mango Pickle 500g sold 340 units this week — new weekly record! Previous record was 280 units.",           time: "5h ago",     read: true  },
 ];
 
 const TYPE_CONFIG: Record<AlertType, { label: string; icon: any; color: string; bg: string }> = {
   stock:    { label: "Low Stock",  icon: Package,      color: "text-orange-500",  bg: "bg-orange-50 dark:bg-orange-900/20" },
   sales:    { label: "Sales",      icon: TrendingUp,   color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
-  kitchen:  { label: "Kitchen",    icon: Clock,        color: "text-blue-500",    bg: "bg-blue-50 dark:bg-blue-900/20" },
+  kitchen:  { label: "Production", icon: Clock,        color: "text-blue-500",    bg: "bg-blue-50 dark:bg-blue-900/20" },
   security: { label: "Security",   icon: Shield,       color: "text-purple-500",  bg: "bg-purple-50 dark:bg-purple-900/20" },
   system:   { label: "System",     icon: RefreshCw,    color: "text-gray-500",    bg: "bg-gray-50 dark:bg-white/10" },
 };
@@ -68,11 +69,36 @@ const SEVERITY_BADGE: Record<AlertSeverity, string> = {
   success:  "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
 };
 
+function mapApiAlerts(apiItems: any[]): Alert[] {
+  return apiItems.map((item: any, i: number) => ({
+    id: item.id ?? String(i),
+    type: "stock" as AlertType,
+    severity: item.currentStock === 0 ? "critical" : "warning",
+    title: item.currentStock === 0
+      ? `Critical: ${item.name} Out of Stock`
+      : `Low Stock: ${item.name}`,
+    message: `${item.name} has ${item.currentStock} ${item.unit ?? "units"} remaining. Minimum threshold: ${item.minStockLevel ?? item.reorderPoint ?? "N/A"}.`,
+    time: "Just now",
+    read: false,
+    actionLabel: "Reorder",
+    actionHref: "/purchases",
+  }));
+}
+
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>(INITIAL_ALERTS);
   const [filterType, setFilterType] = useState<"all" | AlertType>("all");
   const [filterSeverity, setFilterSeverity] = useState<"all" | AlertSeverity>("all");
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+
+  useEffect(() => {
+    inventoryApi.getAlerts()
+      .then((res) => {
+        const mapped = mapApiAlerts(res.data ?? []);
+        if (mapped.length > 0) setAlerts(mapped);
+      })
+      .catch(() => { /* keep mock data on error */ });
+  }, []);
 
   const filtered = alerts.filter((a) => {
     if (filterType !== "all" && a.type !== filterType) return false;
@@ -98,7 +124,7 @@ export default function AlertsPage() {
             <Bell size={24} className="text-orange-500" />
             Real-Time Alerts
           </h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Owner-level visibility into stock, sales, kitchen & security</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Owner-level visibility into raw materials, production, sales & franchise operations</p>
         </div>
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
