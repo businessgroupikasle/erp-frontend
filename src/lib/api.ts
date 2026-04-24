@@ -189,18 +189,30 @@ export const productsFullApi = {
 // --- Vendors ---
 export const vendorsApi = {
   getAll: () => api.get('/api/vendors'),
+  getSummary: () => api.get('/api/vendors/summary'),
+  filterVendors: (params: any) => api.get('/api/vendors/filter', { params }),
   getById: (id: string) => api.get(`/api/vendors/${id}`),
   create: (data: any) => api.post('/api/vendors', data),
   update: (id: string, data: any) => api.patch(`/api/vendors/${id}`, data),
   delete: (id: string) => api.delete(`/api/vendors/${id}`),
+  linkMaterial: (data: { vendorId: string; materialId: string; price: number }) =>
+    api.post('/api/vendors/link-material', data),
+  getLedger: (id: string, params: any = {}) => api.get(`/api/vendors/${id}/ledger`, { params }),
+  recordPayment: (id: string, data: { amount: number; note: string }) => api.post(`/api/vendors/${id}/payment`, data),
+  recordAdjustment: (id: string, data: { amount: number; type: 'CREDIT' | 'DEBIT'; note: string }) => api.post(`/api/vendors/${id}/adjustment`, data),
 };
 
 // --- Purchase Orders (with advance/balance tracking) ---
 export const purchaseOrdersApi = {
   getAll: () => api.get('/api/purchase-orders'),
   getById: (id: string) => api.get(`/api/purchase-orders/${id}`),
-  create: (data: { vendorId: string; advancePaid?: number; items: { inventoryItemId: string; quantity: number; price: number }[] }) =>
-    api.post('/api/purchase-orders', data),
+  create: (data: { 
+    vendorId: string; 
+    advancePaid?: number; 
+    expectedDeliveryDate?: string;
+    notes?: string;
+    items: { inventoryItemId: string; quantity: number; price: number }[] 
+  }) => api.post('/api/purchase-orders', data),
   receive: (id: string) => api.post(`/api/purchase-orders/${id}/receive`),
   recordAdvance: (id: string, advancePaid: number) =>
     api.patch(`/api/purchase-orders/${id}/advance`, { advancePaid }),
@@ -226,3 +238,21 @@ export const franchiseProductRequestsApi = {
   delete: (id: string) => api.delete(`/api/franchise/product-requests/${id}`),
 };
 
+
+// --- Goods Receipt Notes (GRN) ---
+export const grnApi = {
+  getAll: (params: any = {}) => api.get('/api/grn', { params }),
+  getById: (id: string) => api.get(`/api/grn/${id}`),
+  createFromPO: (poId: string, data: { items: any[], receivedBy?: string }) => 
+    api.post(`/api/grn/from-po/${poId}`, data),
+  approve: (id: string) => api.patch(`/api/grn/${id}/approve`),
+  cancel: (id: string) => api.patch(`/api/grn/${id}/cancel`),
+};
+
+// --- Vendor Invoices & Matching ---
+export const vendorInvoicesApi = {
+  getAll: (params: any = {}) => api.get('/api/vendor-invoices', { params }),
+  create: (data: any) => api.post('/api/vendor-invoices', data),
+  match: (id: string) => api.post(`/api/vendor-invoices/${id}/match`),
+  updateStatus: (id: string, status: string) => api.patch(`/api/vendor-invoices/${id}/status`, { status }),
+};

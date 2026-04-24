@@ -11,8 +11,10 @@ import {
   ChevronDown,
   Sun,
   Moon,
-  Landmark
+  Landmark,
+  Store
 } from "lucide-react";
+import Image from "next/image";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { clsx } from "clsx";
 import { useTheme } from "@/context/ThemeContext";
@@ -27,6 +29,7 @@ export default function Sidebar() {
   const { isCollapsed } = useSidebar();
 
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["Sales CRM"]);
+  const [collapsedSections, setCollapsedSections] = useState<string[]>([]);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
@@ -62,6 +65,12 @@ export default function Sidebar() {
     );
   };
 
+  const toggleSection = (section: string) => {
+    setCollapsedSections((prev) =>
+      prev.includes(section) ? prev.filter((s) => s !== section) : [...prev, section]
+    );
+  };
+
   const userRole = user?.role?.toUpperCase() || "STAFF";
   const initials = user?.fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "NX";
 
@@ -82,8 +91,13 @@ export default function Sidebar() {
           isCollapsed ? "px-2 py-3 justify-center" : "px-4 py-3 gap-3"
         )}
       >
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-xs shrink-0 shadow-md shadow-orange-200 dark:shadow-orange-900/30">
-          {initials}
+        <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-md">
+          <Image
+            src="/logo.png"
+            alt="Logo"
+            fill
+            className="object-contain"
+          />
         </div>
         {!isCollapsed && (
           <div className="flex-1 min-w-0">
@@ -113,7 +127,7 @@ export default function Sidebar() {
           ref={navRef}
           className={clsx(
             "flex-1 overflow-y-auto hide-scrollbar",
-            "px-2.5 py-2"
+            "px-3 py-4"
           )}
         >
           <div className="space-y-0.5">
@@ -127,12 +141,32 @@ export default function Sidebar() {
                 <div key={section.section}>
                   {/* Section Header */}
                   {!isCollapsed && (
-                    <div className="px-2.5 pt-4 pb-1.5 first:pt-2">
-                      <p className="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-slate-600 flex items-center gap-1.5">
+                    <div 
+                      onClick={() => toggleSection(section.section)}
+                      className="px-2 pb-2 mt-6 flex items-center justify-between cursor-pointer group/section"
+                    >
+                      <p className={clsx(
+                        "text-[10px] font-black uppercase tracking-[0.2em] transition-colors",
+                        (section.section === "OVERVIEW" || section.section === "HOME HOUSE") 
+                          ? "text-orange-500/80 dark:text-orange-400" 
+                          : "text-slate-400 dark:text-slate-600 group-hover/section:text-slate-500"
+                      )}>
                         {section.section}
                       </p>
+                      <ChevronDown 
+                        size={11} 
+                        className={clsx(
+                          "text-slate-300 dark:text-slate-700 transition-transform duration-300",
+                          collapsedSections.includes(section.section) ? "-rotate-90" : "rotate-0"
+                        )} 
+                      />
                     </div>
                   )}
+
+                  <div className={clsx(
+                    "space-y-1 transition-all duration-300 overflow-hidden",
+                    collapsedSections.includes(section.section) ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"
+                  )}>
 
                   {/* Section Items */}
                   {filteredItems.map((item) => {
@@ -154,24 +188,24 @@ export default function Sidebar() {
                         <div
                           onClick={() => hasChildren ? toggleMenu(item.label) : undefined}
                           className={clsx(
-                            "flex items-center gap-2.5 rounded-xl cursor-pointer select-none transition-all duration-150",
-                            "px-2.5 py-2",
+                            "flex items-center gap-3 rounded-2xl cursor-pointer select-none transition-all duration-200",
+                            "px-3 py-3",
                             isActive
-                              ? "bg-[#FF6B00]/10 text-[#FF6B00] dark:bg-[#FF6B00]/20"
-                              : "text-gray-500 dark:text-slate-400 hover:bg-[#FF6B00]/5 dark:hover:bg-white/5 hover:text-gray-800 dark:hover:text-slate-200"
+                              ? "bg-gradient-to-r from-orange-500/10 to-orange-500/5 text-orange-600 dark:text-orange-400 backdrop-blur-md border border-orange-500/10 shadow-[0_4px_12px_-2px_rgba(255,107,0,0.12)]"
+                              : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200"
                           )}
                         >
                           {hasChildren ? (
-                            <span className="flex items-center gap-2.5 flex-1 min-w-0">
-                              <span className="text-[12.5px] font-semibold flex-1 truncate">{item.label}</span>
+                            <span className="flex items-center gap-3 flex-1 min-w-0">
+                              <span className="text-[13px] font-bold flex-1 truncate tracking-tight">{item.label}</span>
                             </span>
                           ) : (
                             <Link
                               href={item.href}
-                              className="flex items-center gap-2.5 flex-1 min-w-0"
+                              className="flex items-center gap-3 flex-1 min-w-0"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <span className="text-[12.5px] font-semibold flex-1 truncate">{item.label}</span>
+                              <span className="text-[13px] font-bold flex-1 truncate tracking-tight">{item.label}</span>
                             </Link>
                           )}
 
@@ -231,8 +265,9 @@ export default function Sidebar() {
                           </div>
                         )}
                       </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })}
@@ -247,34 +282,7 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* ── Footer ──────────────────────────────────── */}
-      <div
-        className={clsx(
-          "border-t border-orange-100 dark:border-white/5 shrink-0",
-          isCollapsed ? "p-1.5" : "p-2.5"
-        )}
-      >
-        {!isCollapsed && (
-          <button className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-500 dark:text-slate-400 hover:bg-orange-50/60 dark:hover:bg-white/5 hover:text-gray-800 dark:hover:text-slate-200 transition-all mb-1">
-            <span className="text-[12.5px] font-medium flex-1 text-left">Invite Team Members</span>
-          </button>
-        )}
-
-        <div className="flex items-center justify-between gap-1">
-          <button
-            onClick={toggleTheme}
-            className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500 hover:bg-orange-50 dark:hover:bg-white/5 hover:text-orange-500 dark:hover:text-orange-400 transition-all"
-          >
-            {theme === "dark" ? "Light Mode" : "Dark Mode"}
-          </button>
-          <button
-            onClick={logout}
-            className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-all ml-auto"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+      {/* ── Footer Removed ────────────────────────── */}
     </aside>
   );
 }

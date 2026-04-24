@@ -16,6 +16,8 @@ import {
   TrendingUp,
   ChefHat,
   Store,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { clsx } from "clsx";
@@ -23,6 +25,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useSidebar } from "@/context/SidebarContext";
 import { menuSections, menuItems } from "@/config/navigation";
+import { useTheme } from "@/context/ThemeContext";
 import Link from "next/link";
 
 interface Notification {
@@ -171,6 +174,7 @@ export default function RefrensHeader() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { toggleCollapsed } = useSidebar();
+  const { theme, toggleTheme } = useTheme();
 
   if (pathname === "/login") return null;
 
@@ -248,18 +252,6 @@ export default function RefrensHeader() {
           </div>
         )}
 
-        {/* ── Franchise Dashboard Link ──────────────────── */}
-        <div className="hidden md:flex ml-4">
-          <Link 
-            href="/franchise/dashboard"
-            className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-500/20 rounded-xl px-3 py-1.5 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-all group shadow-sm"
-          >
-            <Store size={14} className="text-orange-500 group-hover:scale-110 transition-transform" />
-            <span className="text-[12px] font-black text-orange-700 dark:text-orange-300 tracking-wide uppercase">
-              Franchise Dashboard
-            </span>
-          </Link>
-        </div>
 
         <div className="flex-1" />
 
@@ -391,6 +383,22 @@ export default function RefrensHeader() {
                     <Settings size={15} className="text-gray-400 shrink-0" />
                     Global Config
                   </Link>
+                  <button
+                    onClick={toggleTheme}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-[11px] font-black uppercase text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-950 transition-colors tracking-widest"
+                  >
+                    {theme === "dark" ? (
+                      <>
+                        <Sun size={15} className="text-gray-400 shrink-0" />
+                        Bright Aspect
+                      </>
+                    ) : (
+                      <>
+                        <Moon size={15} className="text-gray-400 shrink-0" />
+                        Dim Aspect
+                      </>
+                    )}
+                  </button>
                   <button
                     onClick={logout}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-[11px] font-black uppercase text-gray-700 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 transition-colors tracking-widest"

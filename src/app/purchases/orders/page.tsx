@@ -41,18 +41,15 @@ export default function PurchaseOrdersPage() {
   const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
   const [showForm, setShowForm]   = useState(false);
-  const [advanceModal, setAdvanceModal] = useState<{ id: string; current: number } | null>(null);
   const [search, setSearch]       = useState("");
 
-  const [vendorId, setVendorId]       = useState("");
-  const [advancePaid, setAdvancePaid] = useState(0);
+  const [vendorId, setVendorId]         = useState("");
   const [expectedDate, setExpectedDate] = useState("");
-  const [notes, setNotes]             = useState("");
-  const [items, setItems]             = useState<POItem[]>([
+  const [notes, setNotes]               = useState("");
+  const [items, setItems]               = useState<POItem[]>([
     { inventoryItemId: "", itemName: "", unit: "kg", quantity: 1, price: 0 },
   ]);
-  const [saving, setSaving]   = useState(false);
-  const [advAmt, setAdvAmt]   = useState(0);
+  const [saving, setSaving] = useState(false);
 
   // Quick Add Material State
   const [showMaterialForm, setShowMaterialForm] = useState(false);
@@ -90,12 +87,28 @@ export default function PurchaseOrdersPage() {
       if (idx !== i) return it;
       if (field === "inventoryItemId") {
         const mat = materials.find((m: any) => m.id === value);
-        return { ...it, inventoryItemId: value, itemName: mat?.name ?? "", unit: mat?.unit ?? "kg" };
+        // Auto-fill price from vendor's linked material rate (if available)
+        const vendorRate = selectedVendor?.suppliedMaterials?.find(
+          (sm: any) => sm.materialId === value
+        )?.price ?? 0;
+        return {
+          ...it,
+          inventoryItemId: value,
+          itemName: mat?.name ?? "",
+          unit: mat?.unit ?? "kg",
+          price: vendorRate > 0 ? vendorRate : it.price,
+        };
       }
       return { ...it, [field]: value };
     }));
 
   const total = items.reduce((s, it) => s + it.quantity * it.price, 0);
+
+  // Auto-advance: pull the selected vendor's ledger balance and apply it to this PO
+  const selectedVendor = vendors.find((v: any) => v.id === vendorId);
+  const availableAdvance = Math.max(0, selectedVendor?.balance ?? 0);
+  const autoApplied = Math.min(availableAdvance, total);
+  const balanceDue = Math.max(0, total - autoApplied);
 
   const handleCreate = async () => {
     if (!vendorId || items.some((it) => !it.inventoryItemId || it.quantity <= 0 || it.price <= 0)) return;
@@ -103,18 +116,19 @@ export default function PurchaseOrdersPage() {
     try {
       await purchaseOrdersApi.create({
         vendorId,
-        advancePaid,
+        advancePaid: autoApplied,   // auto-applied from vendor ledger balance
         expectedDeliveryDate: expectedDate,
         notes,
         items: items.map(({ inventoryItemId, quantity, price }) => ({ inventoryItemId, quantity, price })),
       });
       setShowForm(false);
-      setVendorId(""); setAdvancePaid(0); setExpectedDate(""); setNotes("");
+      setVendorId(""); setExpectedDate(""); setNotes("");
       setItems([{ inventoryItemId: "", itemName: "", unit: "kg", quantity: 1, price: 0 }]);
       fetchAll();
     } catch (e: any) { 
       console.error(e);
-      alert(e?.response?.data?.error ?? "Failed to create Purchase Order. Ensure all fields are valid.");
+      const serverError = e?.response?.data?.error;
+      alert(serverError || "Failed to create Purchase Order. Please check the information and try again.");
     }
     finally { setSaving(false); }
   };
@@ -186,14 +200,6 @@ export default function PurchaseOrdersPage() {
     }
   };
 
-  const handleRecordAdvance = async () => {
-    if (!advanceModal) return;
-    try {
-      await purchaseOrdersApi.recordAdvance(advanceModal.id, advAmt);
-      setAdvanceModal(null);
-      fetchAll();
-    } catch (e) { console.error(e); }
-  };
 
   const filtered = orders.filter((o) =>
     !search ||
@@ -338,12 +344,6 @@ export default function PurchaseOrdersPage() {
                   {po.status === "PENDING" && (
                     <>
                       <button
-                        onClick={() => { setAdvanceModal({ id: po.id, current: po.advancePaid ?? 0 }); setAdvAmt(po.advancePaid ?? 0); }}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-[12px] font-bold transition-all"
-                      >
-                        <Wallet size={13} /> Record Advance
-                      </button>
-                      <button
                         onClick={() => handleReceive(po.id)}
                         className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-white rounded-xl text-[12px] font-bold transition-all"
                       >
@@ -459,8 +459,16 @@ export default function PurchaseOrdersPage() {
                             placeholder="Rate"
                             value={item.price}
                             onChange={(e) => updateItem(i, "price", Number(e.target.value))}
-                            className="w-full pl-6 pr-2 bg-white dark:bg-card border border-gray-200 dark:border-white/5 rounded-lg py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-orange-500/20 font-bold"
+                            className={clsx(
+                              "w-full pl-6 pr-2 border rounded-lg py-2 text-[12px] focus:outline-none focus:ring-2 font-bold",
+                              item.price > 0 && selectedVendor?.suppliedMaterials?.find((sm: any) => sm.materialId === item.inventoryItemId)?.price === item.price
+                                ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 focus:ring-emerald-500/20"
+                                : "bg-white dark:bg-card border-gray-200 dark:border-white/5 focus:ring-orange-500/20"
+                            )}
                           />
+                          {item.price > 0 && selectedVendor?.suppliedMaterials?.find((sm: any) => sm.materialId === item.inventoryItemId)?.price === item.price && (
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-black text-emerald-500 uppercase">rate</span>
+                          )}
                         </div>
                       </div>
                       <div className="col-span-1 text-right">
@@ -478,45 +486,62 @@ export default function PurchaseOrdersPage() {
                 </div>
               </div>
 
-              {/* Section 3: Summary & Payment */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Advance Payment (₹)</label>
-                    <div className="relative">
-                      <IndianRupee size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="number"
-                        value={advancePaid}
-                        onChange={(e) => setAdvancePaid(Number(e.target.value))}
-                        className="w-full pl-9 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 font-bold text-emerald-600"
-                      />
-                    </div>
+              {/* Section 3: Advance Info + Summary */}
+              {/* Vendor Advance Banner */}
+              {vendorId && (
+                <div className={clsx(
+                  "rounded-2xl px-4 py-3 border flex items-center justify-between",
+                  availableAdvance > 0
+                    ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20"
+                    : "bg-gray-50 dark:bg-white/[0.03] border-gray-200 dark:border-white/10"
+                )}>
+                  <div className="flex items-center gap-2">
+                    <Wallet size={16} className={availableAdvance > 0 ? "text-emerald-500" : "text-gray-400"} />
+                    <span className={clsx("text-xs font-black uppercase tracking-wider",
+                      availableAdvance > 0 ? "text-emerald-700 dark:text-emerald-400" : "text-gray-500")}>
+                      {availableAdvance > 0 ? "Advance Available" : "No Advance Balance"}
+                    </span>
                   </div>
-                  <div>
-                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Notes</label>
-                    <textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Special instructions or quality notes..."
-                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 h-20 resize-none"
-                    />
-                  </div>
+                  <span className={clsx("text-base font-black",
+                    availableAdvance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400")}>
+                    {fmt(availableAdvance)}
+                  </span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Notes</label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Special instructions or quality notes..."
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 h-24 resize-none"
+                  />
                 </div>
 
+                {/* Order Summary */}
                 <div className="bg-orange-50/50 dark:bg-orange-500/5 rounded-2xl p-5 border border-orange-100/50 dark:border-orange-500/10 space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Subtotal</span>
                     <span className="text-lg font-black text-gray-900 dark:text-white">{fmt(total)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-emerald-600">
-                    <span className="text-xs font-bold uppercase tracking-wider">Paid</span>
-                    <span className="font-black">− {fmt(advancePaid)}</span>
-                  </div>
-                  <div className="pt-3 border-t border-orange-200 dark:border-orange-500/20 flex justify-between items-center">
+                  {autoApplied > 0 && (
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Advance Applied</span>
+                        <p className="text-[10px] text-emerald-500/70 mt-0.5">Auto-adjusted from ledger</p>
+                      </div>
+                      <span className="font-black text-emerald-600 dark:text-emerald-400">− {fmt(autoApplied)}</span>
+                    </div>
+                  )}
+                  <div className={clsx(
+                    "pt-3 border-t flex justify-between items-center",
+                    autoApplied > 0 ? "border-emerald-200 dark:border-emerald-500/20" : "border-orange-200 dark:border-orange-500/20"
+                  )}>
                     <span className="text-xs font-black text-gray-700 dark:text-slate-300 uppercase tracking-widest">Balance Due</span>
-                    <span className={clsx("text-xl font-black", total - advancePaid > 0 ? "text-red-500" : "text-gray-400")}>
-                      {fmt(Math.max(0, total - advancePaid))}
+                    <span className={clsx("text-xl font-black", balanceDue > 0 ? "text-red-500" : "text-emerald-500")}>
+                      {balanceDue > 0 ? fmt(balanceDue) : "₹0 — Covered"}
                     </span>
                   </div>
                 </div>
@@ -536,7 +561,7 @@ export default function PurchaseOrdersPage() {
               </button>
               <button
                 onClick={handleCreate}
-                disabled={saving || !vendorId || total <= 0}
+                disabled={saving || !vendorId || total <= 0 || items.some(it => !it.inventoryItemId || it.quantity <= 0 || it.price <= 0)}
                 className="px-8 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 disabled:opacity-50 text-white rounded-xl text-sm font-black shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all border border-orange-400/20"
               >
                 {saving ? "Processing..." : "Confirm Purchase Order"}
@@ -600,36 +625,6 @@ export default function PurchaseOrdersPage() {
         </div>
       )}
 
-      {/* Advance Payment Modal */}
-      {advanceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-[#12141c] rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-black text-gray-900 dark:text-white">Record Advance Payment</h2>
-              <button onClick={() => setAdvanceModal(null)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">
-                <X size={16} className="text-gray-400" />
-              </button>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1.5">Total Advance Paid (₹)</label>
-              <div className="relative">
-                <IndianRupee size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="number"
-                  min={0}
-                  value={advAmt}
-                  onChange={(e) => setAdvAmt(Number(e.target.value))}
-                  className="w-full pl-9 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setAdvanceModal(null)} className="px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Cancel</button>
-              <button onClick={handleRecordAdvance} className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-sm font-bold transition-all">Save</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

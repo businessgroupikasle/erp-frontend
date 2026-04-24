@@ -1,0 +1,296 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ArrowLeft, Package, AlertTriangle, TrendingUp, TrendingDown,
+  RefreshCw, Search, Loader2, BarChart3, ArrowUpRight, ArrowDownRight
+} from "lucide-react";
+import { inventoryApi } from "@/lib/api";
+
+interface InventoryItem {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  currentStock: number;
+  minimumStock: number;
+  unit: string;
+  vendor?: { name: string };
+  updatedAt: string;
+}
+
+const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  RAW_MATERIAL:   { bg: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-100" },
+  SEMI_FINISHED:  { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-100" },
+  FINISHED_GOOD:  { bg: "bg-green-50",  text: "text-green-700",  border: "border-green-100" },
+  PACKAGING:      { bg: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-100" },
+};
+
+export default function InventoryDashboardPage() {
+  const router = useRouter();
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [movements, setMovements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filterCat, setFilterCat] = useState("ALL");
+  const [filterStatus, setFilterStatus] = useState("ALL");
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [invRes, movRes] = await Promise.all([
+        inventoryApi.getInventory(),
+        inventoryApi.getMovements({ take: 20 }),
+      ]);
+      setItems(invRes.data?.items || invRes.data || []);
+      setMovements(movRes.data?.movements || movRes.data || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filtered = items.filter(item => {
+    const matchSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
+      item.sku.toLowerCase().includes(search.toLowerCase());
+    const matchCat = filterCat === "ALL" || item.category === filterCat;
+    const isLow = item.currentStock <= item.minimumStock;
+    const matchStatus =
+      filterStatus === "ALL" ? true :
+      filterStatus === "LOW" ? isLow :
+      filterStatus === "OK" ? !isLow : true;
+    return matchSearch && matchCat && matchStatus;
+  });
+
+  const lowStockCount = items.filter(i => i.currentStock <= i.minimumStock).length;
+  const totalValue = items.reduce((s, i) => s + i.currentStock, 0);
+
+  const formatCurrency = (n: number) =>
+    new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2 }).format(n);
+
+  const stockPercent = (item: InventoryItem) =>
+    Math.min(100, Math.round((item.currentStock / Math.max(item.minimumStock * 2, 1)) * 100));
+
+  return (
+    <div className="min-h-screen bg-[#FAFAF9] p-6 md:p-10">
+      <div className="max-w-6xl mx-auto">
+
+        {/* Header */}
+        <button onClick={() => router.back()} className="flex items-center gap-2 text-[#999] hover:text-[#1A1A1A] text-sm font-medium mb-8">
+          <ArrowLeft size={16} /> Back
+        </button>
+
+        <div className="flex items-start justify-between mb-10">
+          <div>
+            <div className="w-10 h-10 bg-[#7C3AED]/10 rounded-xl flex items-center justify-center mb-3">
+              <BarChart3 className="text-[#7C3AED]" size={20} />
+            </div>
+            <h1 className="text-3xl font-black text-[#1A1A1A] tracking-tight">Inventory Dashboard</h1>
+            <p className="text-sm text-[#666] font-medium mt-1">Real-time stock levels, movements & alerts</p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={fetchData}
+              className="p-3 bg-white border border-[#F0EAF0] rounded-xl text-[#666] hover:bg-slate-50 transition-all"
+            >
+              <RefreshCw size={16} />
+            </button>
+            <button
+              onClick={() => router.push("/purchases/grn")}
+              className="px-5 py-3 bg-[#7C3AED] text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-purple-200 hover:bg-[#6D28D9] transition-all"
+            >
+              <Package size={16} /> Receive Goods (GRN)
+            </button>
+          </div>
+        </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {[
+            { label: "Total SKUs",     value: items.length,                                     icon: Package,       color: "text-[#7C3AED]", bg: "bg-purple-50"  },
+            { label: "Low Stock",      value: lowStockCount,                                    icon: AlertTriangle, color: "text-red-600",    bg: "bg-red-50"     },
+            { label: "Categories",     value: [...new Set(items.map(i => i.category))].length,  icon: BarChart3,     color: "text-blue-600",   bg: "bg-blue-50"    },
+            { label: "Total Units",    value: totalValue.toFixed(0),                            icon: TrendingUp,    color: "text-green-600",  bg: "bg-green-50"   },
+          ].map(kpi => {
+            const Icon = kpi.icon;
+            return (
+              <div key={kpi.label} className="bg-white rounded-2xl p-5 border border-[#F0EAF0] shadow-sm">
+                <div className={`w-10 h-10 ${kpi.bg} rounded-xl flex items-center justify-center mb-3`}>
+                  <Icon className={kpi.color} size={18} />
+                </div>
+                <p className="text-[10px] font-bold text-[#999] uppercase tracking-widest mb-1">{kpi.label}</p>
+                <p className={`text-3xl font-black ${kpi.color}`}>{kpi.value}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Low Stock Alert Banner */}
+        {lowStockCount > 0 && (
+          <div className="flex items-center gap-4 p-4 bg-red-50 border border-red-100 rounded-2xl mb-6">
+            <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
+              <AlertTriangle className="text-red-600" size={18} />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-black text-red-900">{lowStockCount} item{lowStockCount > 1 ? "s" : ""} below minimum stock</p>
+              <p className="text-xs text-red-700 font-medium">Raise a PO or GRN to replenish these items immediately.</p>
+            </div>
+            <button
+              onClick={() => setFilterStatus("LOW")}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-all"
+            >
+              Show Low Stock
+            </button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Items Table */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Filters */}
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999]" size={14} />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search items..."
+                  className="w-full pl-9 pr-4 py-2.5 bg-white border border-[#F0EAF0] rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED]"
+                />
+              </div>
+              <select
+                value={filterCat}
+                onChange={e => setFilterCat(e.target.value)}
+                className="px-3 py-2.5 bg-white border border-[#F0EAF0] rounded-xl text-xs font-bold text-[#666] focus:outline-none"
+              >
+                <option value="ALL">All Categories</option>
+                <option value="RAW_MATERIAL">Raw Material</option>
+                <option value="SEMI_FINISHED">Semi-Finished</option>
+                <option value="FINISHED_GOOD">Finished Good</option>
+                <option value="PACKAGING">Packaging</option>
+              </select>
+              <select
+                value={filterStatus}
+                onChange={e => setFilterStatus(e.target.value)}
+                className="px-3 py-2.5 bg-white border border-[#F0EAF0] rounded-xl text-xs font-bold text-[#666] focus:outline-none"
+              >
+                <option value="ALL">All Stock</option>
+                <option value="LOW">Low Stock</option>
+                <option value="OK">In Stock</option>
+              </select>
+            </div>
+
+            {/* Items */}
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="animate-spin text-[#7C3AED]" size={32} />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filtered.map(item => {
+                  const isLow = item.currentStock <= item.minimumStock;
+                  const pct = stockPercent(item);
+                  const catStyle = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.RAW_MATERIAL;
+                  return (
+                    <div
+                      key={item.id}
+                      className={`bg-white rounded-2xl p-5 border transition-all hover:shadow-md ${
+                        isLow ? "border-red-100 shadow-red-50/50" : "border-[#F0EAF0]"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-black text-[#1A1A1A] text-sm">{item.name}</p>
+                            {isLow && (
+                              <span className="text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
+                                LOW
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-[#999] font-bold">{item.sku}</span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${catStyle.bg} ${catStyle.text}`}>
+                              {item.category.replace("_", " ")}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-xl font-black ${isLow ? "text-red-600" : "text-[#1A1A1A]"}`}>
+                            {item.currentStock}
+                          </p>
+                          <p className="text-[11px] text-[#999] font-medium">{item.unit}</p>
+                        </div>
+                      </div>
+                      {/* Stock bar */}
+                      <div className="space-y-1">
+                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              pct < 30 ? "bg-red-500" : pct < 60 ? "bg-amber-400" : "bg-green-500"
+                            }`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-[#999] font-medium">
+                          <span>Min: {item.minimumStock} {item.unit}</span>
+                          <span>{pct}% stocked</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {filtered.length === 0 && !loading && (
+                  <div className="text-center py-16 text-[#999]">
+                    <Package size={40} className="mx-auto mb-3 opacity-30" />
+                    <p className="font-bold">No items match your filters</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Recent Movements */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-black text-[#1A1A1A] uppercase tracking-tight">Recent Movements</h3>
+            <div className="space-y-3">
+              {movements.slice(0, 15).map((m: any) => {
+                const isIn = ["PURCHASE_IN", "PRODUCTION_IN", "TRANSFER_IN", "ADJUSTMENT"].includes(m.movementType);
+                return (
+                  <div key={m.id} className="bg-white rounded-xl p-4 border border-[#F0EAF0] flex items-start gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      isIn ? "bg-green-50" : "bg-red-50"
+                    }`}>
+                      {isIn
+                        ? <ArrowUpRight className="text-green-600" size={14} />
+                        : <ArrowDownRight className="text-red-600" size={14} />
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-[#1A1A1A] truncate">{m.item?.name || "—"}</p>
+                      <p className="text-[10px] text-[#999] font-medium">
+                        {m.movementType.replace(/_/g, " ")}
+                      </p>
+                    </div>
+                    <span className={`text-sm font-black ${isIn ? "text-green-600" : "text-red-600"}`}>
+                      {isIn ? "+" : "-"}{m.quantity}
+                    </span>
+                  </div>
+                );
+              })}
+              {movements.length === 0 && !loading && (
+                <p className="text-center text-[#999] text-xs font-medium py-8">No recent movements</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
