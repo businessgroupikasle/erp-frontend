@@ -71,21 +71,9 @@ function Skeleton({ className }: { className?: string }) {
 }
 
 export default function Dashboard() {
-  const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month'>('today');
   const [data, setData] = useState<any>(null);
-  const [branches, setBranches] = useState<any[]>([]);
-  const [selectedBranch, setSelectedBranch] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchBranches = useCallback(async () => {
-    try {
-      const res = await franchiseApi.getAll();
-      setBranches(res.data);
-    } catch (err) {
-      console.error("Failed to load branches", err);
-    }
-  }, []);
 
   const fetchDashboard = useCallback(() => {
     setLoading(true);
@@ -95,27 +83,16 @@ export default function Dashboard() {
     const periodStart = new Date();
     periodStart.setHours(0,0,0,0);
 
-    if (dateFilter === 'week') {
-      periodStart.setDate(periodEnd.getDate() - 7);
-    } else if (dateFilter === 'month') {
-      periodStart.setMonth(periodEnd.getMonth() - 1);
-    }
-
     dashboardApi.getSummary({ 
       startDate: periodStart.toISOString(), 
       endDate: periodEnd.toISOString(),
-      franchiseId: selectedBranch === "all" ? undefined : selectedBranch
     })
       .then((res) => {
         setData(res.data);
       })
       .catch((err) => setError(err.response?.data?.error || "Failed to load dashboard"))
       .finally(() => setLoading(false));
-  }, [dateFilter, selectedBranch]);
-
-  useEffect(() => {
-    fetchBranches();
-  }, [fetchBranches]);
+  }, []);
 
   useEffect(() => {
     fetchDashboard();
@@ -146,58 +123,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-full bg-[#F8FAFC] dark:bg-[#090a0f] p-4 md:p-6 space-y-6">
       
-      {/* ── 🥇 TOP CONTROL BAR ────────────────────────── */}
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-[#12141c] p-4 rounded-2xl border border-slate-200/60 dark:border-white/5 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="relative group">
-            <select 
-              value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
-              className="appearance-none bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 pr-10 text-sm font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-500/20 transition-all cursor-pointer"
-            >
-              <option value="all">🌐 All Operations</option>
-              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-          </div>
 
-          <div className="h-8 w-px bg-slate-200 dark:bg-white/10 hidden sm:block" />
-
-          <div className="flex items-center bg-slate-50 dark:bg-white/5 rounded-xl p-1 border border-slate-200 dark:border-white/10">
-            {(['today', 'week', 'month'] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setDateFilter(f)}
-                className={clsx(
-                  "px-4 py-1.5 text-xs font-bold rounded-lg transition-all capitalize",
-                  dateFilter === f 
-                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm" 
-                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                )}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="hidden md:block text-right">
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Global Status</p>
-            <div className="text-xs font-bold text-emerald-500 flex items-center justify-end gap-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Operational
-            </div>
-          </div>
-          <button className="relative w-10 h-10 flex items-center justify-center bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 transition-all">
-            <Bell size={20} />
-            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-indigo-500 rounded-full border-2 border-white dark:border-[#12141c]" />
-          </button>
-          <div className="w-10 h-10 rounded-xl bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 font-black text-xs shadow-lg cursor-pointer hover:scale-105 transition-transform uppercase">
-            SA
-          </div>
-        </div>
-      </header>
 
       {/* ── 🥈 MODULE OVERVIEW ───────────────────────── */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -348,7 +274,7 @@ export default function Dashboard() {
                 { 
                   label: 'Franchise DB', 
                   icon: LayoutDashboard, 
-                  href: selectedBranch === 'all' ? '/franchise/dashboard' : `/franchise/dashboard?id=${selectedBranch}`, 
+                  href: '/franchise/dashboard', 
                   color: 'bg-rose-500' 
                 },
                 { label: 'New Lead', icon: Users, href: '/crm/leads', color: 'bg-indigo-500' },

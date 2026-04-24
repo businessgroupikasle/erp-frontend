@@ -19,10 +19,10 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { clsx } from "clsx";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useSidebar } from "@/context/SidebarContext";
-import { menuSections } from "@/config/navigation";
+import { menuSections, menuItems } from "@/config/navigation";
 import Link from "next/link";
 
 interface Notification {
@@ -40,12 +40,6 @@ const MOCK_NOTIFICATIONS: Notification[] = [
   { id: "3", type: "warning",  title: "Kitchen Delay",      message: "Order #47 waiting 18 mins in queue.",         time: "20m ago",   read: false },
   { id: "4", type: "success",  title: "Daily Target Hit",   message: "Today's sales crossed ₹25,000 🎉",            time: "1h ago",    read: true  },
   { id: "5", type: "info",     title: "Recipe Updated",     message: "Biryani recipe modified by Chef Ramesh.",     time: "3h ago",    read: true  },
-];
-
-const SEARCH_SUGGESTIONS = [
-  "Billing & POS", "Kitchen Display", "Menu Management", "Recipe Management",
-  "Raw Materials", "Stock Alerts", "Customer Database", "Sales Reports",
-  "Waste & Loss", "Production Batches", "GST Reports", "Business Settings",
 ];
 
 function NIcon({ type }: { type: Notification["type"] }) {
@@ -81,19 +75,37 @@ function HBtn({
 
 function SearchModal({ onClose }: { onClose: () => void }) {
   const [q, setQ] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => { inputRef.current?.focus(); }, []);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  const router = useRouter();
 
   const filtered = q
-    ? SEARCH_SUGGESTIONS.filter((s) => s.toLowerCase().includes(q.toLowerCase()))
-    : SEARCH_SUGGESTIONS;
+    ? menuItems.filter((s) => s.label.toLowerCase().includes(q.toLowerCase()))
+    : menuItems;
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => { setSelectedIndex(0); }, [q]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { 
+      if (e.key === "Escape") onClose(); 
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex(prev => (prev < filtered.length - 1 ? prev + 1 : prev));
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex(prev => (prev > 0 ? prev - 1 : 0));
+      }
+      if (e.key === "Enter" && filtered[selectedIndex]) {
+        e.preventDefault();
+        router.push(filtered[selectedIndex].href);
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose, filtered, selectedIndex, router]);
 
   return (
     <div className="fixed inset-0 z-[200] flex items-start justify-center pt-20 bg-black/30 backdrop-blur-sm" onClick={onClose}>
@@ -108,7 +120,7 @@ function SearchModal({ onClose }: { onClose: () => void }) {
             type="text"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search POS, recipes, inventory, reports…"
+            placeholder="Search menus, pos, orders, settings…"
             className="flex-1 text-sm text-gray-900 dark:text-white bg-transparent outline-none placeholder:text-gray-400"
           />
           {q && (
@@ -122,16 +134,28 @@ function SearchModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="max-h-64 overflow-y-auto hide-scrollbar py-1">
           {filtered.length > 0 ? (
-            filtered.map((s) => (
-              <button
-                key={s}
-                onClick={onClose}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-slate-300 hover:bg-orange-50 dark:hover:bg-orange-900/10 hover:text-orange-700 dark:hover:text-orange-300 transition-colors text-left"
-              >
-                <Search size={13} className="text-gray-300 dark:text-slate-600 shrink-0" />
-                {s}
-              </button>
-            ))
+            filtered.map((item, index) => {
+              const Icon = item.icon || Search;
+              return (
+                <button
+                  key={item.label + item.href}
+                  onClick={() => {
+                    router.push(item.href);
+                    onClose();
+                  }}
+                  onMouseEnter={() => setSelectedIndex(index)}
+                  className={clsx(
+                    "w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left",
+                    index === selectedIndex 
+                      ? "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300" 
+                      : "text-gray-700 dark:text-slate-300 hover:bg-orange-50/50 dark:hover:bg-white/5"
+                  )}
+                >
+                  <Icon size={13} className={clsx("shrink-0", index === selectedIndex ? "text-orange-400 dark:text-orange-300" : "text-gray-300 dark:text-slate-600")} />
+                  {item.label}
+                </button>
+              );
+            })
           ) : (
             <p className="px-4 py-6 text-center text-sm text-gray-400 dark:text-slate-500">
               No results for &quot;{q}&quot;
@@ -165,6 +189,8 @@ export default function RefrensHeader() {
   const markAllRead = () => setNotifications((p) => p.map((n) => ({ ...n, read: true })));
   const markRead = (id: string) =>
     setNotifications((p) => p.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  const removeNotification = (id: string) =>
+    setNotifications((p) => p.filter((n) => n.id !== id));
 
   const getPageTitle = () => {
     for (const section of menuSections) {
@@ -192,6 +218,17 @@ export default function RefrensHeader() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <>
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
@@ -211,16 +248,17 @@ export default function RefrensHeader() {
           </div>
         )}
 
-        {/* ── Operation Node ──────────────────────────── */}
+        {/* ── Franchise Dashboard Link ──────────────────── */}
         <div className="hidden md:flex ml-4">
-          <div className="flex items-center gap-2 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl px-3 py-1.5 cursor-pointer hover:border-slate-900/30 transition-all group">
-            <Store size={14} className="text-gray-400 group-hover:text-slate-900" />
-            <div className="flex flex-col">
-              <span className="text-[10px] text-gray-400 font-bold uppercase leading-none">NODE</span>
-              <span className="text-[12px] font-bold text-gray-700 dark:text-white leading-tight">Master Control</span>
-            </div>
-            <ChevronDown size={12} className="text-gray-400 ml-1" />
-          </div>
+          <Link 
+            href="/franchise/dashboard"
+            className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-500/20 rounded-xl px-3 py-1.5 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-all group shadow-sm"
+          >
+            <Store size={14} className="text-orange-500 group-hover:scale-110 transition-transform" />
+            <span className="text-[12px] font-black text-orange-700 dark:text-orange-300 tracking-wide uppercase">
+              Franchise Dashboard
+            </span>
+          </Link>
         </div>
 
         <div className="flex-1" />
@@ -262,11 +300,11 @@ export default function RefrensHeader() {
                 </div>
                 <div className="max-h-72 overflow-y-auto hide-scrollbar divide-y divide-slate-50 dark:divide-white/5">
                   {notifications.map((n) => (
-                    <button
+                    <div
                       key={n.id}
                       onClick={() => markRead(n.id)}
                       className={clsx(
-                        "w-full flex items-start gap-4 px-4 py-4 text-left hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors",
+                        "group w-full flex items-start gap-4 px-4 py-4 text-left cursor-pointer hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors",
                         !n.read && "bg-slate-50/40 dark:bg-indigo-900/5"
                       )}
                     >
@@ -279,8 +317,21 @@ export default function RefrensHeader() {
                         <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-1 italic leading-snug">{n.message}</p>
                         <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2 font-black uppercase tracking-tighter">{n.time}</p>
                       </div>
-                    </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); removeNotification(n.id); }}
+                        className="p-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+                        title="Dismiss"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   ))}
+                  {notifications.length === 0 && (
+                    <div className="px-4 py-8 text-center">
+                      <Bell size={24} className="mx-auto text-gray-300 dark:text-white/10 mb-2" />
+                      <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest">No Notifications</p>
+                    </div>
+                  )}
                 </div>
                 <div className="px-4 py-2.5 border-t border-slate-50 dark:border-white/5">
                   <a href="/alerts" className="w-full text-[10px] text-indigo-500 font-black uppercase hover:underline text-center block tracking-widest">
