@@ -54,6 +54,8 @@ export default function FranchisePage() {
   const [showAddUser, setShowAddUser] = useState(false);
   const [userForm, setUserForm] = useState({ fullName: "", email: "", password: "", roleId: "FRANCHISEE" });
   const [roles, setRoles] = useState<any[]>([]);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [showUserPassword, setShowUserPassword] = useState(false);
 
   const fetchFranchises = useCallback(async () => {
     setLoading(true);
@@ -111,13 +113,16 @@ export default function FranchisePage() {
     setSaving(true);
     try {
       if (editing) {
-        // Sanitize payload for update
         const { adminUser, ...updateData } = form;
         await franchiseApi.update(editing.id, updateData);
       } else {
-        // Prepare payload with optional admin user
         const payload = { ...form };
-        if (!form.adminUser.email) delete (payload as any).adminUser;
+        if (!form.adminUser.email) {
+          delete (payload as any).adminUser;
+        } else {
+          const email = form.adminUser.email;
+          payload.adminUser.email = email.includes('@') ? email : `${email}@gmail.com`;
+        }
         await franchiseApi.create(payload);
       }
       setShowForm(false);
@@ -158,23 +163,33 @@ export default function FranchisePage() {
   };
 
   const handleCreateUser = async () => {
-    if (!userForm.fullName || !userForm.email || !userForm.password) return;
+    if (!userForm.fullName || !userForm.email || (!editingUser && !userForm.password)) return;
     setSaving(true);
     try {
-      await userGovernanceApi.create({ ...userForm, franchiseId: editing.id });
+      const emailWithDomain = userForm.email.includes('@') ? userForm.email : `${userForm.email}@gmail.com`;
+      const payload: any = { ...userForm, email: emailWithDomain };
+      if (!payload.password) delete payload.password;
+
+      if (editingUser) {
+        await userGovernanceApi.update(editingUser.id, payload);
+      } else {
+        await userGovernanceApi.create({ ...payload, franchiseId: editing.id });
+      }
+
       setShowAddUser(false);
+      setEditingUser(null);
       setUserForm({ fullName: "", email: "", password: "", roleId: "FRANCHISEE" });
       fetchUsers(editing.id);
       setNotification({
         type: 'success',
-        title: 'Admin Added',
-        message: `Account for ${userForm.fullName} has been created.`
+        title: editingUser ? 'User Updated' : 'Admin Added',
+        message: `Account for ${userForm.fullName} has been ${editingUser ? 'updated' : 'created'}.`
       });
     } catch (e: any) {
       setNotification({
         type: 'error',
-        title: 'Creation Failed',
-        message: e.response?.data?.error || "Failed to create user"
+        title: 'Operation Failed',
+        message: e.response?.data?.error || "Failed to process user request"
       });
     } finally {
       setSaving(false);
@@ -309,64 +324,66 @@ export default function FranchisePage() {
               <div 
                 key={f.id} 
                 className={clsx(
-                  "group rounded-[2rem] border p-6 transition-all duration-500 relative overflow-hidden",
+                  "group rounded-[2.5rem] border p-7 transition-all duration-500 relative overflow-hidden",
                   isHQ 
-                    ? "bg-gradient-to-br from-orange-50/50 to-white border-orange-500/30 shadow-2xl shadow-orange-500/20" 
-                    : "bg-white border-slate-100 hover:shadow-2xl hover:shadow-orange-500/10"
+                    ? "bg-gradient-to-br from-orange-50/80 via-white to-white border-orange-200/50 shadow-2xl shadow-orange-500/10" 
+                    : "bg-white/70 backdrop-blur-md border-slate-100 hover:shadow-2xl hover:shadow-slate-200/50"
                 )}
               >
-                {/* Visual Flair */}
                 <div className={clsx(
-                  "absolute top-0 right-0 w-32 h-32 rounded-bl-[5rem] transition-all duration-700",
-                  isHQ 
-                    ? "bg-orange-500/10" 
-                    : "bg-orange-500/5 opacity-0 group-hover:opacity-100"
+                  "absolute top-[-10%] right-[-10%] w-48 h-48 rounded-full blur-3xl opacity-20 transition-all duration-700",
+                  isHQ ? "bg-orange-400 group-hover:scale-125" : "bg-slate-200 group-hover:bg-orange-200"
+                )} />
+                <div className={clsx(
+                  "absolute bottom-[-10%] left-[-10%] w-32 h-32 rounded-full blur-2xl opacity-10 transition-all duration-700",
+                  isHQ ? "bg-amber-400" : "bg-slate-100"
                 )} />
                 
-                {/* Header Actions */}
-                <div className="flex items-start justify-between relative z-10 mb-6">
+                <div className="flex items-start justify-between relative z-10 mb-8">
                   <div className={clsx(
-                    "w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110",
-                    "bg-gradient-to-br from-[#FF6B00] to-[#FF8C33] shadow-orange-500/20"
+                    "w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-3",
+                    "bg-gradient-to-br from-[#FF6B00] to-[#FF8C33] shadow-orange-500/30"
                   )}>
-                    {isHQ ? <Terminal size={24} className="text-white" /> : <Building2 size={24} className="text-white" />}
+                    {isHQ ? <Terminal size={28} className="text-white" /> : <Building2 size={28} className="text-white" />}
                   </div>
                   
-                  <div className="flex gap-1.5 p-1 bg-slate-50 border border-slate-200 rounded-2xl backdrop-blur-sm">
-                    <button 
-                      onClick={() => handleToggleStatus(f)}
-                      className={clsx(
-                        "p-2 rounded-xl transition-all active:scale-90",
-                        isActive 
-                          ? "text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20" 
-                          : "text-red-500 bg-red-500/10 hover:bg-red-500/20"
-                      )}
-                      title={isActive ? "Deactivate Branch" : "Activate Branch"}
-                    >
-                      <Power size={14} />
-                    </button>
+                  <div className="flex gap-2 p-1.5 bg-white/40 backdrop-blur-xl border border-white/50 rounded-2xl shadow-sm">
+                    {!isHQ && (
+                      <button 
+                        onClick={() => handleToggleStatus(f)}
+                        className={clsx(
+                          "p-2.5 rounded-xl transition-all active:scale-90",
+                          isActive 
+                            ? "text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20" 
+                            : "text-red-500 bg-red-500/10 hover:bg-red-500/20"
+                        )}
+                        title={isActive ? "Deactivate Branch" : "Activate Branch"}
+                      >
+                        <Power size={16} />
+                      </button>
+                    )}
                     <Link 
                       href={`/franchise/dashboard?id=${f.id}`}
-                      className="p-2 rounded-xl text-slate-400 hover:text-[#FF6B00] transition-all active:scale-90"
+                      className="p-2.5 rounded-xl text-slate-400 hover:text-[#FF6B00] transition-all active:scale-90"
                       title="Monitor Activity"
                     >
-                      <Eye size={16} />
+                      <Eye size={18} />
                     </Link>
                     <button 
                       onClick={() => openEdit(f)} 
-                      className="p-2 rounded-xl text-slate-400 hover:text-[#FF6B00] transition-all active:scale-90"
+                      className="p-2.5 rounded-xl text-slate-400 hover:text-[#FF6B00] transition-all active:scale-90"
                       title="Settings"
                     >
-                      <Edit2 size={16} />
+                      <Edit2 size={18} />
                     </button>
                     {(currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN") && !isHQ && (
                       <button 
                         onClick={() => setConfirmDelete(f)} 
                         disabled={f.status === 'ACTIVE' || (f._count?.inventory || 0) > 0}
                         className={clsx(
-                          "p-2 rounded-xl transition-all active:scale-90",
+                          "p-2.5 rounded-xl transition-all active:scale-90",
                           f.status === 'ACTIVE' || (f._count?.inventory || 0) > 0
-                            ? "text-slate-300 cursor-not-allowed"
+                            ? "text-slate-200 cursor-not-allowed"
                             : "text-slate-400 hover:text-red-500 hover:bg-red-50"
                         )}
                         title={
@@ -375,69 +392,65 @@ export default function FranchisePage() {
                           "Delete Franchise"
                         }
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={18} />
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* Content */}
-                <div className="space-y-4 relative z-10">
+                <div className="space-y-6 relative z-10">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className={clsx(
-                        "font-black text-lg tracking-tight transition-colors text-slate-900 group-hover:text-[#FF6B00]"
-                      )}>
-                        {f.name}
-                      </h3>
+                    <div className="flex items-center gap-3 mb-2">
+                       <h3 className="font-black text-xl tracking-tight transition-colors text-slate-900 group-hover:text-[#FF6B00]">{f.name}</h3>
                       {isHQ && (
-                        <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 text-[8px] font-black uppercase tracking-widest border border-orange-500/20">
+                        <span className="px-3 py-1 rounded-full bg-orange-500 text-white text-[9px] font-black uppercase tracking-[0.2em] shadow-lg shadow-orange-500/20 animate-pulse">
                           Master
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 text-slate-400 font-bold text-[10px] uppercase tracking-wider">
-                      <MapPin size={12} className="text-orange-500" /> {f.location}
+                    <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest pl-0.5">
+                      <div className="p-1 bg-orange-500/10 rounded-md">
+                        <MapPin size={14} className="text-orange-500" />
+                      </div>
+                      {f.location}
                     </div>
                   </div>
 
-                  <div className={clsx(
-                    "p-4 rounded-2xl space-y-2.5 transition-all duration-500 border border-slate-100 bg-slate-50/50"
-                  )}>
-                    <div className="flex items-center gap-3 text-sm">
-                      <div className="w-6 h-6 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                        <User size={12} className="text-orange-500" />
+                  <div className="p-5 rounded-[2rem] space-y-3 transition-all duration-500 border border-slate-100 bg-white shadow-sm group-hover:shadow-md">
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="w-8 h-8 rounded-xl bg-orange-500/5 flex items-center justify-center">
+                        <User size={14} className="text-orange-500/70" />
                       </div>
-                      <span className="font-bold text-slate-700">{f.ownerName}</span>
+                      <span className="font-bold text-slate-800 text-base">{f.ownerName}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <div className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                        <Phone size={12} className="text-blue-500" />
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="w-8 h-8 rounded-xl bg-blue-500/5 flex items-center justify-center">
+                        <Phone size={14} className="text-blue-500/70" />
                       </div>
-                      <span className="text-slate-500 font-medium">{f.contactNum}</span>
+                      <span className="text-slate-500 font-bold tracking-tight">{f.contactNum}</span>
                     </div>
                   </div>
 
-                  <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+                  <div className="pt-6 flex items-center justify-between border-t border-slate-100/50">
                     <span className={clsx(
-                      "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] shadow-sm transform transition-transform group-hover:scale-105",
+                      "px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-sm transform transition-transform group-hover:scale-105",
                       STATUS_STYLES[f.status ?? "ACTIVE"] ?? STATUS_STYLES.ACTIVE
                     )}>
                       {f.status ?? "ACTIVE"}
                     </span>
                     
-                    <div className="flex items-center gap-2">
-                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Operators</span>
-                       <div className="flex items-center -space-x-2">
+                    <div className="flex items-center gap-3">
+                       <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Team</span>
+                       <div className="flex items-center -space-x-2.5">
                         {[...Array(Math.min(3, f._count?.users || 0))].map((_, i) => (
-                          <div key={i} className="w-7 h-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center">
-                             <User size={10} className="text-slate-500" />
+                          <div key={i} className="w-8 h-8 rounded-full bg-slate-50 border-2 border-white flex items-center justify-center shadow-sm">
+                             <User size={12} className="text-slate-400" />
                           </div>
                         ))}
                         {f._count?.users > 0 && (
                           <div className={clsx(
-                            "w-7 h-7 rounded-full border-2 flex items-center justify-center text-[8px] font-black",
-                            isHQ ? "bg-orange-500 text-white border-white" : "bg-slate-200 border-white text-slate-600"
+                            "w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-black transition-all group-hover:scale-110",
+                            isHQ ? "bg-orange-500 text-white border-white shadow-lg shadow-orange-500/40" : "bg-slate-900 border-white text-white"
                           )}>
                             {f._count?.users}
                           </div>
@@ -466,7 +479,14 @@ export default function FranchisePage() {
                   {editing ? "Update details and manage branch administrators." : "Register a new outlet and its primary admin account."}
                 </p>
               </div>
-              <button onClick={() => setShowForm(false)} className="p-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 rounded-2xl transition-all">
+              <button 
+                onClick={() => {
+                  setShowForm(false);
+                  setShowAddUser(false);
+                  setEditingUser(null);
+                }} 
+                className="p-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 rounded-2xl transition-all"
+              >
                 <X size={20} className="text-slate-400" />
               </button>
             </div>
@@ -501,8 +521,8 @@ export default function FranchisePage() {
               )}
 
               {activeTab === 'info' ? (
-                <div className="space-y-6">
-                    <div className="col-span-2">
+                <div className="space-y-6 animate-in fade-in duration-300">
+                    <div>
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Franchise Name</label>
                       <div className="relative group">
                         <Building2 size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
@@ -530,123 +550,140 @@ export default function FranchisePage() {
                         />
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Status</label>
-                      <div className="relative group">
-                        <RefreshCw size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors pointer-events-none" />
-                        <select 
-                          value={form.status}
-                          onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
-                          className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all font-bold appearance-none text-slate-900 dark:text-white"
-                        >
-                          <option value="ACTIVE">Active</option>
-                          <option value="PENDING">Planned</option>
-                          <option value="INACTIVE">Deactivated</option>
-                        </select>
+                    {(editing?.name !== "Kiddos Food Headquarters" && editing?.id !== 'hq-001') && (
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Status</label>
+                        <div className="relative group">
+                          <RefreshCw size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors pointer-events-none" />
+                          <select 
+                            value={form.status}
+                            onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
+                            className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all font-bold appearance-none text-slate-900 dark:text-white"
+                          >
+                            <option value="ACTIVE">Active</option>
+                            <option value="PENDING">Planned</option>
+                            <option value="INACTIVE">Deactivated</option>
+                          </select>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Owner Name</label>
-                      <div className="relative group">
-                        <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
-                        <input 
-                          value={form.ownerName}
-                          onChange={(e) => {
-                            if (e.target.value === "" || /^[a-zA-Z\s]*$/.test(e.target.value)) {
-                              setForm(f => ({ ...f, ownerName: e.target.value }));
-                            }
-                          }}
-                          placeholder="e.g. Aryan Khan"
-                          className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all font-bold" 
-                        />
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Owner Name</label>
+                        <div className="relative group">
+                          <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                          <input 
+                            value={form.ownerName}
+                            onChange={(e) => {
+                              if (e.target.value === "" || /^[a-zA-Z\s]*$/.test(e.target.value)) {
+                                setForm(f => ({ ...f, ownerName: e.target.value }));
+                              }
+                            }}
+                            placeholder="e.g. Aryan Khan"
+                            className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all font-bold" 
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Phone Number</label>
-                      <div className="relative group">
-                        <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
-                        <input 
-                          value={form.contactNum}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, "");
-                            if (val.length <= 10) {
-                              setForm(f => ({ ...f, contactNum: val }));
-                            }
-                          }}
-                          placeholder="10-digit mobile number"
-                          maxLength={10}
-                          className={clsx(
-                            "w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-white/5 border rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all font-bold",
-                            form.contactNum && form.contactNum.length !== 10 && form.contactNum.length > 0
-                              ? "border-amber-500 text-amber-600 focus:border-amber-500" 
-                              : "border-slate-200 dark:border-white/10 focus:border-[#FF6B00]"
-                          )}
-                        />
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Phone Number</label>
+                        <div className="relative group">
+                          <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                          <input 
+                            value={form.contactNum}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, "");
+                              if (val.length <= 10) {
+                                setForm(f => ({ ...f, contactNum: val }));
+                              }
+                            }}
+                            placeholder="10-digit mobile number"
+                            maxLength={10}
+                            className={clsx(
+                              "w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-white/5 border rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all font-bold",
+                              form.contactNum && form.contactNum.length !== 10 && form.contactNum.length > 0
+                                ? "border-amber-500 text-amber-600 focus:border-amber-500" 
+                                : "border-slate-200 dark:border-white/10 focus:border-[#FF6B00]"
+                            )}
+                          />
+                        </div>
                       </div>
                     </div>
 
-                  {!editing && (
-                    <div className="mt-8 p-6 bg-slate-50 dark:bg-white/5 rounded-3xl border border-slate-200 dark:border-white/10">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2 bg-orange-500 rounded-lg shadow-lg shadow-orange-500/40">
-                          <Shield size={16} className="text-white" />
-                        </div>
-                        <h4 className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wider">Primary Admin Account</h4>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Admin Full Name</label>
-                          <div className="relative group">
-                            <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
-                            <input 
-                              value={form.adminUser.fullName}
-                              onChange={(e) => {
-                                if (e.target.value === "" || /^[a-zA-Z\s]*$/.test(e.target.value)) {
-                                  setForm(f => ({ ...f, adminUser: { ...f.adminUser, fullName: e.target.value } }));
-                                }
-                              }}
-                              placeholder="e.g. Branch Supervisor"
-                              className="w-full pl-10 pr-5 py-3.5 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
-                            />
+                    {!editing && (
+                      <div className="mt-8 p-6 bg-[#FF6B00]/5 rounded-[2rem] border border-[#FF6B00]/20">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="p-2 bg-orange-500 rounded-lg shadow-lg shadow-orange-500/30">
+                            <Shield size={16} className="text-white" />
                           </div>
+                          <h4 className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wider">Primary Admin Account</h4>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        
+                        <div className="space-y-4">
                           <div>
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Login Email</label>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Admin Full Name</label>
                             <div className="relative group">
-                              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                              <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
                               <input 
-                                value={form.adminUser.email}
-                                onChange={(e) => setForm(f => ({ ...f, adminUser: { ...f.adminUser, email: e.target.value } }))}
-                                placeholder="admin@branch.com"
+                                value={form.adminUser.fullName}
+                                onChange={(e) => {
+                                  if (e.target.value === "" || /^[a-zA-Z\s]*$/.test(e.target.value)) {
+                                    setForm(f => ({ ...f, adminUser: { ...f.adminUser, fullName: e.target.value } }));
+                                  }
+                                }}
+                                placeholder="e.g. Branch Supervisor"
                                 className="w-full pl-10 pr-5 py-3.5 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
                               />
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Login Password</label>
-                            <div className="relative group">
-                              <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
-                              <input 
-                                type={showPassword ? "text" : "password"}
-                                value={form.adminUser.password}
-                                onChange={(e) => setForm(f => ({ ...f, adminUser: { ...f.adminUser, password: e.target.value } }))}
-                                placeholder="••••••••"
-                                className="w-full pl-10 pr-12 py-3.5 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
-                              />
-                              <button 
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                              >
-                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                              </button>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Login Email</label>
+                              <div className="relative group flex">
+                                <div className="relative grow">
+                                  <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                                  <input 
+                                    value={form.adminUser.email}
+                                    onChange={(e) => {
+                                      const val = e.target.value.replace(/\s/g, "");
+                                      setForm(f => ({ ...f, adminUser: { ...f.adminUser, email: val } }));
+                                    }}
+                                    placeholder="admin"
+                                    className={clsx(
+                                      "w-full pl-10 pr-4 py-3.5 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 focus:outline-none focus:border-[#FF6B00] font-bold text-sm",
+                                      form.adminUser.email.includes('@') ? "rounded-xl" : "rounded-l-xl"
+                                    )}
+                                  />
+                                </div>
+                                {!form.adminUser.email.includes('@') && (
+                                  <div className="flex items-center px-4 bg-slate-100 dark:bg-white/5 border border-l-0 border-slate-200 dark:border-white/5 rounded-r-xl text-slate-400 font-bold text-xs">
+                                    @gmail.com
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Login Password</label>
+                              <div className="relative group">
+                                <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                                <input 
+                                  type={showPassword ? "text" : "password"}
+                                  value={form.adminUser.password}
+                                  onChange={(e) => setForm(f => ({ ...f, adminUser: { ...f.adminUser, password: e.target.value } }))}
+                                  placeholder="••••••••"
+                                  className="w-full pl-10 pr-12 py-3.5 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
+                                />
+                                <button 
+                                  onClick={() => setShowPassword(!showPassword)}
+                                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                                >
+                                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               ) : (
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
@@ -655,21 +692,29 @@ export default function FranchisePage() {
                     {!showAddUser && (
                       <button 
                         onClick={() => setShowAddUser(true)}
-                        className="flex items-center gap-1.5 text-xs font-black text-[#FF6B00] hover:underline"
+                        className="flex items-center gap-1.5 text-xs font-black text-[#FF6B00] hover:underline transition-all"
                       >
-                        <Plus size={14} /> New Operator
+                        <Plus size={14} /> Register New Operator
                       </button>
                     )}
                   </div>
 
                   {showAddUser ? (
-                    <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-3xl border border-orange-500/20 space-y-4 animate-in zoom-in-95 duration-300">
+                    <div className="p-6 bg-orange-500/5 rounded-3xl border border-orange-500/20 space-y-4 animate-in zoom-in-95 duration-300">
                       <div className="flex justify-between items-center mb-2">
-                         <h5 className="text-xs font-black text-slate-900 dark:text-white uppercase">Register New Personnel</h5>
-                         <button onClick={() => setShowAddUser(false)} className="text-slate-400 p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg"><X size={14} /></button>
+                         <h5 className="text-xs font-black text-slate-900 dark:text-white uppercase">{editingUser ? 'Update Personnel' : 'New Personnel Credentials'}</h5>
+                         <button 
+                            onClick={() => { 
+                              setShowAddUser(false); 
+                              setEditingUser(null); 
+                            }} 
+                            className="text-slate-400 p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="col-span-1 md:col-span-2">
                           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Full Name</label>
                           <div className="relative group">
                             <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
@@ -687,14 +732,27 @@ export default function FranchisePage() {
                         </div>
                         <div>
                           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Email</label>
-                          <div className="relative group">
-                            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
-                            <input 
-                              value={userForm.email}
-                              onChange={(e) => setUserForm(u => ({ ...u, email: e.target.value }))}
-                              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
-                              placeholder="david@branch.com"
-                            />
+                          <div className="relative group flex">
+                            <div className="relative grow">
+                              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+                              <input 
+                                value={userForm.email}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/\s/g, "");
+                                  setUserForm(u => ({ ...u, email: val }));
+                                }}
+                                className={clsx(
+                                  "w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 focus:outline-none focus:border-[#FF6B00] font-bold text-sm",
+                                  userForm.email.includes('@') ? "rounded-xl" : "rounded-l-xl"
+                                )}
+                                placeholder="name"
+                              />
+                            </div>
+                            {!userForm.email.includes('@') && (
+                              <div className="flex items-center px-4 bg-slate-100 dark:bg-white/5 border border-l-0 border-slate-200 dark:border-white/5 rounded-r-xl text-slate-400 font-bold text-xs font-black">
+                                @gmail.com
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div>
@@ -702,20 +760,26 @@ export default function FranchisePage() {
                           <div className="relative group">
                             <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
                             <input 
-                              type="password"
+                              type={showUserPassword ? "text" : "password"}
                               value={userForm.password}
                               onChange={(e) => setUserForm(u => ({ ...u, password: e.target.value }))}
-                              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
-                              placeholder="••••••••"
+                              className="w-full pl-10 pr-12 py-3 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none focus:border-[#FF6B00] font-bold text-sm" 
+                              placeholder={editingUser ? "Leave blank to keep current" : "••••••••"}
                             />
+                            <button 
+                              onClick={() => setShowUserPassword(!showUserPassword)}
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                              {showUserPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
                           </div>
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-1 md:col-span-2">
                           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Role Type</label>
                           <select 
                             value={userForm.roleId}
                             onChange={(e) => setUserForm(u => ({ ...u, roleId: e.target.value }))}
-                            className="w-full px-4 py-3 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none font-bold text-sm appearance-none"
+                            className="w-full px-4 py-3 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none font-bold text-sm appearance-none cursor-pointer"
                           >
                             {roles.filter(r => ["FRANCHISEE", "MANAGER", "STAFF"].includes(r.name)).map(r => (
                               <option key={r.id} value={r.id || r.name}>{r.name}</option>
@@ -723,40 +787,49 @@ export default function FranchisePage() {
                           </select>
                         </div>
                       </div>
-                      <div className="flex gap-2 justify-end pt-2">
-                        <button onClick={() => setShowAddUser(false)} className="px-4 py-2 text-xs font-black text-slate-400 hover:text-slate-600">Cancel</button>
-                        <button 
-                          onClick={handleCreateUser} 
-                          disabled={saving || !userForm.fullName || !userForm.email || !userForm.password}
-                          className="px-6 py-2 bg-[#FF6B00] text-white rounded-xl text-xs font-black shadow-lg shadow-orange-500/20 active:scale-95 transition-all"
-                        >
-                          {saving ? "Creating..." : "Confirm Registry"}
-                        </button>
-                      </div>
                     </div>
                   ) : loadingUsers ? (
                     <div className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs animate-pulse">Requesting User Registry...</div>
                   ) : selectedFranchiseUsers.length === 0 ? (
-                    <div className="py-20 text-center text-slate-400 flex flex-col items-center">
+                    <div className="py-20 text-center text-slate-400 flex flex-col items-center bg-slate-50 dark:bg-white/5 rounded-[2rem] border border-dashed border-slate-200 dark:border-white/10">
                       <Shield size={48} strokeWidth={1} className="mb-4 opacity-20" />
                       <p className="font-bold">No administrative users found for this branch.</p>
                       <button onClick={() => setShowAddUser(true)} className="mt-4 text-[#FF6B00] font-black text-xs hover:underline uppercase tracking-widest underline-offset-4">Register first user</button>
                     </div>
                   ) : (
-                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                       {selectedFranchiseUsers.map((u) => (
-                        <div key={u.id}>
-                          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-transparent hover:border-orange-500/30 transition-all group">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-[#FF6B00]">
-                                <User size={18} />
+                        <div key={u.id} className="group/user">
+                          <div className={clsx(
+                            "flex items-center justify-between p-4 bg-white dark:bg-[#1A1C24] rounded-2xl border transition-all duration-300",
+                            resettingPassword === u.id ? "border-[#FF6B00] shadow-lg shadow-orange-500/5 scale-[1.02]" : "border-slate-100 dark:border-white/5 hover:border-orange-500/30"
+                          )}>
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-[#FF6B00] transition-colors group-hover/user:bg-orange-500 group-hover/user:text-white">
+                                <User size={20} />
                               </div>
                               <div>
                                 <p className="font-black text-slate-900 dark:text-white text-sm">{u.fullName}</p>
                                 <p className="text-xs text-slate-500 font-medium">{u.email} • <span className="text-[#FF6B00] font-black text-[10px] tracking-widest uppercase">{u.role?.name || "Member"}</span></p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 opacity-40 group-hover/user:opacity-100 transition-opacity">
+                               <button 
+                                  onClick={() => {
+                                    setEditingUser(u);
+                                    setUserForm({
+                                      fullName: u.fullName || "",
+                                      email: u.email || "",
+                                      password: "",
+                                      roleId: u.roleId || (u.role?.id || "FRANCHISEE")
+                                    });
+                                    setShowAddUser(true);
+                                  }}
+                                  className="p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-[#FF6B00] transition-all"
+                                  title="Edit Personnel"
+                                >
+                                  <Edit2 size={16} />
+                                </button>
                                <button 
                                 onClick={() => {
                                   if (resettingPassword === u.id) {
@@ -767,49 +840,58 @@ export default function FranchisePage() {
                                     setNewPassword("");
                                   }
                                 }}
-                                className={clsx("p-2 rounded-xl transition-all shadow-sm", resettingPassword === u.id ? "bg-orange-500 text-white" : "bg-white dark:bg-slate-800 text-slate-400 hover:text-[#FF6B00]")}
-                                title="Reset Password"
+                                className={clsx(
+                                  "p-2.5 rounded-xl transition-all",
+                                  resettingPassword === u.id 
+                                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/40" 
+                                    : "bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-[#FF6B00]"
+                                )}
+                                title="Quick Password Reset"
                               >
-                                <Key size={14} />
+                                <Key size={16} />
                               </button>
-                              {currentUser?.role === "SUPER_ADMIN" && editing?.name !== "Kiddos Food Headquarters" && (
+                              {currentUser?.role === "SUPER_ADMIN" && (editing?.name !== "Kiddos Food Headquarters" && editing?.id !== 'hq-001') && (
                                 <button 
                                   onClick={async () => {
-                                    if (confirm(`Delete user ${u.fullName}?`)) {
+                                    if (confirm(`Permanent deletion for ${u.fullName}? This cannot be undone.`)) {
                                       await userGovernanceApi.delete(u.id);
                                       fetchUsers(editing.id);
                                     }
                                   }}
-                                  className="p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 transition-all shadow-sm"
-                                  title="Delete User"
+                                  className="p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-red-500 transition-all"
+                                  title="Revoke Access"
                                 >
-                                  <Trash2 size={14} />
+                                  <Trash2 size={16} />
                                 </button>
                               )}
                             </div>
                           </div>
                           {resettingPassword === u.id && (
-                            <div className="p-4 bg-orange-50 dark:bg-orange-900/10 rounded-2xl border border-orange-500/20 mt-2 mb-4 animate-in slide-in-from-top-2 duration-200">
-                               <div className="flex gap-2">
-                                 <input 
-                                   type="text"
-                                   value={newPassword}
-                                   onChange={(e) => setNewPassword(e.target.value)}
-                                   placeholder="Enter new password"
-                                   className="flex-1 px-4 py-2 bg-white dark:bg-slate-900 border border-orange-500/30 rounded-xl focus:outline-none text-sm font-bold"
-                                 />
+                            <div className="p-5 bg-orange-500/5 rounded-2xl border border-orange-500/20 mt-3 mb-4 animate-in slide-in-from-top-4 duration-300">
+                               <p className="text-[10px] font-black text-[#FF6B00] uppercase tracking-widest mb-3 ml-1">New Administrative Password</p>
+                               <div className="flex gap-3">
+                                 <div className="relative grow">
+                                   <Key size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#FF6B00]" />
+                                   <input 
+                                     type="text"
+                                     value={newPassword}
+                                     onChange={(e) => setNewPassword(e.target.value)}
+                                     placeholder="Enter new credentials"
+                                     className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#0D0F14] border border-[#FF6B00]/30 rounded-xl focus:outline-none text-sm font-black text-slate-900 dark:text-white"
+                                   />
+                                 </div>
                                  <button 
                                    onClick={() => handlePasswordReset(u.id)}
                                    disabled={!newPassword || saving}
-                                   className="px-4 py-2 bg-orange-500 text-white rounded-xl text-xs font-black hover:bg-orange-600 disabled:opacity-50"
+                                   className="px-6 py-2.5 bg-orange-500 text-white rounded-xl text-xs font-black shadow-lg shadow-orange-500/20 hover:bg-orange-600 disabled:opacity-50 transition-all"
                                  >
-                                   {saving ? '...' : 'Save'}
+                                   {saving ? '...' : 'Update'}
                                  </button>
                                  <button 
                                    onClick={() => setResettingPassword(null)}
-                                   className="px-3 py-2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                                   className="px-4 py-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-black transition-colors"
                                  >
-                                   Cancel
+                                   Dismiss
                                  </button>
                                </div>
                             </div>
@@ -822,20 +904,32 @@ export default function FranchisePage() {
               )}
             </div>
 
-            {/* Modal Footer */}
+            {/* Consistently Branded Modal Footer */}
             <div className="p-8 border-t border-slate-100 dark:border-white/5 flex gap-3 justify-end bg-slate-50 dark:bg-white/5">
               <button 
-                onClick={() => setShowForm(false)} 
-                className="px-6 py-3 rounded-2xl text-sm font-black text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10 transition-all"
+                onClick={() => {
+                  if (showAddUser) {
+                    setShowAddUser(false);
+                    setEditingUser(null);
+                  } else {
+                    setShowForm(false);
+                  }
+                }} 
+                className="px-8 py-4 rounded-2xl text-sm font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10 transition-all active:scale-95"
               >
-                Cancel
+                {showAddUser ? "Back to Registry" : "Cancel"}
               </button>
               <button 
-                onClick={handleSave} 
-                disabled={saving || !form.name || !form.location || (form.contactNum.length !== 10)}
-                className="px-10 py-3 bg-[#FF6B00] hover:bg-[#e66000] disabled:opacity-50 text-white rounded-2xl text-sm font-black shadow-xl shadow-orange-500/20 transition-all active:scale-95"
+                onClick={showAddUser ? handleCreateUser : handleSave} 
+                disabled={
+                  saving || 
+                  (showAddUser 
+                    ? (!userForm.fullName || !userForm.email || (!editingUser && !userForm.password))
+                    : (!form.name || !form.location || (form.contactNum.length !== 10)))
+                }
+                className="px-12 py-4 bg-[#FF6B00] hover:bg-[#e66000] disabled:opacity-50 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-2xl shadow-orange-500/20 transition-all active:scale-95"
               >
-                {saving ? "Processing..." : editing ? "Update Settings" : "Create Franchise"}
+                {saving ? "Processing..." : showAddUser ? (editingUser ? "Seal Changes" : "Confirm User") : (editing ? "Save All Settings" : "Finalize Outlet")}
               </button>
             </div>
           </div>
@@ -871,6 +965,7 @@ export default function FranchisePage() {
           </div>
         </div>
       )}
+
       {/* Notification Modal */}
       <Modal
         isOpen={!!notification}
