@@ -198,8 +198,8 @@ export const vendorsApi = {
   linkMaterial: (data: { vendorId: string; materialId: string; price: number }) =>
     api.post('/api/vendors/link-material', data),
   getLedger: (id: string, params: any = {}) => api.get(`/api/vendors/${id}/ledger`, { params }),
-  recordPayment: (id: string, data: { amount: number; note: string }) => api.post(`/api/vendors/${id}/payment`, data),
-  recordAdjustment: (id: string, data: { amount: number; type: 'CREDIT' | 'DEBIT'; note: string }) => api.post(`/api/vendors/${id}/adjustment`, data),
+  recordPayment: (id: string, data: { amount: number; note: string; referenceId?: string }) => api.post(`/api/vendors/${id}/payment`, data),
+  recordAdjustment: (id: string, data: { amount: number; type: 'CREDIT' | 'DEBIT'; note: string; referenceType?: string }) => api.post(`/api/vendors/${id}/adjustment`, data),
 };
 
 // --- Purchase Orders (with advance/balance tracking) ---
@@ -257,4 +257,10 @@ export const vendorInvoicesApi = {
   create: (data: any) => api.post('/api/vendor-invoices', data),
   match: (id: string) => api.post(`/api/vendor-invoices/${id}/match`),
   updateStatus: (id: string, status: string) => api.patch(`/api/vendor-invoices/${id}/status`, { status }),
+};
+
+// --- System Settings & Company Profile ---
+export const settingsApi = {
+  getCompanyProfile: () => api.get('/api/settings/company'),
+  updateCompanyProfile: (data: any) => api.patch('/api/settings/company', data),
 };

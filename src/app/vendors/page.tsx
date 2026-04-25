@@ -8,7 +8,7 @@ import {
   TrendingUp, TrendingDown, Minus, Wallet
 } from "lucide-react";
 import { clsx } from "clsx";
-import { vendorsApi, rawMaterialsApi } from "@/lib/api";
+import { vendorsApi, rawMaterialsApi, purchaseOrdersApi } from "@/lib/api";
 import VendorLedgerModal from "@/components/modules/vendors/VendorLedgerModal";
 
 const EMPTY_FORM = {
@@ -27,12 +27,13 @@ export default function VendorsPage() {
   const [search, setSearch]     = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing]   = useState<any>(null);
+  const [orders, setOrders]     = useState<any[]>([]);
   const [saving, setSaving]     = useState(false);
   const [form, setForm]         = useState(EMPTY_FORM);
 
   // Link Material State
   const [linkModal, setLinkModal] = useState<any>(null);
-  const [linkData, setLinkData]   = useState({ materialId: "", price: "" });
+  const [linkData, setLinkData]   = useState({ materialId: "", price: "", isNew: false, newName: "", newUnit: "kg" });
 
   // Custom Dialogs State
   const [confirmModal, setConfirmModal] = useState<{ show: boolean, vendor: any } | null>(null);
@@ -42,7 +43,8 @@ export default function VendorsPage() {
   // Ledger & Payment State
   const [showLedger, setShowLedger] = useState<any>(null);
   const [showPayment, setShowPayment] = useState<any>(null);
-  const [paymentForm, setPaymentForm] = useState({ amount: "", note: "", type: "PAYMENT" as "PAYMENT" | "ADVANCE" });
+  const [showUnitList, setShowUnitList] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({ amount: "", note: "", referenceId: "", type: "PAYMENT" as "PAYMENT" | "ADVANCE" });
 
   // Return Advance State (vendor returns money to us)
   const [showReturn, setShowReturn] = useState<any>(null);
@@ -52,14 +54,16 @@ export default function VendorsPage() {
   const fetchVendors = useCallback(async () => {
     setLoading(true);
     try {
-      const [vRes, mRes, sRes] = await Promise.all([
+      const [vRes, mRes, sRes, poRes] = await Promise.all([
         vendorsApi.getAll(),
         rawMaterialsApi.getAll(),
-        vendorsApi.getSummary()
+        vendorsApi.getSummary(),
+        purchaseOrdersApi.getAll()
       ]);
       setVendors(vRes.data ?? []);
       setMaterials(mRes.data ?? []);
       setSummary(sRes.data ?? null);
+      setOrders(poRes.data ?? []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -139,10 +143,11 @@ export default function VendorsPage() {
     try {
       await vendorsApi.recordPayment(showPayment.id, {
         amount: Number(paymentForm.amount),
-        note: paymentForm.note || (isAdvanceType ? "Advance Payment" : "Direct Payment")
+        note: paymentForm.note || (isAdvanceType ? "Advance Payment" : "Direct Payment"),
+        referenceId: paymentForm.referenceId || undefined
       });
       setShowPayment(null);
-      setPaymentForm({ amount: "", note: "", type: "PAYMENT" });
+      setPaymentForm({ amount: "", note: "", type: "PAYMENT", referenceId: "" });
       fetchVendors();
     } catch (e: any) {
       alert(e?.response?.data?.error ?? "Failed to record payment.");
@@ -152,17 +157,31 @@ export default function VendorsPage() {
   };
 
   const handleReturnAdvance = async () => {
-    if (!showReturn || !returnForm.amount || Number(returnForm.amount) <= 0) return;
+    if (!showReturn || !returnForm.amount) return;
     const amount = Number(returnForm.amount);
-    if (amount > (showReturn.balance ?? 0)) {
-      alert(`Cannot return more than the available advance of ₹${showReturn.balance?.toLocaleString()}`);
+    const advance = showReturn.advance ?? 0;
+
+    if (advance <= 0) {
+      alert("No advance available to return. Current Status: " + (showReturn.due > 0 ? `We Owe ₹${showReturn.due.toLocaleString()}` : "Settled"));
       return;
     }
+
+    if (amount <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+
+    if (amount > advance) {
+      alert(`Return amount (₹${amount.toLocaleString()}) cannot exceed available advance (₹${advance.toLocaleString()})`);
+      return;
+    }
+
     setSaving(true);
     try {
       await vendorsApi.recordAdjustment(showReturn.id, {
         amount,
         type: "DEBIT",
+        referenceType: "RETURN",
         note: returnForm.note || "Advance Returned by Vendor"
       });
       setShowReturn(null);
@@ -176,22 +195,45 @@ export default function VendorsPage() {
   };
 
   const handleLinkMaterial = async () => {
-    if (!linkData.materialId || !linkModal) return;
+    if (linkData.isNew && (!linkData.newName || !linkData.newUnit)) return;
+    if (!linkData.isNew && !linkData.materialId) return;
+    if (!linkModal) return;
+
     setSaving(true);
     try {
+      let finalMaterialId = linkData.materialId;
+
+      // 1. If new material, create it first
+      if (linkData.isNew) {
+        const mRes = await rawMaterialsApi.create({
+          name: linkData.newName,
+          unit: linkData.newUnit
+        });
+        finalMaterialId = mRes.data.id;
+      }
+
+      // 2. Link to vendor
       await vendorsApi.linkMaterial({
         vendorId: linkModal.id,
-        materialId: linkData.materialId,
+        materialId: finalMaterialId,
         price: Number(linkData.price) || 0
       });
+
       setLinkModal(null);
-      setLinkData({ materialId: "", price: "" });
+      setLinkData({ materialId: "", price: "", isNew: false, newName: "", newUnit: "kg" });
       fetchVendors();
     } catch (e: any) {
       console.error("Link Material Error:", e);
-      alert(e?.response?.data?.error ?? "Failed to link material. Please check if the material is already linked.");
+      alert(e?.response?.data?.error ?? "Failed to handle material operation. Please check if the material name already exists.");
     } finally { setSaving(false); }
   };
+
+  const [materialSearch, setMaterialSearch] = useState("");
+  const [showMaterialList, setShowMaterialList] = useState(false);
+
+  const filteredSelection = materials.filter(m => 
+    m.name.toLowerCase().includes(materialSearch.toLowerCase())
+  );
 
   const handleDelete = async (vendor: any) => {
     // 1. Check for remaining balance (Advance or Due)
@@ -268,6 +310,7 @@ export default function VendorsPage() {
   // Production financial summary from backend
   const totalOwed    = summary?.totalOwed ?? 0;
   const totalAdvance = summary?.totalAdvance ?? 0;
+  const totalPurchased = summary?.totalPurchased ?? 0;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 p-1">
@@ -334,16 +377,14 @@ export default function VendorsPage() {
               </div>
             </div>
 
-            <div className="bg-orange-50/70 dark:bg-orange-500/10 backdrop-blur-md rounded-2xl border border-orange-100 dark:border-orange-500/20 p-5 shadow-sm hover:translate-y-[-2px] transition-all">
+            <div className="bg-indigo-50/70 dark:bg-indigo-500/10 backdrop-blur-md rounded-2xl border border-indigo-100 dark:border-indigo-500/20 p-5 shadow-sm hover:translate-y-[-2px] transition-all group">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-100 dark:bg-orange-500/20 rounded-lg">
-                  <Package size={16} className="text-orange-600" />
+                <div className="p-2 bg-indigo-100 dark:bg-indigo-500/20 rounded-lg group-hover:scale-110 transition-transform">
+                  <ShoppingCart size={16} className="text-indigo-600" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-orange-600/70 uppercase tracking-widest">Linked Materials</p>
-                  <p className="text-xl font-black text-orange-700 dark:text-orange-400 leading-none mt-1">
-                    {vendors.reduce((s, v) => s + (v.suppliedMaterials?.length ?? 0), 0)}
-                  </p>
+                  <p className="text-[10px] font-black text-indigo-600/70 uppercase tracking-widest">Total Purchase</p>
+                  <p className="text-xl font-black text-indigo-700 dark:text-indigo-400 leading-none mt-1">₹{totalPurchased.toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -457,32 +498,32 @@ export default function VendorsPage() {
               {/* Financial Metrics Grid */}
               <div className="grid grid-cols-3 gap-2.5 mb-5 mt-2">
                 <div className="bg-slate-50 dark:bg-white/5 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">Total Purchased</p>
-                  <p className="text-[13px] font-black text-slate-700 dark:text-slate-200">₹{vendor.totalOrder?.toLocaleString() || 0}</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">TOTAL PURCHASED</p>
+                  <p className="text-[13px] font-black text-slate-900 dark:text-white">₹{(vendor.totalPurchased || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div className="bg-emerald-50/30 dark:bg-emerald-500/5 p-3 rounded-2xl border border-emerald-100/50 dark:border-emerald-500/10">
-                  <p className="text-[9px] font-black text-emerald-600/70 dark:text-emerald-400/50 uppercase tracking-tighter mb-1">Amount Paid</p>
-                  <p className="text-[13px] font-black text-emerald-700 dark:text-emerald-400">₹{vendor.totalAdvance?.toLocaleString() || 0}</p>
+                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter mb-1">AMOUNT PAID</p>
+                  <p className="text-[13px] font-black text-emerald-700 dark:text-emerald-400">₹{(vendor.totalPaid || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div className={clsx(
                   "p-3 rounded-2xl border",
-                  (vendor.balance || 0) > 0 
+                  (vendor.advance || 0) > 0 
                     ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20" 
-                    : (vendor.balance || 0) < 0 
+                    : (vendor.due || 0) > 0 
                     ? "bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20" 
                     : "bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5"
                 )}>
                   <p className={clsx(
                     "text-[9px] font-black uppercase tracking-tighter mb-1",
-                    (vendor.balance || 0) > 0 ? "text-emerald-600" : (vendor.balance || 0) < 0 ? "text-red-600" : "text-slate-400"
+                    (vendor.advance || 0) > 0 ? "text-emerald-600" : (vendor.due || 0) > 0 ? "text-red-600" : "text-slate-400"
                   )}>
-                    {(vendor.balance || 0) > 0 ? "IN ADVANCE" : (vendor.balance || 0) < 0 ? "TOTAL DUE" : "SETTLED"}
+                    {(vendor.advance || 0) > 0 ? "IN ADVANCE" : (vendor.due || 0) > 0 ? "TOTAL DUE" : "SETTLED"}
                   </p>
                   <p className={clsx(
                     "text-[13px] font-black",
-                    (vendor.balance || 0) > 0 ? "text-emerald-700" : (vendor.balance || 0) < 0 ? "text-red-700" : "text-slate-400"
+                    (vendor.advance || 0) > 0 ? "text-emerald-700" : (vendor.due || 0) > 0 ? "text-red-700" : "text-slate-400"
                   )}>
-                    ₹{Math.abs(vendor.balance || 0).toLocaleString()}
+                    ₹{((vendor.advance || 0) > 0 ? vendor.advance : (vendor.due || 0) > 0 ? vendor.due : 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
@@ -575,49 +616,199 @@ export default function VendorsPage() {
       {/* Link Material Modal */}
       {linkModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-[#12141c] rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-black text-gray-900 dark:text-white">Link Material to {linkModal.name}</h2>
-              <button onClick={() => setLinkModal(null)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg"><X size={16} className="text-gray-400" /></button>
+              <h2 className="text-lg font-black text-gray-900 dark:text-white">Link Material to {linkModal.name}</h2>
+              <button onClick={() => setLinkModal(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl transition-colors"><X size={20} className="text-gray-400" /></button>
             </div>
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1">Select Material</label>
-                <select 
-                  value={linkData.materialId}
-                  onChange={(e) => setLinkData({ ...linkData, materialId: e.target.value })}
-                  className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold"
-                >
-                  <option value="">Choose material...</option>
-                  {materials.map((m: any) => (
-                    <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1">Latest Price (₹)</label>
-                <input 
-                  type="text"
-                  placeholder="0.00"
-                  value={linkData.price}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9.]/g, "");
-                    // Remove leading zero if another number is typed
-                    setLinkData({ ...linkData, price: val.startsWith("0") && val.length > 1 ? val.substring(1) : val });
+            <div className="flex flex-col min-h-[300px]">
+              <div className="bg-slate-50 dark:bg-white/[0.03] p-1.5 rounded-2xl flex gap-1 border border-slate-200/50 dark:border-white/5 mb-6">
+                <button 
+                  onClick={() => {
+                    setLinkData({ ...linkData, isNew: false });
+                    setMaterialSearch("");
+                    setShowMaterialList(false);
+                    setShowUnitList(false);
                   }}
-                  className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold"
-                />
+                  className={clsx(
+                    "flex-1 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all",
+                    !linkData.isNew ? "bg-white dark:bg-white/10 text-indigo-600 dark:text-white shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  Existing
+                </button>
+                <button 
+                  onClick={() => {
+                    setLinkData({ ...linkData, isNew: true });
+                    setShowMaterialList(false);
+                    setShowUnitList(false);
+                  }}
+                  className={clsx(
+                    "flex-1 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all",
+                    linkData.isNew ? "bg-white dark:bg-white/10 text-indigo-600 dark:text-white shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  Create New
+                </button>
+              </div>
+
+              <div className="flex-1 space-y-6 relative">
+                {linkData.isNew ? (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-300">
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">New Material Name *</label>
+                      <input 
+                        placeholder="Ex: Organic Cotton"
+                        value={linkData.newName}
+                        onChange={(e) => setLinkData({ ...linkData, newName: e.target.value })}
+                        className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 font-semibold transition-all text-slate-800 dark:text-white placeholder:font-normal placeholder:text-slate-400/50"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Unit of Measure *</label>
+                      <div className="relative">
+                        <button 
+                           onClick={() => setShowUnitList(!showUnitList)}
+                           className="w-full px-5 py-3.5 text-left text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 font-semibold transition-all text-slate-800 dark:text-white flex items-center justify-between"
+                        >
+                           <span>{linkData.newUnit ? linkData.newUnit.charAt(0).toUpperCase() + linkData.newUnit.slice(1) : "Select unit..."}</span>
+                           <ChevronDown size={16} className={clsx("text-slate-400 transition-transform", showUnitList && "rotate-180")} />
+                        </button>
+
+                        {showUnitList && (
+                          <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1a1c26] border border-slate-200 dark:border-white/10 rounded-[1.5rem] shadow-2xl z-[60] overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-1.5 space-y-1">
+                             {['kg', 'liter', 'pcs', 'box', 'gm', 'ml'].map((u: string) => (
+                               <button
+                                 key={u}
+                                 onClick={() => {
+                                   setLinkData({ ...linkData, newUnit: u });
+                                   setShowUnitList(false);
+                                 }}
+                                 className={clsx(
+                                   "w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all tabular-nums",
+                                   linkData.newUnit === u 
+                                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" 
+                                     : "text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-white"
+                                 )}
+                               >
+                                 {u.charAt(0).toUpperCase() + u.slice(1)}
+                               </button>
+                             ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
+                    <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Select Raw Material *</label>
+                    <div className="relative">
+                      <button 
+                         onClick={() => setShowMaterialList(!showMaterialList)}
+                         className="w-full px-5 py-3.5 text-left text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 font-semibold transition-all text-slate-800 dark:text-white flex items-center justify-between"
+                      >
+                         <span className={clsx(!linkData.materialId && "text-slate-400 font-normal")}>
+                           {linkData.materialId 
+                             ? materials.find(m => m.id === linkData.materialId)?.name + " (" + materials.find(m => m.id === linkData.materialId)?.unit + ")"
+                             : "Choose material..."}
+                         </span>
+                         <ChevronDown size={16} className={clsx("text-slate-400 transition-transform", showMaterialList && "rotate-180")} />
+                      </button>
+
+                      {showMaterialList && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1a1c26] border border-slate-200 dark:border-white/10 rounded-[1.5rem] shadow-2xl z-[60] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                           <div className="p-2 border-b border-slate-100 dark:border-white/5">
+                              <div className="relative">
+                                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                 <input 
+                                   autoFocus
+                                   placeholder="Search materials..."
+                                   value={materialSearch}
+                                   onChange={(e) => setMaterialSearch(e.target.value)}
+                                   className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 dark:bg-white/5 border-none rounded-xl focus:ring-0 font-bold"
+                                 />
+                              </div>
+                           </div>
+                           <div className="max-h-[180px] overflow-y-auto p-1.5 custom-scrollbar">
+                              {filteredSelection.length === 0 ? (
+                                <div className="py-8 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">No matching items</div>
+                              ) : (
+                                filteredSelection.map((m: any) => (
+                                  <button
+                                    key={m.id}
+                                    onClick={() => {
+                                       const existingLink = linkModal.suppliedMaterials?.find((sm: any) => sm.materialId === m.id);
+                                       setLinkData({ 
+                                         ...linkData, 
+                                         materialId: m.id, 
+                                         price: existingLink ? String(existingLink.price) : "" 
+                                       });
+                                       setShowMaterialList(false);
+                                       setMaterialSearch("");
+                                    }}
+                                    className={clsx(
+                                      "w-full text-left px-4 py-3.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between group",
+                                      linkData.materialId === m.id 
+                                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" 
+                                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-white"
+                                    )}
+                                  >
+                                    <span>{m.name}</span>
+                                    <span className={clsx(
+                                      "text-[10px] font-black uppercase tracking-tighter opacity-70", 
+                                      linkData.materialId === m.id ? "text-indigo-100" : "text-indigo-500 group-hover:text-indigo-600"
+                                    )}>
+                                      {m.unit}
+                                    </span>
+                                  </button>
+                                ))
+                              )}
+                           </div>
+                        </div>
+                      )}
+                    </div>
+                    {/* Status helper text for price awareness */}
+                    <div className="mt-2 ml-1 min-h-[14px]">
+                      {linkData.materialId && (
+                        <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-tight">
+                          {linkModal.suppliedMaterials?.some((sm: any) => sm.materialId === linkData.materialId) 
+                            ? "✓ Already linked - You are updating the price" 
+                            : "○ New link - Set your first purchase price"}
+                        </p>
+                      )}
+                    </div>
+                    {/* Spacer to stabilize height when switching modes */}
+                    <div className="h-[46px]" /> 
+                  </div>
+                )}
+
+                <div className="space-y-1.5 pt-6 border-t border-slate-100 dark:border-white/5">
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Agreed Purchase Price (₹) *</label>
+                  <div className="relative">
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</div>
+                    <input 
+                      type="text"
+                      placeholder="0.00"
+                      value={linkData.price}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.]/g, "");
+                        setLinkData({ ...linkData, price: val.startsWith("0") && val.length > 1 ? val.substring(1) : val });
+                      }}
+                      className="w-full pl-10 pr-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 font-semibold transition-all text-slate-800 dark:text-white placeholder:font-normal placeholder:text-slate-400/50"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-3 justify-end pt-2">
-              <button onClick={() => setLinkModal(null)} className="px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-white/5">Cancel</button>
+            <div className="flex gap-3 justify-end pt-4">
+              <button onClick={() => setLinkModal(null)} className="px-6 py-3 rounded-2xl border border-gray-200 dark:border-white/10 text-sm font-black uppercase tracking-widest text-gray-500 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Cancel</button>
               <button 
                 onClick={handleLinkMaterial} 
-                disabled={saving || !linkData.materialId}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-indigo-500/20">
-                {saving ? "Linking..." : "Link Material"}
+                disabled={saving || (linkData.isNew ? (!linkData.newName || !linkData.newUnit) : !linkData.materialId)}
+                className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20">
+                {saving ? "Wait..." : linkData.isNew ? "Create & Link" : "Link Material"}
               </button>
             </div>
           </div>
@@ -824,23 +1015,65 @@ export default function VendorsPage() {
         />
       )}
 
-      {/* Direct Payment Modal */}
-      {showPayment && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+       {showPayment && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-black text-gray-900 dark:text-white">Record Payment</h2>
-                <p className="text-xs text-gray-500 uppercase tracking-widest font-bold mt-1">{showPayment.name}</p>
+                <h2 className="text-lg font-black text-gray-900 dark:text-white">Record Payment</h2>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{showPayment.name}</p>
               </div>
-              <button onClick={() => setShowPayment(null)} className="p-2 hover:bg-black/5 rounded-full"><X size={20} className="text-gray-400" /></button>
+              <button onClick={() => setShowPayment(null)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors"><X size={20} className="text-gray-400" /></button>
             </div>
 
-            {/* Type Toggle */}
-            <div className="flex gap-2 p-1 bg-slate-100 dark:bg-white/5 rounded-2xl">
+            {/* Financial Status Quick View */}
+            <div className={clsx(
+              "rounded-3xl p-5 border flex items-center gap-4 relative overflow-hidden transition-all",
+              (showPayment.balance || 0) > 0 
+                ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20" 
+                : (showPayment.balance || 0) < 0 
+                ? "bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20" 
+                : "bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5"
+            )}>
+              <div className={clsx(
+                "w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm shrink-0",
+                (showPayment.balance || 0) > 0 ? "bg-white dark:bg-white/10 text-emerald-500" 
+                : (showPayment.balance || 0) < 0 ? "bg-white dark:bg-white/10 text-red-500" 
+                : "bg-white dark:bg-white/10 text-slate-400"
+              )}>
+                {(showPayment.balance || 0) > 0 ? <Wallet size={20} /> : <CreditCard size={20} />}
+              </div>
+              <div>
+                <p className={clsx(
+                  "text-[10px] font-black uppercase tracking-widest",
+                  (showPayment.balance || 0) > 0 ? "text-emerald-600 dark:text-emerald-400" 
+                  : (showPayment.balance || 0) < 0 ? "text-red-600 dark:text-red-400" 
+                  : "text-slate-500"
+                )}>
+                  {(showPayment.balance || 0) > 0 ? "In Advance" : (showPayment.balance || 0) < 0 ? "Total Due" : "Settled"}
+                </p>
+                <p className={clsx(
+                  "text-2xl font-black leading-none mt-1",
+                  (showPayment.balance || 0) > 0 ? "text-emerald-700 dark:text-emerald-300" 
+                  : (showPayment.balance || 0) < 0 ? "text-red-700 dark:text-red-300" 
+                  : "text-slate-600 dark:text-slate-400"
+                )}>
+                  ₹{Math.abs(showPayment.balance || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              
+              {/* Decorative Icon Background */}
+              <div className="absolute right-[-10px] top-[-10px] opacity-[0.03] dark:opacity-[0.07]">
+                {(showPayment.balance || 0) > 0 ? <Wallet size={80} className="rotate-12" /> : <CreditCard size={80} className="rotate-12" />}
+              </div>
+            </div>
+
+
+            {/* Premium Segmented Toggle */}
+            <div className="bg-slate-50 dark:bg-white/[0.03] p-1.5 rounded-2xl flex gap-1 border border-slate-200/50 dark:border-white/5">
               {([
-                { key: "PAYMENT", label: "Payment", icon: CreditCard, desc: "Paying for a PO/invoice" },
-                { key: "ADVANCE", label: "Advance", icon: Wallet,     desc: "Upfront credit to vendor" },
+                { key: "PAYMENT", label: "Payment", icon: CreditCard, desc: "For PO/Invoice" },
+                { key: "ADVANCE", label: "Advance", icon: Wallet,     desc: "Upfront Credit" },
               ] as const).map(opt => {
                 const Icon = opt.icon;
                 const active = paymentForm.type === opt.key;
@@ -848,140 +1081,178 @@ export default function VendorsPage() {
                   <button
                     key={opt.key}
                     onClick={() => setPaymentForm(f => ({ ...f, type: opt.key }))}
-                    className={`flex-1 flex flex-col items-center py-3 px-4 rounded-xl transition-all ${
+                    className={clsx(
+                      "flex-1 flex flex-col items-center py-2.5 px-3 rounded-xl transition-all border",
                       active
                         ? opt.key === "ADVANCE"
-                          ? "bg-violet-600 text-white shadow-sm"
-                          : "bg-emerald-500 text-white shadow-sm"
-                        : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
-                    }`}
+                          ? "bg-white dark:bg-violet-600/10 border-violet-100 dark:border-violet-500/30 text-violet-600 shadow-sm"
+                          : "bg-white dark:bg-emerald-600/10 border-emerald-100 dark:border-emerald-500/30 text-emerald-600 shadow-sm"
+                        : "bg-transparent border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                    )}
                   >
-                    <Icon size={16} className="mb-1" />
-                    <span className="text-[11px] font-black uppercase tracking-wider">{opt.label}</span>
-                    <span className={`text-[9px] font-medium mt-0.5 ${active ? "opacity-80" : "opacity-60"}`}>{opt.desc}</span>
+                    <Icon size={14} className="mb-0.5" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{opt.label}</span>
+                    <span className="text-[8px] font-bold opacity-50 uppercase tracking-tighter mt-0.5">{opt.desc}</span>
                   </button>
                 );
               })}
             </div>
 
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Amount (₹)</label>
-                <input 
-                  type="text"
-                  placeholder="0.00"
-                  value={paymentForm.amount}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value.replace(/[^0-9.]/g, "") })}
-                  className={`w-full px-5 py-4 text-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 font-black transition-colors ${
-                    paymentForm.type === "ADVANCE"
-                      ? "focus:ring-violet-500/10 focus:border-violet-500/50 text-violet-600"
-                      : "focus:ring-emerald-500/10 focus:border-emerald-500/50 text-emerald-600"
-                  }`}
-                />
+            <div className="space-y-5">
+              <div className="space-y-1.5 text-center">
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Amount (₹)</label>
+                <div className="relative">
+                   <div className={clsx(
+                     "absolute left-5 top-1/2 -translate-y-1/2 font-black text-xl transition-colors",
+                     paymentForm.type === "ADVANCE" ? "text-violet-400" : "text-emerald-400"
+                   )}>₹</div>
+                   <input 
+                    type="text"
+                    placeholder="0.00"
+                    value={paymentForm.amount}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value.replace(/[^0-9.]/g, "") })}
+                    className={clsx(
+                      "w-full pl-12 pr-5 py-5 text-4xl text-center bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 font-black transition-all",
+                      paymentForm.type === "ADVANCE"
+                        ? "focus:ring-violet-500/10 focus:border-violet-500/50 text-violet-600"
+                        : "focus:ring-emerald-500/10 focus:border-emerald-500/50 text-emerald-600"
+                    )}
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Reference / Note</label>
-                <textarea 
-                  placeholder={paymentForm.type === "ADVANCE" ? "e.g. Advance for April supplies" : "e.g. Bank Transfer Ref #123"}
-                  value={paymentForm.note}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, note: e.target.value })}
-                  className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 font-bold transition-all resize-none text-slate-800 dark:text-white"
-                  rows={2}
-                />
+              <div className="space-y-4">
+                <div className="space-y-1.5 pt-2">
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Allocate to PO (Optional)</label>
+                  <select
+                    value={paymentForm.referenceId || ""}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, referenceId: e.target.value })}
+                    className="w-full px-5 py-3 text-xs bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 font-semibold transition-all text-slate-800 dark:text-white appearance-none"
+                  >
+                    <option value="">Auto-Apply (Oldest first)</option>
+                    {orders
+                      .filter(o => o.vendorId === showPayment.id && o.status !== 'CLOSED' && o.status !== 'CANCELLED')
+                      .map(o => (
+                        <option key={o.id} value={o.id}>
+                          PO #{o.id.substring(0, 8).toUpperCase()} - ₹{(o.totalAmount - (o.paid || 0)).toLocaleString()} Due
+                        </option>
+                      ))
+                    }
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Reference / Note</label>
+                  <textarea 
+                    placeholder={paymentForm.type === "ADVANCE" ? "Ex: Advance for April supplies" : "Ex: Bank Transfer Ref #123"}
+                    value={paymentForm.note}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, note: e.target.value })}
+                    className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 font-semibold transition-all resize-none text-slate-800 dark:text-white placeholder:font-normal placeholder:text-slate-400/50"
+                    rows={2}
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-4 pt-2">
+            <div className="flex gap-4 pt-4">
               <button 
                 onClick={() => setShowPayment(null)}
-                className="flex-1 py-4 rounded-2xl border border-gray-200 dark:border-white/10 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+                className="flex-1 py-4 rounded-2xl border border-gray-200 dark:border-white/10 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleRecordPayment}
                 disabled={saving || !paymentForm.amount}
-                className={`flex-[2] py-4 disabled:opacity-50 text-white rounded-2xl text-sm font-black shadow-lg transition-all uppercase tracking-widest flex items-center justify-center gap-2 ${
+                className={clsx(
+                  "flex-[2] py-4 disabled:opacity-50 text-white rounded-2xl text-[11px] font-black shadow-lg transition-all uppercase tracking-widest flex items-center justify-center gap-2",
                   paymentForm.type === "ADVANCE"
                     ? "bg-violet-600 hover:bg-violet-500 shadow-violet-500/20"
                     : "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
-                }`}
+                )}
               >
-                {saving
-                  ? "Recording..."
-                  : paymentForm.type === "ADVANCE"
-                    ? <><Wallet size={18} /> Confirm Advance</>
-                    : <><CreditCard size={18} /> Confirm Payment</>
-                }
+                {saving ? "Wait..." : (
+                  <>
+                    {paymentForm.type === "ADVANCE" ? <Wallet size={16} /> : <CreditCard size={16} />}
+                    Confirm {paymentForm.type === "ADVANCE" ? "Advance" : "Payment"}
+                  </>
+                )}
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Return Advance Modal */}
       {showReturn && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6 font-sans">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-black text-gray-900 dark:text-white">Return Advance</h2>
-                <p className="text-xs text-gray-500 uppercase tracking-widest font-bold mt-1">{showReturn.name}</p>
+                <h2 className="text-lg font-black text-gray-900 dark:text-white leading-none">Return Advance</h2>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">{showReturn.name}</p>
               </div>
-              <button onClick={() => setShowReturn(null)} className="p-2 hover:bg-black/5 rounded-full"><X size={20} className="text-gray-400" /></button>
+              <button onClick={() => setShowReturn(null)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors"><X size={20} className="text-gray-400" /></button>
             </div>
 
-            <div className="bg-amber-50 dark:bg-amber-500/10 rounded-2xl p-4 border border-amber-100 dark:border-amber-500/20 flex items-center gap-3">
-              <RefreshCw size={18} className="text-amber-500 shrink-0" />
-              <div>
-                <p className="text-xs font-black text-amber-700 dark:text-amber-400 uppercase tracking-wider">Available Advance</p>
-                <p className="text-2xl font-black text-amber-600 dark:text-amber-300 leading-none mt-0.5">
-                  ₹{(showReturn.balance ?? 0).toLocaleString("en-IN")}
-                </p>
-              </div>
+            <div className="bg-amber-50 dark:bg-amber-500/10 rounded-3xl p-5 border border-amber-100 dark:border-amber-500/20 flex items-center gap-4 relative overflow-hidden">
+               <div className="absolute right-[-10px] top-[-10px] opacity-10">
+                 <RefreshCw size={80} className="rotate-12 text-amber-500" />
+               </div>
+               <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-2xl flex items-center justify-center shadow-sm shrink-0">
+                 <RefreshCw size={20} className="text-amber-500" />
+               </div>
+               <div>
+                 <p className="text-[10px] font-black text-amber-500 dark:text-amber-400 uppercase tracking-widest">Available Advance</p>
+                 <p className="text-2xl font-black text-amber-600 dark:text-amber-300 leading-none mt-1">
+                   ₹{(showReturn.balance ?? 0).toLocaleString("en-IN")}
+                 </p>
+               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Return Amount (₹)</label>
-                <input
-                  type="text"
-                  placeholder="0.00"
-                  value={returnForm.amount}
-                  onChange={(e) => setReturnForm({ ...returnForm, amount: e.target.value.replace(/[^0-9.]/g, "") })}
-                  className="w-full px-5 py-4 text-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500/50 font-black text-amber-600"
-                />
-                {returnForm.amount && Number(returnForm.amount) > (showReturn.balance ?? 0) && (
-                  <p className="text-xs text-red-500 font-bold ml-1">Exceeds available advance of ₹{(showReturn.balance ?? 0).toLocaleString("en-IN")}</p>
-                )}
+            <div className="space-y-6">
+              <div className="space-y-1.5 text-center">
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Return Amount (₹)</label>
+                <div className="relative">
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-amber-400 font-black text-xl">₹</div>
+                  <input
+                    type="text"
+                    placeholder="0.00"
+                    value={returnForm.amount}
+                    onChange={(e) => setReturnForm({ ...returnForm, amount: e.target.value.replace(/[^0-9.]/g, "") })}
+                    className="w-full pl-12 pr-5 py-5 text-4xl text-center bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500/50 font-black text-amber-600 transition-all placeholder:font-normal placeholder:text-slate-300"
+                  />
+                  {returnForm.amount && Number(returnForm.amount) > (showReturn.balance ?? 0) && (
+                    <div className="absolute -bottom-6 left-0 right-0 animate-in fade-in slide-in-from-top-1 text-center">
+                      <p className="text-[9px] text-red-500 font-black uppercase tracking-tight">Exceeds available advance of ₹{(showReturn.balance ?? 0).toLocaleString("en-IN")}</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Reason / Reference</label>
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Reason / Reference</label>
                 <textarea
-                  placeholder="e.g. Cash returned by vendor on 24 Apr"
+                  placeholder="Ex: Cash returned by vendor on 24 Apr..."
                   value={returnForm.note}
                   onChange={(e) => setReturnForm({ ...returnForm, note: e.target.value })}
-                  className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500/50 font-bold transition-all resize-none text-slate-800 dark:text-white"
+                  className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500/50 font-semibold transition-all resize-none text-slate-800 dark:text-white placeholder:font-normal placeholder:text-slate-400/50"
                   rows={3}
                 />
               </div>
             </div>
 
-            <div className="flex gap-4 pt-2">
+            <div className="flex gap-4 pt-4">
               <button
                 onClick={() => setShowReturn(null)}
-                className="flex-1 py-4 rounded-2xl border border-gray-200 dark:border-white/10 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+                className="flex-1 py-4 rounded-2xl border border-gray-200 dark:border-white/10 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={handleReturnAdvance}
-                disabled={saving || !returnForm.amount || Number(returnForm.amount) <= 0 || Number(returnForm.amount) > (showReturn.balance ?? 0)}
-                className="flex-[2] py-4 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-white rounded-2xl text-sm font-black shadow-lg shadow-amber-500/20 transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+                disabled={saving || !returnForm.amount || Number(returnForm.amount) > (showReturn.balance ?? 0)}
+                className="flex-[2] py-4 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-2xl text-[11px] font-black shadow-lg shadow-amber-500/20 transition-all uppercase tracking-widest flex items-center justify-center gap-2"
               >
-                {saving ? "Processing..." : <><RefreshCw size={18} /> Confirm Return</>}
+                {saving ? "Wait..." : <><RefreshCw size={16} /> Confirm Return</>}
               </button>
             </div>
           </div>

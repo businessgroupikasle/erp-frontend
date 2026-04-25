@@ -20,6 +20,8 @@ export default function VendorLedgerModal({ vendor, onClose }: { vendor: any; on
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'ALL' | 'PAYMENTS' | 'PURCHASES'>('ALL');
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
     fetchLedger();
@@ -38,19 +40,77 @@ export default function VendorLedgerModal({ vendor, onClose }: { vendor: any; on
   };
 
   const filteredLedger = ledger.filter(entry => {
-    if (activeTab === 'PAYMENTS') return entry.referenceType === 'PAYMENT' || entry.referenceType === 'ADVANCE';
-    if (activeTab === 'PURCHASES') return entry.referenceType === 'PO';
+    // 1. Type filter
+    if (activeTab === 'PAYMENTS' && !(entry.referenceType === 'PAYMENT' || entry.referenceType === 'ADVANCE')) return false;
+    if (activeTab === 'PURCHASES' && entry.referenceType !== 'PO') return false;
+
+    // 2. Date filter
+    const entryDate = new Date(entry.createdAt).setHours(0,0,0,0);
+    if (startDate && entryDate < new Date(startDate).setHours(0,0,0,0)) return false;
+    if (endDate && entryDate > new Date(endDate).setHours(0,0,0,0)) return false;
+
     return true;
   });
 
-  const isAdvance = vendor.balance >= 0;
+  const exportExcel = () => {
+    const headers = ["Date", "Type", "Reference", "Note", "Amount", "Balance"];
+    const rows = filteredLedger.map(e => [
+      new Date(e.createdAt).toLocaleDateString(),
+      e.type,
+      e.referenceType,
+      e.note,
+      e.amount,
+      e.runningBalance
+    ]);
+    
+    let csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(",") + "\n"
+      + rows.map(r => r.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${vendor.name}_Statement.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const printStatement = () => {
+    window.print();
+  };
+
+  const currentBalance = ledger.length > 0 ? ledger[0].runningBalance : (vendor.balance || 0);
+  const isAdvance = currentBalance >= 0;
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
       <div className="bg-white border border-[#F0EAF0] w-full max-w-4xl rounded-3xl shadow-2xl shadow-slate-200/60 flex flex-col max-h-[90vh]">
 
-        {/* Header */}
-        <div className="px-8 py-6 border-b border-[#F0EAF0] flex items-center justify-between rounded-t-3xl bg-gradient-to-r from-violet-50 to-white">
+        {/* Print Header (Only visible when printing) */}
+        <div className="hidden print:block mb-8 border-b-2 border-slate-900 pb-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-black uppercase tracking-tighter text-slate-900">Vendor Statement</h1>
+              <p className="text-sm font-bold text-slate-500 mt-1">Generated on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</p>
+            </div>
+            <div className="text-right">
+              <h2 className="text-xl font-black text-slate-900">{vendor.name}</h2>
+              <p className="text-sm font-bold text-slate-500">{vendor.contact}</p>
+              {vendor.email && <p className="text-sm font-bold text-slate-500">{vendor.email}</p>}
+            </div>
+          </div>
+          {(startDate || endDate) && (
+            <div className="mt-4 inline-block bg-slate-100 px-4 py-2 rounded-lg">
+              <p className="text-[11px] font-black uppercase tracking-widest text-slate-600">
+                Statement Period: {startDate || "Opening"} — {endDate || "Present"}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Header (Screen only) */}
+        <div className="px-8 py-6 border-b border-[#F0EAF0] flex items-center justify-between rounded-t-3xl bg-gradient-to-r from-violet-50 to-white print:hidden">
           <div>
             <h2 className="text-xl font-black text-[#1A1A1A] flex items-center gap-3">
               <div className="w-10 h-10 bg-[#7C3AED]/10 rounded-xl flex items-center justify-center">
@@ -69,35 +129,84 @@ export default function VendorLedgerModal({ vendor, onClose }: { vendor: any; on
         </div>
 
         {/* Filters & Summary */}
-        <div className="px-8 py-4 bg-slate-50/70 border-b border-[#F0EAF0] flex items-center justify-between">
-          <div className="flex bg-white p-1 rounded-xl border border-[#F0EAF0] shadow-sm">
-            {(['ALL', 'PURCHASES', 'PAYMENTS'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={clsx(
-                  "px-5 py-2 rounded-lg text-sm font-bold transition-all",
-                  activeTab === tab
-                    ? "bg-[#7C3AED] text-white shadow-lg shadow-purple-200"
-                    : "text-[#999] hover:text-[#1A1A1A]"
-                )}
+        <div className="px-8 py-5 bg-slate-50/70 border-b border-[#F0EAF0] flex flex-col gap-4 print:bg-white print:px-0 print:border-none">
+          <div className="flex items-center justify-between print:hidden">
+            <div className="flex bg-white p-1 rounded-xl border border-[#F0EAF0] shadow-sm">
+              {(['ALL', 'PURCHASES', 'PAYMENTS'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={clsx(
+                    "px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all",
+                    activeTab === tab
+                      ? "bg-[#7C3AED] text-white shadow-lg shadow-purple-200"
+                      : "text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  {tab === 'ALL' ? 'All' : tab}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={exportExcel}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-colors"
               >
-                {tab === 'ALL' ? 'All History' : tab.charAt(0) + tab.slice(1).toLowerCase()}
+                Excel
               </button>
-            ))}
+              <button 
+                onClick={printStatement}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors"
+              >
+                PDF / Print
+              </button>
+            </div>
           </div>
 
-          <div className="text-right">
-            <p className="text-[10px] text-[#999] uppercase tracking-[0.15em] font-bold mb-0.5">Net Balance</p>
-            <p className={clsx(
-              "text-2xl font-black tracking-tight",
-              isAdvance ? "text-emerald-600" : "text-rose-600"
-            )}>
-              ₹{Math.abs(vendor.balance).toLocaleString()}
-              <span className="text-xs ml-1.5 font-semibold opacity-70">
-                {isAdvance ? "(Advance)" : "(Owed)"}
-              </span>
-            </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 print:hidden">
+              <div className="flex flex-col">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1 ml-1">From Date</label>
+                <input 
+                  type="date" 
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1 ml-1">To Date</label>
+                <input 
+                  type="date" 
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                />
+              </div>
+              {(startDate || endDate) && (
+                <button 
+                  onClick={() => { setStartDate(""); setEndDate(""); }}
+                  className="mt-5 p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                  title="Clear Dates"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="text-right">
+              <p className="text-[10px] text-[#999] uppercase tracking-[0.15em] font-bold mb-0.5">Net Balance</p>
+              <p className={clsx(
+                "text-2xl font-black tracking-tight leading-none",
+                isAdvance ? "text-emerald-600" : "text-rose-600"
+              )}>
+                ₹{Math.abs(currentBalance).toLocaleString()}
+                <span className="text-[10px] ml-1.5 font-bold opacity-70 uppercase">
+                  {isAdvance ? "Advance" : "Due"}
+                </span>
+              </p>
+            </div>
           </div>
         </div>
 
@@ -191,8 +300,8 @@ export default function VendorLedgerModal({ vendor, onClose }: { vendor: any; on
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-8 py-5 border-t border-[#F0EAF0] flex justify-between items-center rounded-b-3xl bg-slate-50/50">
+        {/* Footer (Screen only) */}
+        <div className="px-8 py-5 border-t border-[#F0EAF0] flex justify-between items-center rounded-b-3xl bg-slate-50/50 print:hidden">
           <div className="flex gap-5 text-xs text-[#999] font-semibold">
             <span className="flex items-center gap-1.5">
               <ArrowUpRight className="w-3 h-3 text-rose-500" /> DEBIT = Purchase/Cost
@@ -209,6 +318,32 @@ export default function VendorLedgerModal({ vendor, onClose }: { vendor: any; on
           </button>
         </div>
       </div>
+
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .print-container, .print-container * {
+            visibility: visible;
+          }
+          .print-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: auto;
+            background: white !important;
+            padding: 20px !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+          @page {
+            size: auto;
+            margin: 15mm;
+          }
+        }
+      `}</style>
     </div>
   );
 }
