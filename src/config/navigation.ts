@@ -29,12 +29,15 @@ export interface MenuItem {
   label: string;
   href: string;
   roles: string[];
+  moduleId?: string;
   isNew?: boolean;
   isHot?: boolean;
+  moduleId?: string;
   children?: {
     label: string;
     href: string;
     isNew?: boolean;
+    moduleId?: string;
   }[];
 }
 
@@ -82,6 +85,7 @@ export const menuSections: MenuSection[] = [
         label: "Raw Material Stock",
         href: "/inventory/stock",
         roles: ALL_ROLES,
+        moduleId: "raw-material",
       },
       {
         icon: ChefHat,
@@ -94,12 +98,14 @@ export const menuSections: MenuSection[] = [
         label: "Production",
         href: "/production",
         roles: ADMIN_ROLES,
+        moduleId: "production",
       },
       {
         icon: Package,
         label: "Products",
         href: "/products",
         roles: ALL_ROLES,
+        moduleId: "inventory",
       },
     ],
   },
@@ -142,18 +148,21 @@ export const menuSections: MenuSection[] = [
         label: "POS & Invoicing",
         href: "/pos",
         roles: ALL_ROLES,
+        moduleId: "pos",
       },
       {
         icon: FileText,
         label: "Sales Orders",
         href: "/sales/orders",
         roles: ALL_ROLES,
+        moduleId: "crm",
       },
       {
         icon: Users,
         label: "Customers",
         href: "/customers",
         roles: ALL_ROLES,
+        moduleId: "crm",
       },
     ],
   },
@@ -220,12 +229,14 @@ export const menuSections: MenuSection[] = [
         label: "Attendance",
         href: "/hr/attendance",
         roles: ALL_ROLES,
+        moduleId: "attendance",
       },
       {
         icon: Landmark,
         label: "Payroll & Payslips",
         href: "/hr/payroll",
         roles: ADMIN_ROLES,
+        moduleId: "accounting",
       },
     ],
   },
@@ -238,7 +249,6 @@ export const menuSections: MenuSection[] = [
         label: "General Settings",
         href: "/settings/general",
         roles: SUPER_ONLY,
-
       },
       {
         icon: ClipboardList,

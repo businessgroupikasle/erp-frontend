@@ -2,18 +2,22 @@
 
 import { useState } from "react";
 import SettingsLayout from "@/components/modules/settings/SettingsLayout";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { clsx } from "clsx";
+import { Upload, Mail, Phone, MapPin, Building2, Globe, Save } from "lucide-react";
 
 export default function GeneralSettingsPage() {
-  const [expandedSections, setExpandedSections] = useState<string[]>([
-    "Refrens Premium Subscription", "PDF & Reports Configurations", "Time and Currency", "Security"
-  ]);
+  const [companyData, setCompanyData] = useState({
+    name: "Kiddos Food",
+    email: "contact@kiddosfood.com",
+    phone: "+91 98765 43210",
+    address: "123 Food Street, Industrial Area, Bangalore - 560001",
+    logo: null
+  });
 
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => 
-      prev.includes(section) ? prev.filter(s => s !== section) : [...prev, section]
-    );
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = () => {
+    setIsSaving(true);
+    setTimeout(() => setIsSaving(false), 1500);
   };
 
   const SectionHeader = ({ title }: { title: string }) => {
@@ -35,139 +39,96 @@ export default function GeneralSettingsPage() {
   };
 
   return (
-    <SettingsLayout>
-      <div className="space-y-4">
-        <h2 className="text-[17px] font-black text-[#1A1A1A] dark:text-white mb-6">General Settings</h2>
-
-        {/* Subscription */}
-        <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
-           <SectionHeader title="Refrens Premium Subscription" />
-           {expandedSections.includes("Refrens Premium Subscription") && (
-             <div className="pb-8 space-y-6 pt-2">
-                <div className="flex items-center gap-4">
-                   <button className="px-4 py-2 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[12px] font-bold text-[#7C3AED] bg-[#F3E8FF] transition-all">Active Subscription</button>
-                   <button className="px-4 py-2 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[12px] font-bold text-[#666] hover:bg-slate-50 transition-all">Billing History</button>
-                </div>
-                
-                <div className="w-full h-40 bg-[#1A1A1A] dark:bg-black rounded-xl relative overflow-hidden flex flex-col items-center justify-center space-y-3">
-                   <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 bg-orange-400 rounded-sm rotate-45 flex items-center justify-center">
-                         <div className="w-3 h-3 border-2 border-white rounded-full opacity-50" />
-                      </div>
-                      <span className="text-xl font-black text-white tracking-widest uppercase italic">Refrens Premium</span>
-                   </div>
-                   <div className="absolute inset-0 bg-gradient-to-r from-orange-400/5 to-transparent pointer-events-none" />
-                </div>
-
-                <div className="flex items-center gap-20 px-4">
-                   <span className="text-[12px] font-bold text-[#666]">Status</span>
-                   <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[11px] font-black rounded-md uppercase tracking-wide">Trial</span>
-                </div>
-             </div>
-           )}
+    <SettingsLayout categoryTitle="General Settings">
+      <div className="max-w-4xl space-y-10">
+        <div className="flex items-center justify-between">
+           <div>
+              <h2 className="text-[17px] font-black text-[#1A1A1A] dark:text-white">General Settings</h2>
+              <p className="text-[12px] font-medium text-[#999] mt-1">Manage your company's public identity and contact details.</p>
+           </div>
+           <button 
+             onClick={handleSave}
+             className="px-6 py-2.5 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl font-bold text-[13px] flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-purple-200/50"
+           >
+              {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={16} />}
+              {isSaving ? "Saving..." : "Save Changes"}
+           </button>
         </div>
 
-        {/* PDF & Reports */}
-        <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
-           <SectionHeader title="PDF & Reports Configurations" />
-           {expandedSections.includes("PDF & Reports Configurations") && (
-             <div className="pb-8 space-y-8 pt-2">
-                <div className="flex items-start justify-between max-w-3xl">
-                   <div className="space-y-1">
-                      <p className="text-[13px] font-bold text-[#1A1A1A] dark:text-white">Select Script for PDF Reports</p>
-                      <p className="text-[11px] font-medium text-[#999]">Important if you are using language other than English in Statement and Report PDFs.</p>
-                   </div>
-                   <select className="w-64 px-4 py-2 bg-white dark:bg-slate-800 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[13px] font-medium appearance-none">
-                      <option>English (Latin)</option>
-                   </select>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+           {/* Sidebar: Logo Upload */}
+           <div className="space-y-4">
+              <label className="text-[11px] font-black text-[#999] uppercase tracking-widest">Company Logo</label>
+              <div className="aspect-square w-full bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-[#F0EAF0] dark:border-slate-800 flex flex-col items-center justify-center p-6 group cursor-pointer hover:border-[#7C3AED]/30 transition-all">
+                 <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center text-[#7C3AED] group-hover:scale-110 transition-transform">
+                    <Upload size={24} />
+                 </div>
+                 <p className="text-[12px] font-bold text-[#666] mt-4">Upload Logo</p>
+                 <p className="text-[10px] text-[#999] mt-1 text-center font-medium">PNG, JPG or SVG (Max. 2MB)</p>
+              </div>
+           </div>
 
-                <div className="flex items-start justify-between max-w-3xl">
-                   <div className="space-y-1">
-                      <p className="text-[13px] font-bold text-[#1A1A1A] dark:text-white">Select Font for PDF Reports</p>
-                      <p className="text-[11px] font-medium text-[#999]">Important if you are using language other than English in Statement and Report PDFs.</p>
-                   </div>
-                   <select className="w-64 px-4 py-2 bg-white dark:bg-slate-800 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[13px] font-medium appearance-none">
-                      <option>Noto Sans</option>
-                   </select>
-                </div>
-             </div>
-           )}
-        </div>
+           {/* Main Form Fields */}
+           <div className="md:col-span-2 space-y-8">
+              <div className="grid grid-cols-1 gap-6">
+                 <div>
+                    <label className="flex items-center gap-2 text-[11px] font-black text-[#999] uppercase tracking-widest mb-2">
+                       <Building2 size={14} className="text-[#7C3AED]" /> Company Name
+                    </label>
+                    <input 
+                      type="text" 
+                      defaultValue={companyData.name}
+                      className="w-full px-5 py-3.5 bg-white dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-2xl text-[14px] font-medium focus:ring-4 focus:ring-purple-500/5 focus:border-[#7C3AED] transition-all outline-none"
+                      placeholder="Enter company name"
+                    />
+                 </div>
 
-        {/* Time and Currency */}
-        <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
-           <SectionHeader title="Time and Currency" />
-           {expandedSections.includes("Time and Currency") && (
-             <div className="pb-8 space-y-8 pt-2">
-                <div className="flex items-start justify-between max-w-3xl">
-                   <div className="space-y-1">
-                      <p className="text-[13px] font-bold text-[#1A1A1A] dark:text-white">Business Time Zone</p>
-                      <p className="text-[11px] font-medium text-[#999]">Set a time zone for your business.</p>
-                   </div>
-                   <select className="w-64 px-4 py-2 bg-white dark:bg-slate-800 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[13px] font-medium appearance-none">
-                      <option>(GMT+05:30) India Standard Time</option>
-                   </select>
-                </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                       <label className="flex items-center gap-2 text-[11px] font-black text-[#999] uppercase tracking-widest mb-2">
+                          <Mail size={14} className="text-[#7C3AED]" /> Email Address
+                       </label>
+                       <input 
+                         type="email" 
+                         defaultValue={companyData.email}
+                         className="w-full px-5 py-3.5 bg-white dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-2xl text-[14px] font-medium focus:ring-4 focus:ring-purple-500/5 focus:border-[#7C3AED] transition-all outline-none"
+                         placeholder="email@example.com"
+                       />
+                    </div>
+                    <div>
+                       <label className="flex items-center gap-2 text-[11px] font-black text-[#999] uppercase tracking-widest mb-2">
+                          <Phone size={14} className="text-[#7C3AED]" /> Phone Number
+                       </label>
+                       <input 
+                         type="text" 
+                         defaultValue={companyData.phone}
+                         className="w-full px-5 py-3.5 bg-white dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-2xl text-[14px] font-medium focus:ring-4 focus:ring-purple-500/5 focus:border-[#7C3AED] transition-all outline-none"
+                         placeholder="+91 00000 00000"
+                       />
+                    </div>
+                 </div>
 
-                <div className="flex items-start justify-between max-w-3xl">
-                   <div className="space-y-1">
-                      <p className="text-[13px] font-bold text-[#1A1A1A] dark:text-white">Business Currency</p>
-                      <p className="text-[11px] font-medium text-[#999]">Set a base currency in you do business.</p>
-                   </div>
-                   <select className="w-64 px-4 py-2 bg-white dark:bg-slate-800 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[13px] font-medium appearance-none">
-                      <option>Indian Rupee (INR, ₹)</option>
-                   </select>
-                </div>
+                 <div>
+                    <label className="flex items-center gap-2 text-[11px] font-black text-[#999] uppercase tracking-widest mb-2">
+                       <MapPin size={14} className="text-[#7C3AED]" /> Business Address
+                    </label>
+                    <textarea 
+                      defaultValue={companyData.address}
+                      rows={4}
+                      className="w-full px-5 py-3.5 bg-white dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-2xl text-[14px] font-medium focus:ring-4 focus:ring-purple-500/5 focus:border-[#7C3AED] transition-all outline-none resize-none"
+                      placeholder="Enter full business address"
+                    />
+                 </div>
+              </div>
 
-                <div className="flex items-start justify-between max-w-3xl">
-                   <div className="space-y-1">
-                      <p className="text-[13px] font-bold text-[#1A1A1A] dark:text-white">Business Currency Locale</p>
-                      <p className="text-[11px] font-medium text-[#999]">Set locale currency where you are located at.</p>
-                   </div>
-                   <select className="w-64 px-4 py-2 bg-white dark:bg-slate-800 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[13px] font-medium appearance-none">
-                      <option>India - English (Lakhs)</option>
-                   </select>
-                </div>
-             </div>
-           )}
-        </div>
-
-        {/* Security */}
-        <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
-           <SectionHeader title="Security" />
-           {expandedSections.includes("Security") && (
-             <div className="pb-8 space-y-8 pt-4 px-2">
-                <div className="flex items-center justify-between max-w-3xl">
-                   <div className="space-y-1">
-                      <p className="text-[13px] font-bold text-[#1A1A1A] dark:text-white">Change Profile to Public</p>
-                      <p className="text-[11px] font-medium text-[#999]">Enable to ensure that your Business Profile is visible and discoverable to everyone.</p>
-                   </div>
-                   <div className="w-10 h-5 bg-slate-200 dark:bg-slate-700 rounded-full cursor-pointer relative">
-                      <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm" />
-                   </div>
-                </div>
-
-                <div className="flex items-center justify-between max-w-3xl">
-                   <div className="space-y-1">
-                      <p className="text-[13px] font-bold text-[#1A1A1A] dark:text-white">Change Password</p>
-                      <p className="text-[11px] font-medium text-[#999]">Update your password frequently to stay secure.</p>
-                   </div>
-                   <button className="px-6 py-2 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[12px] font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-[#444] dark:text-white shadow-sm">
-                      Change Password
-                   </button>
-                </div>
-
-                <div className="flex items-center justify-between max-w-3xl">
-                   <div className="space-y-1">
-                      <p className="text-[13px] font-bold text-[#1A1A1A] dark:text-white">Remove Current Business</p>
-                   </div>
-                   <button className="px-8 py-2 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[11px] font-black hover:bg-red-50 transition-all text-red-500 uppercase tracking-widest shadow-sm">
-                      REMOVE
-                   </button>
-                </div>
-             </div>
-           )}
+              <div className="pt-6 border-t border-[#F0EAF0] dark:border-slate-800">
+                 <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800/30">
+                    <p className="text-[12px] font-bold text-blue-600 dark:text-blue-400">
+                       💡 These details will appear on all your invoices, purchase orders, and official documents.
+                    </p>
+                 </div>
+              </div>
+           </div>
         </div>
       </div>
     </SettingsLayout>

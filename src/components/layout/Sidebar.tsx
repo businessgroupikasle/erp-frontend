@@ -30,7 +30,21 @@ export default function Sidebar() {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
+  const [moduleConfig, setModuleConfig] = useState<Record<string, boolean>>({});
   const navRef = useRef<HTMLElement>(null);
+
+  const loadModuleConfig = useCallback(() => {
+    const saved = localStorage.getItem("erp_modules_config");
+    if (saved) {
+      setModuleConfig(JSON.parse(saved));
+    }
+  }, []);
+
+  useEffect(() => {
+    loadModuleConfig();
+    window.addEventListener('erp_modules_updated', loadModuleConfig);
+    return () => window.removeEventListener('erp_modules_updated', loadModuleConfig);
+  }, [loadModuleConfig]);
 
   const checkScroll = useCallback(() => {
     const el = navRef.current;
@@ -119,7 +133,18 @@ export default function Sidebar() {
           <div className="space-y-0.5">
             {menuSections.map((section) => {
               const filteredItems = section.items.filter(
-                (item) => !user || item.roles.includes(userRole)
+                (item) => {
+                  // Role Check
+                  const hasRole = !user || item.roles.includes(userRole);
+                  if (!hasRole) return false;
+
+                  // Module Check
+                  if (item.moduleId && moduleConfig[item.moduleId] === false) {
+                    return false;
+                  }
+
+                  return true;
+                }
               );
               if (filteredItems.length === 0) return null;
 

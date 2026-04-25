@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { clsx } from "clsx";
+import { exportToExcel, exportToPDF } from "@/lib/exportUtils";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 type Period = "this_month" | "last_month" | "this_quarter" | "this_year" | "custom";
@@ -189,9 +190,45 @@ export default function ProfitLossPage() {
     setTimeout(() => setIsRefreshing(false), 1200);
   };
 
-  const handleExport = (type: "pdf" | "excel") => {
+  const handleExport = async (type: "pdf" | "excel") => {
     if (!validateDates()) return;
-    alert(`Exporting as ${type.toUpperCase()}… (integrate your export API here)`);
+    
+    // Prepare data
+    const exportData: any[] = [];
+    
+    exportData.push({ Account: "--- INCOME ---", Current: "", Previous: "", Change: "" });
+    INCOME_DATA.items.forEach(item => {
+      exportData.push({
+        Account: item.label,
+        Current: item.current,
+        Previous: compareEnabled ? item.previous : "-",
+        Change: compareEnabled && item.previous > 0 ? (((item.current - item.previous) / item.previous) * 100).toFixed(1) + "%" : "-"
+      });
+    });
+    exportData.push({ Account: "Total Income", Current: totalIncome, Previous: compareEnabled ? prevIncome : "-", Change: "" });
+    
+    exportData.push({ Account: "", Current: "", Previous: "", Change: "" });
+    exportData.push({ Account: "--- EXPENSES ---", Current: "", Previous: "", Change: "" });
+    EXPENSE_DATA.items.forEach(item => {
+      exportData.push({
+        Account: item.label,
+        Current: item.current,
+        Previous: compareEnabled ? item.previous : "-",
+        Change: compareEnabled && item.previous > 0 ? (((item.current - item.previous) / item.previous) * 100).toFixed(1) + "%" : "-"
+      });
+    });
+    exportData.push({ Account: "Total Expenses", Current: totalExpenses, Previous: compareEnabled ? prevExpenses : "-", Change: "" });
+    
+    exportData.push({ Account: "", Current: "", Previous: "", Change: "" });
+    exportData.push({ Account: "NET PROFIT", Current: netProfit, Previous: compareEnabled ? prevProfit : "-", Change: "" });
+
+    if (type === "excel") {
+      await exportToExcel(exportData, `Profit_Loss_${period}`);
+    } else {
+      const columns = ["Account", "Current", "Previous", "Change"];
+      const rows = exportData.map(d => [String(d.Account), String(d.Current), String(d.Previous), String(d.Change)]);
+      await exportToPDF("Profit & Loss Report", columns, rows, `Profit_Loss_${period}`);
+    }
   };
 
   return (
@@ -226,14 +263,23 @@ export default function ProfitLossPage() {
               <Printer size={14} />
               Print
             </button>
-            <div className="relative">
+            <div className="relative group">
               <button
-                onClick={() => handleExport("excel")}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-[13px] font-semibold shadow-md shadow-violet-500/20 transition-all active:scale-[0.98]"
               >
                 <Download size={14} />
                 Export
+                <ChevronDown size={14} className="opacity-70" />
               </button>
+              
+              <div className="absolute right-0 top-full mt-2 w-36 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                <button onClick={() => handleExport("excel")} className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-violet-600 dark:hover:text-violet-400 rounded-t-xl transition-colors">
+                  Export as Excel
+                </button>
+                <button onClick={() => handleExport("pdf")} className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-violet-600 dark:hover:text-violet-400 rounded-b-xl transition-colors">
+                  Export as PDF
+                </button>
+              </div>
             </div>
           </div>
         </div>

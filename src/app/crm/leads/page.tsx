@@ -18,6 +18,7 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import api from "@/lib/api";
 import { useSearchParams } from "next/navigation";
+import { exportToExcel, exportToPDF } from "@/lib/exportUtils";
 
 interface Lead {
   id: string;
@@ -97,7 +98,7 @@ export default function CRMLeadsPage() {
     if (e.key === "Enter") fetchLeads();
   };
 
-  const downloadCSV = () => {
+  const handleExport = async (type: "excel" | "pdf") => {
     const headers = ["Contact Name", "Org", "Email", "Phone", "Country", "City", "Lead Source", "Budget", "Status", "Pipeline", "Created At", "Follow Up"];
     const rows = leads.map((l) => [
       l.contactName, l.orgName || "", l.email || "", l.phone || "",
@@ -106,13 +107,26 @@ export default function CRMLeadsPage() {
       new Date(l.createdAt).toLocaleDateString(),
       l.followUpDate ? new Date(l.followUpDate).toLocaleDateString() : ""
     ]);
-    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "leads.csv";
-    a.click();
+
+    if (type === "excel") {
+      const data = leads.map((l) => ({
+        "Contact Name": l.contactName,
+        "Org": l.orgName || "",
+        "Email": l.email || "",
+        "Phone": l.phone || "",
+        "Country": l.contactCountry || "",
+        "City": l.customerCity || "",
+        "Lead Source": l.leadSource || "",
+        "Budget": l.budget || "",
+        "Status": l.status,
+        "Pipeline": l.pipeline?.name || "",
+        "Created At": new Date(l.createdAt).toLocaleDateString(),
+        "Follow Up": l.followUpDate ? new Date(l.followUpDate).toLocaleDateString() : ""
+      }));
+      await exportToExcel(data, "Leads_Export");
+    } else {
+      await exportToPDF("Leads Export", headers, rows, "Leads_Export");
+    }
   };
 
   return (
@@ -200,10 +214,21 @@ export default function CRMLeadsPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button onClick={downloadCSV} className="flex items-center gap-2 px-3 py-1.5 border border-[#F0EAF0] dark:border-slate-800 rounded-md text-[11px] font-bold text-[#666] hover:bg-slate-50 transition-colors">
-                <Download size={14} />
-                Download CSV
-              </button>
+              <div className="relative group">
+                <button className="flex items-center gap-2 px-3 py-1.5 border border-[#F0EAF0] dark:border-slate-800 rounded-md text-[11px] font-bold text-[#666] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                  <Download size={14} />
+                  Export
+                  <ChevronDown size={12} className="opacity-70" />
+                </button>
+                <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                  <button onClick={() => handleExport("excel")} className="w-full text-left px-3 py-2 text-[11px] font-bold text-[#666] dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors rounded-t-lg">
+                    Export as Excel
+                  </button>
+                  <button onClick={() => handleExport("pdf")} className="w-full text-left px-3 py-2 text-[11px] font-bold text-[#666] dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors rounded-b-lg">
+                    Export as PDF
+                  </button>
+                </div>
+              </div>
               <div className="relative group w-64">
                 <input
                   type="text"

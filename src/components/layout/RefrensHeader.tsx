@@ -385,7 +385,7 @@ export default function RefrensHeader() {
 
                 <div className="py-1.5">
                   <Link
-                    href="/settings/general"
+                    href="/settings/team"
                     className="flex items-center gap-3 px-4 py-2.5 text-[11px] font-black uppercase text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-950 transition-colors tracking-widest"
                   >
                     <Settings size={15} className="text-gray-400 shrink-0" />

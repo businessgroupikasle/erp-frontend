@@ -5,6 +5,7 @@ import { Plus, ChevronRight, Calendar, ChevronDown, Download, Columns, Loader2 }
 import Link from "next/link";
 import { clsx } from "clsx";
 import api from "@/lib/api";
+import { exportToExcel, exportToPDF } from "@/lib/exportUtils";
 
 interface LeadSourceRow {
   leadSource: string;
@@ -47,11 +48,27 @@ export default function LeadSourceReport() {
     } catch { setRows([]); } finally { setLoading(false); }
   };
 
-  const downloadCSV = () => {
+  const handleExport = async (type: "excel" | "pdf") => {
     const headers = ["Lead Source", "Total Revenue", "Conversion Rate (%)", "Leads", "Open", "Closed", "Lost", "Not Serviceable", "Avg Deal Value", "Avg Closure Days"];
-    const data = rows.map((r) => [r.leadSource, r.totalRevenue, r.conversionRate, r.leadsGenerated, r.openLeads, r.closedLeads, r.lostLeads, r.notServiceable, r.avgDealValue, r.avgClosureTimeDays]);
-    const csv = [headers, ...data].map((r) => r.join(",")).join("\n");
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "lead-source.csv"; a.click();
+    const data = rows.map((r) => [String(r.leadSource), String(r.totalRevenue), String(r.conversionRate), String(r.leadsGenerated), String(r.openLeads), String(r.closedLeads), String(r.lostLeads), String(r.notServiceable), String(r.avgDealValue), String(r.avgClosureTimeDays)]);
+    
+    if (type === "excel") {
+      const excelData = rows.map(r => ({
+        "Lead Source": r.leadSource,
+        "Total Revenue": r.totalRevenue,
+        "Conversion Rate (%)": r.conversionRate,
+        "Leads": r.leadsGenerated,
+        "Open": r.openLeads,
+        "Closed": r.closedLeads,
+        "Lost": r.lostLeads,
+        "Not Serviceable": r.notServiceable,
+        "Avg Deal Value": r.avgDealValue,
+        "Avg Closure Days": r.avgClosureTimeDays
+      }));
+      await exportToExcel(excelData, "Lead_Source_Report");
+    } else {
+      await exportToPDF("Lead Source Report", headers, data, "Lead_Source_Report");
+    }
   };
 
   return (
@@ -119,9 +136,21 @@ export default function LeadSourceReport() {
         </div>
 
         <div className="flex justify-end">
-          <button onClick={downloadCSV} className="flex items-center gap-2 px-3 py-1.5 border border-[#F0EAF0] dark:border-slate-800 rounded-md text-[11px] font-bold text-[#666] hover:bg-slate-50 bg-white dark:bg-slate-900 shadow-sm">
-            <Download size={14} /> Download CSV
-          </button>
+          <div className="relative group">
+            <button className="flex items-center gap-2 px-3 py-1.5 border border-[#F0EAF0] dark:border-slate-800 rounded-md text-[11px] font-bold text-[#666] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+              <Download size={14} />
+              Export
+              <ChevronDown size={12} className="opacity-70" />
+            </button>
+            <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              <button onClick={() => handleExport("excel")} className="w-full text-left px-3 py-2 text-[11px] font-bold text-[#666] dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors rounded-t-lg">
+                Export as Excel
+              </button>
+              <button onClick={() => handleExport("pdf")} className="w-full text-left px-3 py-2 text-[11px] font-bold text-[#666] dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors rounded-b-lg">
+                Export as PDF
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">

@@ -15,9 +15,8 @@ export default function UserAccountLayout({ children }: UserAccountLayoutProps) 
 
   const menuItems = [
     { label: "Personal Information", href: "/settings/user/profile" },
-    { label: "Notification & Alerts", href: "/settings/user/notifications" },
     { label: "Password & Security", href: "/settings/user/security" },
-    { label: "Configurations", href: "/settings/user/config" },
+    { label: "Preferences", href: "/settings/user/config" },
   ];
 
   return (
@@ -49,7 +48,7 @@ export default function UserAccountLayout({ children }: UserAccountLayoutProps) 
 
         {/* Entry point back to Business Settings */}
         <Link 
-          href="/settings/general"
+          href="/settings/team"
           className="group flex items-center justify-between p-4 bg-[#FAF9FA] dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-2xl hover:border-[#7C3AED] transition-all"
         >
           <div className="flex items-center gap-3">
