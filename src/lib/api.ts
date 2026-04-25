@@ -216,6 +216,8 @@ export const purchaseOrdersApi = {
   receive: (id: string) => api.post(`/api/purchase-orders/${id}/receive`),
   recordAdvance: (id: string, advancePaid: number) =>
     api.patch(`/api/purchase-orders/${id}/advance`, { advancePaid }),
+  applyAdvance: (id: string) =>
+    api.post(`/api/purchase-orders/${id}/apply-advance`),
   cancel: (id: string) => api.patch(`/api/purchase-orders/${id}/cancel`),
   delete: (id: string) => api.delete(`/api/purchase-orders/${id}`),
 };

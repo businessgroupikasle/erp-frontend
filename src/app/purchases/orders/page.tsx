@@ -180,6 +180,15 @@ export default function PurchaseOrdersPage() {
     } catch (e) { console.error(e); }
   };
 
+  const handleApplyAdvance = async (id: string) => {
+    try {
+      await purchaseOrdersApi.applyAdvance(id);
+      fetchAll();
+    } catch (e: any) {
+      alert(e?.response?.data?.error || "Failed to successfully apply advance.");
+    }
+  };
+
   const handleCancel = async (id: string) => {
     if (!confirm("Cancel this purchase order?")) return;
     try {
@@ -341,6 +350,14 @@ export default function PurchaseOrdersPage() {
 
                 {/* Actions */}
                 <div className="mt-4 flex gap-2 flex-wrap">
+                  {balance > 0 && vendors.find(v => v.id === po.vendorId)?.balance > 0 && (
+                    <button
+                      onClick={() => handleApplyAdvance(po.id)}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-[12px] font-bold transition-all shadow-md shadow-emerald-500/20"
+                    >
+                      <Wallet size={13} /> Settle with Advance
+                    </button>
+                  )}
                   {po.status === "PENDING" && (
                     <>
                       <button

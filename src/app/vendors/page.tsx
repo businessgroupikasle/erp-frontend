@@ -637,26 +637,26 @@ export default function VendorsPage() {
                 <div className="space-y-1.5">
                   <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Vendor Official Name *</label>
                   <input 
-                    placeholder="Alphabets only (e.g. Rahul Traders)" 
+                    placeholder="Ex: Harikrishna" 
                     value={form.name}
                     onChange={(e) => {
                       const val = e.target.value.replace(/[^A-Za-z\s]/g, "");
                       setForm((f) => ({ ...f, name: val }));
                     }}
-                    className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 font-bold transition-all text-slate-800 dark:text-white"
+                    className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 font-semibold transition-all text-slate-800 dark:text-white placeholder:font-normal placeholder:text-slate-400/50"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Contact Number (10-Digit) *</label>
                   <input 
-                    placeholder="e.g. 9812345678" 
+                    placeholder="Ex: 9812345678" 
                     value={form.contact}
                     maxLength={10}
                     onChange={(e) => {
                       const val = e.target.value.replace(/\D/g, "");
                       setForm((f) => ({ ...f, contact: val }));
                     }}
-                    className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 font-bold transition-all text-slate-800 dark:text-white"
+                    className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 font-semibold transition-all text-slate-800 dark:text-white placeholder:font-normal placeholder:text-slate-400/50"
                   />
                 </div>
               </div>
@@ -665,10 +665,10 @@ export default function VendorsPage() {
                 <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Official Gmail Address</label>
                 <input 
                   type="email"
-                  placeholder="name@gmail.com (Registration Required)" 
+                  placeholder="Ex: name@gmail.com" 
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 font-bold transition-all text-slate-800 dark:text-white"
+                  className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 font-semibold transition-all text-slate-800 dark:text-white placeholder:font-normal placeholder:text-slate-400/50"
                 />
               </div>
 
@@ -732,22 +732,22 @@ export default function VendorsPage() {
                 <div className="space-y-1.5">
                   <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Registered Office Address *</label>
                   <textarea 
-                    placeholder="Enter full physical address, city, state and pincode..." 
+                    placeholder="Official address..." 
                     value={form.address}
                     rows={2}
                     onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                    className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 font-bold transition-all resize-none text-slate-800 dark:text-white"
+                    className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 font-semibold transition-all resize-none text-slate-800 dark:text-white placeholder:font-normal placeholder:text-slate-400/50"
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Internal Reference Notes</label>
                   <textarea 
-                    placeholder="Special instructions or service agreement notes..." 
+                    placeholder="Internal notes..." 
                     value={form.remark}
                     rows={2}
                     onChange={(e) => setForm((f) => ({ ...f, remark: e.target.value }))}
-                    className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 font-bold transition-all resize-none text-slate-800 dark:text-white"
+                    className="w-full px-5 py-3.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 font-semibold transition-all resize-none text-slate-800 dark:text-white placeholder:font-normal placeholder:text-slate-400/50"
                   />
                 </div>
               </div>
