@@ -70,6 +70,11 @@ export default function RecipesPage() {
     setIngredients((prev) => prev.map((ing, idx) => {
       if (idx !== i) return ing;
       if (field === "inventoryItemId") {
+        // Restriction: Prevent duplicates
+        if (prev.some((item, index) => index !== i && item.inventoryItemId === value)) {
+          alert("This material is already in the recipe. Please adjust its quantity instead.");
+          return ing;
+        }
         const mat = materials.find((m: any) => m.id === value);
         return { ...ing, inventoryItemId: value, itemName: mat?.name ?? "", unit: mat?.unit ?? "kg" };
       }
@@ -139,6 +144,14 @@ export default function RecipesPage() {
 
   const handleQuickMaterial = async () => {
     if (!quickName) return;
+
+    // Restriction: Pre-check if exists
+    const exists = materials.find(m => m.name.toLowerCase() === quickName.toLowerCase());
+    if (exists) {
+        alert(`A material named "${quickName}" already exists. Please select it from the dropdown.`);
+        return;
+    }
+
     setAddingQuick(true);
     try {
       await rawMaterialsApi.create({
@@ -380,8 +393,10 @@ export default function RecipesPage() {
                       <div className="col-span-6">
                         <select value={ing.inventoryItemId} onChange={(e) => updateIngredient(i, "inventoryItemId", e.target.value)}
                           className="w-full appearance-none bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-orange-500/20">
-                          <option value="">Select material...</option>
-                          {materials.map((m: any) => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}
+                           <option value="">Select material...</option>
+                           {materials
+                             .filter(m => !ingredients.some((ing, idx) => idx !== i && ing.inventoryItemId === m.id))
+                             .map((m: any) => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}
                         </select>
                       </div>
                       <div className="col-span-3">

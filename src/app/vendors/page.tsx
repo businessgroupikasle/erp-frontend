@@ -203,13 +203,27 @@ export default function VendorsPage() {
     try {
       let finalMaterialId = linkData.materialId;
 
-      // 1. If new material, create it first
+      // 1. If new material, check if it already exists by name first
       if (linkData.isNew) {
-        const mRes = await rawMaterialsApi.create({
-          name: linkData.newName,
-          unit: linkData.newUnit
-        });
-        finalMaterialId = mRes.data.id;
+        const alreadyExists = materials.find(m => m.name.toLowerCase() === linkData.newName.toLowerCase());
+        if (alreadyExists) {
+            // If it exists, check if it's already linked to THIS vendor
+            const isLinked = linkModal.suppliedMaterials?.some((sm: any) => sm.materialId === alreadyExists.id);
+            if (isLinked) {
+                alert(`The material "${linkData.newName}" is already linked to this vendor. Please update its price in the list.`);
+                return;
+            }
+            // If exists but not linked, just use its ID
+            finalMaterialId = alreadyExists.id;
+        } else {
+            const mRes = await rawMaterialsApi.create({
+              name: linkData.newName,
+              unit: linkData.newUnit
+            });
+            finalMaterialId = mRes.data.id;
+            // Update local materials list
+            setMaterials(prev => [...prev, mRes.data]);
+        }
       }
 
       // 2. Link to vendor
@@ -232,7 +246,8 @@ export default function VendorsPage() {
   const [showMaterialList, setShowMaterialList] = useState(false);
 
   const filteredSelection = materials.filter(m => 
-    m.name.toLowerCase().includes(materialSearch.toLowerCase())
+    m.name.toLowerCase().includes(materialSearch.toLowerCase()) &&
+    !linkModal?.suppliedMaterials?.some((sm: any) => sm.materialId === m.id)
   );
 
   const handleDelete = async (vendor: any) => {
@@ -539,7 +554,7 @@ export default function VendorsPage() {
                 <button
                   onClick={() => {
                     setShowPayment(vendor);
-                    setPaymentForm({ amount: "", note: "", type: "PAYMENT" });
+                    setPaymentForm({ amount: "", note: "", type: "PAYMENT", referenceId: "" });
                   }}
                   className="flex-1 py-2.5 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-[11px] uppercase tracking-wider rounded-xl transition-all border border-emerald-500/10 flex items-center justify-center gap-2"
                 >

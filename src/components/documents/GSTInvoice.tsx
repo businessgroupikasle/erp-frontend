@@ -38,10 +38,12 @@ export default function GSTInvoice({ order, vendor, companyDetails, onClose }: G
   const round = (n: number) => Math.round(n * 100) / 100;
   
   // Place of Supply Detection
-  const placeOfSupply = vendor.state || "Unknown";
+  const companyState = (companyDetails?.state || "Unknown").toLowerCase();
+  const vendorState = (vendor?.state || "Unknown").toLowerCase();
+  
   const isSameState = 
-    placeOfSupply.toLowerCase().includes(companyDetails.state.toLowerCase()) ||
-    companyDetails.state.toLowerCase().includes(placeOfSupply.toLowerCase());
+    vendorState.includes(companyState) ||
+    companyState.includes(vendorState);
   
   const taxableSubtotal = items.reduce((s, it) => s + (safe(it.quantity) * safe(it.price)), 0);
   
@@ -64,13 +66,13 @@ export default function GSTInvoice({ order, vendor, companyDetails, onClose }: G
 
   const totalTax = round(taxBreakdown.cgst + taxBreakdown.sgst + taxBreakdown.igst);
   const grandTotal = round(taxableSubtotal + totalTax);
-  const advance = safe(order.advancePaid);
-  const balance = Math.max(0, grandTotal - advance);
+  const totalPaid = safe(order.paid || order.advancePaid);
+  const balance = Math.max(0, grandTotal - totalPaid);
 
   // Status Badge Logic
   const getStatusInfo = () => {
-    if (balance <= 0 && grandTotal > 0) return { label: "PAID", color: "bg-emerald-100 text-emerald-700 border-emerald-200" };
-    if (advance > 0 && balance > 0) return { label: "PARTIAL", color: "bg-blue-100 text-blue-700 border-blue-200" };
+    if (balance <= 0.01 && grandTotal > 0) return { label: "PAID", color: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+    if (totalPaid > 0 && balance > 0.01) return { label: "PARTIAL", color: "bg-blue-100 text-blue-700 border-blue-200" };
     return { label: "DUE", color: "bg-rose-100 text-rose-700 border-rose-200" };
   };
   const statusInfo = getStatusInfo();
@@ -142,7 +144,7 @@ export default function GSTInvoice({ order, vendor, companyDetails, onClose }: G
               </h2>
               <div className="space-y-1">
                 <p className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter opacity-90">
-                  INV-{new Date().getFullYear()}-{order.id?.slice(-4).toUpperCase() || '0001'}
+                  {order.poNumber || `INV-${new Date().getFullYear()}-${order.id?.slice(-4).toUpperCase() || '0001'}`}
                 </p>
                 <div className="flex flex-col md:items-end gap-1">
                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">
@@ -300,8 +302,8 @@ export default function GSTInvoice({ order, vendor, companyDetails, onClose }: G
               {/* Payment Context (Simplified & Powerful) */}
               <div className="p-10 bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/10 rounded-[3rem] space-y-6">
                  <div className="flex justify-between items-center px-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Advance Paid</span>
-                    <span className="text-xl font-black text-slate-800 dark:text-white tabular-nums tracking-tighter">− ₹{fmt(advance)}</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Total Amount Paid</span>
+                    <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tighter">− ₹{fmt(totalPaid)}</span>
                  </div>
                  
                  <div className="h-px bg-slate-200 dark:bg-white/10 border-dashed border-t" />
@@ -310,18 +312,18 @@ export default function GSTInvoice({ order, vendor, companyDetails, onClose }: G
                     <div>
                        <span className={clsx(
                          "text-[12px] font-black uppercase tracking-[0.3em] leading-none px-3 py-1.5 rounded-full border shadow-sm transition-all",
-                         balance > 0 
+                         balance > 0.01 
                           ? "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/20 dark:border-rose-500/30" 
                           : "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-500/30"
                        )}>
-                         {balance > 0 ? "TOTAL DUE" : "FULLY PAID"}
+                         {balance > 0.01 ? "TOTAL DUE" : "FULLY PAID"}
                        </span>
                     </div>
                     <div className="text-right">
                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none mb-1">Final Balance</p>
                        <span className={clsx(
                          "text-3xl font-black tabular-nums transition-colors tracking-tighter", 
-                         balance > 0 ? "text-rose-600" : "text-emerald-500"
+                         balance > 0.01 ? "text-rose-600" : "text-emerald-500"
                        )}>
                          ₹{fmt(balance)}
                        </span>

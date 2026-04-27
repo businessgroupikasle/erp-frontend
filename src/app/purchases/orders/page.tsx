@@ -88,6 +88,13 @@ export default function PurchaseOrdersPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [editingProfile, setEditingProfile] = useState<any>(FALLBACK_COMPANY);
 
+  // Payment Modal State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [paymentNote, setPaymentNote] = useState("");
+  const [payingPO, setPayingPO] = useState<any>(null);
+  const [lastPayment, setLastPayment] = useState<any>(null);
+
   // Derived Company Data
   const currentCompany = companyProfile || FALLBACK_COMPANY;
   const isProfileComplete = companyProfile && companyProfile.gstin && companyProfile.address;
@@ -144,6 +151,12 @@ export default function PurchaseOrdersPage() {
       if (idx !== i) return it;
       const cleanVal = (field === "quantity" || field === "price") ? Math.max(0, value) : value;
       if (field === "inventoryItemId") {
+        // Restriction: Prevent adding the same material multiple times
+        if (prev.some((item, index) => index !== i && item.inventoryItemId === value)) {
+          alert("This material is already in your order list. Please update the quantity of the existing row instead.");
+          return it;
+        }
+
         const mat = materials.find((m: any) => m.id === value);
         // Auto-fill price from vendor's linked material rate (if available)
         const vendorRate = selectedVendor?.suppliedMaterials?.find(
@@ -215,10 +228,19 @@ export default function PurchaseOrdersPage() {
 
   const handleQuickAddMaterial = async () => {
     if (!newMat.name) return;
+    
+    // Restriction: Prevent adding duplicate material by name in local state before API call
+    const alreadyExists = materials.find(m => m.name.toLowerCase() === newMat.name.toLowerCase());
+    if (alreadyExists) {
+        alert(`A material named "${newMat.name}" already exists. Please select it from the list instead of creating a duplicate.`);
+        return;
+    }
+
     setMatSaving(true);
     try {
       const res = await rawMaterialsApi.create({
         ...newMat,
+        vendorId: vendorId,
         sku: "RM-" + Math.random().toString(36).substring(2, 8).toUpperCase()
       });
       setMaterials(prev => [...prev, res.data]);
@@ -278,6 +300,26 @@ export default function PurchaseOrdersPage() {
       fetchAll();
     } catch (e: any) {
       alert(e?.response?.data?.error ?? "Failed to cancel PO");
+    }
+  };
+
+  const handleRecordPayment = async () => {
+    if (!payingPO || paymentAmount <= 0) return;
+    setSaving(true);
+    try {
+      const res = await vendorsApi.recordPayment(payingPO.vendorId, {
+        amount: paymentAmount,
+        note: paymentNote || `Payment for PO #${payingPO.id.substring(0, 8)}`,
+        referenceId: payingPO.id
+      });
+      setLastPayment(res.data);
+      // Keep payingPO for the success screen
+      fetchAll();
+    } catch (e: any) {
+      console.error(e);
+      alert(e.response?.data?.error || "Failed to record payment.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -471,6 +513,18 @@ export default function PurchaseOrdersPage() {
                       className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-[12px] font-bold transition-all shadow-md shadow-emerald-500/20"
                     >
                       <Wallet size={13} /> Settle with Advance
+                    </button>
+                  )}
+                  {balance > 0 && (
+                    <button
+                      onClick={() => {
+                        setPayingPO(po);
+                        setPaymentAmount(balance);
+                        setShowPaymentModal(true);
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-orange-100 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-500/20 rounded-xl text-[12px] font-bold transition-all"
+                    >
+                      <IndianRupee size={13} /> Pay Balance
                     </button>
                   )}
                   <button
@@ -715,7 +769,12 @@ export default function PurchaseOrdersPage() {
                               </div>
                             </div>
                             <div className="max-h-[160px] overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
-                              {materials.filter(m => m.name.toLowerCase().includes(materialSearch.toLowerCase())).map(m => (
+                              {materials
+                                .filter(m => 
+                                  m.name.toLowerCase().includes(materialSearch.toLowerCase()) && 
+                                  !items.some((it, idx) => idx !== i && it.inventoryItemId === m.id)
+                                )
+                                .map(m => (
                                 <button
                                   key={m.id}
                                   onClick={() => {
@@ -1127,6 +1186,144 @@ export default function PurchaseOrdersPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Payment Modal */}
+      {showPaymentModal && payingPO && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#1a1c26] w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden animate-in zoom-in-95 duration-200">
+            {!lastPayment ? (
+              <>
+                <div className="p-6 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-orange-50/50 dark:bg-orange-500/[0.02]">
+                  <div>
+                    <h2 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                      <Wallet className="text-orange-500" size={20} />
+                      Record Payment
+                    </h2>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{payingPO.poNumber || `PO-#${payingPO.id.substring(0, 8).toUpperCase()}`} · {payingPO.vendor?.name}</p>
+                  </div>
+                  <button onClick={() => setShowPaymentModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  <div className="bg-slate-50 dark:bg-white/[0.02] rounded-2xl p-4 border border-slate-100 dark:border-white/5">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Amount</span>
+                      <span className="text-sm font-black text-slate-700 dark:text-slate-200">{fmt(payingPO.totalAmount)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Remaining Balance</span>
+                      <span className="text-lg font-black text-orange-600">{fmt(payingPO.totalAmount - (payingPO.paid || 0))}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Payment Amount (₹)</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                        <input
+                          type="number"
+                          value={paymentAmount || ""}
+                          onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                          className="w-full pl-10 pr-4 py-4 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 text-lg font-black transition-all"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Payment Note (Optional)</label>
+                      <textarea
+                        value={paymentNote}
+                        onChange={(e) => setPaymentNote(e.target.value)}
+                        className="w-full px-4 py-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 text-sm font-semibold transition-all h-20 resize-none"
+                        placeholder="e.g. Paid via UPI / Bank Transfer"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button 
+                      onClick={() => setShowPaymentModal(false)}
+                      className="flex-1 px-6 py-4 rounded-2xl border border-slate-200 dark:border-white/10 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={handleRecordPayment}
+                      disabled={saving || paymentAmount <= 0}
+                      className="flex-[2] px-6 py-4 bg-orange-500 hover:bg-orange-400 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {saving ? "Processing..." : (
+                        <>
+                          <CheckCircle2 size={16} />
+                          Confirm Payment
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="p-10 text-center space-y-6 animate-in zoom-in-95 duration-500">
+                <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-500/20 rounded-[2rem] flex items-center justify-center text-emerald-600 mx-auto shadow-xl shadow-emerald-500/10 border border-emerald-200/50 dark:border-emerald-500/20">
+                  <CheckCircle2 size={40} strokeWidth={2.5} />
+                </div>
+                
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Payment Successful!</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 font-medium px-4">Transaction has been recorded and balance updated.</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-white/5 rounded-3xl p-5 border border-slate-100 dark:border-white/5 space-y-3">
+                  <div className="flex justify-between items-center text-[11px] font-bold">
+                    <span className="text-slate-400 uppercase tracking-widest">Invoice ID</span>
+                    <span className="text-slate-700 dark:text-slate-200 font-black font-mono tracking-tighter">TXN-{lastPayment.id.slice(-8).toUpperCase()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px] font-bold">
+                    <span className="text-slate-400 uppercase tracking-widest">Amount Paid</span>
+                    <span className="text-emerald-600 font-black tracking-tight">{fmt(lastPayment.amount)}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-4">
+                  <button 
+                    onClick={() => {
+                      setViewingPO({
+                        ...payingPO,
+                        paid: (payingPO.paid || 0) + lastPayment.amount,
+                        advancePaid: (payingPO.advancePaid || 0) + lastPayment.amount
+                      });
+                      setShowPaymentModal(false);
+                      setPayingPO(null);
+                      setLastPayment(null);
+                      setPaymentAmount(0);
+                      setPaymentNote("");
+                    }}
+                    className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <FileText size={16} />
+                    View & Download Invoice
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowPaymentModal(false);
+                      setPayingPO(null);
+                      setLastPayment(null);
+                      setPaymentAmount(0);
+                      setPaymentNote("");
+                    }}
+                    className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    Back to Orders
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
