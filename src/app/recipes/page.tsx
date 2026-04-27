@@ -15,32 +15,35 @@ interface RecipeIngredient {
   quantityRequired: number;
 }
 
+import { useToast } from "@/context/ToastContext";
+
 export default function RecipesPage() {
-  const [recipes, setRecipes]     = useState<any[]>([]);
-  const [products, setProducts]   = useState<any[]>([]);
+  const { showToast } = useToast();
+  const [recipes, setRecipes] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [search, setSearch]       = useState("");
-  const [showForm, setShowForm]   = useState(false);
-  const [editing, setEditing]     = useState<any>(null);
-  const [selected, setSelected]   = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [selected, setSelected] = useState<any>(null);
 
   // Form state
-  const [productId, setProductId]   = useState("");
+  const [productId, setProductId] = useState("");
   const [recipeName, setRecipeName] = useState("");
-  const [yieldQty, setYieldQty]     = useState(1);
+  const [yieldQty, setYieldQty] = useState(1);
   const [instructions, setInstructions] = useState("");
-  const [ingredients, setIngredients]   = useState<RecipeIngredient[]>([
+  const [ingredients, setIngredients] = useState<RecipeIngredient[]>([
     { inventoryItemId: "", itemName: "", unit: "kg", quantityRequired: 0 },
   ]);
   const [saving, setSaving] = useState(false);
 
   // Quick Add state
-  const [showQuickProduct, setShowQuickProduct]   = useState(false);
+  const [showQuickProduct, setShowQuickProduct] = useState(false);
   const [showQuickMaterial, setShowQuickMaterial] = useState(false);
-  const [quickName, setQuickName]   = useState("");
+  const [quickName, setQuickName] = useState("");
   const [quickPrice, setQuickPrice] = useState(0);
-  const [quickUnit, setQuickUnit]   = useState("kg");
+  const [quickUnit, setQuickUnit] = useState("kg");
   const [addingQuick, setAddingQuick] = useState(false);
 
   const fetchAll = useCallback(async () => {
@@ -72,7 +75,7 @@ export default function RecipesPage() {
       if (field === "inventoryItemId") {
         // Restriction: Prevent duplicates
         if (prev.some((item, index) => index !== i && item.inventoryItemId === value)) {
-          alert("This material is already in the recipe. Please adjust its quantity instead.");
+          showToast("This material is already in the recipe. Please adjust its quantity instead.", "warning");
           return ing;
         }
         const mat = materials.find((m: any) => m.id === value);
@@ -148,8 +151,8 @@ export default function RecipesPage() {
     // Restriction: Pre-check if exists
     const exists = materials.find(m => m.name.toLowerCase() === quickName.toLowerCase());
     if (exists) {
-        alert(`A material named "${quickName}" already exists. Please select it from the dropdown.`);
-        return;
+      showToast(`A material named "${quickName}" already exists. Please select it from the dropdown.`, "info");
+      return;
     }
 
     setAddingQuick(true);
@@ -162,6 +165,7 @@ export default function RecipesPage() {
       await fetchAll();
       setShowQuickMaterial(false);
       setQuickName(""); setQuickUnit("kg");
+      showToast("Material created successfully", "success");
     } catch (e) { console.error(e); }
     finally { setAddingQuick(false); }
   };
@@ -393,10 +397,10 @@ export default function RecipesPage() {
                       <div className="col-span-6">
                         <select value={ing.inventoryItemId} onChange={(e) => updateIngredient(i, "inventoryItemId", e.target.value)}
                           className="w-full appearance-none bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-orange-500/20">
-                           <option value="">Select material...</option>
-                           {materials
-                             .filter(m => !ingredients.some((ing, idx) => idx !== i && ing.inventoryItemId === m.id))
-                             .map((m: any) => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}
+                          <option value="">Select material...</option>
+                          {materials
+                            .filter(m => !ingredients.some((ing, idx) => idx !== i && ing.inventoryItemId === m.id))
+                            .map((m: any) => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}
                         </select>
                       </div>
                       <div className="col-span-3">

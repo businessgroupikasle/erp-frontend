@@ -19,7 +19,10 @@ const EMPTY_FORM = {
   remark: ""
 };
 
+import { useToast } from "@/context/ToastContext";
+
 export default function VendorsPage() {
+  const { showToast } = useToast();
   const [vendors, setVendors]   = useState<any[]>([]);
   const [summary, setSummary]   = useState<any>(null); // Real-time financial data from backend
   const [materials, setMaterials] = useState<any[]>([]);
@@ -89,13 +92,13 @@ export default function VendorsPage() {
   const handleSave = async () => {
     // 1. Name Validation (Alpha only)
     if (!form.name.trim() || !/^[A-Za-z\s]+$/.test(form.name)) {
-      alert("Vendor Name is required and must contain only alphabets.");
+      showToast("Vendor Name is required and must contain only alphabets.", "warning");
       return;
     }
 
     // 2. Contact Validation (10 digits)
     if (!form.contact.trim() || !/^\d{10}$/.test(form.contact)) {
-      alert("Contact Number must be exactly 10 digits.");
+      showToast("Contact Number must be exactly 10 digits.", "warning");
       return;
     }
 
@@ -210,7 +213,7 @@ export default function VendorsPage() {
             // If it exists, check if it's already linked to THIS vendor
             const isLinked = linkModal.suppliedMaterials?.some((sm: any) => sm.materialId === alreadyExists.id);
             if (isLinked) {
-                alert(`The material "${linkData.newName}" is already linked to this vendor. Please update its price in the list.`);
+                showToast(`The material "${linkData.newName}" is already linked to this vendor.`, "info");
                 return;
             }
             // If exists but not linked, just use its ID
@@ -236,9 +239,10 @@ export default function VendorsPage() {
       setLinkModal(null);
       setLinkData({ materialId: "", price: "", isNew: false, newName: "", newUnit: "kg" });
       fetchVendors();
+      showToast("Material linked successfully", "success");
     } catch (e: any) {
       console.error("Link Material Error:", e);
-      alert(e?.response?.data?.error ?? "Failed to handle material operation. Please check if the material name already exists.");
+      showToast(e?.response?.data?.error ?? "Failed to link material", "error");
     } finally { setSaving(false); }
   };
 

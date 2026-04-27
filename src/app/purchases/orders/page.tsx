@@ -53,7 +53,10 @@ interface POItem {
   gstRate: number;
 }
 
+import { useToast } from "@/context/ToastContext";
+
 export default function PurchaseOrdersPage() {
+  const { showToast } = useToast();
   const [orders, setOrders] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
@@ -153,7 +156,7 @@ export default function PurchaseOrdersPage() {
       if (field === "inventoryItemId") {
         // Restriction: Prevent adding the same material multiple times
         if (prev.some((item, index) => index !== i && item.inventoryItemId === value)) {
-          alert("This material is already in your order list. Please update the quantity of the existing row instead.");
+          showToast("This material is already in your order list. Please update the quantity instead.", "warning");
           return it;
         }
 
@@ -232,7 +235,7 @@ export default function PurchaseOrdersPage() {
     // Restriction: Prevent adding duplicate material by name in local state before API call
     const alreadyExists = materials.find(m => m.name.toLowerCase() === newMat.name.toLowerCase());
     if (alreadyExists) {
-        alert(`A material named "${newMat.name}" already exists. Please select it from the list instead of creating a duplicate.`);
+        showToast(`A material named "${newMat.name}" already exists. Please select it from the list instead.`, "warning");
         return;
     }
 
@@ -246,6 +249,7 @@ export default function PurchaseOrdersPage() {
       setMaterials(prev => [...prev, res.data]);
       setShowMaterialForm(false);
       setNewMat({ name: "", unit: "kg", hsnCode: "", gstRate: 5 });
+      showToast("New material added to order", "success");
 
       // Automatically select this material in the last empty row or add a new row
       setItems((prev) => {
@@ -272,7 +276,7 @@ export default function PurchaseOrdersPage() {
     } catch (e: any) {
       console.error("Material creation failed:", e);
       const msg = e.response?.data?.error || e.message || "Unknown error";
-      alert("Failed to add material: " + msg);
+      showToast("Failed to add material: " + msg, "error");
     }
     finally { setMatSaving(false); }
   };

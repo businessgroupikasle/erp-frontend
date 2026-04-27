@@ -7,6 +7,8 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { SidebarProvider } from "@/context/SidebarContext";
 
+import { ToastProvider } from "@/context/ToastContext";
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -20,17 +22,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={inter.className}>
         <ThemeProvider>
           <AuthProvider>
-            <SidebarProvider>
-              <div className="flex h-screen overflow-hidden bg-background text-foreground">
-                <Sidebar />
-                <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                  <RefrensHeader />
-                  <main className="flex-1 overflow-y-auto bg-background custom-scrollbar p-6">
-                    {children}
-                  </main>
+            <ToastProvider>
+              <SidebarProvider>
+                <div className="flex h-screen overflow-hidden bg-background text-foreground">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                    <RefrensHeader />
+                    <main className="flex-1 overflow-y-auto bg-background custom-scrollbar p-6">
+                      {children}
+                    </main>
+                  </div>
                 </div>
-              </div>
-            </SidebarProvider>
+              </SidebarProvider>
+            </ToastProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
