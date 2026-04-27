@@ -28,14 +28,11 @@ export default function LoginPage() {
       login(accessToken, refreshToken, user);
 
       // Role-Based Redirection Logic
-      const role = user.role.name || user.role;
-      const roleLower = role.toLowerCase();
+      const role = (user.role?.name || user.role || '').toUpperCase();
 
-      if (roleLower === 'super_admin') {
-        router.push("/");
-      } else if (roleLower === 'admin') {
-        router.push("/");
-      } else if (roleLower === 'staff') {
+      if (role === 'FRANCHISE_ADMIN') {
+        router.push("/franchise/dashboard");
+      } else if (role === 'STAFF') {
         router.push("/pos");
       } else {
         router.push("/");

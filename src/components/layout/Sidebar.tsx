@@ -20,7 +20,7 @@ import { clsx } from "clsx";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { useSidebar } from "@/context/SidebarContext";
-import { menuSections } from "@/config/navigation";
+import { SUPER_ADMIN_SIDEBAR, franchiseMenuSections } from "@/config/navigation";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -72,7 +72,7 @@ export default function Sidebar() {
   };
 
   const userRole = user?.role?.toUpperCase() || "STAFF";
-  const initials = user?.fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "NX";
+  const sections = userRole === "FRANCHISE_ADMIN" ? franchiseMenuSections : SUPER_ADMIN_SIDEBAR;
 
   if (pathname === "/login") return null;
 
@@ -131,33 +131,33 @@ export default function Sidebar() {
           )}
         >
           <div className="space-y-0.5">
-            {menuSections.map((section) => {
+            {sections.map((section) => {
               const filteredItems = section.items.filter(
                 (item) => !user || item.roles.includes(userRole)
               );
               if (filteredItems.length === 0) return null;
 
               return (
-                <div key={section.section}>
+                <div key={section.title}>
                   {/* Section Header */}
                   {!isCollapsed && (
                     <div 
-                      onClick={() => toggleSection(section.section)}
+                      onClick={() => toggleSection(section.title)}
                       className="px-2 pb-2 mt-6 flex items-center justify-between cursor-pointer group/section"
                     >
                       <p className={clsx(
                         "text-[10px] font-black uppercase tracking-[0.2em] transition-colors",
-                        (section.section === "OVERVIEW" || section.section === "HOME HOUSE") 
+                        (section.title === "OVERVIEW" || section.title === "HOME HOUSE") 
                           ? "text-orange-500/80 dark:text-orange-400" 
                           : "text-slate-400 dark:text-slate-600 group-hover/section:text-slate-500"
                       )}>
-                        {section.section}
+                        {section.title}
                       </p>
                       <ChevronDown 
                         size={11} 
                         className={clsx(
                           "text-slate-300 dark:text-slate-700 transition-transform duration-300",
-                          collapsedSections.includes(section.section) ? "-rotate-90" : "rotate-0"
+                          collapsedSections.includes(section.title) ? "-rotate-90" : "rotate-0"
                         )} 
                       />
                     </div>
@@ -165,7 +165,7 @@ export default function Sidebar() {
 
                   <div className={clsx(
                     "space-y-1 transition-all duration-300 overflow-hidden",
-                    collapsedSections.includes(section.section) ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"
+                    collapsedSections.includes(section.title) ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"
                   )}>
 
                   {/* Section Items */}
@@ -176,6 +176,7 @@ export default function Sidebar() {
                       pathname === item.href ||
                       (hasChildren && item.children?.some((c) => pathname === c.href));
                     const isHovered = hoveredItem === item.label;
+                    const isComingSoon = item.isComingSoon;
 
                     return (
                       <div
@@ -186,10 +187,11 @@ export default function Sidebar() {
                       >
                         {/* Row */}
                         <div
-                          onClick={() => hasChildren ? toggleMenu(item.label) : undefined}
+                          onClick={() => (!hasChildren && !isComingSoon) ? undefined : (hasChildren ? toggleMenu(item.label) : undefined)}
                           className={clsx(
-                            "flex items-center gap-3 rounded-2xl cursor-pointer select-none transition-all duration-200",
+                            "flex items-center gap-3 rounded-2xl select-none transition-all duration-200",
                             "px-3 py-3",
+                            isComingSoon ? "opacity-50 cursor-not-allowed grayscale" : "cursor-pointer",
                             isActive
                               ? "bg-gradient-to-r from-orange-500/10 to-orange-500/5 text-orange-600 dark:text-orange-400 backdrop-blur-md border border-orange-500/10 shadow-[0_4px_12px_-2px_rgba(255,107,0,0.12)]"
                               : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200"
@@ -200,19 +202,28 @@ export default function Sidebar() {
                               <span className="text-[13px] font-bold flex-1 truncate tracking-tight">{item.label}</span>
                             </span>
                           ) : (
-                            <Link
-                              href={item.href}
-                              className="flex items-center gap-3 flex-1 min-w-0"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <span className="text-[13px] font-bold flex-1 truncate tracking-tight">{item.label}</span>
-                            </Link>
+                            isComingSoon ? (
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <span className="text-[13px] font-bold flex-1 truncate tracking-tight text-slate-400">{item.label}</span>
+                              </div>
+                            ) : (
+                              <Link
+                                href={item.href}
+                                className="flex items-center gap-3 flex-1 min-w-0"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <span className="text-[13px] font-bold flex-1 truncate tracking-tight">{item.label}</span>
+                              </Link>
+                            )
                           )}
 
                           {!isCollapsed && item.isNew && (
                             <span className="badge-new shrink-0">New</span>
                           )}
-                          {!isCollapsed && item.isHot && !item.isNew && (
+                          {!isCollapsed && item.isComingSoon && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0">Soon</span>
+                          )}
+                          {!isCollapsed && item.isHot && !item.isNew && !item.isComingSoon && (
                             <span className="badge-hot shrink-0">Hot</span>
                           )}
                           {!isCollapsed && hasChildren && (

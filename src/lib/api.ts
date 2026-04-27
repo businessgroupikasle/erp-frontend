@@ -264,3 +264,34 @@ export const settingsApi = {
   getCompanyProfile: () => api.get('/api/settings/company'),
   updateCompanyProfile: (data: any) => api.patch('/api/settings/company', data),
 };
+
+// --- Franchise Orders (Phase 7) ---
+export const franchiseOrdersApi = {
+  getAll: (params?: { franchiseId?: string; status?: string }) =>
+    api.get('/api/franchise-orders', { params }),
+  getById: (id: string) => api.get(`/api/franchise-orders/${id}`),
+  create: (data: {
+    franchiseId: string;
+    paymentType?: 'COD' | 'ONLINE';
+    expectedDispatchDate?: string;
+    notes?: string;
+    items: Array<{ productId: string; quantity: number }>;
+  }) => api.post('/api/franchise-orders', data),
+  updateStatus: (id: string, status: string, extra?: { actualDispatchDate?: string }) =>
+    api.patch(`/api/franchise-orders/${id}/status`, { status, ...extra }),
+  recordPayment: (id: string, amount: number) =>
+    api.post(`/api/franchise-orders/${id}/payment`, { amount }),
+  getInvoice: (id: string, interState = false) =>
+    api.get(`/api/franchise-orders/${id}/invoice`, { params: { interState } }),
+};
+
+// --- Product Batches (Phase 6) ---
+export const productBatchesApi = {
+  getAll: (productId?: string) =>
+    api.get('/api/production/batches', { params: productId ? { productId } : {} }),
+};
+
+// --- Vendor Ledger Balance ---
+export const vendorLedgerApi = {
+  getBalance: (vendorId: string) => api.get(`/api/vendors/${vendorId}/balance`),
+};

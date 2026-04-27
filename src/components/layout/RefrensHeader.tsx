@@ -24,7 +24,7 @@ import { clsx } from "clsx";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useSidebar } from "@/context/SidebarContext";
-import { menuSections, menuItems } from "@/config/navigation";
+import { SUPER_ADMIN_SIDEBAR, menuItems } from "@/config/navigation";
 import { useTheme } from "@/context/ThemeContext";
 import Link from "next/link";
 
@@ -197,7 +197,7 @@ export default function RefrensHeader() {
     setNotifications((p) => p.filter((n) => n.id !== id));
 
   const getPageTitle = () => {
-    for (const section of menuSections) {
+    for (const section of SUPER_ADMIN_SIDEBAR) {
       for (const item of section.items) {
         if (item.href === pathname) return item.label;
         if (item.children) {
