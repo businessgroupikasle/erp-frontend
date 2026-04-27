@@ -40,7 +40,7 @@ const STATUS_ICONS: Record<string, any> = {
 };
 
 function fmt(n: number) {
-  return "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return "₹" + Math.round(n).toLocaleString("en-IN");
 }
 
 interface POItem {
@@ -54,6 +54,7 @@ interface POItem {
 }
 
 import { useToast } from "@/context/ToastContext";
+import { UNITS } from "@/lib/constants";
 
 export default function PurchaseOrdersPage() {
   const { showToast } = useToast();
@@ -407,20 +408,20 @@ export default function PurchaseOrdersPage() {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Spend", value: fmt(totalSpend), icon: ShoppingCart, color: "text-indigo-500", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
           { label: "Total Paid", value: fmt(totalPaid), icon: Wallet, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
           { label: "Balance Due", value: fmt(totalBalance), icon: AlertCircle, color: "text-red-500", bg: "bg-red-50 dark:bg-red-500/10" },
           { label: "Pending Orders", value: String(pendingCount), icon: Clock, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-500/10" },
         ].map((card) => (
-          <div key={card.label} className="bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 p-4 flex items-center gap-3">
-            <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", card.bg)}>
-              <card.icon size={18} className={card.color} />
+          <div key={card.label} className="bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 p-6 flex items-center gap-5">
+            <div className={clsx("w-14 h-14 rounded-2xl flex items-center justify-center shrink-0", card.bg)}>
+              <card.icon size={24} className={card.color} />
             </div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{card.label}</p>
-              <p className="text-lg font-black text-gray-900 dark:text-white">{card.value}</p>
+              <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">{card.label}</p>
+              <p className="text-2xl font-black text-gray-900 dark:text-white leading-none mt-1">{card.value}</p>
             </div>
           </div>
         ))}
@@ -475,7 +476,7 @@ export default function PurchaseOrdersPage() {
                 {po.poItems?.length > 0 && (
                   <div className="mt-4 space-y-1.5">
                     {po.poItems.map((item: any, i: number) => (
-                      <div key={i} className="flex items-center justify-between text-[12px] bg-gray-50 dark:bg-white/5 rounded-lg px-3 py-2">
+                      <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[12px] bg-gray-50 dark:bg-white/5 rounded-lg px-3 py-2">
                         <div className="flex items-center gap-2">
                           <Package size={12} className="text-gray-400" />
                           <span className="font-medium text-gray-700 dark:text-slate-300">
@@ -483,14 +484,14 @@ export default function PurchaseOrdersPage() {
                           </span>
                           <span className="text-gray-400">{item.quantity} {item.inventoryItem?.unit ?? "kg"}</span>
                         </div>
-                        <span className="font-bold text-gray-900 dark:text-white">{fmt(item.quantity * item.price)}</span>
+                        <span className="font-bold text-gray-900 dark:text-white sm:text-right">{fmt(item.quantity * item.price)}</span>
                       </div>
                     ))}
                   </div>
                 )}
 
                 {/* Financial Summary */}
-                <div className="mt-4 grid grid-cols-4 gap-3">
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center">
                     <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Subtotal</p>
                     <p className="text-[12px] font-black text-gray-700 dark:text-slate-300 mt-1">{fmt(po.subtotal || (po.totalAmount - (po.cgst + po.sgst + po.igst)) || 0)}</p>
@@ -946,8 +947,8 @@ export default function PurchaseOrdersPage() {
               </div>
             </div>
 
-            <div className="p-8 pt-0 flex flex-col md:flex-row gap-4 justify-end items-center">
-              <div className="mr-auto flex items-center gap-2 bg-slate-50 dark:bg-white/5 px-4 py-2 rounded-xl">
+            <div className="p-8 pt-0 flex flex-col md:flex-row gap-4 justify-between items-center">
+              <div className="flex items-center gap-2 bg-slate-50 dark:bg-white/5 px-4 py-2 rounded-xl w-full md:w-auto">
                 <AlertCircle size={14} className="text-orange-400 shrink-0" />
                 <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">PO status will be PENDING</p>
               </div>
@@ -1032,14 +1033,14 @@ export default function PurchaseOrdersPage() {
                     onClick={() => setShowUnitList(!showUnitList)}
                     className="w-full px-5 py-3.5 text-left text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 font-semibold transition-all text-slate-800 dark:text-white flex items-center justify-between"
                   >
-                    <span>{
+                    <span className="capitalize">{
                       newMat.unit === "kg" ? "kilogram (kg)" :
-                        newMat.unit === "g" ? "gram (g)" :
-                          newMat.unit === "ltr" ? "liter (ltr)" :
-                            newMat.unit === "ml" ? "milliliter (ml)" :
-                              newMat.unit === "pc" ? "piece (pc)" :
-                                newMat.unit === "pkt" ? "packet (pkt)" :
-                                  "box"
+                      newMat.unit === "g" ? "gram (g)" :
+                      newMat.unit === "ltr" ? "liter (ltr)" :
+                      newMat.unit === "ml" ? "milliliter (ml)" :
+                      newMat.unit === "pc" ? "piece (pc)" :
+                      newMat.unit === "pkt" ? "packet (pkt)" :
+                      newMat.unit
                     }</span>
                     <ChevronDown size={16} className={clsx("text-slate-400 transition-transform", showUnitList && "rotate-180")} />
                   </button>
@@ -1047,29 +1048,21 @@ export default function PurchaseOrdersPage() {
                   {showUnitList && (
                     <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1a1c26] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                       <div className="p-1.5 space-y-0.5">
-                        {[
-                          { id: "kg", label: "kilogram (kg)" },
-                          { id: "g", label: "gram (g)" },
-                          { id: "ltr", label: "liter (ltr)" },
-                          { id: "ml", label: "milliliter (ml)" },
-                          { id: "pc", label: "piece (pc)" },
-                          { id: "pkt", label: "packet (pkt)" },
-                          { id: "box", label: "box" }
-                        ].map(unit => (
+                        {UNITS.map(u => (
                           <button
-                            key={unit.id}
+                            key={u}
                             onClick={() => {
-                              setNewMat({ ...newMat, unit: unit.id });
+                              setNewMat({ ...newMat, unit: u });
                               setShowUnitList(false);
                             }}
                             className={clsx(
                               "w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all",
-                              newMat.unit === unit.id
+                              newMat.unit === u
                                 ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
                                 : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-indigo-600"
                             )}
                           >
-                            {unit.label}
+                            {u}
                           </button>
                         ))}
                       </div>

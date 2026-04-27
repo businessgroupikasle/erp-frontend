@@ -353,15 +353,15 @@ export default function VendorsPage() {
       </div>
 
           {/* Value Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white/70 dark:bg-card/70 backdrop-blur-md rounded-2xl border border-gray-100 dark:border-white/5 p-5 shadow-sm hover:translate-y-[-2px] transition-all">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-50 dark:bg-orange-500/10 rounded-lg">
-                  <Store size={16} className="text-orange-500" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white/70 dark:bg-card/70 backdrop-blur-md rounded-2xl border border-gray-100 dark:border-white/5 p-6 shadow-sm hover:translate-y-[-2px] transition-all">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-orange-50 dark:bg-orange-500/10 rounded-xl">
+                  <Store size={20} className="text-orange-500" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Vendors</p>
-                  <p className="text-xl font-black text-slate-900 dark:text-white leading-none mt-1">{vendors.length}</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Total Vendors</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white leading-none mt-1">{vendors.length}</p>
                 </div>
               </div>
             </div>
@@ -370,13 +370,13 @@ export default function VendorsPage() {
               onClick={() => setSummaryDetail('OWE')}
               className="bg-red-50/70 dark:bg-red-500/10 backdrop-blur-md rounded-2xl border border-red-100 dark:border-red-500/20 p-5 shadow-sm hover:translate-y-[-2px] transition-all cursor-pointer group"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 dark:bg-red-500/20 rounded-lg group-hover:scale-110 transition-transform">
-                  <AlertCircle size={16} className="text-red-500" />
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-red-100 dark:bg-red-500/20 rounded-xl group-hover:scale-110 transition-transform">
+                  <AlertCircle size={20} className="text-red-500" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-red-600/70 uppercase tracking-widest">Total We Owe</p>
-                  <p className="text-xl font-black text-red-700 dark:text-red-400 leading-none mt-1">₹{totalOwed.toLocaleString()}</p>
+                  <p className="text-[11px] font-black text-red-600/70 uppercase tracking-widest">Total We Owe</p>
+                  <p className="text-2xl font-black text-red-700 dark:text-red-400 leading-none mt-1">₹{Math.round(totalOwed).toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -385,25 +385,25 @@ export default function VendorsPage() {
               onClick={() => setSummaryDetail('ADVANCE')}
               className="bg-emerald-50/70 dark:bg-emerald-500/10 backdrop-blur-md rounded-2xl border border-emerald-100 dark:border-emerald-500/20 p-5 shadow-sm hover:translate-y-[-2px] transition-all cursor-pointer group"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 rounded-lg group-hover:scale-110 transition-transform">
-                  <RefreshCw size={16} className="text-emerald-500" />
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-emerald-100 dark:bg-emerald-500/20 rounded-xl group-hover:scale-110 transition-transform">
+                  <RefreshCw size={20} className="text-emerald-500" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-emerald-600/70 uppercase tracking-widest">Total Advance</p>
-                  <p className="text-xl font-black text-emerald-700 dark:text-emerald-400 leading-none mt-1">₹{totalAdvance.toLocaleString()}</p>
+                  <p className="text-[11px] font-black text-emerald-600/70 uppercase tracking-widest">Total Advance</p>
+                  <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400 leading-none mt-1">₹{Math.round(totalAdvance).toLocaleString()}</p>
                 </div>
               </div>
             </div>
 
             <div className="bg-indigo-50/70 dark:bg-indigo-500/10 backdrop-blur-md rounded-2xl border border-indigo-100 dark:border-indigo-500/20 p-5 shadow-sm hover:translate-y-[-2px] transition-all group">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-100 dark:bg-indigo-500/20 rounded-lg group-hover:scale-110 transition-transform">
-                  <ShoppingCart size={16} className="text-indigo-600" />
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-indigo-100 dark:bg-indigo-500/20 rounded-xl group-hover:scale-110 transition-transform">
+                  <ShoppingCart size={20} className="text-indigo-600" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-indigo-600/70 uppercase tracking-widest">Total Purchase</p>
-                  <p className="text-xl font-black text-indigo-700 dark:text-indigo-400 leading-none mt-1">₹{totalPurchased.toLocaleString()}</p>
+                  <p className="text-[11px] font-black text-indigo-600/70 uppercase tracking-widest">Total Purchase</p>
+                  <p className="text-2xl font-black text-indigo-700 dark:text-indigo-400 leading-none mt-1">₹{Math.round(totalPurchased).toLocaleString()}</p>
                 </div>
               </div>
             </div>

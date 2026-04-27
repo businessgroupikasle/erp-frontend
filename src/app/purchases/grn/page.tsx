@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/context/ToastContext";
 import {
   Package, ChevronDown, CheckCircle2, XCircle, AlertTriangle,
   Truck, ClipboardCheck, ArrowLeft, Loader2, Search
@@ -35,6 +36,7 @@ interface GRNItem {
 
 export default function GRNPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [step, setStep] = useState<1 | 2>(1);
   const [pos, setPOs] = useState<PO[]>([]);
   const [loadingPOs, setLoadingPOs] = useState(true);
@@ -92,8 +94,10 @@ export default function GRNPage() {
       const grnId = res.data.id;
       await grnApi.approve(grnId);
       setApprovedId(grnId);
-    } catch (e) {
-      alert("Failed to create/approve GRN. Check backend.");
+      showToast("GRN Approved successfully! Stock levels updated.", "success");
+    } catch (e: any) {
+      console.error(e);
+      showToast(e.response?.data?.error || "Failed to create or approve GRN. Please verify quantities.", "error");
     } finally {
       setSubmitting(false);
     }

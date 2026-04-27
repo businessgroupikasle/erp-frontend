@@ -12,7 +12,10 @@ import {
   Sun,
   Moon,
   Landmark,
-  Store
+  Store,
+  X as CloseIcon,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -26,7 +29,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
-  const { isCollapsed } = useSidebar();
+  const { isCollapsed, toggleCollapsed, isMobileOpen, closeMobile } = useSidebar();
 
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["Sales CRM"]);
   const [collapsedSections, setCollapsedSections] = useState<string[]>([]);
@@ -79,11 +82,19 @@ export default function Sidebar() {
   return (
     <aside
       className={clsx(
-        "relative flex flex-col h-screen shrink-0 sidebar-transition z-50",
-        "bg-white dark:bg-[#0f1117] border-r border-orange-100 dark:border-white/5",
-        isCollapsed ? "w-[72px]" : "w-[288px]"
+        "fixed inset-y-0 left-0 lg:relative flex flex-col h-screen shrink-0 sidebar-transition z-[100] lg:z-50",
+        "bg-white dark:bg-[#0f1117]",
+        isCollapsed ? "lg:w-0 lg:opacity-0 lg:overflow-hidden lg:border-none" : "lg:w-[288px] border-r border-orange-100 dark:border-white/5",
+        isMobileOpen ? "translate-x-0 w-[288px] border-r border-orange-100" : "-translate-x-full lg:translate-x-0"
       )}
     >
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/30 backdrop-blur-[2px] lg:hidden z-[-1]" 
+          onClick={closeMobile}
+        />
+      )}
       {/* ── Brand / User Header ─────────────────────── */}
       <div
         className={clsx(
@@ -99,7 +110,7 @@ export default function Sidebar() {
             className="object-contain"
           />
         </div>
-        {!isCollapsed && (
+        {(!isCollapsed || isMobileOpen) && (
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-semibold text-gray-900 dark:text-white truncate leading-tight">
               Kiddos Food
@@ -109,6 +120,14 @@ export default function Sidebar() {
             </p>
           </div>
         )}
+
+        {/* Mobile Close Button */}
+        <button
+          onClick={closeMobile}
+          className="lg:hidden p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-slate-400 hover:text-red-500 transition-colors"
+        >
+          <CloseIcon size={20} />
+        </button>
       </div>
 
 
@@ -210,7 +229,7 @@ export default function Sidebar() {
                               <Link
                                 href={item.href}
                                 className="flex items-center gap-3 flex-1 min-w-0"
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => { e.stopPropagation(); closeMobile(); }}
                               >
                                 <span className="text-[13px] font-bold flex-1 truncate tracking-tight">{item.label}</span>
                               </Link>
@@ -258,6 +277,7 @@ export default function Sidebar() {
                               <Link
                                 key={child.href}
                                 href={child.href}
+                                onClick={closeMobile}
                                 className={clsx(
                                   "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[12px] font-medium transition-all",
                                   pathname === child.href

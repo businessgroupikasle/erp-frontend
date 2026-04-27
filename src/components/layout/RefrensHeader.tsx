@@ -173,7 +173,7 @@ function SearchModal({ onClose }: { onClose: () => void }) {
 export default function RefrensHeader() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const { toggleCollapsed } = useSidebar();
+  const { toggleCollapsed, toggleMobileOpen } = useSidebar();
   const { theme, toggleTheme } = useTheme();
 
   if (pathname === "/login") return null;
@@ -240,12 +240,26 @@ export default function RefrensHeader() {
       <header className="w-full h-14 bg-white dark:bg-[#0f1117] border-b border-slate-100 dark:border-white/5 flex items-center px-4 gap-3 sticky top-0 z-40 shadow-sm">
 
         {/* ── Left: Hamburger + Logo ──────────────────── */}
-        {/* Sidebar Toggle removed as per icon removal and layout simplification */}
+        <button
+          onClick={toggleMobileOpen}
+          className="lg:hidden p-2 -ml-2 rounded-xl text-gray-500 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+          aria-label="Toggle Menu"
+        >
+          <Menu size={20} />
+        </button>
+
+        <button
+          onClick={toggleCollapsed}
+          className="hidden lg:flex p-2 -ml-2 rounded-xl text-gray-500 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+          title="Toggle Sidebar"
+        >
+          <Menu size={20} />
+        </button>
 
         {/* Dynamic Page Title */}
         {pageTitle && (
           <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
-            <div className="w-px h-5 bg-slate-200 dark:bg-white/10 hidden sm:block" />
+            <div className="w-px h-5 bg-slate-200 dark:bg-white/10" />
             <h1 className="text-[15px] font-black text-gray-900 dark:text-white tracking-tight uppercase">
               {pageTitle}
             </h1>

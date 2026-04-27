@@ -16,6 +16,7 @@ interface RecipeIngredient {
 }
 
 import { useToast } from "@/context/ToastContext";
+import { UNITS } from "@/lib/constants";
 
 export default function RecipesPage() {
   const { showToast } = useToast();
@@ -43,7 +44,7 @@ export default function RecipesPage() {
   const [showQuickMaterial, setShowQuickMaterial] = useState(false);
   const [quickName, setQuickName] = useState("");
   const [quickPrice, setQuickPrice] = useState(0);
-  const [quickUnit, setQuickUnit] = useState("kg");
+  const [quickUnit, setQuickUnit] = useState<string>(UNITS[0]);
   const [addingQuick, setAddingQuick] = useState(false);
 
   const fetchAll = useCallback(async () => {
@@ -489,10 +490,7 @@ export default function RecipesPage() {
               <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Unit</label>
               <select value={quickUnit} onChange={(e) => setQuickUnit(e.target.value)}
                 className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20">
-                <option value="kg">kg</option>
-                <option value="ltr">ltr</option>
-                <option value="units">units</option>
-                <option value="gm">gm</option>
+                {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
             <div className="flex gap-2 pt-2">
