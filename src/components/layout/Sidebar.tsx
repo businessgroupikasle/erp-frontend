@@ -166,9 +166,16 @@ export default function Sidebar() {
                     >
                       <p className={clsx(
                         "text-[10px] font-black uppercase tracking-[0.2em] transition-colors",
-                        (section.title === "OVERVIEW" || section.title === "HOME HOUSE") 
-                          ? "text-orange-500/80 dark:text-orange-400" 
-                          : "text-slate-400 dark:text-slate-600 group-hover/section:text-slate-500"
+                        section.title.toUpperCase() === "OVERVIEW" ? "text-orange-500/80 dark:text-orange-400" :
+                        section.title.toUpperCase() === "SALES" ? "text-emerald-500/80 dark:text-emerald-400" :
+                        section.title.toUpperCase() === "INVENTORY" ? "text-blue-500/80 dark:text-blue-400" :
+                        section.title.toUpperCase() === "PRODUCTION" ? "text-rose-500/80 dark:text-rose-400" :
+                        section.title.toUpperCase() === "PROCUREMENT" ? "text-amber-500/80 dark:text-amber-400" :
+                        section.title.toUpperCase() === "FRANCHISE" ? "text-purple-500/80 dark:text-purple-400" :
+                        section.title.toUpperCase() === "ACCOUNTS" ? "text-teal-500/80 dark:text-teal-400" :
+                        section.title.toUpperCase() === "REPORTS" ? "text-indigo-500/80 dark:text-indigo-400" :
+                        section.title.toUpperCase() === "HR & PAYROLL" ? "text-cyan-500/80 dark:text-cyan-400" :
+                        "text-slate-400 dark:text-slate-600 group-hover/section:text-slate-500"
                       )}>
                         {section.title}
                       </p>

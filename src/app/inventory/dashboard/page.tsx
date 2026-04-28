@@ -115,7 +115,7 @@ export default function InventoryDashboardPage() {
           {[
             { label: "Total SKUs",     value: items.length,                                     icon: Package,       color: "text-[#7C3AED]", bg: "bg-purple-50"  },
             { label: "Low Stock",      value: lowStockCount,                                    icon: AlertTriangle, color: "text-red-600",    bg: "bg-red-50"     },
-            { label: "Categories",     value: [...new Set(items.map(i => i.category))].length,  icon: BarChart3,     color: "text-blue-600",   bg: "bg-blue-50"    },
+            { label: "Categories",     value: Array.from(new Set(items.map(i => i.category))).length,  icon: BarChart3,     color: "text-blue-600",   bg: "bg-blue-50"    },
             { label: "Total Units",    value: totalValue.toFixed(0),                            icon: TrendingUp,    color: "text-green-600",  bg: "bg-green-50"   },
           ].map(kpi => {
             const Icon = kpi.icon;

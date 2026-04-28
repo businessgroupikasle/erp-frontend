@@ -168,10 +168,22 @@ function ProductionContent() {
         ) : (
           <div className="grid gap-3 md:gap-5">
             {history.map((batch) => (
-              <div key={batch.id} className="group bg-white dark:bg-card/40 backdrop-blur-md rounded-[24px] md:rounded-[32px] border border-slate-100 dark:border-white/5 p-4 md:p-5 hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 md:gap-6">
+              <div key={batch.id} className="group bg-white dark:bg-card/40 backdrop-blur-md rounded-[24px] md:rounded-[32px] border border-slate-100 dark:border-white/5 p-4 md:p-5 hover:shadow-2xl transition-all relative overflow-hidden">
+                {/* Status-aware Corner Accent */}
+                <div className={clsx(
+                  "absolute top-0 right-0 w-24 h-24 rounded-bl-[100px] -mr-8 -mt-8 opacity-40 transition-all group-hover:opacity-60",
+                  batch.status === 'COMPLETED' ? "bg-emerald-500/10" :
+                  batch.status === 'IN_PROGRESS' ? "bg-blue-500/10" :
+                  batch.status === 'CANCELLED' ? "bg-red-500/10" : "bg-amber-500/10"
+                )} />
+
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 md:gap-6 relative z-10">
                    <div className="flex items-start md:items-center gap-3 md:gap-5">
-                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-indigo-500 dark:bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0">
+                      <div className={clsx(
+                        "w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-105 shrink-0",
+                        batch.status === 'COMPLETED' ? "bg-emerald-500 shadow-emerald-500/20" : 
+                        batch.status === 'IN_PROGRESS' ? "bg-blue-500 shadow-blue-500/20" : "bg-indigo-500 shadow-indigo-500/20"
+                      )}>
                          <ChefHat size={20} className="md:w-7 md:h-7" />
                       </div>
                       <div className="min-w-0">
@@ -271,10 +283,10 @@ function ProductionContent() {
                    </div>
                 </div>
 
-                <div className="p-5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-100 dark:border-white/5 shadow-inner">
+                <div className="p-5 bg-indigo-50/30 dark:bg-indigo-500/5 rounded-2xl border border-indigo-100/50 dark:border-indigo-500/10 shadow-inner">
                    <div className="flex items-center justify-between mb-3">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target Batch Magnitude</label>
-                      <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Scaling Recipe x{quantity}</span>
+                      <label className="text-[10px] font-black text-indigo-400 dark:text-indigo-300 uppercase tracking-widest">Target Batch Magnitude</label>
+                      <span className="text-[9px] font-black text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest">Scaling Recipe x{quantity}</span>
                    </div>
                    <div className="flex items-center gap-4">
                       <div className="relative flex-1">
@@ -314,19 +326,21 @@ function ProductionContent() {
                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
                         {ingredientPreview.map((ing, i) => (
                            <div key={i} className={clsx("flex items-center justify-between p-3 md:p-4 rounded-xl md:rounded-2xl border transition-all", 
-                             ing.sufficient ? "bg-emerald-500/[0.02] dark:bg-emerald-500/[0.05] border-emerald-500/10" : "bg-rose-500/[0.02] dark:bg-rose-500/[0.05] border-rose-500/10")}>
+                             ing.sufficient 
+                               ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20" 
+                               : "bg-rose-50/50 dark:bg-rose-500/5 border-rose-100 dark:border-rose-500/20")}>
                               <div className="flex items-center gap-3">
-                                 <div className={clsx("w-6 h-6 md:w-7 md:h-7 rounded-lg flex items-center justify-center shrink-0", ing.sufficient ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500")}>
+                                 <div className={clsx("w-6 h-6 md:w-7 md:h-7 rounded-lg flex items-center justify-center shrink-0 shadow-sm", ing.sufficient ? "bg-emerald-500 text-white" : "bg-rose-500 text-white")}>
                                     {ing.sufficient ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
                                  </div>
                                  <div className="min-w-0">
                                     <p className="text-[10px] md:text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-tight truncate">{ing.name}</p>
-                                    <p className="text-[8px] md:text-[9px] text-slate-400 font-bold tracking-widest uppercase">Required: {ing.needed} {ing.unit}</p>
+                                    <p className={clsx("text-[8px] md:text-[9px] font-bold tracking-widest uppercase", ing.sufficient ? "text-emerald-600/70" : "text-rose-600/70")}>Required: {ing.needed} {ing.unit}</p>
                                  </div>
                               </div>
                               <div className="text-right shrink-0">
-                                 <p className={clsx("text-[10px] font-black", ing.sufficient ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500 tracking-widest flex items-center gap-1.5 uppercase")}>
-                                    {!ing.sufficient && <Minus size={8} />} {ing.available} <span className="text-[8px] text-slate-400 font-bold ml-1 uppercase">Stock</span>
+                                 <p className={clsx("text-[10px] font-black", ing.sufficient ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400 flex items-center gap-1.5 uppercase")}>
+                                    {!ing.sufficient && <Minus size={8} />} {ing.available} <span className="text-[8px] opacity-60 ml-1 uppercase">Stock</span>
                                  </p>
                               </div>
                            </div>

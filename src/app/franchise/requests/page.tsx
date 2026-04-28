@@ -9,7 +9,7 @@ import { clsx } from "clsx";
 import {
   franchiseProductRequestsApi,
   productsFullApi,
-  franchiseManagementApi,
+  franchiseApi,
 } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -60,7 +60,7 @@ export default function FranchiseRequestsPage() {
       setProducts(pRes.data ?? []);
 
       if (isAdmin) {
-        const fRes = await franchiseManagementApi.getAll();
+        const fRes = await franchiseApi.getAll();
         setFranchises(fRes.data ?? []);
       }
     } catch (e) { console.error(e); }

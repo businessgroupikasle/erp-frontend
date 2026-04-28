@@ -14,6 +14,11 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Ikasle ERP | Business Management",
   description: "Enterprise Resource Planning by Ikasle — manage sales, purchases, accounting and more",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.png",
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
