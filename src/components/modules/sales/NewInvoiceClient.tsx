@@ -68,10 +68,10 @@ export default function NewInvoiceClient() {
             </div>
 
             <BillingSection 
-              fromLabel="Billed By"
-              toLabel="Billed To"
-              targetType="client"
-            />
+                    fromLabel="Billed By"
+                    toLabel="Billed To"
+                    targetType="client" fromSubLabel={""} toSubLabel={""}  
+                               />
 
             <div className="flex flex-wrap items-center gap-4 pt-8">
                <label className="flex items-center gap-3 cursor-pointer">

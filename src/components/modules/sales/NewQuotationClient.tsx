@@ -68,10 +68,10 @@ export default function NewQuotationClient() {
             </div>
 
             <BillingSection 
-              fromLabel="Quotation From"
-              toLabel="Quotation For"
-              targetType="client"
-            />
+                    fromLabel="Quotation From"
+                    toLabel="Quotation For"
+                    targetType="client" fromSubLabel={""} toSubLabel={""} 
+                                />
 
             <div className="flex flex-wrap items-center gap-4 pt-8">
                <label className="flex items-center gap-3 cursor-pointer">
