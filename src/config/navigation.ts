@@ -91,7 +91,7 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     items: [
       {
         icon: Package,
-        label: "Marketplace Products",
+        label: "Products",
         href: "/products",
         roles: ADMIN_ROLES,
       },
@@ -325,7 +325,7 @@ export const franchiseMenuSections: MenuSection[] = [
         href: "/franchise-orders",
         roles: FRANCHISE_ADMIN_ONLY,
         children: [
-          { label: "Place Order",   href: "/franchise-orders" },
+          { label: "Place Order", href: "/franchise-orders" },
           { label: "Order History", href: "/franchise-orders" },
         ],
       },

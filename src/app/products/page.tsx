@@ -11,8 +11,8 @@ import Link from "next/link";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [search, setSearch]     = useState("");
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -37,8 +37,8 @@ export default function ProductsPage() {
     !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.category?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const activeCount  = products.filter((p) => p.isActive).length;
-  const categories   = Array.from(new Set(products.map((p) => p.category).filter(Boolean)));
+  const activeCount = products.filter((p) => p.isActive).length;
+  const categories = Array.from(new Set(products.map((p) => p.category).filter(Boolean)));
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -49,21 +49,21 @@ export default function ProductsPage() {
             <div className="p-2.5 rounded-2xl bg-orange-500/10 text-orange-500">
               <Package size={28} />
             </div>
-            Marketplace Products
+            Products
           </h1>
           <p className="text-sm text-gray-500 dark:text-slate-400 mt-2 font-medium">
             Strategic management of finished goods and consumer offerings
           </p>
         </div>
         <div className="flex gap-3">
-          <button 
-            onClick={fetchProducts} 
+          <button
+            onClick={fetchProducts}
             className="p-3.5 rounded-2xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 transition-all text-gray-400 hover:text-orange-500 shadow-sm"
           >
             <RefreshCw size={20} />
           </button>
-          <Link 
-            href="/products/add" 
+          <Link
+            href="/products/add"
             className="flex items-center gap-3 bg-orange-500 hover:bg-orange-400 text-white px-6 py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl shadow-orange-500/20 active:scale-95"
           >
             <Plus size={18} /> Add Product
@@ -75,7 +75,7 @@ export default function ProductsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {[
           { label: "Total Inventory", value: products.length, icon: Package, color: "text-blue-500" },
-          { label: "Active Listings",  value: activeCount, icon: CheckCircle2, color: "text-emerald-500" },
+          { label: "Active Listings", value: activeCount, icon: CheckCircle2, color: "text-emerald-500" },
           { label: "Market Segments", value: categories.length, icon: Search, color: "text-purple-500" },
         ].map((s) => (
           <div key={s.label} className="bg-white dark:bg-card rounded-[2rem] border border-gray-100 dark:border-white/5 p-6 shadow-sm group hover:border-orange-500/20 transition-all">
@@ -96,11 +96,11 @@ export default function ProductsPage() {
         <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
           <Search size={18} className="text-gray-400 group-focus-within:text-orange-500 transition-colors" />
         </div>
-        <input 
-          value={search} 
-          onChange={(e) => setSearch(e.target.value)} 
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Filter by name, category, or SKU..."
-          className="w-full pl-14 pr-6 py-4.5 text-base font-bold bg-white dark:bg-card border border-gray-100 dark:border-white/5 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-orange-500/10 shadow-sm transition-all dark:text-white" 
+          className="w-full pl-14 pr-6 py-4.5 text-base font-bold bg-white dark:bg-card border border-gray-100 dark:border-white/5 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-orange-500/10 shadow-sm transition-all dark:text-white"
         />
       </div>
 
@@ -119,8 +119,8 @@ export default function ProductsPage() {
             <p className="text-lg font-black text-gray-900 dark:text-white">No products found</p>
             <p className="text-sm text-gray-400 font-medium mt-1">Adjust your search or create a new product entry.</p>
           </div>
-          <Link 
-            href="/products/add" 
+          <Link
+            href="/products/add"
             className="inline-flex items-center gap-2 text-orange-500 font-black text-xs uppercase tracking-widest hover:gap-3 transition-all"
           >
             Create First Product <Plus size={16} />
@@ -132,14 +132,14 @@ export default function ProductsPage() {
             <div key={product.id} className="bg-white dark:bg-card rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 hover:shadow-2xl hover:-translate-y-1 transition-all group relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="flex gap-2">
-                  <Link 
-                    href={`/products/edit?id=${product.id}`} 
+                  <Link
+                    href={`/products/edit?id=${product.id}`}
                     className="p-2.5 rounded-xl bg-white dark:bg-slate-800 shadow-lg text-gray-400 hover:text-orange-500 transition-all border border-gray-100 dark:border-white/5"
                   >
                     <Edit2 size={16} />
                   </Link>
-                  <button 
-                    onClick={() => handleDelete(product.id)} 
+                  <button
+                    onClick={() => handleDelete(product.id)}
                     className="p-2.5 rounded-xl bg-white dark:bg-slate-800 shadow-lg text-gray-400 hover:text-red-500 transition-all border border-gray-100 dark:border-white/5"
                   >
                     <Trash2 size={16} />
@@ -151,27 +151,27 @@ export default function ProductsPage() {
                 <div className="w-16 h-16 rounded-2xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
                   {product.emoji ?? "📦"}
                 </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-wider">
-                      {product.category ?? "Uncategorized"}
-                    </span>
-                    {product.recipe ? (
-                      <Link 
-                        href={`/recipes?search=${product.name}`}
-                        className="px-3 py-1 rounded-full bg-orange-500/10 text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-wider flex items-center gap-1 hover:bg-orange-500/20 transition-all"
-                      >
-                        <CheckCircle2 size={10} /> Recipe Ready
-                      </Link>
-                    ) : (
-                      <Link 
-                        href={`/recipes`}
-                        className="px-3 py-1 rounded-full bg-red-500/10 text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-wider flex items-center gap-1 hover:bg-red-500/20 transition-all"
-                      >
-                        Missing Recipe
-                      </Link>
-                    )}
-                  </div>
-                  <h3 className="font-black text-gray-900 dark:text-white text-lg mt-1 line-clamp-1">{product.name}</h3>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-wider">
+                    {product.category ?? "Uncategorized"}
+                  </span>
+                  {product.recipe ? (
+                    <Link
+                      href={`/recipes?search=${product.name}`}
+                      className="px-3 py-1 rounded-full bg-orange-500/10 text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-wider flex items-center gap-1 hover:bg-orange-500/20 transition-all"
+                    >
+                      <CheckCircle2 size={10} /> Recipe Ready
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/recipes`}
+                      className="px-3 py-1 rounded-full bg-red-500/10 text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-wider flex items-center gap-1 hover:bg-red-500/20 transition-all"
+                    >
+                      Missing Recipe
+                    </Link>
+                  )}
+                </div>
+                <h3 className="font-black text-gray-900 dark:text-white text-lg mt-1 line-clamp-1">{product.name}</h3>
               </div>
 
               {product.description && (
@@ -189,7 +189,7 @@ export default function ProductsPage() {
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                   <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                     {product.isActive ? (
                       <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -206,7 +206,7 @@ export default function ProductsPage() {
                   </span>
                 </div>
               </div>
-              
+
               <div className="mt-4 flex gap-4 text-[10px] font-bold text-gray-300 uppercase tracking-widest">
                 {product.sku && <span>SKU: {product.sku}</span>}
                 <span>Tax: {product.taxPercent ?? 0}%</span>

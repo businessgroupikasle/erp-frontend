@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   ChefHat, Plus, X, Search, Package, ArrowRight,
-  IndianRupee, Scale, RefreshCw, Trash2, ChevronDown, Edit2, Download,
+  IndianRupee, Scale, RefreshCw, Trash2, ChevronDown, Edit2, Download, Play,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { recipesApi, productsFullApi, rawMaterialsApi } from "@/lib/api";
+import Link from "next/link";
 
 interface RecipeIngredient {
   inventoryItemId: string;
@@ -333,6 +334,14 @@ export default function RecipesPage() {
                     <p className="text-[10px] text-gray-400 uppercase font-bold">Yield</p>
                     <p className="text-sm font-black text-gray-900 dark:text-white">{recipe.yieldQty} units</p>
                   </div>
+                  <Link
+                    href={`/production?recipeId=${recipe.id}`}
+                    className="p-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/10 text-gray-400 hover:text-indigo-500 transition-all"
+                    title="Produce Now"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Play size={14} fill="currentColor" />
+                  </Link>
                   <button
                     onClick={(e) => { e.stopPropagation(); downloadSingleRecipe(recipe); }}
                     className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/10 text-gray-400 hover:text-blue-500 transition-all"
@@ -387,9 +396,12 @@ export default function RecipesPage() {
                   {recipe.instructions && (
                     <p className="mt-3 text-[11px] text-gray-500 dark:text-slate-400 italic">{recipe.instructions}</p>
                   )}
-                  <div className="mt-3 flex items-center gap-1 text-[11px] text-orange-500 font-bold">
+                  <Link 
+                    href={`/production?recipeId=${recipe.id}`}
+                    className="mt-3 flex items-center gap-1 text-[11px] text-orange-500 font-bold hover:underline"
+                  >
                     <ArrowRight size={11} /> Go to Production to execute this recipe
-                  </div>
+                  </Link>
                 </div>
               )}
             </div>
