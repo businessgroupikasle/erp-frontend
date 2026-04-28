@@ -64,6 +64,8 @@ export default function PurchaseOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("ALL");
+  const [vendorFilter, setVendorFilter] = useState("");
 
   const [companyProfile, setCompanyProfile] = useState<any>(null);
 
@@ -91,6 +93,7 @@ export default function PurchaseOrdersPage() {
   const [viewingPO, setViewingPO] = useState<any>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [editingProfile, setEditingProfile] = useState<any>(FALLBACK_COMPANY);
+  const [forceShowAllMaterials, setForceShowAllMaterials] = useState(false);
 
   // Payment Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -99,7 +102,8 @@ export default function PurchaseOrdersPage() {
   const [payingPO, setPayingPO] = useState<any>(null);
   const [lastPayment, setLastPayment] = useState<any>(null);
 
-  // Derived Company Data
+  // Derived Data
+  const selectedVendor = vendors.find((v: any) => v.id === vendorId);
   const currentCompany = companyProfile || FALLBACK_COMPANY;
   const isProfileComplete = companyProfile && companyProfile.gstin && companyProfile.address;
 
@@ -144,6 +148,20 @@ export default function PurchaseOrdersPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  // Auto-update item prices when vendor changes
+  useEffect(() => {
+    if (vendorId && selectedVendor) {
+      setItems(prev => prev.map(it => {
+        if (!it.inventoryItemId) return it;
+        const vendorRate = selectedVendor?.suppliedMaterials?.find(
+          (sm: any) => sm.materialId === it.inventoryItemId
+        )?.price ?? 0;
+        if (vendorRate > 0) return { ...it, price: vendorRate };
+        return it;
+      }));
+    }
+  }, [vendorId, selectedVendor]);
+
   const addItem = () =>
     setItems((prev) => [...prev, { inventoryItemId: "", itemName: "", unit: "kg", quantity: 0, price: 0, hsnCode: "", gstRate: 5 }]);
 
@@ -184,7 +202,6 @@ export default function PurchaseOrdersPage() {
   // GST Logic (Senior Architect Rounding)
   const round = (n: number) => Math.round(n * 100) / 100;
 
-  const selectedVendor = vendors.find((v: any) => v.id === vendorId);
   const isSameState = !selectedVendor?.state || selectedVendor.state.toLowerCase().includes((currentCompany.state || "").toLowerCase());
 
   const taxDetails = items.reduce((acc, it) => {
@@ -339,11 +356,15 @@ export default function PurchaseOrdersPage() {
   };
 
 
-  const filtered = orders.filter((o) =>
-    !search ||
-    o.vendor?.name?.toLowerCase().includes(search.toLowerCase()) ||
-    o.id?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = orders.filter((o) => {
+    const matchesSearch = !search ||
+      o.vendor?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      o.id?.toLowerCase().includes(search.toLowerCase());
+    
+    const matchesStatus = filterStatus === "ALL" || filterStatus === "ITEMS" || o.status === filterStatus;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const totalSpend = orders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
   const totalPaid = orders.reduce((s, o) => s + (o.paid ?? 0), 0);
@@ -438,9 +459,122 @@ export default function PurchaseOrdersPage() {
         />
       </div>
 
-      {/* Orders List */}
+      {/* Orders List or Items List */}
       {loading ? (
-        <div className="py-20 text-center text-gray-400 text-sm">Loading purchase orders...</div>
+        <div className="py-20 text-center text-gray-400 text-sm">Loading data...</div>
+      ) : filterStatus === "ITEMS" ? (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white dark:bg-card p-4 rounded-2xl border border-gray-100 dark:border-white/5">
+            <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em]">Product Summary</h3>
+            <div className="relative w-full sm:w-64">
+              <select 
+                value={vendorFilter} 
+                onChange={(e) => setVendorFilter(e.target.value)}
+                className="w-full pl-3 pr-8 py-2 text-xs bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none font-bold text-slate-600 dark:text-slate-300"
+              >
+                <option value="">All Vendors</option>
+                {vendors.map(v => (
+                  <option key={v.id} value={v.id}>{v.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {(() => {
+            const itemMap = new Map();
+            orders.forEach(po => {
+              if (po.status === "CANCELLED") return;
+              if (vendorFilter && po.vendorId !== vendorFilter) return;
+              
+              po.poItems.forEach((item: any) => {
+                const id = item.inventoryItemId;
+                const receivedQty = po.goodsReceipts?.reduce((sum: number, grn: any) => {
+                  const grnItem = grn.items?.find((gi: any) => gi.materialId === id);
+                  return sum + (grnItem?.acceptedQty ?? 0);
+                }, 0) ?? 0;
+
+                if (!itemMap.has(id)) {
+                  itemMap.set(id, {
+                    id,
+                    name: item.inventoryItem?.name ?? item.itemName,
+                    unit: item.inventoryItem?.unit ?? "kg",
+                    ordered: 0,
+                    received: 0,
+                    vendors: new Set(),
+                    lastPrice: item.price
+                  });
+                }
+                const entry = itemMap.get(id);
+                entry.ordered += item.quantity;
+                entry.received += receivedQty;
+                entry.vendors.add(po.vendor?.name);
+                entry.lastPrice = item.price;
+              });
+            });
+
+            const aggregated = Array.from(itemMap.values());
+            if (aggregated.length === 0) {
+              return (
+                <div className="py-20 text-center text-gray-300 dark:text-slate-600 space-y-2">
+                  <Package size={48} strokeWidth={1} className="mx-auto" />
+                  <p className="text-sm font-semibold">No purchased products found</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {aggregated.map(it => (
+                  <div key={it.id} className="bg-white dark:bg-card p-5 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm group hover:shadow-md transition-all">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                        <Package size={20} className="text-indigo-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-gray-900 dark:text-white text-sm uppercase tracking-tight">{it.name}</h4>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{it.unit}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="bg-slate-50 dark:bg-white/5 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">TOTAL ORDERED</p>
+                        <p className="text-sm font-black text-slate-900 dark:text-white">{it.ordered.toFixed(1)} {it.unit}</p>
+                      </div>
+                      <div className={clsx(
+                        "p-3 rounded-2xl border transition-all",
+                        it.received >= it.ordered 
+                          ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20" 
+                          : "bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20"
+                      )}>
+                        <p className={clsx(
+                          "text-[9px] font-black uppercase tracking-tighter mb-1",
+                          it.received >= it.ordered ? "text-emerald-600" : "text-amber-600"
+                        )}>TOTAL RECEIVED</p>
+                        <p className={clsx(
+                          "text-sm font-black",
+                          it.received >= it.ordered ? "text-emerald-700" : "text-amber-700"
+                        )}>{it.received.toFixed(1)} {it.unit}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Supplied By</p>
+                       <div className="flex flex-wrap gap-1.5">
+                          {Array.from(it.vendors).map((v: any) => (
+                             <span key={v} className="px-2 py-1 bg-slate-100 dark:bg-white/5 text-[9px] font-black text-slate-500 dark:text-slate-400 rounded-lg uppercase tracking-tight">
+                                {v}
+                             </span>
+                          ))}
+                       </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="py-20 text-center text-gray-300 dark:text-slate-600 space-y-2">
           <ShoppingCart size={48} strokeWidth={1} className="mx-auto" />
@@ -475,18 +609,35 @@ export default function PurchaseOrdersPage() {
                 {/* Items */}
                 {po.poItems?.length > 0 && (
                   <div className="mt-4 space-y-1.5">
-                    {po.poItems.map((item: any, i: number) => (
-                      <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[12px] bg-gray-50 dark:bg-white/5 rounded-lg px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <Package size={12} className="text-gray-400" />
-                          <span className="font-medium text-gray-700 dark:text-slate-300">
-                            {item.inventoryItem?.name ?? item.inventoryItemId}
-                          </span>
-                          <span className="text-gray-400">{item.quantity} {item.inventoryItem?.unit ?? "kg"}</span>
+                    {po.poItems.map((item: any, i: number) => {
+                      const receivedQty = po.goodsReceipts?.reduce((sum: number, grn: any) => {
+                        const grnItem = grn.items?.find((gi: any) => gi.materialId === item.inventoryItemId);
+                        return sum + (grnItem?.acceptedQty ?? 0);
+                      }, 0) ?? 0;
+
+                      return (
+                        <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[12px] bg-gray-50 dark:bg-white/5 rounded-lg px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <Package size={12} className="text-gray-400" />
+                            <span className="font-medium text-gray-700 dark:text-slate-300">
+                              {item.inventoryItem?.name ?? item.inventoryItemId}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400">{item.quantity} {item.inventoryItem?.unit ?? "kg"}</span>
+                              {receivedQty > 0 && (
+                                <span className={clsx(
+                                  "text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter",
+                                  receivedQty >= item.quantity ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                                )}>
+                                  {receivedQty} Received
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="font-bold text-gray-900 dark:text-white sm:text-right">{fmt(item.quantity * item.price)}</span>
                         </div>
-                        <span className="font-bold text-gray-900 dark:text-white sm:text-right">{fmt(item.quantity * item.price)}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 
@@ -552,12 +703,12 @@ export default function PurchaseOrdersPage() {
                   </button>
                   {po.status === "PENDING" && (
                     <>
-                      <button
+                      {/* <button
                         onClick={() => handleReceive(po.id)}
                         className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-white rounded-xl text-[12px] font-bold transition-all"
                       >
                         <Truck size={13} /> Mark Received (GRN)
-                      </button>
+                      </button> */}
                       <button
                         onClick={() => handleCancel(po.id)}
                         className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 dark:bg-white/5 hover:bg-red-50 dark:hover:bg-red-900/10 text-gray-600 dark:text-slate-300 hover:text-red-600 rounded-xl text-[12px] font-bold transition-all"
@@ -622,24 +773,56 @@ export default function PurchaseOrdersPage() {
                           </div>
                         </div>
                         <div className="max-h-[200px] overflow-y-auto p-1.5 space-y-1">
-                          {vendors.filter(v => v.name.toLowerCase().includes(vendorSearch.toLowerCase())).map(v => (
-                            <button
-                              key={v.id}
-                              onClick={() => {
-                                setVendorId(v.id);
-                                setShowVendorList(false);
-                                setVendorSearch("");
-                              }}
-                              className={clsx(
-                                "w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all",
-                                vendorId === v.id
-                                  ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
-                                  : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-orange-600"
-                              )}
-                            >
-                              {v.name}
-                            </button>
-                          ))}
+                          {(() => {
+                            const selectedMaterialIds = items.map(it => it.inventoryItemId).filter(Boolean);
+                            const filtered = vendors.filter(v => {
+                              const matchesSearch = v.name.toLowerCase().includes(vendorSearch.toLowerCase());
+                              const suppliesAllSelected = selectedMaterialIds.every(id => 
+                                v.suppliedMaterials?.some((sm: any) => sm.materialId === id) || 
+                                materials.find(m => m.id === id)?.vendorId === v.id
+                              );
+                              return matchesSearch && suppliesAllSelected;
+                            });
+
+                            if (filtered.length === 0) {
+                              return (
+                                <div className="py-8 text-center space-y-2">
+                                  <Package size={24} className="mx-auto text-slate-300" />
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">No vendors supply these materials</p>
+                                </div>
+                              );
+                            }
+
+                            return filtered.map(v => (
+                              <button
+                                key={v.id}
+                                onClick={() => {
+                                  setVendorId(v.id);
+                                  setShowVendorList(false);
+                                  setVendorSearch("");
+                                }}
+                                className={clsx(
+                                  "w-full text-left px-4 py-3 rounded-xl transition-all group",
+                                  vendorId === v.id
+                                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
+                                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"
+                                )}
+                              >
+                                <div className="font-bold text-xs">{v.name}</div>
+                                <div className={clsx(
+                                  "text-[9px] mt-1 flex flex-wrap gap-1",
+                                  vendorId === v.id ? "text-orange-100" : "text-slate-400"
+                                )}>
+                                  {v.suppliedMaterials?.slice(0, 3).map((sm: any) => (
+                                    <span key={sm.materialId} className="bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded-md">
+                                      {sm.material?.name || materials.find(m => m.id === sm.materialId)?.name}
+                                    </span>
+                                  ))}
+                                  {v.suppliedMaterials?.length > 3 && <span>+{v.suppliedMaterials.length - 3} more</span>}
+                                </div>
+                              </button>
+                            ));
+                          })()}
                         </div>
                       </div>
                     )}
@@ -737,7 +920,19 @@ export default function PurchaseOrdersPage() {
                 <div className="flex items-center justify-between ml-1">
                   <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Order Items</label>
                   <div className="flex gap-4">
-                    <button onClick={() => setShowMaterialForm(true)} className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-600 transition-colors">
+                    <button 
+                      onClick={() => {
+                        if (!vendorId) {
+                          showToast("Please select a vendor first to link this new material to them.", "warning");
+                          return;
+                        }
+                        setShowMaterialForm(true);
+                      }} 
+                      className={clsx(
+                        "flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-colors",
+                        vendorId ? "text-indigo-500 hover:text-indigo-600" : "text-slate-300 cursor-not-allowed"
+                      )}
+                    >
                       <Plus size={12} className="stroke-[3]" /> New Material
                     </button>
                     <button onClick={addItem} className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-600 transition-colors">
@@ -774,30 +969,72 @@ export default function PurchaseOrdersPage() {
                               </div>
                             </div>
                             <div className="max-h-[160px] overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
-                              {materials
-                                .filter(m => 
+                              {(() => {
+                                const filteredMaterials = materials.filter(m => 
                                   m.name.toLowerCase().includes(materialSearch.toLowerCase()) && 
-                                  !items.some((it, idx) => idx !== i && it.inventoryItemId === m.id)
-                                )
-                                .map(m => (
-                                <button
-                                  key={m.id}
-                                  onClick={() => {
-                                    updateItem(i, "inventoryItemId", m.id);
-                                    setShowMaterialList(null);
-                                    setMaterialSearch("");
-                                  }}
-                                  className={clsx(
-                                    "w-full text-left px-3 py-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-between",
-                                    item.inventoryItemId === m.id
-                                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                                      : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-indigo-600"
-                                  )}
-                                >
-                                  <span>{m.name}</span>
-                                  <span className="opacity-50 text-[10px]">{m.unit}</span>
-                                </button>
-                              ))}
+                                  !items.some((it, idx) => idx !== i && it.inventoryItemId === m.id) &&
+                                  (
+                                    (vendorId && !forceShowAllMaterials)
+                                      ? (selectedVendor?.suppliedMaterials?.some((sm: any) => sm.materialId === m.id) || m.vendorId === vendorId)
+                                      : (m.category === 'RAW_MATERIAL' || m.category === 'PACKAGING' || m.isPurchased)
+                                  ) &&
+                                  // Exclude traditionally produced items unless they have a vendor link
+                                  (m.category !== 'SEMI_FINISHED' && m.category !== 'FINISHED_GOOD' || m.vendorId)
+                                );
+
+                                if (filteredMaterials.length === 0) {
+                                  return (
+                                    <div className="py-8 text-center space-y-4">
+                                      <div className="w-12 h-12 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center mx-auto">
+                                        <Package size={24} className="text-slate-300" />
+                                      </div>
+                                      <div className="space-y-1 px-4">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                          {vendorId && !forceShowAllMaterials ? "No materials linked to this vendor" : "No materials found"}
+                                        </p>
+                                        {vendorId && !forceShowAllMaterials && (
+                                          <button 
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setForceShowAllMaterials(true);
+                                            }}
+                                            className="text-[10px] font-black text-orange-500 hover:text-orange-600 uppercase tracking-widest underline underline-offset-4"
+                                          >
+                                            Show All Raw Materials
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                return filteredMaterials.map(m => (
+                                  <button
+                                    key={m.id}
+                                    onClick={() => {
+                                      updateItem(i, "inventoryItemId", m.id);
+                                      setShowMaterialList(null);
+                                      setMaterialSearch("");
+                                    }}
+                                    className={clsx(
+                                      "w-full text-left px-3 py-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-between",
+                                      item.inventoryItemId === m.id
+                                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-indigo-600"
+                                    )}
+                                  >
+                                    <span>{m.name}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="opacity-50 text-[10px]">{m.unit}</span>
+                                      {m.vendorId && (
+                                        <span className="text-[8px] bg-slate-100 dark:bg-white/10 px-1 rounded uppercase tracking-tighter">
+                                          {vendors.find(v => v.id === m.vendorId)?.name?.split(' ')[0]}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </button>
+                                ));
+                              })()}
                             </div>
                           </div>
                         )}

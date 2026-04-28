@@ -58,10 +58,10 @@ export default function VendorsPage() {
     setLoading(true);
     try {
       const [vRes, mRes, sRes, poRes] = await Promise.all([
-        vendorsApi.getAll(),
-        rawMaterialsApi.getAll(),
-        vendorsApi.getSummary(),
-        purchaseOrdersApi.getAll()
+        vendorsApi.getAll().catch(e => { console.error('Failed to fetch vendors:', e); return { data: [] }; }),
+        rawMaterialsApi.getAll().catch(e => { console.error('Failed to fetch raw materials:', e); return { data: [] }; }),
+        vendorsApi.getSummary().catch(e => { console.error('Failed to fetch summary:', e); return { data: null }; }),
+        purchaseOrdersApi.getAll().catch(e => { console.error('Failed to fetch POs:', e); return { data: [] }; })
       ]);
       setVendors(vRes.data ?? []);
       setMaterials(mRes.data ?? []);
@@ -301,17 +301,23 @@ export default function VendorsPage() {
   const [maxPrice, setMaxPrice] = useState("");
 
   const filtered = vendors.filter((v) => {
-    const matchesSearch   = !search || v.name?.toLowerCase().includes(search.toLowerCase()) || v.contact?.includes(search);
-    const matchesMaterial = !materialFilter || v.suppliedMaterials?.some((sm: any) => sm.materialId === materialFilter);
+    const vName = v.name || "";
+    const vContact = v.contact || "";
+    const matchesSearch = !search || 
+      vName.toLowerCase().includes(search.toLowerCase()) || 
+      vContact.includes(search);
+    
+    const matchesMaterial = !materialFilter || (v.suppliedMaterials || []).some((sm: any) => sm.materialId === materialFilter);
     
     let matchesBalance = true;
-    if (balanceFilter === "ADVANCE") matchesBalance = (v.balance || 0) > 0;
-    if (balanceFilter === "OWED")    matchesBalance = (v.balance || 0) < 0;
+    const vBalance = v.balance || 0;
+    if (balanceFilter === "ADVANCE") matchesBalance = vBalance > 0;
+    if (balanceFilter === "OWED")    matchesBalance = vBalance < 0;
 
     // Price Filter Logic
     let matchesPrice = true;
     if (minPrice || maxPrice) {
-      const prices = v.suppliedMaterials?.map((sm: any) => sm.price || 0) || [];
+      const prices = (v.suppliedMaterials || []).map((sm: any) => sm.price || 0);
       if (prices.length === 0) {
         matchesPrice = false;
       } else {
@@ -327,6 +333,7 @@ export default function VendorsPage() {
   });
 
   // Production financial summary from backend
+
   const totalOwed    = summary?.totalOwed ?? 0;
   const totalAdvance = summary?.totalAdvance ?? 0;
   const totalPurchased = summary?.totalPurchased ?? 0;

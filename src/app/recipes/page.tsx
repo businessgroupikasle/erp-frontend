@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   ChefHat, Plus, X, Search, Package, ArrowRight,
-  IndianRupee, Scale, RefreshCw, Trash2, ChevronDown, Edit2,
+  IndianRupee, Scale, RefreshCw, Trash2, ChevronDown, Edit2, Download,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { recipesApi, productsFullApi, rawMaterialsApi } from "@/lib/api";
@@ -63,6 +63,57 @@ export default function RecipesPage() {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const downloadAllRecipesCSV = () => {
+    if (recipes.length === 0) return;
+    const headers = ["Recipe Name", "Output Product", "Yield", "Ingredients Count", "Instructions"];
+    const rows = recipes.map(r => [
+      r.name,
+      r.product?.name ?? "N/A",
+      `${r.yieldQty} units`,
+      r.recipeItems?.length ?? 0,
+      r.instructions?.replace(/,/g, ";") ?? ""
+    ]);
+    
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", `all_recipes_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Recipes list downloaded", "success");
+  };
+
+  const downloadSingleRecipe = (recipe: any) => {
+    const headers = ["Ingredient", "Quantity", "Unit"];
+    const rows = (recipe.recipeItems ?? []).map((item: any) => [
+      item.inventoryItem?.name ?? item.inventoryItemId,
+      item.quantityRequired,
+      item.unit ?? "kg"
+    ]);
+
+    const csvContent = [
+      [`Recipe: ${recipe.name}`],
+      [`Product: ${recipe.product?.name ?? "N/A"}`],
+      [`Yield: ${recipe.yieldQty} units`],
+      [],
+      headers,
+      ...rows,
+      [],
+      [`Instructions: ${recipe.instructions ?? "None"}`]
+    ].map(e => e.join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", `recipe_${recipe.name.toLowerCase().replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Recipe downloaded", "success");
+  };
 
   const addIngredient = () =>
     setIngredients((prev) => [...prev, { inventoryItemId: "", itemName: "", unit: "kg", quantityRequired: 0 }]);
@@ -205,6 +256,9 @@ export default function RecipesPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <button onClick={downloadAllRecipesCSV} className="flex items-center gap-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-slate-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all">
+            <Download size={16} /> Export CSV
+          </button>
           <button onClick={fetchAll} className="p-2 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
             <RefreshCw size={16} className="text-gray-400" />
           </button>
@@ -279,6 +333,13 @@ export default function RecipesPage() {
                     <p className="text-[10px] text-gray-400 uppercase font-bold">Yield</p>
                     <p className="text-sm font-black text-gray-900 dark:text-white">{recipe.yieldQty} units</p>
                   </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); downloadSingleRecipe(recipe); }}
+                    className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/10 text-gray-400 hover:text-blue-500 transition-all"
+                    title="Download Recipe"
+                  >
+                    <Download size={14} />
+                  </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); openEdit(recipe); }}
                     className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-orange-500 transition-all"

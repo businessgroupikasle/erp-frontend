@@ -225,6 +225,7 @@ export const purchaseOrdersApi = {
 // --- Raw Materials ---
 export const rawMaterialsApi = {
   getAll: () => api.get('/api/raw-materials'),
+  getById: (id: string) => api.get(`/api/raw-materials/${id}`),
   create: (data: any) => api.post('/api/raw-materials', data),
   update: (id: string, data: any) => api.patch(`/api/raw-materials/${id}`, data),
   delete: (id: string) => api.delete(`/api/raw-materials/${id}`),

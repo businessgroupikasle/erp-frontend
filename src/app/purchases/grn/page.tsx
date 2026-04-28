@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/context/ToastContext";
 import {
   Package, ChevronDown, CheckCircle2, XCircle, AlertTriangle,
-  Truck, ClipboardCheck, ArrowLeft, Loader2, Search
+  Truck, ClipboardCheck, ArrowLeft, Loader2, Search, Calendar,
+  ExternalLink, ArrowRight, History, Plus
 } from "lucide-react";
 import { purchaseOrdersApi, grnApi } from "@/lib/api";
+import { clsx } from "clsx";
 
 interface POItem {
   id: string;
@@ -18,6 +20,7 @@ interface POItem {
 
 interface PO {
   id: string;
+  poNumber?: string;
   vendor: { name: string };
   status: string;
   totalAmount: number;
@@ -32,28 +35,39 @@ interface GRNItem {
   acceptedQty: number;
   rejectedQty: number;
   price: number;
+  inventoryItem?: { name: string; unit: string };
 }
 
 export default function GRNPage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const [view, setView] = useState<"NEW" | "HISTORY">("NEW");
   const [step, setStep] = useState<1 | 2>(1);
   const [pos, setPOs] = useState<PO[]>([]);
-  const [loadingPOs, setLoadingPOs] = useState(true);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedPO, setSelectedPO] = useState<PO | null>(null);
   const [grnItems, setGrnItems] = useState<GRNItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [approvedId, setApprovedId] = useState<string | null>(null);
   const [poSearch, setPoSearch] = useState("");
 
+  // Fetch Pending POs or History based on view
   useEffect(() => {
-    purchaseOrdersApi.getAll().then(r => {
-      const pending = (r.data.orders || r.data || []).filter(
-        (p: PO) => p.status === "PENDING" || p.status === "APPROVED"
-      );
-      setPOs(pending);
-    }).finally(() => setLoadingPOs(false));
-  }, []);
+    setLoading(true);
+    if (view === "NEW") {
+      purchaseOrdersApi.getAll().then(r => {
+        const pending = (r.data.orders || r.data || []).filter(
+          (p: PO) => p.status === "PENDING" || p.status === "APPROVED"
+        );
+        setPOs(pending);
+      }).finally(() => setLoading(false));
+    } else {
+      grnApi.getAll().then(r => {
+        setHistory(r.data || []);
+      }).finally(() => setLoading(false));
+    }
+  }, [view]);
 
   const selectPO = (po: PO) => {
     setSelectedPO(po);
@@ -95,6 +109,14 @@ export default function GRNPage() {
       await grnApi.approve(grnId);
       setApprovedId(grnId);
       showToast("GRN Approved successfully! Stock levels updated.", "success");
+      
+      // Wait a bit and go to history
+      setTimeout(() => {
+        setView("HISTORY");
+        setStep(1);
+        setSelectedPO(null);
+        setApprovedId(null);
+      }, 2000);
     } catch (e: any) {
       console.error(e);
       showToast(e.response?.data?.error || "Failed to create or approve GRN. Please verify quantities.", "error");
@@ -103,194 +125,228 @@ export default function GRNPage() {
     }
   };
 
-  const formatCurrency = (n: number) =>
-    new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(n);
-
-  const filteredPOs = pos.filter(
-    p =>
-      p.vendor.name.toLowerCase().includes(poSearch.toLowerCase()) ||
-      p.id.slice(-6).toLowerCase().includes(poSearch.toLowerCase())
+  const filteredPOs = pos.filter(p => 
+    p.vendor.name.toLowerCase().includes(poSearch.toLowerCase()) ||
+    p.poNumber?.toLowerCase().includes(poSearch.toLowerCase())
   );
 
-  if (approvedId) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-8">
-        <div className="bg-white rounded-3xl p-12 shadow-2xl shadow-green-100 text-center space-y-6 max-w-md w-full">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-            <CheckCircle2 className="text-green-600" size={40} />
-          </div>
-          <h1 className="text-2xl font-black text-[#1A1A1A]">GRN Approved!</h1>
-          <p className="text-[#666] text-sm font-medium leading-relaxed">
-            Inventory has been updated with accepted quantities. The stock movement has been recorded.
-          </p>
-          <div className="bg-green-50 p-4 rounded-xl text-sm font-bold text-green-700">
-            GRN ID: #{approvedId.slice(-8).toUpperCase()}
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => router.push("/purchases/orders")}
-              className="flex-1 px-6 py-3 border-2 border-[#F0EAF0] rounded-xl font-bold text-sm text-[#666] hover:bg-slate-50 transition-all"
-            >
-              View Orders
-            </button>
-            <button
-              onClick={() => router.push("/inventory")}
-              className="flex-1 px-6 py-3 bg-[#7C3AED] text-white rounded-xl font-bold text-sm shadow-lg shadow-purple-200 hover:bg-[#6D28D9] transition-all"
-            >
-              Check Inventory
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-[#FAFAF9] p-6 md:p-10">
-      {/* Header */}
-      <div className="max-w-5xl mx-auto">
-        <button
-          onClick={() => step === 2 ? setStep(1) : router.back()}
-          className="flex items-center gap-2 text-[#999] hover:text-[#1A1A1A] transition-colors text-sm font-medium mb-8"
-        >
-          <ArrowLeft size={16} /> {step === 2 ? "Back to PO Selection" : "Back"}
-        </button>
-
-        <div className="flex items-start justify-between mb-10">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-[#7C3AED]/10 rounded-xl flex items-center justify-center">
-                <Truck className="text-[#7C3AED]" size={20} />
+    <div className="min-h-screen bg-[#FDFCFD] dark:bg-slate-950 p-4 md:p-10 animate-in fade-in duration-700">
+      <div className="max-w-7xl mx-auto space-y-10">
+        
+        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 py-4 border-b border-slate-200 dark:border-slate-800">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 md:p-2.5 bg-orange-500 rounded-lg md:rounded-xl shadow-lg shadow-orange-500/20 shrink-0">
+                <Truck className="text-white md:hidden" size={18} />
+                <Truck className="text-white hidden md:block" size={20} />
               </div>
-              <span className="text-[10px] font-bold text-[#999] uppercase tracking-[0.2em]">
-                {step === 1 ? "Step 1 of 2" : "Step 2 of 2"}
-              </span>
+              <h1 className="text-lg md:text-xl lg:text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase transition-all">
+                Goods Received <span className="text-slate-400 font-medium ml-1 tracking-tighter italic">Notes</span>
+              </h1>
             </div>
-            <h1 className="text-3xl font-black text-[#1A1A1A] tracking-tight">
-              {step === 1 ? "Select Purchase Order" : "Record Goods Received"}
-            </h1>
-            <p className="text-sm text-[#666] font-medium mt-1">
-              {step === 1
-                ? "Choose a pending PO to create a Goods Receipt Note (GRN)"
-                : `PO from ${selectedPO?.vendor.name} — enter quantities received`}
+            <p className="text-slate-500 dark:text-slate-400 font-medium ml-10 md:ml-12 text-[10px] md:text-xs leading-relaxed">
+              Inventory reconciliation and <span className="text-orange-500 font-bold underline decoration-orange-500/30">vendor shipment</span> verification.
             </p>
           </div>
-          {/* Step indicators */}
-          <div className="hidden md:flex items-center gap-2">
-            <div className={`px-4 py-2 rounded-full text-xs font-bold ${step >= 1 ? "bg-[#7C3AED] text-white" : "bg-slate-100 text-[#999]"}`}>
-              1 Select PO
-            </div>
-            <div className="w-8 h-px bg-[#E8DEE8]" />
-            <div className={`px-4 py-2 rounded-full text-xs font-bold ${step >= 2 ? "bg-[#7C3AED] text-white" : "bg-slate-100 text-[#999]"}`}>
-              2 Record GRN
-            </div>
+
+          {/* View Toggle */}
+          <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-2xl w-full md:w-fit border border-slate-200 dark:border-white/5 overflow-x-auto">
+            <button
+              onClick={() => { setView("NEW"); setStep(1); }}
+              className={clsx(
+                "flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center justify-center gap-2",
+                view === "NEW" 
+                  ? "bg-white dark:bg-card text-slate-900 dark:text-white shadow-md border border-slate-100 dark:border-white/10" 
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              )}
+            >
+              <Plus size={14} /> New Receipt
+            </button>
+            <button
+              onClick={() => setView("HISTORY")}
+              className={clsx(
+                "flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center justify-center gap-2",
+                view === "HISTORY" 
+                  ? "bg-white dark:bg-card text-slate-900 dark:text-white shadow-md border border-slate-100 dark:border-white/10" 
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              )}
+            >
+              <History size={14} /> Received History
+            </button>
           </div>
-        </div>
+        </header>
 
-        {/* ── STEP 1: PO Selection ── */}
-        {step === 1 && (
-          <div className="space-y-4">
-            <div className="relative mb-6">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#999]" size={16} />
-              <input
-                value={poSearch}
-                onChange={e => setPoSearch(e.target.value)}
-                placeholder="Search by vendor name or PO ID..."
-                className="w-full pl-11 pr-4 py-3.5 bg-white border border-[#F0EAF0] rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED]"
-              />
-            </div>
-
-            {loadingPOs ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="animate-spin text-[#7C3AED]" size={32} />
+        {view === "HISTORY" ? (
+          /* --- HISTORY VIEW --- */
+          <div className="space-y-6">
+            {loading ? (
+              <div className="py-20 text-center space-y-4">
+                <Loader2 className="mx-auto text-purple-600 animate-spin" size={40} />
+                <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Fetching history...</p>
               </div>
-            ) : filteredPOs.length === 0 ? (
-              <div className="text-center py-20 text-[#999]">
-                <Package size={48} className="mx-auto mb-4 opacity-30" />
-                <p className="font-bold">No pending purchase orders found</p>
-                <p className="text-sm mt-1">Create a PO first before recording a GRN</p>
+            ) : history.length === 0 ? (
+              <div className="py-20 bg-white rounded-[32px] border-2 border-dashed border-slate-200 text-center">
+                <Package size={48} className="mx-auto text-slate-300 mb-4" />
+                <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">No received goods found</p>
               </div>
             ) : (
-              filteredPOs.map(po => (
-                <button
-                  key={po.id}
-                  onClick={() => selectPO(po)}
-                  className="w-full bg-white border border-[#F0EAF0] rounded-2xl p-6 flex items-center justify-between hover:border-[#7C3AED] hover:shadow-lg hover:shadow-purple-50 transition-all group text-left"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-bold text-[#7C3AED] bg-purple-50 px-2 py-0.5 rounded">
-                        PO-{po.id.slice(-6).toUpperCase()}
-                      </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
-                        po.status === "APPROVED" ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600"
-                      }`}>
-                        {po.status}
-                      </span>
+              <div className="grid grid-cols-1 gap-4">
+                {history.map((grn) => (
+                  <div key={grn.id} className="bg-white dark:bg-card/40 backdrop-blur-md rounded-[32px] border border-slate-200 dark:border-white/5 p-6 hover:shadow-2xl hover:shadow-black/[0.03] transition-all group">
+                    <div className="flex flex-col md:flex-row justify-between gap-6">
+                      <div className="flex items-start gap-4">
+                        <div className="p-3 bg-green-50 dark:bg-green-500/10 rounded-2xl group-hover:scale-110 transition-transform">
+                          <ClipboardCheck className="text-green-600" size={24} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                              GRN-{grn.id.substring(0,8).toUpperCase()}
+                            </h3>
+                            <span className="px-3 py-1 bg-green-50 dark:bg-green-500/10 text-green-600 text-[10px] font-black rounded-full uppercase tracking-widest border border-green-100/50 dark:border-green-500/20">
+                              {grn.status}
+                            </span>
+                          </div>
+                          <p className="text-sm font-bold text-slate-500 flex items-center gap-2">
+                             From: <span className="text-orange-500 font-black">{grn.procurementOrder?.vendor?.name}</span>
+                             <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                             Ref: <span className="text-slate-900 dark:text-slate-300">{grn.procurementOrder?.poNumber || 'Legacy PO'}</span>
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-10">
+                        <div className="text-center">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Received Date</p>
+                          <p className="text-sm font-black text-slate-900 dark:text-white uppercase">
+                            {new Date(grn.receivedAt || grn.createdAt).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Items Received</p>
+                          <p className="text-sm font-black text-slate-900 dark:text-white">{grn.items?.length || 0} SKUs</p>
+                        </div>
+                        <button 
+                          className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl hover:bg-slate-900 dark:hover:bg-white hover:text-white dark:hover:text-slate-900 transition-all text-slate-400"
+                        >
+                          <ArrowRight size={18} />
+                        </button>
+                      </div>
                     </div>
-                    <p className="font-black text-[#1A1A1A] text-base">{po.vendor.name}</p>
-                    <p className="text-xs text-[#999] font-medium">
-                      {po.poItems?.length ?? 0} items · {formatCurrency(po.totalAmount)} · {new Date(po.createdAt).toLocaleDateString("en-IN")}
-                    </p>
+
+                    <div className="mt-6 pt-6 border-t border-slate-100 dark:border-white/5 flex flex-wrap gap-2">
+                       {grn.items?.map((item: any) => (
+                         <span key={item.id} className="px-3 py-1.5 bg-slate-50 dark:bg-white/5 rounded-lg text-[10px] font-bold text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-white/5">
+                           {item.inventoryItem?.name}: <span className="text-orange-500 font-black">{item.acceptedQty} {item.inventoryItem?.unit}</span>
+                         </span>
+                       ))}
+                    </div>
                   </div>
-                  <ChevronDown className="text-[#999] group-hover:text-[#7C3AED] -rotate-90 transition-all" size={20} />
-                </button>
-              ))
+                ))}
+              </div>
             )}
           </div>
-        )}
-
-        {/* ── STEP 2: GRN Items ── */}
-        {step === 2 && selectedPO && (
-          <div className="space-y-6">
-            {/* PO Context Card */}
-            <div className="bg-[#7C3AED] rounded-2xl p-6 text-white flex justify-between items-center">
-              <div>
-                <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">Purchase Order</p>
-                <p className="text-xl font-black">PO-{selectedPO.id.slice(-6).toUpperCase()}</p>
-                <p className="text-white/80 font-medium text-sm mt-0.5">{selectedPO.vendor.name}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">PO Value</p>
-                <p className="text-xl font-black">{formatCurrency(selectedPO.totalAmount)}</p>
+        ) : step === 1 ? (
+          /* --- STEP 1: SELECT PO --- */
+          <div className="bg-white dark:bg-card/40 backdrop-blur-md rounded-[40px] shadow-2xl shadow-black/[0.03] border border-slate-200 dark:border-white/5 p-8 space-y-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter flex items-center gap-3">
+                <div className="w-1.5 h-8 bg-orange-500 rounded-full" />
+                Select Pending Purchase Order
+              </h2>
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search Vendor or PO #"
+                  value={poSearch}
+                  onChange={e => setPoSearch(e.target.value)}
+                  className="pl-12 pr-6 py-3.5 bg-slate-50 dark:bg-white/5 border-none rounded-2xl text-sm font-bold dark:text-white focus:ring-4 focus:ring-orange-500/10 outline-none w-full md:w-72 transition-all"
+                />
               </div>
             </div>
 
-            {/* Items Table */}
-            <div className="bg-white rounded-2xl border border-[#F0EAF0] overflow-hidden">
-              <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-slate-50 border-b border-[#F0EAF0]">
-                <div className="col-span-3 text-[10px] font-bold text-[#999] uppercase tracking-widest">Material</div>
-                <div className="col-span-2 text-[10px] font-bold text-[#999] uppercase tracking-widest text-center">Ordered</div>
-                <div className="col-span-2 text-[10px] font-bold text-[#999] uppercase tracking-widest text-center">Received</div>
-                <div className="col-span-2 text-[10px] font-bold text-[#999] uppercase tracking-widest text-center">✅ Accepted</div>
-                <div className="col-span-2 text-[10px] font-bold text-[#999] uppercase tracking-widest text-center">❌ Rejected</div>
-                <div className="col-span-1 text-[10px] font-bold text-[#999] uppercase tracking-widest text-center">Status</div>
+            {loading ? (
+              <div className="py-20 text-center">
+                <Loader2 className="mx-auto text-purple-600 animate-spin" size={32} />
+              </div>
+            ) : filteredPOs.length === 0 ? (
+              <div className="py-16 text-center space-y-4">
+                <Package size={40} className="mx-auto text-[#CCC]" />
+                <p className="text-sm font-bold text-[#999] uppercase tracking-widest">No pending purchase orders found</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredPOs.map(po => (
+                  <button
+                    key={po.id}
+                    onClick={() => selectPO(po)}
+                    className="flex flex-col p-6 bg-white dark:bg-card/60 border-2 border-slate-100 dark:border-white/5 rounded-[32px] hover:border-orange-500/50 hover:shadow-2xl hover:shadow-black/[0.05] transition-all text-left group"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="px-4 py-1 bg-orange-50 dark:bg-orange-500/10 text-orange-600 text-[10px] font-black rounded-full uppercase tracking-widest border border-orange-100 dark:border-orange-500/20">
+                        {po.poNumber || "PO-PENDING"}
+                      </span>
+                      <ArrowRight size={18} className="text-slate-300 group-hover:text-orange-500 transition-all translate-x-0 group-hover:translate-x-2" />
+                    </div>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase truncate">{po.vendor.name}</h3>
+                    <div className="flex items-center gap-4 mt-3">
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Amount</span>
+                        <span className="text-sm font-black text-slate-900 dark:text-white">₹{po.totalAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="w-px h-8 bg-slate-100 dark:bg-white/5" />
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Date</span>
+                        <span className="text-sm font-black text-slate-900 dark:text-white">{new Date(po.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* --- STEP 2: VERIFY QUANTITIES --- */
+          <div className="bg-white dark:bg-card/40 backdrop-blur-md rounded-[40px] shadow-2xl shadow-black/[0.03] border border-slate-200 dark:border-white/5 p-8 space-y-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Verify Shipment Content</h2>
+                <p className="text-sm font-bold text-slate-500">
+                  Purchasing from <span className="text-orange-500 font-black">{selectedPO?.vendor.name}</span> • {selectedPO?.poNumber}
+                </p>
+              </div>
+              {approvedId && (
+                <div className="flex items-center gap-2 px-6 py-3 bg-emerald-50 dark:bg-emerald-500/10 border-2 border-emerald-100/50 dark:border-emerald-500/20 text-emerald-600 rounded-2xl animate-bounce">
+                  <CheckCircle2 size={20} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Stock Updated Successfully</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-slate-50 dark:bg-white/5 rounded-2xl">
+                <div className="col-span-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Material Name</div>
+                <div className="col-span-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ordered</div>
+                <div className="col-span-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Accepted</div>
+                <div className="col-span-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Rejected</div>
+                <div className="col-span-1"></div>
               </div>
 
               {grnItems.map((item, idx) => {
-                const po_item = selectedPO.poItems[idx];
-                const hasShortage = item.receivedQty < item.quantity;
+                const originalItem = selectedPO?.poItems[idx];
                 const hasRejection = item.rejectedQty > 0;
+                const hasShortage = item.acceptedQty < item.quantity;
+
                 return (
-                  <div
-                    key={idx}
-                    className={`grid grid-cols-12 gap-4 px-6 py-5 border-b border-[#F0EAF0] last:border-0 transition-colors ${
-                      hasRejection ? "bg-red-50/30" : hasShortage ? "bg-amber-50/30" : ""
-                    }`}
-                  >
-                    <div className="col-span-3 flex items-center">
-                      <div>
-                        <p className="text-sm font-bold text-[#1A1A1A]">{po_item.inventoryItem.name}</p>
-                        <p className="text-[11px] text-[#999] font-medium">{po_item.inventoryItem.unit}</p>
-                      </div>
+                  <div key={idx} className="grid grid-cols-12 gap-4 items-center px-6 py-5 border border-slate-100 dark:border-white/5 rounded-[24px] hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all group">
+                    <div className="col-span-5">
+                      <p className="text-sm font-black text-slate-900 dark:text-white uppercase truncate">{originalItem?.inventoryItem.name}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Unit: {originalItem?.inventoryItem.unit}</p>
                     </div>
-                    <div className="col-span-2 flex items-center justify-center">
-                      <span className="text-sm font-black text-[#1A1A1A]">{item.quantity}</span>
-                    </div>
-                    <div className="col-span-2 flex items-center justify-center">
-                      <span className={`text-sm font-black ${hasShortage ? "text-amber-600" : "text-green-600"}`}>
-                        {item.receivedQty}
-                      </span>
+                    <div className="col-span-2 text-center text-sm font-black text-slate-400">
+                      {item.quantity}
                     </div>
                     <div className="col-span-2 flex items-center justify-center">
                       <input
@@ -299,7 +355,7 @@ export default function GRNPage() {
                         max={item.quantity}
                         value={item.acceptedQty}
                         onChange={e => updateItem(idx, "acceptedQty", Number(e.target.value))}
-                        className="w-20 text-center px-2 py-2 border-2 border-green-200 rounded-lg text-sm font-bold text-green-700 bg-green-50 focus:outline-none focus:border-green-400"
+                        className="w-20 text-center px-2 py-3 border-2 border-emerald-100 dark:border-emerald-500/20 rounded-xl text-sm font-black text-emerald-600 bg-emerald-50/50 dark:bg-emerald-500/5 focus:outline-none focus:border-emerald-400 transition-all"
                       />
                     </div>
                     <div className="col-span-2 flex items-center justify-center">
@@ -309,16 +365,16 @@ export default function GRNPage() {
                         max={item.quantity - item.acceptedQty}
                         value={item.rejectedQty}
                         onChange={e => updateItem(idx, "rejectedQty", Number(e.target.value))}
-                        className="w-20 text-center px-2 py-2 border-2 border-red-200 rounded-lg text-sm font-bold text-red-700 bg-red-50 focus:outline-none focus:border-red-400"
+                        className="w-20 text-center px-2 py-3 border-2 border-red-100 dark:border-red-500/20 rounded-xl text-sm font-black text-red-600 bg-red-50/50 dark:bg-red-500/5 focus:outline-none focus:border-red-400 transition-all"
                       />
                     </div>
                     <div className="col-span-1 flex items-center justify-center">
                       {hasRejection ? (
-                        <XCircle className="text-red-500" size={18} />
+                        <div className="p-2 bg-red-50 dark:bg-red-500/10 rounded-full"><XCircle className="text-red-500" size={18} /></div>
                       ) : hasShortage ? (
-                        <AlertTriangle className="text-amber-500" size={18} />
+                        <div className="p-2 bg-amber-50 dark:bg-amber-500/10 rounded-full"><AlertTriangle className="text-amber-500" size={18} /></div>
                       ) : (
-                        <CheckCircle2 className="text-green-500" size={18} />
+                        <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-full"><CheckCircle2 className="text-emerald-500" size={18} /></div>
                       )}
                     </div>
                   </div>
@@ -327,44 +383,31 @@ export default function GRNPage() {
             </div>
 
             {/* Summary */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { label: "Total Ordered", value: grnItems.reduce((s, i) => s + i.quantity, 0), color: "text-[#1A1A1A]", bg: "bg-slate-50" },
-                { label: "Total Accepted", value: grnItems.reduce((s, i) => s + i.acceptedQty, 0), color: "text-green-700", bg: "bg-green-50" },
-                { label: "Total Rejected", value: grnItems.reduce((s, i) => s + i.rejectedQty, 0), color: "text-red-700", bg: "bg-red-50" },
+                { label: "Total Ordered", value: grnItems.reduce((s, i) => s + i.quantity, 0), color: "text-slate-900 dark:text-white", bg: "bg-slate-50 dark:bg-white/5" },
+                { label: "Total Accepted", value: grnItems.reduce((s, i) => s + i.acceptedQty, 0), color: "text-emerald-600", bg: "bg-emerald-50/50 dark:bg-emerald-500/5" },
+                { label: "Total Rejected", value: grnItems.reduce((s, i) => s + i.rejectedQty, 0), color: "text-red-600", bg: "bg-red-50/50 dark:bg-red-500/5" },
               ].map(stat => (
-                <div key={stat.label} className={`${stat.bg} rounded-2xl p-5 text-center`}>
-                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-widest mb-1">{stat.label}</p>
-                  <p className={`text-3xl font-black ${stat.color}`}>{stat.value}</p>
+                <div key={stat.label} className={`${stat.bg} rounded-[28px] p-6 text-center border border-slate-100 dark:border-white/5`}>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
+                  <p className={`text-3xl font-black tracking-tighter ${stat.color}`}>{stat.value}</p>
                 </div>
               ))}
             </div>
 
-            {/* Warning if rejections exist */}
-            {grnItems.some(i => i.rejectedQty > 0) && (
-              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
-                <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={18} />
-                <div>
-                  <p className="text-sm font-bold text-amber-900">Rejections Detected</p>
-                  <p className="text-xs text-amber-700 font-medium mt-0.5">
-                    Only accepted quantities will be added to inventory. Rejected items should be returned to vendor.
-                  </p>
-                </div>
-              </div>
-            )}
-
             {/* Action Buttons */}
-            <div className="flex items-center justify-between pt-4 border-t border-[#F0EAF0]">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-100 dark:border-white/5">
               <button
                 onClick={() => setStep(1)}
-                className="px-8 py-3 border-2 border-[#F0EAF0] rounded-xl font-bold text-sm text-[#666] hover:bg-slate-50 transition-all flex items-center gap-2"
+                className="w-full sm:w-auto px-8 py-4 border-2 border-slate-100 dark:border-white/5 rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-2"
               >
                 <ArrowLeft size={16} /> Change PO
               </button>
               <button
                 onClick={handleCreateAndApprove}
                 disabled={submitting}
-                className="px-12 py-4 bg-[#7C3AED] text-white rounded-2xl font-black text-sm tracking-widest shadow-2xl shadow-purple-200 hover:bg-[#6D28D9] hover:-translate-y-0.5 transition-all flex items-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto px-12 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[24px] font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {submitting ? <Loader2 size={18} className="animate-spin" /> : <ClipboardCheck size={18} />}
                 {submitting ? "Processing..." : "Approve GRN & Update Stock"}
