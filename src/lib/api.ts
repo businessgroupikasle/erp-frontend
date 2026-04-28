@@ -189,21 +189,35 @@ export const productsFullApi = {
 // --- Vendors ---
 export const vendorsApi = {
   getAll: () => api.get('/api/vendors'),
+  getSummary: () => api.get('/api/vendors/summary'),
+  filterVendors: (params: any) => api.get('/api/vendors/filter', { params }),
   getById: (id: string) => api.get(`/api/vendors/${id}`),
   create: (data: any) => api.post('/api/vendors', data),
   update: (id: string, data: any) => api.patch(`/api/vendors/${id}`, data),
   delete: (id: string) => api.delete(`/api/vendors/${id}`),
+  linkMaterial: (data: { vendorId: string; materialId: string; price: number }) =>
+    api.post('/api/vendors/link-material', data),
+  getLedger: (id: string, params: any = {}) => api.get(`/api/vendors/${id}/ledger`, { params }),
+  recordPayment: (id: string, data: { amount: number; note: string; referenceId?: string }) => api.post(`/api/vendors/${id}/payment`, data),
+  recordAdjustment: (id: string, data: { amount: number; type: 'CREDIT' | 'DEBIT'; note: string; referenceType?: string }) => api.post(`/api/vendors/${id}/adjustment`, data),
 };
 
 // --- Purchase Orders (with advance/balance tracking) ---
 export const purchaseOrdersApi = {
   getAll: () => api.get('/api/purchase-orders'),
   getById: (id: string) => api.get(`/api/purchase-orders/${id}`),
-  create: (data: { vendorId: string; advancePaid?: number; items: { inventoryItemId: string; quantity: number; price: number }[] }) =>
-    api.post('/api/purchase-orders', data),
+  create: (data: { 
+    vendorId: string; 
+    advancePaid?: number; 
+    expectedDeliveryDate?: string;
+    notes?: string;
+    items: { inventoryItemId: string; quantity: number; price: number }[] 
+  }) => api.post('/api/purchase-orders', data),
   receive: (id: string) => api.post(`/api/purchase-orders/${id}/receive`),
   recordAdvance: (id: string, advancePaid: number) =>
     api.patch(`/api/purchase-orders/${id}/advance`, { advancePaid }),
+  applyAdvance: (id: string) =>
+    api.post(`/api/purchase-orders/${id}/apply-advance`),
   cancel: (id: string) => api.patch(`/api/purchase-orders/${id}/cancel`),
   delete: (id: string) => api.delete(`/api/purchase-orders/${id}`),
 };
@@ -211,6 +225,7 @@ export const purchaseOrdersApi = {
 // --- Raw Materials ---
 export const rawMaterialsApi = {
   getAll: () => api.get('/api/raw-materials'),
+  getById: (id: string) => api.get(`/api/raw-materials/${id}`),
   create: (data: any) => api.post('/api/raw-materials', data),
   update: (id: string, data: any) => api.patch(`/api/raw-materials/${id}`, data),
   delete: (id: string) => api.delete(`/api/raw-materials/${id}`),
@@ -226,3 +241,58 @@ export const franchiseProductRequestsApi = {
   delete: (id: string) => api.delete(`/api/franchise/product-requests/${id}`),
 };
 
+
+// --- Goods Receipt Notes (GRN) ---
+export const grnApi = {
+  getAll: (params: any = {}) => api.get('/api/grn', { params }),
+  getById: (id: string) => api.get(`/api/grn/${id}`),
+  createFromPO: (poId: string, data: { items: any[], receivedBy?: string }) => 
+    api.post(`/api/grn/from-po/${poId}`, data),
+  approve: (id: string) => api.patch(`/api/grn/${id}/approve`),
+  cancel: (id: string) => api.patch(`/api/grn/${id}/cancel`),
+};
+
+// --- Vendor Invoices & Matching ---
+export const vendorInvoicesApi = {
+  getAll: (params: any = {}) => api.get('/api/vendor-invoices', { params }),
+  create: (data: any) => api.post('/api/vendor-invoices', data),
+  match: (id: string) => api.post(`/api/vendor-invoices/${id}/match`),
+  updateStatus: (id: string, status: string) => api.patch(`/api/vendor-invoices/${id}/status`, { status }),
+};
+
+// --- System Settings & Company Profile ---
+export const settingsApi = {
+  getCompanyProfile: () => api.get('/api/settings/company'),
+  updateCompanyProfile: (data: any) => api.patch('/api/settings/company', data),
+};
+
+// --- Franchise Orders (Phase 7) ---
+export const franchiseOrdersApi = {
+  getAll: (params?: { franchiseId?: string; status?: string }) =>
+    api.get('/api/franchise-orders', { params }),
+  getById: (id: string) => api.get(`/api/franchise-orders/${id}`),
+  create: (data: {
+    franchiseId: string;
+    paymentType?: 'COD' | 'ONLINE';
+    expectedDispatchDate?: string;
+    notes?: string;
+    items: Array<{ productId: string; quantity: number }>;
+  }) => api.post('/api/franchise-orders', data),
+  updateStatus: (id: string, status: string, extra?: { actualDispatchDate?: string }) =>
+    api.patch(`/api/franchise-orders/${id}/status`, { status, ...extra }),
+  recordPayment: (id: string, amount: number) =>
+    api.post(`/api/franchise-orders/${id}/payment`, { amount }),
+  getInvoice: (id: string, interState = false) =>
+    api.get(`/api/franchise-orders/${id}/invoice`, { params: { interState } }),
+};
+
+// --- Product Batches (Phase 6) ---
+export const productBatchesApi = {
+  getAll: (productId?: string) =>
+    api.get('/api/production/batches', { params: productId ? { productId } : {} }),
+};
+
+// --- Vendor Ledger Balance ---
+export const vendorLedgerApi = {
+  getBalance: (vendorId: string) => api.get(`/api/vendors/${vendorId}/balance`),
+};

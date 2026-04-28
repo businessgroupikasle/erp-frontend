@@ -7,27 +7,30 @@ import DocumentSummary from "@/components/documents/DocumentSummary";
 import DocumentOptions from "@/components/documents/DocumentOptions";
 import { ChevronDown, Edit3, Settings, Calendar, Plus } from "lucide-react";
 
+import { PurchaseOrderProvider } from "@/context/PurchaseOrderContext";
+
 export default function NewPurchasePage() {
   return (
-    <div className="min-h-screen bg-[#FDFCFD] dark:bg-[#020617] -m-8">
-      {/* Header Progress Tracker */}
-      <DocumentHeader 
-        activeStep={1} 
-        steps={["Purchase Details", "Design & Share (optional)"]} 
-      />
+    <PurchaseOrderProvider>
+      <div className="min-h-screen bg-[#FDFCFD] dark:bg-[#020617] -m-8">
+        {/* Header Progress Tracker */}
+        <DocumentHeader 
+          activeStep={1} 
+          steps={["Purchase Details", "Design & Share (optional)"]} 
+        />
 
-      <main className="max-w-[1400px] mx-auto p-10 space-y-8 pb-32">
-        <div className="bg-white dark:bg-[#0A0D14] rounded-3xl border border-[#F0EAF0] dark:border-slate-800 shadow-2xl shadow-purple-100/20 p-10 space-y-12">
-          
-          {/* Top Purchase Title Section */}
-          <div className="flex flex-col items-center justify-center gap-4 text-center">
-            <h1 className="text-4xl font-black text-[#1A1A1A] dark:text-white flex items-center gap-3">
-               Purchase <Edit3 size={24} className="text-[#CCC] cursor-pointer hover:text-[#7C3AED] transition-colors" />
-            </h1>
-            <button className="text-[11px] font-bold text-[#7C3AED] uppercase tracking-widest flex items-center gap-2 hover:underline">
-               <Plus size={14} /> Add Subtitle <span className="p-1 px-1.5 rounded bg-orange-100 text-orange-600 text-[8px]">Trial</span>
-            </button>
-          </div>
+        <main className="max-w-[1400px] mx-auto p-10 space-y-8 pb-32">
+          <div className="bg-white dark:bg-[#0A0D14] rounded-3xl border border-[#F0EAF0] dark:border-slate-800 shadow-2xl shadow-purple-100/20 p-10 space-y-12">
+            
+            {/* Top Purchase Title Section */}
+            <div className="flex flex-col items-center justify-center gap-2 text-center pb-6 border-b border-[#F0EAF0] dark:border-slate-800">
+              <h1 className="text-4xl font-black text-[#1A1A1A] dark:text-white flex items-center gap-3">
+                 New Purchase Order
+              </h1>
+              <p className="text-sm font-medium text-[#666] dark:text-slate-400">
+                 Create and manage vendor purchase orders with real-time tracking
+              </p>
+            </div>
 
           {/* Basic Controls Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -122,5 +125,6 @@ export default function NewPurchasePage() {
         </div>
       </main>
     </div>
+    </PurchaseOrderProvider>
   );
 }

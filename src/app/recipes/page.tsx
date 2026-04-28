@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   ChefHat, Plus, X, Search, Package, ArrowRight,
-  IndianRupee, Scale, RefreshCw, Trash2, ChevronDown, Edit2,
+  IndianRupee, Scale, RefreshCw, Trash2, ChevronDown, Edit2, Download, Play,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { recipesApi, productsFullApi, rawMaterialsApi } from "@/lib/api";
+import Link from "next/link";
 
 interface RecipeIngredient {
   inventoryItemId: string;
@@ -15,32 +16,36 @@ interface RecipeIngredient {
   quantityRequired: number;
 }
 
+import { useToast } from "@/context/ToastContext";
+import { UNITS } from "@/lib/constants";
+
 export default function RecipesPage() {
-  const [recipes, setRecipes]     = useState<any[]>([]);
-  const [products, setProducts]   = useState<any[]>([]);
+  const { showToast } = useToast();
+  const [recipes, setRecipes] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [search, setSearch]       = useState("");
-  const [showForm, setShowForm]   = useState(false);
-  const [editing, setEditing]     = useState<any>(null);
-  const [selected, setSelected]   = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [selected, setSelected] = useState<any>(null);
 
   // Form state
-  const [productId, setProductId]   = useState("");
+  const [productId, setProductId] = useState("");
   const [recipeName, setRecipeName] = useState("");
-  const [yieldQty, setYieldQty]     = useState(1);
+  const [yieldQty, setYieldQty] = useState(1);
   const [instructions, setInstructions] = useState("");
-  const [ingredients, setIngredients]   = useState<RecipeIngredient[]>([
+  const [ingredients, setIngredients] = useState<RecipeIngredient[]>([
     { inventoryItemId: "", itemName: "", unit: "kg", quantityRequired: 0 },
   ]);
   const [saving, setSaving] = useState(false);
 
   // Quick Add state
-  const [showQuickProduct, setShowQuickProduct]   = useState(false);
+  const [showQuickProduct, setShowQuickProduct] = useState(false);
   const [showQuickMaterial, setShowQuickMaterial] = useState(false);
-  const [quickName, setQuickName]   = useState("");
+  const [quickName, setQuickName] = useState("");
   const [quickPrice, setQuickPrice] = useState(0);
-  const [quickUnit, setQuickUnit]   = useState("kg");
+  const [quickUnit, setQuickUnit] = useState<string>(UNITS[0]);
   const [addingQuick, setAddingQuick] = useState(false);
 
   const fetchAll = useCallback(async () => {
@@ -60,6 +65,57 @@ export default function RecipesPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  const downloadAllRecipesCSV = () => {
+    if (recipes.length === 0) return;
+    const headers = ["Recipe Name", "Output Product", "Yield", "Ingredients Count", "Instructions"];
+    const rows = recipes.map(r => [
+      r.name,
+      r.product?.name ?? "N/A",
+      `${r.yieldQty} units`,
+      r.recipeItems?.length ?? 0,
+      r.instructions?.replace(/,/g, ";") ?? ""
+    ]);
+    
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", `all_recipes_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Recipes list downloaded", "success");
+  };
+
+  const downloadSingleRecipe = (recipe: any) => {
+    const headers = ["Ingredient", "Quantity", "Unit"];
+    const rows = (recipe.recipeItems ?? []).map((item: any) => [
+      item.inventoryItem?.name ?? item.inventoryItemId,
+      item.quantityRequired,
+      item.unit ?? "kg"
+    ]);
+
+    const csvContent = [
+      [`Recipe: ${recipe.name}`],
+      [`Product: ${recipe.product?.name ?? "N/A"}`],
+      [`Yield: ${recipe.yieldQty} units`],
+      [],
+      headers,
+      ...rows,
+      [],
+      [`Instructions: ${recipe.instructions ?? "None"}`]
+    ].map(e => e.join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", `recipe_${recipe.name.toLowerCase().replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Recipe downloaded", "success");
+  };
+
   const addIngredient = () =>
     setIngredients((prev) => [...prev, { inventoryItemId: "", itemName: "", unit: "kg", quantityRequired: 0 }]);
 
@@ -70,6 +126,11 @@ export default function RecipesPage() {
     setIngredients((prev) => prev.map((ing, idx) => {
       if (idx !== i) return ing;
       if (field === "inventoryItemId") {
+        // Restriction: Prevent duplicates
+        if (prev.some((item, index) => index !== i && item.inventoryItemId === value)) {
+          showToast("This material is already in the recipe. Please adjust its quantity instead.", "warning");
+          return ing;
+        }
         const mat = materials.find((m: any) => m.id === value);
         return { ...ing, inventoryItemId: value, itemName: mat?.name ?? "", unit: mat?.unit ?? "kg" };
       }
@@ -139,6 +200,14 @@ export default function RecipesPage() {
 
   const handleQuickMaterial = async () => {
     if (!quickName) return;
+
+    // Restriction: Pre-check if exists
+    const exists = materials.find(m => m.name.toLowerCase() === quickName.toLowerCase());
+    if (exists) {
+      showToast(`A material named "${quickName}" already exists. Please select it from the dropdown.`, "info");
+      return;
+    }
+
     setAddingQuick(true);
     try {
       await rawMaterialsApi.create({
@@ -149,6 +218,7 @@ export default function RecipesPage() {
       await fetchAll();
       setShowQuickMaterial(false);
       setQuickName(""); setQuickUnit("kg");
+      showToast("Material created successfully", "success");
     } catch (e) { console.error(e); }
     finally { setAddingQuick(false); }
   };
@@ -187,6 +257,9 @@ export default function RecipesPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <button onClick={downloadAllRecipesCSV} className="flex items-center gap-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-slate-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all">
+            <Download size={16} /> Export CSV
+          </button>
           <button onClick={fetchAll} className="p-2 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
             <RefreshCw size={16} className="text-gray-400" />
           </button>
@@ -261,6 +334,21 @@ export default function RecipesPage() {
                     <p className="text-[10px] text-gray-400 uppercase font-bold">Yield</p>
                     <p className="text-sm font-black text-gray-900 dark:text-white">{recipe.yieldQty} units</p>
                   </div>
+                  <Link
+                    href={`/production?recipeId=${recipe.id}`}
+                    className="p-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/10 text-gray-400 hover:text-indigo-500 transition-all"
+                    title="Produce Now"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Play size={14} fill="currentColor" />
+                  </Link>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); downloadSingleRecipe(recipe); }}
+                    className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/10 text-gray-400 hover:text-blue-500 transition-all"
+                    title="Download Recipe"
+                  >
+                    <Download size={14} />
+                  </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); openEdit(recipe); }}
                     className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-orange-500 transition-all"
@@ -308,9 +396,12 @@ export default function RecipesPage() {
                   {recipe.instructions && (
                     <p className="mt-3 text-[11px] text-gray-500 dark:text-slate-400 italic">{recipe.instructions}</p>
                   )}
-                  <div className="mt-3 flex items-center gap-1 text-[11px] text-orange-500 font-bold">
+                  <Link 
+                    href={`/production?recipeId=${recipe.id}`}
+                    className="mt-3 flex items-center gap-1 text-[11px] text-orange-500 font-bold hover:underline"
+                  >
                     <ArrowRight size={11} /> Go to Production to execute this recipe
-                  </div>
+                  </Link>
                 </div>
               )}
             </div>
@@ -381,7 +472,9 @@ export default function RecipesPage() {
                         <select value={ing.inventoryItemId} onChange={(e) => updateIngredient(i, "inventoryItemId", e.target.value)}
                           className="w-full appearance-none bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-orange-500/20">
                           <option value="">Select material...</option>
-                          {materials.map((m: any) => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}
+                          {materials
+                            .filter(m => !ingredients.some((ing, idx) => idx !== i && ing.inventoryItemId === m.id))
+                            .map((m: any) => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}
                         </select>
                       </div>
                       <div className="col-span-3">
@@ -470,10 +563,7 @@ export default function RecipesPage() {
               <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Unit</label>
               <select value={quickUnit} onChange={(e) => setQuickUnit(e.target.value)}
                 className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20">
-                <option value="kg">kg</option>
-                <option value="ltr">ltr</option>
-                <option value="units">units</option>
-                <option value="gm">gm</option>
+                {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
             <div className="flex gap-2 pt-2">

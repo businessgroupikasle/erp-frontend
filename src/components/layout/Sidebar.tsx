@@ -11,22 +11,28 @@ import {
   ChevronDown,
   Sun,
   Moon,
-  Landmark
+  Landmark,
+  Store,
+  X as CloseIcon,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react";
+import Image from "next/image";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { clsx } from "clsx";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { useSidebar } from "@/context/SidebarContext";
-import { menuSections } from "@/config/navigation";
+import { SUPER_ADMIN_SIDEBAR, franchiseMenuSections } from "@/config/navigation";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
-  const { isCollapsed } = useSidebar();
+  const { isCollapsed, toggleCollapsed, isMobileOpen, closeMobile } = useSidebar();
 
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["Sales CRM"]);
+  const [collapsedSections, setCollapsedSections] = useState<string[]>([]);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
@@ -62,19 +68,33 @@ export default function Sidebar() {
     );
   };
 
+  const toggleSection = (section: string) => {
+    setCollapsedSections((prev) =>
+      prev.includes(section) ? prev.filter((s) => s !== section) : [...prev, section]
+    );
+  };
+
   const userRole = user?.role?.toUpperCase() || "STAFF";
-  const initials = user?.fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "NX";
+  const sections = userRole === "FRANCHISE_ADMIN" ? franchiseMenuSections : SUPER_ADMIN_SIDEBAR;
 
   if (pathname === "/login") return null;
 
   return (
     <aside
       className={clsx(
-        "relative flex flex-col h-screen shrink-0 sidebar-transition z-50",
-        "bg-white dark:bg-[#0f1117] border-r border-orange-100 dark:border-white/5",
-        isCollapsed ? "w-[72px]" : "w-[288px]"
+        "fixed inset-y-0 left-0 lg:relative flex flex-col h-screen shrink-0 sidebar-transition z-[100] lg:z-50",
+        "bg-white dark:bg-[#0f1117]",
+        isCollapsed ? "lg:w-0 lg:opacity-0 lg:overflow-hidden lg:border-none" : "lg:w-[288px] border-r border-orange-100 dark:border-white/5",
+        isMobileOpen ? "translate-x-0 w-[288px] border-r border-orange-100" : "-translate-x-full lg:translate-x-0"
       )}
     >
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/30 backdrop-blur-[2px] lg:hidden z-[-1]" 
+          onClick={closeMobile}
+        />
+      )}
       {/* ── Brand / User Header ─────────────────────── */}
       <div
         className={clsx(
@@ -82,10 +102,15 @@ export default function Sidebar() {
           isCollapsed ? "px-2 py-3 justify-center" : "px-4 py-3 gap-3"
         )}
       >
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-xs shrink-0 shadow-md shadow-orange-200 dark:shadow-orange-900/30">
-          {initials}
+        <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-md">
+          <Image
+            src="/logo.png"
+            alt="Logo"
+            fill
+            className="object-contain"
+          />
         </div>
-        {!isCollapsed && (
+        {(!isCollapsed || isMobileOpen) && (
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-semibold text-gray-900 dark:text-white truncate leading-tight">
               Kiddos Food
@@ -95,6 +120,14 @@ export default function Sidebar() {
             </p>
           </div>
         )}
+
+        {/* Mobile Close Button */}
+        <button
+          onClick={closeMobile}
+          className="lg:hidden p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-slate-400 hover:text-red-500 transition-colors"
+        >
+          <CloseIcon size={20} />
+        </button>
       </div>
 
 
@@ -113,26 +146,53 @@ export default function Sidebar() {
           ref={navRef}
           className={clsx(
             "flex-1 overflow-y-auto hide-scrollbar",
-            "px-2.5 py-2"
+            "px-3 py-4"
           )}
         >
           <div className="space-y-0.5">
-            {menuSections.map((section) => {
+            {sections.map((section) => {
               const filteredItems = section.items.filter(
                 (item) => !user || item.roles.includes(userRole)
               );
               if (filteredItems.length === 0) return null;
 
               return (
-                <div key={section.section}>
+                <div key={section.title}>
                   {/* Section Header */}
                   {!isCollapsed && (
-                    <div className="px-2.5 pt-4 pb-1.5 first:pt-2">
-                      <p className="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-slate-600 flex items-center gap-1.5">
-                        {section.section}
+                    <div 
+                      onClick={() => toggleSection(section.title)}
+                      className="px-2 pb-2 mt-6 flex items-center justify-between cursor-pointer group/section"
+                    >
+                      <p className={clsx(
+                        "text-[10px] font-black uppercase tracking-[0.2em] transition-colors",
+                        section.title.toUpperCase() === "OVERVIEW" ? "text-orange-500/80 dark:text-orange-400" :
+                        section.title.toUpperCase() === "SALES" ? "text-emerald-500/80 dark:text-emerald-400" :
+                        section.title.toUpperCase() === "INVENTORY" ? "text-blue-500/80 dark:text-blue-400" :
+                        section.title.toUpperCase() === "PRODUCTION" ? "text-rose-500/80 dark:text-rose-400" :
+                        section.title.toUpperCase() === "PROCUREMENT" ? "text-amber-500/80 dark:text-amber-400" :
+                        section.title.toUpperCase() === "FRANCHISE" ? "text-purple-500/80 dark:text-purple-400" :
+                        section.title.toUpperCase() === "ACCOUNTS" ? "text-teal-500/80 dark:text-teal-400" :
+                        section.title.toUpperCase() === "REPORTS" ? "text-indigo-500/80 dark:text-indigo-400" :
+                        section.title.toUpperCase() === "HR & PAYROLL" ? "text-cyan-500/80 dark:text-cyan-400" :
+                        "text-slate-400 dark:text-slate-600 group-hover/section:text-slate-500"
+                      )}>
+                        {section.title}
                       </p>
+                      <ChevronDown 
+                        size={11} 
+                        className={clsx(
+                          "text-slate-300 dark:text-slate-700 transition-transform duration-300",
+                          collapsedSections.includes(section.title) ? "-rotate-90" : "rotate-0"
+                        )} 
+                      />
                     </div>
                   )}
+
+                  <div className={clsx(
+                    "space-y-1 transition-all duration-300 overflow-hidden",
+                    collapsedSections.includes(section.title) ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"
+                  )}>
 
                   {/* Section Items */}
                   {filteredItems.map((item) => {
@@ -142,6 +202,7 @@ export default function Sidebar() {
                       pathname === item.href ||
                       (hasChildren && item.children?.some((c) => pathname === c.href));
                     const isHovered = hoveredItem === item.label;
+                    const isComingSoon = item.isComingSoon;
 
                     return (
                       <div
@@ -152,33 +213,43 @@ export default function Sidebar() {
                       >
                         {/* Row */}
                         <div
-                          onClick={() => hasChildren ? toggleMenu(item.label) : undefined}
+                          onClick={() => (!hasChildren && !isComingSoon) ? undefined : (hasChildren ? toggleMenu(item.label) : undefined)}
                           className={clsx(
-                            "flex items-center gap-2.5 rounded-xl cursor-pointer select-none transition-all duration-150",
-                            "px-2.5 py-2",
+                            "flex items-center gap-3 rounded-2xl select-none transition-all duration-200",
+                            "px-3 py-3",
+                            isComingSoon ? "opacity-50 cursor-not-allowed grayscale" : "cursor-pointer",
                             isActive
-                              ? "bg-[#FF6B00]/10 text-[#FF6B00] dark:bg-[#FF6B00]/20"
-                              : "text-gray-500 dark:text-slate-400 hover:bg-[#FF6B00]/5 dark:hover:bg-white/5 hover:text-gray-800 dark:hover:text-slate-200"
+                              ? "bg-gradient-to-r from-orange-500/10 to-orange-500/5 text-orange-600 dark:text-orange-400 backdrop-blur-md border border-orange-500/10 shadow-[0_4px_12px_-2px_rgba(255,107,0,0.12)]"
+                              : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200"
                           )}
                         >
                           {hasChildren ? (
-                            <span className="flex items-center gap-2.5 flex-1 min-w-0">
-                              <span className="text-[12.5px] font-semibold flex-1 truncate">{item.label}</span>
+                            <span className="flex items-center gap-3 flex-1 min-w-0">
+                              <span className="text-[13px] font-bold flex-1 truncate tracking-tight">{item.label}</span>
                             </span>
                           ) : (
-                            <Link
-                              href={item.href}
-                              className="flex items-center gap-2.5 flex-1 min-w-0"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <span className="text-[12.5px] font-semibold flex-1 truncate">{item.label}</span>
-                            </Link>
+                            isComingSoon ? (
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <span className="text-[13px] font-bold flex-1 truncate tracking-tight text-slate-400">{item.label}</span>
+                              </div>
+                            ) : (
+                              <Link
+                                href={item.href}
+                                className="flex items-center gap-3 flex-1 min-w-0"
+                                onClick={(e) => { e.stopPropagation(); closeMobile(); }}
+                              >
+                                <span className="text-[13px] font-bold flex-1 truncate tracking-tight">{item.label}</span>
+                              </Link>
+                            )
                           )}
 
                           {!isCollapsed && item.isNew && (
                             <span className="badge-new shrink-0">New</span>
                           )}
-                          {!isCollapsed && item.isHot && !item.isNew && (
+                          {!isCollapsed && item.isComingSoon && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0">Soon</span>
+                          )}
+                          {!isCollapsed && item.isHot && !item.isNew && !item.isComingSoon && (
                             <span className="badge-hot shrink-0">Hot</span>
                           )}
                           {!isCollapsed && hasChildren && (
@@ -213,6 +284,7 @@ export default function Sidebar() {
                               <Link
                                 key={child.href}
                                 href={child.href}
+                                onClick={closeMobile}
                                 className={clsx(
                                   "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[12px] font-medium transition-all",
                                   pathname === child.href
@@ -231,8 +303,9 @@ export default function Sidebar() {
                           </div>
                         )}
                       </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })}
@@ -247,34 +320,7 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* ── Footer ──────────────────────────────────── */}
-      <div
-        className={clsx(
-          "border-t border-orange-100 dark:border-white/5 shrink-0",
-          isCollapsed ? "p-1.5" : "p-2.5"
-        )}
-      >
-        {!isCollapsed && (
-          <button className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-500 dark:text-slate-400 hover:bg-orange-50/60 dark:hover:bg-white/5 hover:text-gray-800 dark:hover:text-slate-200 transition-all mb-1">
-            <span className="text-[12.5px] font-medium flex-1 text-left">Invite Team Members</span>
-          </button>
-        )}
-
-        <div className="flex items-center justify-between gap-1">
-          <button
-            onClick={toggleTheme}
-            className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500 hover:bg-orange-50 dark:hover:bg-white/5 hover:text-orange-500 dark:hover:text-orange-400 transition-all"
-          >
-            {theme === "dark" ? "Light Mode" : "Dark Mode"}
-          </button>
-          <button
-            onClick={logout}
-            className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-all ml-auto"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+      {/* ── Footer Removed ────────────────────────── */}
     </aside>
   );
 }

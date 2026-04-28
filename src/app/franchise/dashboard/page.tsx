@@ -1,274 +1,483 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import {
-  Package, Send, CheckCircle2, Clock,
-  TrendingUp, RefreshCw, ArrowRight,
-  ShoppingCart, AlertTriangle, Layers, Eye,
+  ShoppingCart, Package, AlertTriangle, TrendingUp,
+  RefreshCw, ArrowRight, Clock, CheckCircle2, Truck,
+  PackageCheck, CreditCard, ChevronRight, BarChart3,
 } from "lucide-react";
 import { clsx } from "clsx";
-import {
-  franchiseProductRequestsApi,
-  inventoryApi,
-  posApi,
-} from "@/lib/api";
+import { franchiseOrdersApi, productBatchesApi, posApi, inventoryApi } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
-const STATUS_STYLES: Record<string, string> = {
-  PENDING:  "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
-  APPROVED: "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
-  REJECTED: "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400",
-  FULFILLED:"bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
+type FranchiseOrderStatus = "PENDING" | "APPROVED" | "IN_PRODUCTION" | "DISPATCHED" | "DELIVERED";
+const STATUS_STEPS: FranchiseOrderStatus[] = ["PENDING", "APPROVED", "IN_PRODUCTION", "DISPATCHED", "DELIVERED"];
+const STATUS_LABELS: Record<FranchiseOrderStatus, string> = {
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  IN_PRODUCTION: "In Production",
+  DISPATCHED: "Dispatched",
+  DELIVERED: "Delivered",
+};
+
+const EXPIRY_BADGE: Record<string, string> = {
+  EXPIRED:       "bg-red-500/15 text-red-400 border-red-500/30",
+  EXPIRING_SOON: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  VALID:         "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  NO_EXPIRY:     "bg-zinc-700/60 text-zinc-400 border-zinc-600/40",
 };
 
 function fmt(n: number) {
   return "₹" + Math.round(n).toLocaleString("en-IN");
 }
-
-export default function FranchiseDashboardPage() {
-  return (
-    <Suspense fallback={<div className="p-10 text-center font-bold animate-pulse">Initializing Dashboard...</div>}>
-      <FranchiseDashboard />
-    </Suspense>
-  );
+function isToday(d: string) {
+  return new Date(d).toDateString() === new Date().toDateString();
 }
 
-function FranchiseDashboard() {
+export default function FranchiseDashboardPage() {
   const { user } = useAuth();
-  const searchParams = useSearchParams();
-  const monitorId = searchParams.get("id");
-
-  const [requests, setRequests] = useState<any[]>([]);
-  const [stock, setStock]       = useState<any[]>([]);
-  const [orders, setOrders]     = useState<any[]>([]);
-  const [loading, setLoading]   = useState(true);
-
-  // Determine active franchiseId
-  const activeFid = (user?.role === "SUPER_ADMIN" && monitorId) ? monitorId : user?.franchiseId;
-  const isMonitoring = !!(user?.role === "SUPER_ADMIN" && monitorId);
+  const [franchiseOrders, setFranchiseOrders] = useState<any[]>([]);
+  const [batches, setBatches]                 = useState<any[]>([]);
+  const [salesOrders, setSalesOrders]         = useState<any[]>([]);
+  const [loading, setLoading]                 = useState(true);
 
   const fetchAll = useCallback(async () => {
-    if (!activeFid) return;
     setLoading(true);
     try {
-      const [rRes, sRes, oRes] = await Promise.allSettled([
-        franchiseProductRequestsApi.getAll(),
-        inventoryApi.getInventory(activeFid),
-        posApi.getOrders({ franchiseId: activeFid, take: 10 }),
+      const [foRes, bRes, soRes] = await Promise.allSettled([
+        franchiseOrdersApi.getAll(),
+        productBatchesApi.getAll(),
+        posApi.getOrders({ take: 100 }),
       ]);
-      if (rRes.status === "fulfilled") {
-        // Filter requests by franchise if Super Admin monitoring
-        const rawReq = rRes.value.data ?? [];
-        setRequests(isMonitoring ? rawReq.filter((r: any) => r.franchiseId === activeFid) : rawReq);
-      }
-      if (sRes.status === "fulfilled") setStock(sRes.value.data ?? []);
-      if (oRes.status === "fulfilled") setOrders(oRes.value.data ?? []);
+      if (foRes.status === "fulfilled") setFranchiseOrders(foRes.value.data ?? []);
+      if (bRes.status  === "fulfilled") setBatches(bRes.value.data ?? []);
+      if (soRes.status === "fulfilled") setSalesOrders(soRes.value.data ?? []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [activeFid, isMonitoring]);
+  }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const pending    = requests.filter((r) => r.status === "PENDING").length;
-  const approved   = requests.filter((r) => r.status === "APPROVED").length;
-  const lowStock   = stock.filter((s: any) => s.currentStock <= s.minimumStock).length;
-  const todaySales = orders
-    .filter((o: any) => new Date(o.createdAt).toDateString() === new Date().toDateString())
-    .reduce((s: number, o: any) => s + (o.totalAmount ?? 0), 0);
+  // ── Stats ────────────────────────────────────────────────────────────────────
+  const todaySales      = salesOrders.filter((o: any) => isToday(o.createdAt)).reduce((s: number, o: any) => s + (o.totalAmount ?? 0), 0);
+  const todayOrderCount = salesOrders.filter((o: any) => isToday(o.createdAt)).length;
+  const pendingCount    = franchiseOrders.filter((o: any) => ["PENDING", "APPROVED"].includes(o.status)).length;
+  const activeOrders    = franchiseOrders.filter((o: any) => ["PENDING", "APPROVED", "IN_PRODUCTION", "DISPATCHED"].includes(o.status));
 
-  const quickActions = [
-    { label: "Request Products",  icon: Send,         href: "/franchise/requests", color: "bg-orange-500" },
-    { label: "View Stock",        icon: Layers,       href: "/inventory/stock",    color: "bg-indigo-500" },
-    { label: "New Sale (POS)",    icon: ShoppingCart, href: "/pos",                color: "bg-emerald-500" },
-    { label: "My Requests",       icon: Package,      href: "/franchise/requests", color: "bg-amber-500" },
-  ];
+  const expiryAlerts    = batches.filter((b: any) => b.expiryStatus === "EXPIRED" || b.expiryStatus === "EXPIRING_SOON");
+  const lowStockBatches = batches.filter((b: any) => b.quantity < 10);
+  const stockItems      = batches.slice(0, 6);
+
+  const pendingPayment  = franchiseOrders
+    .filter((o: any) => o.paymentStatus === "UNPAID" && o.status === "DELIVERED")
+    .reduce((s: number, o: any) => s + (o.totalAmount ?? 0), 0);
+  const totalOrderValue = franchiseOrders.reduce((s: number, o: any) => s + (o.totalAmount ?? 0), 0);
 
   return (
-    <div className="min-h-full bg-[#F8FAFC] dark:bg-[#090a0f] p-4 md:p-6 space-y-6">
+    <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-6 space-y-6">
 
-      {isMonitoring && (
-        <div className="bg-orange-500 text-white px-6 py-4 rounded-2xl shadow-lg shadow-orange-500/30 flex items-center justify-between border-2 border-white/20 animate-in slide-in-from-top duration-500">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
-              <Eye size={18} />
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Franchise Dashboard</p>
+          <h1 className="text-2xl font-black text-white mt-0.5">
+            Welcome, {user?.fullName?.split(" ")[0] ?? "Franchise"} 👋
+          </h1>
+          <p className="text-sm text-zinc-500 mt-0.5">
+            {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={fetchAll}
+            className="p-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className={clsx("w-4 h-4 text-zinc-400", loading && "animate-spin")} />
+          </button>
+          <Link
+            href="/franchise-orders"
+            className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-400 text-white text-sm font-bold rounded-xl transition-colors"
+          >
+            <ShoppingCart className="w-4 h-4" />
+            New Order
+          </Link>
+        </div>
+      </div>
+
+      {/* ── Expiry Alert Banner ── */}
+      {expiryAlerts.length > 0 && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5 text-red-400" />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">GOD-MODE MONITORING</p>
-              <h2 className="text-lg font-black tracking-tight italic">Analyzing Branch: {activeFid}</h2>
+              <p className="text-sm font-bold text-red-300">
+                {expiryAlerts.filter((b) => b.expiryStatus === "EXPIRED").length > 0 && (
+                  <span>{expiryAlerts.filter((b) => b.expiryStatus === "EXPIRED").length} batch(es) EXPIRED · </span>
+                )}
+                {expiryAlerts.filter((b) => b.expiryStatus === "EXPIRING_SOON").length > 0 && (
+                  <span>{expiryAlerts.filter((b) => b.expiryStatus === "EXPIRING_SOON").length} batch(es) expiring soon</span>
+                )}
+              </p>
+              <p className="text-xs text-red-400/70 mt-0.5">
+                {expiryAlerts.slice(0, 3).map((b: any) => b.product?.name).filter(Boolean).join(", ")}
+                {expiryAlerts.length > 3 && ` +${expiryAlerts.length - 3} more`}
+              </p>
             </div>
           </div>
-          <Link href="/franchise" className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-black uppercase transition-all backdrop-blur-md">
-            Exit Viewing
+          <Link
+            href="/production/batches"
+            className="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1 shrink-0"
+          >
+            View All <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
       )}
 
-      {/* Welcome header */}
-      <div className="bg-white dark:bg-[#12141c] rounded-2xl border border-slate-200/60 dark:border-white/5 p-6 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            {isMonitoring ? "EXTERNAL OBSERVATION" : "Franchise Dashboard"}
-          </p>
-          <h1 className="text-2xl font-black text-gray-900 dark:text-white mt-1">
-            {isMonitoring ? "Franchise Activity Node" : `Welcome back, ${user?.fullName?.split(" ")[0] ?? "Franchise Admin"} 👋`}
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 font-medium">
-            {activeFid ? `ID: ${activeFid.slice(0, 8)}` : "Your Franchise"} · Real-time Operational Stream
-          </p>
-        </div>
-        <button onClick={fetchAll} className="p-2 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition-all group">
-          <RefreshCw size={16} className={clsx("text-gray-400 transition-transform duration-700 group-hover:rotate-180", loading && "animate-spin")} />
-        </button>
-      </div>
-
-      {/* Stat Cards */}
+      {/* ── Stats Grid ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Today's Sales",      value: fmt(todaySales), icon: TrendingUp,    color: "text-indigo-500",  bg: "bg-indigo-50 dark:bg-indigo-500/10" },
-          { label: "Pending Requests",   value: String(pending),  icon: Clock,        color: "text-amber-500",   bg: "bg-amber-50 dark:bg-amber-500/10" },
-          { label: "Approved Requests",  value: String(approved), icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
-          { label: "Low Stock Items",    value: String(lowStock), icon: AlertTriangle, color: lowStock > 0 ? "text-red-500" : "text-gray-400", bg: lowStock > 0 ? "bg-red-50 dark:bg-red-500/10" : "bg-gray-50 dark:bg-white/5" },
-        ].map((card) => (
-          <div key={card.label} className="bg-white dark:bg-[#12141c] rounded-2xl border border-slate-200/60 dark:border-white/5 p-5">
-            <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center mb-3", card.bg)}>
-              <card.icon size={18} className={card.color} />
+          {
+            label: "Today Sales",
+            value: fmt(todaySales),
+            sub: `${todayOrderCount} transactions`,
+            icon: TrendingUp,
+            color: "text-emerald-400",
+            bg: "bg-emerald-500/10",
+            border: "border-emerald-500/20",
+          },
+          {
+            label: "Orders Today",
+            value: String(todayOrderCount),
+            sub: "via POS",
+            icon: ShoppingCart,
+            color: "text-blue-400",
+            bg: "bg-blue-500/10",
+            border: "border-blue-500/20",
+          },
+          {
+            label: "Low Stock",
+            value: String(lowStockBatches.length),
+            sub: lowStockBatches.length > 0 ? "needs reorder" : "all good",
+            icon: AlertTriangle,
+            color: lowStockBatches.length > 0 ? "text-amber-400" : "text-zinc-600",
+            bg: lowStockBatches.length > 0 ? "bg-amber-500/10" : "bg-zinc-800/60",
+            border: lowStockBatches.length > 0 ? "border-amber-500/20" : "border-zinc-700/50",
+          },
+          {
+            label: "Pending Orders",
+            value: String(pendingCount),
+            sub: "to home house",
+            icon: Clock,
+            color: pendingCount > 0 ? "text-orange-400" : "text-zinc-600",
+            bg: pendingCount > 0 ? "bg-orange-500/10" : "bg-zinc-800/60",
+            border: pendingCount > 0 ? "border-orange-500/20" : "border-zinc-700/50",
+          },
+        ].map((s) => (
+          <div key={s.label} className={clsx("bg-zinc-900 rounded-2xl border p-5", s.border)}>
+            <div className={clsx("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
+              <s.icon className={clsx("w-4 h-4", s.color)} />
             </div>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{card.label}</p>
-            <p className={clsx("text-2xl font-black mt-1", card.color)}>{card.value}</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-[0.15em] font-bold">{s.label}</p>
+            <p className={clsx("text-2xl font-black mt-1", s.color)}>{s.value}</p>
+            <p className="text-[11px] text-zinc-600 mt-0.5">{s.sub}</p>
           </div>
         ))}
       </div>
 
+      {/* ── Main 2-col layout ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Quick Actions */}
-        <div className="lg:col-span-1 space-y-4">
-          <h2 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest">Quick Actions</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {quickActions.map((action) => (
-              <Link key={action.label} href={action.href}
-                className="bg-white dark:bg-[#12141c] p-5 rounded-2xl border border-slate-200/60 dark:border-white/5 hover:shadow-lg hover:-translate-y-0.5 transition-all flex flex-col items-center text-center gap-3 group">
-                <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform", action.color)}>
-                  <action.icon size={22} />
-                </div>
-                <p className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-wide leading-tight">{action.label}</p>
+        {/* LEFT 2/3: Stock + Active Orders */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* Stock Panel */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xs font-black text-zinc-400 uppercase tracking-[0.15em]">📦 Stock to Sell</h2>
+              <Link href="/franchise/stock" className="text-xs font-bold text-orange-400 hover:text-orange-300 flex items-center gap-1">
+                View All <ArrowRight className="w-3 h-3" />
               </Link>
-            ))}
+            </div>
+
+            {loading ? (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center text-zinc-600 text-sm">
+                Loading stock...
+              </div>
+            ) : stockItems.length === 0 ? (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center">
+                <Package className="w-10 h-10 mx-auto text-zinc-700 mb-3" />
+                <p className="text-sm text-zinc-500 mb-4">No product batches available</p>
+                <Link
+                  href="/franchise-orders"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-white text-xs font-bold rounded-xl transition-colors"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5" /> Order from Home
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {stockItems.map((batch: any) => {
+                  const status = batch.expiryStatus ?? "NO_EXPIRY";
+                  const isLow  = batch.quantity < 10;
+                  return (
+                    <div
+                      key={batch.id}
+                      className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-4 flex items-center justify-between gap-4 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0">
+                          <Package className="w-5 h-5 text-zinc-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-white truncate">
+                            {batch.product?.name ?? "Unknown Product"}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span className={clsx("text-xs font-bold", isLow ? "text-amber-400" : "text-zinc-400")}>
+                              {batch.quantity} {batch.product?.unit ?? "units"}
+                              {isLow && <span className="ml-1">⚠️</span>}
+                            </span>
+                            {batch.expiryDate && (
+                              <>
+                                <span className="text-zinc-700">·</span>
+                                <span className="text-xs text-zinc-500">
+                                  Exp: {new Date(batch.expiryDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={clsx(
+                          "text-[10px] font-bold px-2 py-1 rounded-lg border hidden sm:inline-flex",
+                          EXPIRY_BADGE[status] ?? EXPIRY_BADGE.NO_EXPIRY
+                        )}>
+                          {status === "NO_EXPIRY" ? "Safe" : status === "EXPIRING_SOON" ? "Exp. Soon" : status}
+                        </span>
+                        <Link
+                          href="/franchise-orders"
+                          className="px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          Order More
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Low stock alert */}
-          {lowStock > 0 && (
-            <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle size={14} className="text-red-500" />
-                <p className="text-xs font-black text-red-600 dark:text-red-400 uppercase tracking-wide">Stock Alert</p>
+          {/* Active Order Tracking */}
+          {activeOrders.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-black text-zinc-400 uppercase tracking-[0.15em]">🚚 Active Orders</h2>
+                <Link href="/franchise-orders" className="text-xs font-bold text-orange-400 hover:text-orange-300 flex items-center gap-1">
+                  All Orders <ArrowRight className="w-3 h-3" />
+                </Link>
               </div>
-              <p className="text-sm text-red-600 dark:text-red-400">
-                <strong>{lowStock}</strong> item{lowStock > 1 ? "s are" : " is"} below minimum stock level.
-              </p>
-              <Link href="/inventory/stock" className="mt-2 flex items-center gap-1 text-[11px] font-bold text-red-500 hover:text-red-400">
-                View Stock <ArrowRight size={10} />
-              </Link>
+              <div className="space-y-3">
+                {activeOrders.slice(0, 4).map((order: any) => {
+                  const stepIdx = STATUS_STEPS.indexOf(order.status as FranchiseOrderStatus);
+                  const isDelayed =
+                    order.expectedDispatchDate &&
+                    new Date(order.expectedDispatchDate) < new Date() &&
+                    !["DISPATCHED", "DELIVERED"].includes(order.status);
+
+                  const itemNames = (order.items ?? [])
+                    .slice(0, 2)
+                    .map((i: any) => i.product?.name ?? i.productName ?? "Product")
+                    .join(", ");
+
+                  return (
+                    <div key={order.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                      {/* Row 1: ID + items + amount */}
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-mono text-zinc-500">
+                              #{order.id.slice(-6).toUpperCase()}
+                            </span>
+                            {isDelayed && (
+                              <span className="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md">
+                                ⚠️ DELAYED
+                              </span>
+                            )}
+                            {order.paymentType === "COD" && (
+                              <span className="text-[10px] font-bold text-zinc-500 bg-zinc-800 border border-zinc-700 px-1.5 py-0.5 rounded-md">
+                                COD
+                              </span>
+                            )}
+                          </div>
+                          {itemNames && (
+                            <p className="text-xs text-zinc-400 mt-1 truncate max-w-[280px]">{itemNames}</p>
+                          )}
+                        </div>
+                        <span className="text-sm font-black text-white shrink-0">{fmt(order.totalAmount ?? 0)}</span>
+                      </div>
+
+                      {/* Status Pipeline */}
+                      <div className="flex items-center">
+                        {STATUS_STEPS.map((step, i) => {
+                          const isPast    = i < stepIdx;
+                          const isCurrent = i === stepIdx;
+                          return (
+                            <div key={step} className="flex items-center flex-1">
+                              {i > 0 && (
+                                <div className={clsx("h-1 flex-1 rounded-full transition-all", isPast || isCurrent ? "bg-orange-500" : "bg-zinc-700")} />
+                              )}
+                              <div className={clsx(
+                                "w-2.5 h-2.5 rounded-full shrink-0 transition-all",
+                                isCurrent
+                                  ? "bg-orange-500 ring-2 ring-orange-500/30 ring-offset-1 ring-offset-zinc-900"
+                                  : isPast ? "bg-orange-500" : "bg-zinc-700"
+                              )} />
+                              {i < STATUS_STEPS.length - 1 && (
+                                <div className={clsx("h-1 flex-1 rounded-full", isPast ? "bg-orange-500" : "bg-zinc-700")} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Row 3: Current status + expected date */}
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-[11px] font-bold text-orange-400">
+                          {STATUS_LABELS[order.status as FranchiseOrderStatus]}
+                        </span>
+                        {order.expectedDispatchDate ? (
+                          <span className="text-[10px] text-zinc-600">
+                            Expected: {new Date(order.expectedDispatchDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-zinc-700">No dispatch date set</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Recent Requests */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest">My Product Requests</h2>
-            <Link href="/franchise/requests" className="text-[11px] font-bold text-orange-500 hover:text-orange-400 flex items-center gap-1">
-              View All <ArrowRight size={10} />
+        {/* RIGHT 1/3: Payment + Actions + Sales */}
+        <div className="space-y-4">
+
+          {/* Payment Summary */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <CreditCard className="w-4 h-4 text-zinc-500" />
+              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.15em]">💰 Payments</h3>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-zinc-500">Pending Payment</span>
+                <span className={clsx("text-sm font-black", pendingPayment > 0 ? "text-red-400" : "text-zinc-500")}>
+                  {fmt(pendingPayment)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-zinc-500">Total Orders Value</span>
+                <span className="text-sm font-bold text-zinc-300">{fmt(totalOrderValue)}</span>
+              </div>
+              {pendingPayment > 0 && (
+                <div className="pt-1 border-t border-zinc-800">
+                  <p className="text-[10px] text-zinc-600 mb-2">Last delivered order unpaid</p>
+                </div>
+              )}
+            </div>
+            {pendingPayment > 0 && (
+              <Link
+                href="/franchise/payments"
+                className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 bg-orange-500 hover:bg-orange-400 text-white text-xs font-bold rounded-xl transition-colors"
+              >
+                <CreditCard className="w-3.5 h-3.5" /> Pay Now
+              </Link>
+            )}
+            <Link
+              href="/franchise/payments"
+              className="mt-2 w-full flex items-center justify-center gap-1 py-2 text-xs font-medium text-zinc-600 hover:text-zinc-300 transition-colors"
+            >
+              View Full Ledger <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
 
-          {loading ? (
-            <div className="py-12 text-center text-gray-400 text-sm">Loading...</div>
-          ) : requests.length === 0 ? (
-            <div className="bg-white dark:bg-[#12141c] rounded-2xl border border-slate-200/60 dark:border-white/5 p-8 text-center">
-              <Send size={32} strokeWidth={1} className="mx-auto text-gray-300 dark:text-slate-600 mb-3" />
-              <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">No requests yet</p>
-              <Link href="/franchise/requests" className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-white rounded-xl text-[12px] font-bold transition-all">
-                <Send size={12} /> Request Products Now
-              </Link>
+          {/* Quick Actions */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+            <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.15em] mb-3">Quick Actions</h3>
+            <div className="space-y-1.5">
+              {[
+                { label: "Place New Order",  href: "/franchise-orders",    icon: ShoppingCart, accent: "text-orange-400" },
+                { label: "Track Deliveries", href: "/franchise-orders",    icon: Truck,        accent: "text-blue-400" },
+                { label: "View Stock",       href: "/franchise/stock",     icon: Package,      accent: "text-emerald-400" },
+                { label: "Expiry Alerts",    href: "/production/batches",  icon: AlertTriangle, accent: expiryAlerts.length > 0 ? "text-red-400" : "text-zinc-600" },
+                { label: "Sales Reports",    href: "/reports",             icon: BarChart3,    accent: "text-violet-400" },
+              ].map((a) => (
+                <Link
+                  key={a.label}
+                  href={a.href}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 transition-colors group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <a.icon className={clsx("w-4 h-4", a.accent)} />
+                    <span className="text-sm text-zinc-400 group-hover:text-white transition-colors">{a.label}</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-zinc-700 group-hover:text-zinc-500 transition-colors" />
+                </Link>
+              ))}
             </div>
-          ) : (
-            <div className="space-y-2">
-              {requests.slice(0, 6).map((req) => {
-                const prods = (req.details as any)?.products ?? [];
-                return (
-                  <div key={req.id} className="bg-white dark:bg-[#12141c] rounded-2xl border border-slate-200/60 dark:border-white/5 p-4 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0">
-                        <Package size={15} className="text-orange-500" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                          {prods.length > 0 ? prods.map((p: any) => p.productName).join(", ") : "Product Request"}
-                        </p>
-                        <p className="text-[11px] text-gray-400">
-                          {new Date(req.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                          {prods.length > 0 && <> · {prods.reduce((s: number, p: any) => s + Number(p.quantity), 0)} units</>}
-                        </p>
-                      </div>
-                    </div>
-                    <span className={clsx("px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide shrink-0", STATUS_STYLES[req.status] ?? STATUS_STYLES.PENDING)}>
-                      {req.status}
+          </div>
+
+          {/* Sales Mini */}
+          <div className="bg-gradient-to-br from-orange-500/10 via-orange-600/5 to-transparent border border-orange-500/20 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <BarChart3 className="w-4 h-4 text-orange-400" />
+              <h3 className="text-xs font-black text-orange-400/80 uppercase tracking-[0.15em]">📊 Today Sales</h3>
+            </div>
+            <p className="text-3xl font-black text-white mt-2">{fmt(todaySales)}</p>
+            <p className="text-xs text-zinc-500 mt-1">{todayOrderCount} order{todayOrderCount !== 1 ? "s" : ""} · via POS</p>
+            <Link
+              href="/reports"
+              className="mt-4 flex items-center gap-1 text-xs font-bold text-orange-400 hover:text-orange-300 transition-colors"
+            >
+              Full Reports <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {/* Batch Expiry Summary */}
+          {expiryAlerts.length > 0 && (
+            <div className="bg-zinc-900 border border-red-500/20 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <PackageCheck className="w-4 h-4 text-red-400" />
+                <h3 className="text-xs font-black text-red-400/80 uppercase tracking-[0.15em]">⏰ Expiry Alerts</h3>
+              </div>
+              <div className="space-y-2">
+                {expiryAlerts.slice(0, 4).map((b: any) => (
+                  <div key={b.id} className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-zinc-300 truncate">{b.product?.name ?? "Product"}</span>
+                    <span className={clsx(
+                      "text-[10px] font-bold px-2 py-0.5 rounded border shrink-0",
+                      b.expiryStatus === "EXPIRED" ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                    )}>
+                      {b.expiryStatus === "EXPIRED" ? "EXPIRED" : "Exp. Soon"}
                     </span>
                   </div>
-                );
-              })}
+                ))}
+              </div>
+              <Link href="/production/batches" className="mt-3 flex items-center gap-1 text-xs font-bold text-red-400 hover:text-red-300">
+                View All <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
           )}
         </div>
       </div>
-
-      {/* Recent Stock */}
-      {stock.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest">Current Inventory</h2>
-            <Link href="/inventory/stock" className="text-[11px] font-bold text-orange-500 hover:text-orange-400 flex items-center gap-1">
-              View All <ArrowRight size={10} />
-            </Link>
-          </div>
-          <div className="bg-white dark:bg-[#12141c] rounded-2xl border border-slate-200/60 dark:border-white/5 overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-100 dark:border-white/5">
-                  <th className="text-left px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">Item</th>
-                  <th className="text-center px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">Stock</th>
-                  <th className="text-center px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">Min</th>
-                  <th className="text-center px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                {stock.slice(0, 8).map((item: any) => {
-                  const isLow = item.currentStock <= item.minimumStock;
-                  return (
-                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                      <td className="px-5 py-3 text-sm font-bold text-gray-900 dark:text-white">{item.name}</td>
-                      <td className="px-5 py-3 text-center">
-                        <span className={clsx("text-sm font-black", isLow ? "text-red-500" : "text-gray-900 dark:text-white")}>
-                          {item.currentStock} {item.unit}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-center text-sm text-gray-400">{item.minimumStock} {item.unit}</td>
-                      <td className="px-5 py-3 text-center">
-                        {isLow
-                          ? <span className="text-[10px] font-black text-red-500 flex items-center justify-center gap-1"><AlertTriangle size={10} /> Low</span>
-                          : <span className="text-[10px] font-black text-emerald-500 flex items-center justify-center gap-1"><CheckCircle2 size={10} /> OK</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
