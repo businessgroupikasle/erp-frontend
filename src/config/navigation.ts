@@ -214,19 +214,19 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       {
         icon: CreditCard,
         label: "Payments",
-        href: "/accounting/vouchers?type=payment",
+        href: "/accounting/payments",
         roles: ADMIN_ROLES,
       },
       {
         icon: TrendingUp,
         label: "Expenses",
-        href: "/accounting/vouchers?type=expense",
+        href: "/accounting/expenses",
         roles: ADMIN_ROLES,
       },
       {
         icon: FileText,
         label: "Vendor Ledger",
-        href: "/accounting/ledgers?type=vendor",
+        href: "/accounting/ledgers",
         roles: ADMIN_ROLES,
       },
     ],

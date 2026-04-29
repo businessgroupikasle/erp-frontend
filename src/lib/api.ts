@@ -294,7 +294,16 @@ export const productBatchesApi = {
     api.get('/api/production/batches', { params: productId ? { productId } : {} }),
 };
 
-// --- Vendor Ledger Balance ---
+// --- Vendor Ledger ---
 export const vendorLedgerApi = {
   getBalance: (vendorId: string) => api.get(`/api/vendors/${vendorId}/balance`),
+  getLedger: (vendorId: string, params?: any) => api.get(`/api/vendors/${vendorId}/ledger`, { params }),
+};
+
+// --- Accounts & Money Workflow ---
+export const accountingApi = {
+  getPayments: (params?: any) => api.get('/api/accounting/payments', { params }),
+  recordPayment: (data: any) => api.post('/api/accounting/payments', data),
+  getExpenses: (params?: any) => api.get('/api/accounting/expenses', { params }),
+  recordExpense: (data: any) => api.post('/api/accounting/expenses', data),
 };
