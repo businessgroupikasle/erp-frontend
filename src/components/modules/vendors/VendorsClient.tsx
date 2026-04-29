@@ -322,6 +322,105 @@ export default function VendorsClient() {
         ))}
       </div>
 
+      {linkModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6 overflow-hidden relative">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-bl-[100px] -mr-12 -mt-12" />
+             
+             <div className="flex items-center gap-4 relative z-10">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+                   <Plus size={24} />
+                </div>
+                <div>
+                   <h2 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Link Material</h2>
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{linkModal.name}</p>
+                </div>
+             </div>
+
+             <div className="bg-slate-50 dark:bg-white/5 p-1.5 rounded-2xl flex gap-1">
+                <button 
+                  onClick={() => setLinkData({ ...linkData, isNew: false })}
+                  className={clsx("flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", !linkData.isNew ? "bg-white dark:bg-card text-indigo-600 shadow-sm" : "text-slate-400")}
+                >
+                  Existing
+                </button>
+                <button 
+                  onClick={() => setLinkData({ ...linkData, isNew: true })}
+                  className={clsx("flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", linkData.isNew ? "bg-white dark:bg-card text-indigo-600 shadow-sm" : "text-slate-400")}
+                >
+                  New Material
+                </button>
+             </div>
+
+             <div className="space-y-4 relative z-10">
+                {linkData.isNew ? (
+                   <>
+                      <div className="space-y-1.5">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Material Name</label>
+                         <input 
+                           placeholder="Enter material name..." 
+                           value={linkData.newName} 
+                           onChange={(e) => setLinkData({ ...linkData, newName: e.target.value })}
+                           className="w-full px-5 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-sm focus:ring-4 ring-indigo-500/10 outline-none transition-all"
+                         />
+                      </div>
+                      <div className="space-y-1.5">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unit (kg, ltr, etc.)</label>
+                         <input 
+                           placeholder="kg" 
+                           value={linkData.newUnit} 
+                           onChange={(e) => setLinkData({ ...linkData, newUnit: e.target.value })}
+                           className="w-full px-5 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-sm focus:ring-4 ring-indigo-500/10 outline-none transition-all"
+                         />
+                      </div>
+                   </>
+                ) : (
+                   <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Material</label>
+                      <select 
+                        value={linkData.materialId} 
+                        onChange={(e) => setLinkData({ ...linkData, materialId: e.target.value })}
+                        className="w-full px-5 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-sm focus:ring-4 ring-indigo-500/10 outline-none transition-all appearance-none cursor-pointer"
+                      >
+                         <option value="">Choose Material...</option>
+                         {materials.map(m => (
+                            <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                         ))}
+                      </select>
+                   </div>
+                )}
+
+                <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Base Price (₹)</label>
+                   <input 
+                     placeholder="0.00" 
+                     type="number"
+                     value={linkData.price} 
+                     onChange={(e) => setLinkData({ ...linkData, price: e.target.value })}
+                     className="w-full px-5 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-sm focus:ring-4 ring-indigo-500/10 outline-none transition-all"
+                   />
+                </div>
+             </div>
+
+             <div className="flex gap-4 pt-2">
+                <button 
+                  onClick={() => setLinkModal(null)} 
+                  className="flex-1 py-4 text-[11px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleLinkMaterial} 
+                  disabled={saving || (linkData.isNew ? !linkData.newName : !linkData.materialId)} 
+                  className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl text-[11px] font-black shadow-lg shadow-indigo-600/20 uppercase tracking-[0.2em] transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                >
+                  {saving ? "Linking..." : "Confirm Link"}
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
+
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-xl p-8 space-y-6">

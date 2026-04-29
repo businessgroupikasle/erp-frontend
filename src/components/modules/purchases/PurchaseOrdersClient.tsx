@@ -96,6 +96,7 @@ export default function PurchaseOrdersClient() {
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentNote, setPaymentNote] = useState("");
   const [payingPO, setPayingPO] = useState<any>(null);
+  const [paymentMode, setPaymentMode] = useState<"CASH" | "UPI" | "CARD" | undefined>(undefined);
   const [lastPayment, setLastPayment] = useState<any>(null);
 
   const selectedVendor = vendors.find((v: any) => v.id === vendorId);
@@ -234,15 +235,20 @@ export default function PurchaseOrdersClient() {
   };
 
   const handleRecordPayment = async () => {
-    if (!payingPO || paymentAmount <= 0) return;
+    if (!payingPO || paymentAmount <= 0 || !paymentMode) return;
     setSaving(true);
     try {
       const res = await vendorsApi.recordPayment(payingPO.vendorId, {
         amount: paymentAmount,
         note: paymentNote || `Payment for PO #${payingPO.id.substring(0, 8)}`,
+        paymentMode,
         referenceId: payingPO.id
       });
       setLastPayment(res.data);
+      setShowPaymentModal(false);
+      setPayingPO(null);
+      setPaymentAmount(0);
+      setPaymentNote("");
       fetchAll();
     } catch (e: any) {
       alert(e.response?.data?.error || "Failed to record payment.");
@@ -341,26 +347,278 @@ export default function PurchaseOrdersClient() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-           {/* Form implementation simplified for brevity in this refactor - in actual code, keep full form */}
-           <div className="bg-white dark:bg-[#12141c] rounded-3xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <h2 className="text-lg font-black mb-6">New Purchase Order</h2>
-              <button onClick={() => setShowForm(false)} className="bg-orange-500 text-white px-6 py-2 rounded-xl">Close Form</button>
-              <p className="mt-4 text-gray-400 italic">Full PO Creation Form Active</p>
-           </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#0f1117] rounded-[2.5rem] shadow-2xl w-full max-w-4xl p-8 space-y-8 relative my-8">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/5 rounded-bl-[100px] -mr-16 -mt-16" />
+            
+            <div className="flex items-center justify-between relative z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-xl shadow-orange-500/20">
+                  <ShoppingCart size={28} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight uppercase">Initialize Purchase Order</h2>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Buy raw materials from vendors</p>
+                </div>
+              </div>
+              <button onClick={() => setShowForm(false)} className="p-3 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-all">
+                <X size={24} className="text-slate-400" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Vendor *</label>
+                <div className="relative">
+                   <select 
+                     value={vendorId} 
+                     onChange={(e) => setVendorId(e.target.value)}
+                     className="w-full h-14 bg-slate-50 dark:bg-white/5 px-5 rounded-2xl font-bold text-sm outline-none focus:ring-4 ring-orange-500/10 appearance-none border border-slate-200 dark:border-white/10"
+                   >
+                     <option value="">Choose Supplier...</option>
+                     {vendors.map(v => <option key={v.id} value={v.id}>{v.name} (Bal: ₹{v.balance || 0})</option>)}
+                   </select>
+                   <ChevronDown size={16} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Expected Delivery Date</label>
+                <input 
+                  type="date" 
+                  value={expectedDate} 
+                  onChange={(e) => setExpectedDate(e.target.value)}
+                  className="w-full h-14 bg-slate-50 dark:bg-white/5 px-5 rounded-2xl font-bold text-sm outline-none focus:ring-4 ring-orange-500/10 border border-slate-200 dark:border-white/10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4 relative z-10">
+              <div className="flex items-center justify-between">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Order Items</p>
+                 <button onClick={addItem} className="text-[10px] font-black text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-3 py-1.5 rounded-lg uppercase tracking-widest flex items-center gap-2 hover:bg-orange-100 transition-all">
+                    <Plus size={12} /> Add Material
+                 </button>
+              </div>
+              
+              <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                {items.map((it, idx) => (
+                  <div key={idx} className="bg-slate-50/50 dark:bg-white/5 p-4 rounded-3xl border border-slate-100 dark:border-white/5 grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                    <div className="md:col-span-4 space-y-1.5">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Material</label>
+                      <select 
+                        value={it.inventoryItemId} 
+                        onChange={(e) => updateItem(idx, "inventoryItemId", e.target.value)}
+                        className="w-full h-11 bg-white dark:bg-card px-4 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-white/10"
+                      >
+                        <option value="">Select Item...</option>
+                        {materials
+                          .filter(m => {
+                            if (!vendorId) return true; // Show all if no vendor selected yet
+                            const isSupplied = selectedVendor?.suppliedMaterials?.some((sm: any) => sm.materialId === m.id);
+                            const isPrimary = m.vendorId === vendorId;
+                            return isSupplied || isPrimary;
+                          })
+                          .map(m => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)
+                        }
+                      </select>
+                    </div>
+                    <div className="md:col-span-2 space-y-1.5">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Qty ({it.unit})</label>
+                      <input 
+                        type="number" 
+                        value={it.quantity} 
+                        onChange={(e) => updateItem(idx, "quantity", Number(e.target.value))}
+                        className="w-full h-11 bg-white dark:bg-card px-4 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-white/10"
+                      />
+                    </div>
+                    <div className="md:col-span-2 space-y-1.5">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Price (₹)</label>
+                      <input 
+                        type="number" 
+                        value={it.price} 
+                        onChange={(e) => updateItem(idx, "price", Number(e.target.value))}
+                        className="w-full h-11 bg-white dark:bg-card px-4 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-white/10"
+                      />
+                    </div>
+                    <div className="md:col-span-3 space-y-1.5">
+                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Line Total</p>
+                       <div className="h-11 flex items-center px-4 bg-white/50 dark:bg-black/20 rounded-xl font-black text-xs">
+                          ₹{(it.quantity * it.price).toLocaleString()} <span className="text-[8px] text-slate-400 ml-2">({it.gstRate}% GST)</span>
+                       </div>
+                    </div>
+                    <div className="md:col-span-1 flex justify-center">
+                      <button onClick={() => removeItem(idx)} className="p-3 text-slate-300 hover:text-red-500 transition-colors">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-slate-100 dark:border-white/5 relative z-10">
+               <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Additional Notes</label>
+                    <textarea 
+                      value={notes} 
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Special instructions or terms..."
+                      className="w-full h-32 bg-slate-50 dark:bg-white/5 p-5 rounded-3xl font-bold text-sm outline-none border border-slate-200 dark:border-white/10 resize-none"
+                    />
+                  </div>
+               </div>
+               
+               <div className="bg-slate-50 dark:bg-white/5 rounded-[2rem] p-6 space-y-4">
+                  <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                     <span>Subtotal</span>
+                     <span>₹{subtotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200 dark:border-white/10 pb-4">
+                     <span>GST ({isSameState ? "CGST + SGST" : "IGST"})</span>
+                     <span>₹{totalGst.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2">
+                     <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Grand Total</span>
+                     <span className="text-2xl font-black text-orange-600">₹{grandTotal.toLocaleString()}</span>
+                  </div>
+                  
+                  {autoApplied > 0 && (
+                    <div className="bg-emerald-500/10 p-3 rounded-xl flex justify-between items-center">
+                       <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2"><Wallet size={12}/> Advance Applied</span>
+                       <span className="text-xs font-black text-emerald-700">-₹{autoApplied.toLocaleString()}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-center pt-2 text-slate-500">
+                     <span className="text-[10px] font-black uppercase tracking-widest">Balance Due</span>
+                     <span className="text-lg font-black italic">₹{balanceDue.toLocaleString()}</span>
+                  </div>
+               </div>
+            </div>
+
+            <div className="flex gap-4 pt-4 relative z-10">
+              <button 
+                onClick={() => setShowForm(false)} 
+                className="flex-1 py-5 text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-all"
+              >
+                Abort
+              </button>
+              <button 
+                onClick={handleCreate} 
+                disabled={saving || !vendorId || items.some(it => !it.inventoryItemId || it.quantity <= 0)} 
+                className="flex-[2] py-5 bg-orange-500 text-white rounded-2xl text-[11px] font-black shadow-xl shadow-orange-500/20 uppercase tracking-[0.3em] transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale"
+              >
+                {saving ? "Processing..." : "Authorize Order"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {showPaymentModal && payingPO && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60">
-           <div className="bg-white dark:bg-[#1a1c26] w-full max-w-md rounded-3xl p-8">
-              <h2 className="text-lg font-black mb-4">Record Payment</h2>
-              <input type="number" value={paymentAmount} onChange={(e) => setPaymentAmount(Number(e.target.value))} className="w-full py-4 text-3xl text-center border-b font-black" />
-              <div className="flex gap-4 mt-6">
-                 <button onClick={() => setShowPaymentModal(false)} className="flex-1 py-4 border rounded-2xl">Cancel</button>
-                 <button onClick={handleRecordPayment} className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-black">Confirm</button>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="bg-white dark:bg-[#0f1117] w-full max-w-md rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/5 overflow-hidden animate-in zoom-in-95 duration-300">
+            {/* Header */}
+            <div className="p-8 pb-0">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+                    <Wallet size={22} className="text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Record Payment</h2>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{payingPO.vendor?.name}</p>
+                  </div>
+                </div>
+                <button onClick={() => { setShowPaymentModal(false); setPayingPO(null); }} className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-400 hover:text-slate-600 transition-all">
+                  <X size={18} />
+                </button>
               </div>
-           </div>
+
+              {/* PO Summary */}
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-3 text-center">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total</p>
+                  <p className="text-sm font-black text-slate-900 dark:text-white mt-0.5">{fmt(payingPO.totalAmount ?? 0)}</p>
+                </div>
+                <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl p-3 text-center">
+                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Paid</p>
+                  <p className="text-sm font-black text-emerald-700 dark:text-emerald-400 mt-0.5">{fmt(payingPO.paid ?? 0)}</p>
+                </div>
+                <div className="bg-red-50 dark:bg-red-500/10 rounded-2xl p-3 text-center">
+                  <p className="text-[9px] font-black text-red-500 uppercase tracking-widest">Balance</p>
+                  <p className="text-sm font-black text-red-600 dark:text-red-400 mt-0.5">{fmt(Math.max(0, (payingPO.totalAmount ?? 0) - (payingPO.paid ?? 0)))}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Amount Input */}
+            <div className="px-8 space-y-5">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Payment Amount</label>
+                <div className="relative">
+                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-300 dark:text-slate-600">₹</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                    className="w-full pl-10 pr-6 py-5 text-3xl font-black bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Payment Mode</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {["CASH", "UPI", "CARD"].map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setPaymentMode(mode as any)}
+                      className={clsx(
+                        "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border",
+                        paymentMode === mode 
+                          ? "bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20" 
+                          : "bg-slate-50 dark:bg-white/5 text-slate-400 border-transparent hover:border-slate-200"
+                      )}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Note <span className="text-slate-300 dark:text-slate-600 normal-case tracking-normal font-bold">(optional)</span></label>
+                <input
+                  type="text"
+                  value={paymentNote}
+                  onChange={(e) => setPaymentNote(e.target.value)}
+                  placeholder={`Payment for PO-${payingPO.id?.slice(0, 8).toUpperCase()}`}
+                  className="w-full px-5 py-3.5 text-sm font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all placeholder:text-slate-300 dark:placeholder:text-white/10"
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="p-8 pt-6 flex gap-3">
+              <button
+                onClick={() => { setShowPaymentModal(false); setPayingPO(null); setPaymentAmount(0); setPaymentNote(""); }}
+                className="flex-1 py-4 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRecordPayment}
+                disabled={saving || paymentAmount <= 0 || !paymentMode}
+                className="flex-[2] py-4 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 disabled:grayscale text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-orange-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                {saving ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                {saving ? "Processing..." : "Confirm Payment"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

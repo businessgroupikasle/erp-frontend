@@ -3,19 +3,20 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import {
   Factory, X, ChevronDown, CheckCircle2,
-  Clock, Package, RefreshCw, Play, Layers,
+  Clock, Package, RefreshCw, Play,
   AlertTriangle, ChefHat, History, Minus,
-  ArrowRight
+  ArrowRight, Square, CheckSquare
 } from "lucide-react";
 import { clsx } from "clsx";
-import { productionApi, recipesApi, franchiseApi } from "@/lib/api";
+import { productionApi, recipesApi, franchiseApi, inventoryApi, customersApi } from "@/lib/api";
 import { useSearchParams } from "next/navigation";
 
-const STATUS_STYLES: Record<string, string> = {
-  COMPLETED:   "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  IN_PROGRESS: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  PENDING:     "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  CANCELLED:   "bg-red-500/10 text-red-500 border-red-500/20",
+const STATUS_CONFIG: Record<string, { color: string, bg: string, border: string, dot: string, icon: any }> = {
+  COMPLETED:   { color: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "border-emerald-200 dark:border-emerald-500/20", dot: "bg-emerald-500", icon: CheckCircle2 },
+  IN_PROGRESS: { color: "text-blue-700 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10", border: "border-blue-200 dark:border-blue-500/20", dot: "bg-blue-500", icon: Clock },
+  STOPPED:     { color: "text-amber-700 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", border: "border-amber-200 dark:border-amber-500/20", dot: "bg-amber-500", icon: Square },
+  PENDING:     { color: "text-slate-600 dark:text-slate-400", bg: "bg-slate-50 dark:bg-white/5", border: "border-slate-200 dark:border-white/10", dot: "bg-slate-400", icon: Clock },
+  CANCELLED:   { color: "text-rose-700 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10", border: "border-rose-200 dark:border-rose-500/20", dot: "bg-rose-500", icon: X },
 };
 
 function ProductionContent() {
@@ -25,14 +26,19 @@ function ProductionContent() {
   const [history, setHistory]     = useState<any[]>([]);
   const [recipes, setRecipes]     = useState<any[]>([]);
   const [franchises, setFranchises] = useState<any[]>([]);
+  const [customers, setCustomers]     = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
+  const [stockLoading, setStockLoading] = useState(false);
   const [showForm, setShowForm]   = useState(false);
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState("");
+  const [franchiseInventory, setFranchiseInventory] = useState<any[]>([]);
 
   // Form
   const [recipeId, setRecipeId]             = useState("");
   const [franchiseId, setFranchiseId]       = useState("");
+  const [customerId, setCustomerId]         = useState("");
+  const [allocationType, setAllocationType] = useState<"FRANCHISE" | "CUSTOMER">("FRANCHISE");
   const [quantity, setQuantity]             = useState(1);
   const [productionType, setProductionType] = useState("FINISHED_GOOD");
   const [expiryDate, setExpiryDate]         = useState("");
@@ -42,19 +48,30 @@ function ProductionContent() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [hRes, rRes, fRes] = await Promise.all([
+      const [hRes, rRes, fRes, cRes] = await Promise.all([
         productionApi.getHistory(),
         recipesApi.getAll(),
         franchiseApi.getAll(),
+        customersApi.getAll(),
       ]);
       setHistory(hRes.data ?? []);
       setRecipes(rRes.data ?? []);
       setFranchises(fRes.data ?? []);
+      setCustomers(cRes.data ?? []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  useEffect(() => {
+    if (franchiseId && showForm) {
+      setStockLoading(true);
+      inventoryApi.getInventory(franchiseId).then(res => {
+        setFranchiseInventory(res.data ?? []);
+      }).catch(console.error).finally(() => setStockLoading(false));
+    }
+  }, [franchiseId, showForm]);
 
   useEffect(() => {
     if (initialRecipeId && recipes.length > 0) {
@@ -67,33 +84,75 @@ function ProductionContent() {
   }, [initialRecipeId, recipes]);
 
   const handleStart = async () => {
-    if (!recipeId || !franchiseId || quantity <= 0) {
-      setError("Please fill all required fields.");
+    if (!recipeId || !franchiseId || !expiryDate || quantity <= 0) {
+      setError("Please fill all required fields including Expiry Date.");
       return;
     }
     setSaving(true);
     setError("");
     try {
-      await productionApi.startBatch({ recipeId, franchiseId, quantity, productionType, expiryDate: expiryDate || undefined });
+      await productionApi.startBatch({ 
+        recipeId, 
+        franchiseId: allocationType === "FRANCHISE" ? franchiseId : (franchiseId || ""), // Fallback to current franchiseId if already set
+        customerId: allocationType === "CUSTOMER" ? customerId : undefined, 
+        quantity, 
+        productionType, 
+        expiryDate: expiryDate || undefined 
+      });
       setShowForm(false);
-      setRecipeId(""); setFranchiseId(""); setQuantity(1); setExpiryDate("");
+      setRecipeId(""); setFranchiseId(""); setCustomerId(""); setQuantity(1); setExpiryDate("");
+      setAllocationType("FRANCHISE");
       fetchAll();
     } catch (e: any) {
       setError(e?.response?.data?.error ?? "Failed to start production. Check stock levels.");
     } finally { setSaving(false); }
   };
 
+  const handleStop = async (id: string) => {
+    setSaving(true);
+    try {
+      await productionApi.stopBatch(id);
+      fetchAll();
+    } catch (e: any) {
+      alert(e?.response?.data?.error ?? "Failed to stop production");
+    } finally { setSaving(false); }
+  };
+
+  const handleApprove = async (id: string) => {
+    if (!confirm("Approve this batch and move to finished products?")) return;
+    setSaving(true);
+    try {
+      await productionApi.approveBatch(id);
+      fetchAll();
+    } catch (e: any) {
+      alert(e?.response?.data?.error ?? "Failed to approve production");
+    } finally { setSaving(false); }
+  };
+
+
   const completedCount = history.filter((h) => h.status === "COMPLETED").length;
   const totalProduced  = history.filter((h) => h.status === "COMPLETED").reduce((s, h) => s + (h.quantity ?? 0), 0);
 
-  interface IngredientPreview { name: string; unit: string; needed: string; available: number | string; sufficient: boolean; }
-  const ingredientPreview: IngredientPreview[] = selectedRecipe?.recipeItems?.map((item: any) => ({
-    name: item.inventoryItem?.name ?? item.inventoryItemId,
-    unit: item.unit,
-    needed: ((item.quantityRequired ?? 0) * quantity).toFixed(3),
-    available: item.inventoryItem?.currentStock ?? "?",
-    sufficient: (item.inventoryItem?.currentStock ?? 0) >= (item.quantityRequired ?? 0) * quantity,
-  })) ?? [];
+  interface IngredientPreview { id: string; name: string; unit: string; needed: string; available: number | string; sufficient: boolean; }
+  const ingredientPreview: IngredientPreview[] = selectedRecipe?.recipeItems?.map((item: any) => {
+    // Match by SKU or Name in the selected franchise's inventory
+    const franchiseItem = franchiseInventory.find(fi => {
+      const matchSku = fi.sku && item.inventoryItem?.sku && fi.sku.trim().toLowerCase() === item.inventoryItem.sku.trim().toLowerCase();
+      const matchName = fi.name && item.inventoryItem?.name && fi.name.trim().toLowerCase() === item.inventoryItem.name.trim().toLowerCase();
+      return matchSku || matchName;
+    });
+
+    const availableStock = franchiseId ? (franchiseItem ? franchiseItem.currentStock : 0) : "-";
+
+    return {
+      id: item.inventoryItemId,
+      name: item.inventoryItem?.name ?? item.inventoryItemId,
+      unit: item.unit,
+      needed: ((item.quantityRequired ?? 0) * quantity).toFixed(3),
+      available: availableStock,
+      sufficient: franchiseId && franchiseItem ? (franchiseItem.currentStock >= (item.quantityRequired ?? 0) * quantity) : false,
+    };
+  }) ?? [];
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 md:space-y-8 animate-in fade-in duration-700 px-4 sm:px-0">
@@ -191,9 +250,18 @@ function ProductionContent() {
                             <h3 className="text-base md:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">
                                {batch.recipe?.name || "Standard Production"}
                             </h3>
-                            <span className={clsx("px-2.5 md:px-3 py-0.5 md:py-1 rounded-full text-[7px] md:text-[8px] font-black uppercase tracking-[0.2em] border", STATUS_STYLES[batch.status])}>
-                               {batch.status}
-                            </span>
+                             {(() => {
+                               const config = STATUS_CONFIG[batch.status] || STATUS_CONFIG.PENDING;
+                               return (
+                                 <span className={clsx(
+                                   "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border transition-all",
+                                   config.bg, config.color, config.border
+                                 )}>
+                                   <span className={clsx("w-1 h-1 rounded-full", config.dot)} />
+                                   {batch.status.replace("_", " ")}
+                                 </span>
+                               );
+                             })()}
                          </div>
                          <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium italic truncate">
                             Synthesized {(batch.quantity * (batch.recipe?.yieldQty || 1)).toFixed(1)} units of <span className="text-indigo-600 dark:text-indigo-400 font-bold">{batch.recipe?.product?.name || "Uncategorized"}</span>
@@ -202,28 +270,69 @@ function ProductionContent() {
                             <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
                                <Package size={9} className="text-slate-300 md:w-2.5 md:h-2.5" /> {batch.quantity} Batch(es)
                             </span>
-                            <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                               <Clock size={9} className="text-slate-300 md:w-2.5 md:h-2.5" /> {new Date(batch.producedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                            {batch.batches?.map((b: any) => b.expiryDate && (
-                              <span key={b.id} className={clsx(
-                                "text-[7px] md:text-[8px] font-black px-1.5 md:px-2 py-0.5 rounded-lg uppercase tracking-wider",
-                                new Date(b.expiryDate) < new Date() ? "bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400" :
-                                (new Date(b.expiryDate).getTime() - Date.now()) < 3 * 86400000 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" :
-                                "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
-                              )}>
-                                {new Date(b.expiryDate) < new Date() ? "Expired" :
-                                 (new Date(b.expiryDate).getTime() - Date.now()) < 3 * 86400000 ? "Expiring Soon" : "Valid"}
-                                {" · "}{new Date(b.expiryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })}
+                             <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                               <Clock size={9} className="text-slate-300 md:w-2.5 md:h-2.5" /> Start: {batch.startTime ? new Date(batch.startTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : "N/A"}
+                             </span>
+                             {batch.endTime && (
+                               <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                 <Clock size={9} className="text-slate-300 md:w-2.5 md:h-2.5" /> End: {new Date(batch.endTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                               </span>
+                             )}
+                            {batch.customer && (
+                              <span className="text-[8px] md:text-[9px] font-black text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1">
+                                Customer: {batch.customer.name}
                               </span>
-                            ))}
+                            )}
+                             {(() => {
+                               const actualExpiry = batch.expiryDate || (batch.batches && batch.batches.length > 0 ? batch.batches[0].expiryDate : null);
+                               if (!actualExpiry) return null;
+                               const expiryDateObj = new Date(actualExpiry);
+                               const isExpired = expiryDateObj < new Date();
+                               const isExpiringSoon = (expiryDateObj.getTime() - Date.now()) < 3 * 86400000;
+
+                               return (
+                                 <span className={clsx(
+                                   "flex items-center gap-1.5 text-[8px] font-black px-2 py-1 rounded-lg uppercase tracking-wider border backdrop-blur-md",
+                                   isExpired ? "bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400" 
+                                             : isExpiringSoon ? "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400" 
+                                                              : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-400"
+                                 )}>
+                                   <span className={clsx("w-1 h-1 rounded-full animate-pulse", 
+                                     isExpired ? "bg-rose-500" : isExpiringSoon ? "bg-amber-500" : "bg-emerald-500"
+                                   )} />
+                                   {isExpired ? "Expired" : isExpiringSoon ? "Expiring Soon" : "Valid"}
+                                   <span className="opacity-40">/</span>
+                                   {expiryDateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                                 </span>
+                               );
+                             })()}
                          </div>
                       </div>
                    </div>
 
-                   <button className="w-full lg:w-auto px-4 py-3 md:py-3.5 bg-slate-50 dark:bg-white/5 rounded-lg md:rounded-xl border border-slate-100 dark:border-white/10 text-[8px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-all flex items-center justify-center gap-2">
-                      View Ledger Entry <ArrowRight size={12} />
-                   </button>
+                   <div className="flex flex-col sm:flex-row items-center gap-2">
+                     {batch.status === 'IN_PROGRESS' && (
+                       <button 
+                         onClick={() => handleStop(batch.id)}
+                         disabled={saving}
+                         className="w-full lg:w-auto px-6 py-3 md:py-3.5 bg-amber-500 text-white rounded-lg md:rounded-xl shadow-lg shadow-amber-500/20 text-[8px] md:text-[9px] font-black uppercase tracking-widest hover:bg-amber-400 transition-all flex items-center justify-center gap-2"
+                       >
+                         <Square size={12} fill="currentColor" /> Stop Production
+                       </button>
+                     )}
+                     {batch.status === 'STOPPED' && (
+                       <button 
+                         onClick={() => handleApprove(batch.id)}
+                         disabled={saving}
+                         className="w-full lg:w-auto px-6 py-3 md:py-3.5 bg-emerald-600 text-white rounded-lg md:rounded-xl shadow-lg shadow-emerald-600/20 text-[8px] md:text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500 transition-all flex items-center justify-center gap-2"
+                       >
+                         <CheckSquare size={12} /> Approve & Store
+                       </button>
+                     )}
+                     <button className="w-full lg:w-auto px-4 py-3 md:py-3.5 bg-slate-50 dark:bg-white/5 rounded-lg md:rounded-xl border border-slate-100 dark:border-white/10 text-[8px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-all flex items-center justify-center gap-2">
+                        View Ledger Entry <ArrowRight size={12} />
+                     </button>
+                   </div>
                 </div>
 
                 {/* Integrated Material Breakdown */}
@@ -231,7 +340,7 @@ function ProductionContent() {
                    {batch.items?.map((item: any, i: number) => (
                       <div key={i} className="p-2.5 md:p-3 bg-slate-50/50 dark:bg-white/[0.01] rounded-lg md:rounded-xl border border-slate-100 dark:border-white/5 group/ing">
                          <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 truncate">{item.inventoryItem?.name || "Ingredient"}</p>
-                         <p className="text-sm md:text-base font-black text-red-500 tracking-tighter">-{item.usedQuantity.toFixed(2)}</p>
+                         <p className="text-sm md:text-base font-black text-red-500 tracking-tighter">{item.usedQuantity.toFixed(2)} <span className="text-[10px] opacity-60 ml-0.5 uppercase">{item.inventoryItem?.unit || ""}</span></p>
                       </div>
                    ))}
                 </div>
@@ -257,31 +366,81 @@ function ProductionContent() {
                 </div>
              </div>
 
+             <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-2xl mb-8 border border-slate-200 dark:border-white/5 shadow-inner">
+                <button 
+                  onClick={() => { setAllocationType("FRANCHISE"); setCustomerId(""); }}
+                  className={clsx("flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all", 
+                    allocationType === "FRANCHISE" ? "bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-lg" : "text-slate-400 hover:text-slate-600")}
+                >
+                  To Franchise
+                </button>
+                <button 
+                  onClick={() => { setAllocationType("CUSTOMER"); setFranchiseId(franchiseId); }}
+                  className={clsx("flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all", 
+                    allocationType === "CUSTOMER" ? "bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-lg" : "text-slate-400 hover:text-slate-600")}
+                >
+                  To Customer
+                </button>
+             </div>
+
              <div className="space-y-6 md:space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                   <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Active Recipe *</label>
-                      <select 
-                        value={recipeId} 
-                        onChange={(e) => setRecipeId(e.target.value)}
-                        className="w-full h-12 md:h-14 bg-slate-50 dark:bg-white/5 px-4 md:px-5 rounded-xl md:rounded-2xl font-black text-[11px] md:text-xs outline-none focus:ring-4 ring-indigo-500/10 appearance-none dark:text-white cursor-pointer border border-slate-100 dark:border-white/5"
-                      >
-                         <option value="">Choose Blueprint...</option>
-                         {recipes.map(r => <option key={r.id} value={r.id}>{r.name} (Yield: {r.yieldQty})</option>)}
-                      </select>
-                   </div>
-                   <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Allocation Franchise *</label>
-                      <select 
-                        value={franchiseId} 
-                        onChange={(e) => setFranchiseId(e.target.value)}
-                        className="w-full h-12 md:h-14 bg-slate-50 dark:bg-white/5 px-4 md:px-5 rounded-xl md:rounded-2xl font-black text-[11px] md:text-xs outline-none focus:ring-4 ring-indigo-500/10 appearance-none dark:text-white cursor-pointer border border-slate-100 dark:border-white/5"
-                      >
-                         <option value="">Target Destination...</option>
-                         {franchises.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                      </select>
-                   </div>
-                </div>
+                 <div className="grid grid-cols-1 gap-6">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Active Recipe *</label>
+                       <select 
+                         value={recipeId} 
+                         onChange={(e) => setRecipeId(e.target.value)}
+                         className="w-full h-12 md:h-14 bg-slate-50 dark:bg-white/5 px-4 md:px-5 rounded-xl md:rounded-2xl font-black text-[11px] md:text-xs outline-none focus:ring-4 ring-indigo-500/10 appearance-none dark:text-white cursor-pointer border border-slate-100 dark:border-white/5"
+                       >
+                          <option value="">Choose Blueprint...</option>
+                          {recipes.map(r => <option key={r.id} value={r.id}>{r.name} (Yield: {r.yieldQty})</option>)}
+                       </select>
+                    </div>
+
+                    {allocationType === "FRANCHISE" ? (
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Allocation Franchise *</label>
+                          <select 
+                            value={franchiseId} 
+                            onChange={(e) => setFranchiseId(e.target.value)}
+                            className="w-full h-12 md:h-14 bg-slate-50 dark:bg-white/5 px-4 md:px-5 rounded-xl md:rounded-2xl font-black text-[11px] md:text-xs outline-none focus:ring-4 ring-indigo-500/10 appearance-none dark:text-white cursor-pointer border border-slate-100 dark:border-white/5"
+                          >
+                             <option value="">Target Destination...</option>
+                             {franchises.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                          </select>
+                       </div>
+                    ) : (
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Target Customer *</label>
+                          <div className="relative">
+                             <select 
+                               value={customerId} 
+                               onChange={(e) => setCustomerId(e.target.value)}
+                               className="w-full h-12 md:h-14 bg-slate-50 dark:bg-white/5 px-4 md:px-5 rounded-xl md:rounded-2xl font-black text-[11px] md:text-xs outline-none focus:ring-4 ring-indigo-500/10 appearance-none dark:text-white cursor-pointer border border-slate-100 dark:border-white/5"
+                             >
+                                <option value="">Select Recipient...</option>
+                                {customers.map(c => <option key={c.id} value={c.id}>{c.name} ({c.phone || "No Phone"})</option>)}
+                             </select>
+                             <ChevronDown size={14} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                          </div>
+                          
+                          {/* For customer allocation, we still need to know which branch is producing it.
+                              If user is super admin, show a small picker for 'Producing From'. 
+                              For now, we'll use the first franchise if none selected. */}
+                          <div className="mt-4 pt-4 border-t border-slate-50 dark:border-white/5">
+                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Producing At (Source)</label>
+                             <select 
+                               value={franchiseId} 
+                               onChange={(e) => setFranchiseId(e.target.value)}
+                               className="w-full mt-1.5 h-10 bg-slate-50/50 dark:bg-white/[0.02] px-4 rounded-xl font-bold text-[10px] outline-none dark:text-white border border-slate-100 dark:border-white/5"
+                             >
+                                <option value="">Select Branch...</option>
+                                {franchises.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                             </select>
+                          </div>
+                       </div>
+                    )}
+                 </div>
 
                 <div className="p-5 bg-indigo-50/30 dark:bg-indigo-500/5 rounded-2xl border border-indigo-100/50 dark:border-indigo-500/10 shadow-inner">
                    <div className="flex items-center justify-between mb-3">
@@ -309,7 +468,7 @@ function ProductionContent() {
                 </div>
 
                 <div className="space-y-2">
-                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Batch Expiry Date <span className="text-slate-300 dark:text-slate-600">(Optional)</span></label>
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Batch Expiry Date *</label>
                    <input
                      type="date"
                      value={expiryDate}
@@ -322,30 +481,44 @@ function ProductionContent() {
                 {/* Raw Material Verification Ledger */}
                 {selectedRecipe && (
                   <div className="space-y-3">
-                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Verification</p>
-                     <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                        {ingredientPreview.map((ing, i) => (
-                           <div key={i} className={clsx("flex items-center justify-between p-3 md:p-4 rounded-xl md:rounded-2xl border transition-all", 
-                             ing.sufficient 
-                               ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20" 
-                               : "bg-rose-50/50 dark:bg-rose-500/5 border-rose-100 dark:border-rose-500/20")}>
-                              <div className="flex items-center gap-3">
-                                 <div className={clsx("w-6 h-6 md:w-7 md:h-7 rounded-lg flex items-center justify-center shrink-0 shadow-sm", ing.sufficient ? "bg-emerald-500 text-white" : "bg-rose-500 text-white")}>
-                                    {ing.sufficient ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
-                                 </div>
-                                 <div className="min-w-0">
-                                    <p className="text-[10px] md:text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-tight truncate">{ing.name}</p>
-                                    <p className={clsx("text-[8px] md:text-[9px] font-bold tracking-widest uppercase", ing.sufficient ? "text-emerald-600/70" : "text-rose-600/70")}>Required: {ing.needed} {ing.unit}</p>
-                                 </div>
-                              </div>
-                              <div className="text-right shrink-0">
-                                 <p className={clsx("text-[10px] font-black", ing.sufficient ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400 flex items-center gap-1.5 uppercase")}>
-                                    {!ing.sufficient && <Minus size={8} />} {ing.available} <span className="text-[8px] opacity-60 ml-1 uppercase">Stock</span>
-                                 </p>
-                              </div>
-                           </div>
-                        ))}
-                     </div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Verification</p>
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                         {stockLoading ? (
+                            <div className="py-8 text-center flex flex-col items-center gap-2">
+                               <RefreshCw size={20} className="animate-spin text-indigo-500/50" />
+                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Checking Inventory...</p>
+                            </div>
+                         ) : !franchiseId ? (
+                            <div className="p-6 bg-slate-50 dark:bg-white/5 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl text-center">
+                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Select a franchise to verify stock</p>
+                            </div>
+                         ) : (
+                            ingredientPreview.map((ing, i) => (
+                               <div key={i} className="space-y-2">
+                                  <div className={clsx("flex items-center justify-between p-3 md:p-4 rounded-xl md:rounded-2xl border transition-all", 
+                                    ing.sufficient 
+                                      ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20" 
+                                      : "bg-rose-50/50 dark:bg-rose-500/5 border-rose-100 dark:border-rose-500/20")}>
+                                     <div className="flex items-center gap-3">
+                                        <div className={clsx("w-6 h-6 md:w-7 md:h-7 rounded-lg flex items-center justify-center shrink-0 shadow-sm", ing.sufficient ? "bg-emerald-500 text-white" : "bg-rose-500 text-white")}>
+                                           {ing.sufficient ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
+                                        </div>
+                                        <div className="min-w-0">
+                                           <p className="text-[10px] md:text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-tight truncate">{ing.name}</p>
+                                           <p className={clsx("text-[8px] md:text-[9px] font-bold tracking-widest uppercase", ing.sufficient ? "text-emerald-600/70" : "text-rose-600/70")}>Required: {ing.needed} {ing.unit}</p>
+                                        </div>
+                                     </div>
+                                     <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                                        <p className={clsx("text-[10px] font-black", ing.sufficient ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400 flex items-center gap-1.5 uppercase")}>
+                                           {!ing.sufficient && ing.available !== "-" && <Minus size={8} />} {ing.available} <span className="text-[8px] opacity-60 ml-1 uppercase">Stock</span>
+                                        </p>
+                                     </div>
+                                  </div>
+
+                               </div>
+                            ))
+                         )}
+                      </div>
                   </div>
                 )}
 
@@ -359,7 +532,7 @@ function ProductionContent() {
                    <button onClick={() => setShowForm(false)} className="flex-1 py-4 md:py-5 bg-slate-100 dark:bg-white/5 rounded-xl md:rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 transition-all">Abort</button>
                    <button 
                      onClick={handleStart} 
-                     disabled={saving || !recipeId || !franchiseId || ingredientPreview.some(i => !i.sufficient)} 
+                     disabled={saving || !recipeId || !franchiseId || !expiryDate || ingredientPreview.some(i => !i.sufficient)} 
                      className="flex-[2] py-4 md:py-5 bg-indigo-600 text-white rounded-xl md:rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:hover:scale-100"
                    >
                       {saving ? "Processing..." : "Authorize Cycle"}

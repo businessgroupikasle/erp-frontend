@@ -2,40 +2,40 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  PackageCheck,
-  RefreshCw,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  Filter,
+  PackageCheck, RefreshCw, AlertTriangle,
+  CheckCircle2, Clock, Filter, Package,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { productBatchesApi, productsFullApi } from "@/lib/api";
 
 type ExpiryStatus = "EXPIRED" | "EXPIRING_SOON" | "VALID" | "NO_EXPIRY";
 
-const EXPIRY_STYLES: Record<ExpiryStatus, string> = {
-  EXPIRED:       "bg-red-500/10 text-red-400 border-red-500/20",
-  EXPIRING_SOON: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  VALID:         "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  NO_EXPIRY:     "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+const EXPIRY_CONFIG: Record<ExpiryStatus, { bg: string; text: string; border: string; dot: string; label: string }> = {
+  EXPIRED:       { bg: "bg-rose-50 dark:bg-rose-500/10",       text: "text-rose-700 dark:text-rose-400",      border: "border-rose-200 dark:border-rose-500/20",    dot: "bg-rose-500",    label: "Expired" },
+  EXPIRING_SOON: { bg: "bg-amber-50 dark:bg-amber-500/10",     text: "text-amber-700 dark:text-amber-400",    border: "border-amber-200 dark:border-amber-500/20",  dot: "bg-amber-500",   label: "Expiring Soon" },
+  VALID:         { bg: "bg-emerald-50 dark:bg-emerald-500/10", text: "text-emerald-700 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-500/20", dot: "bg-emerald-500", label: "Valid" },
+  NO_EXPIRY:     { bg: "bg-slate-50 dark:bg-white/5",          text: "text-slate-600 dark:text-slate-400",    border: "border-slate-200 dark:border-white/10",      dot: "bg-slate-400",   label: "No Expiry" },
 };
 
-const EXPIRY_ICONS: Record<ExpiryStatus, JSX.Element> = {
-  EXPIRED:       <AlertTriangle className="w-3 h-3" />,
-  EXPIRING_SOON: <Clock className="w-3 h-3" />,
-  VALID:         <CheckCircle2 className="w-3 h-3" />,
-  NO_EXPIRY:     <PackageCheck className="w-3 h-3" />,
-};
-
-function expiryLabel(status: ExpiryStatus) {
-  return status === "NO_EXPIRY" ? "No Expiry" : status.replace("_", " ");
+function getEffectiveExpiry(batch: any): string | null {
+  return batch.expiryDate ?? batch.production?.expiryDate ?? null;
 }
 
+function computeExpiryStatus(expiryDate: string | null): ExpiryStatus {
+  if (!expiryDate) return "NO_EXPIRY";
+  const now = Date.now();
+  const exp = new Date(expiryDate).getTime();
+  if (exp < now) return "EXPIRED";
+  if (exp - now < 3 * 86_400_000) return "EXPIRING_SOON";
+  return "VALID";
+}
+
+const FILTER_TABS = ["ALL", "VALID", "EXPIRING_SOON", "EXPIRED", "NO_EXPIRY"] as const;
+
 export default function ProductBatchesPage() {
-  const [batches, setBatches]   = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading]   = useState(true);
+  const [batches, setBatches]     = useState<any[]>([]);
+  const [products, setProducts]   = useState<any[]>([]);
+  const [loading, setLoading]     = useState(true);
   const [productFilter, setProductFilter] = useState("");
   const [expiryFilter, setExpiryFilter]   = useState<string>("ALL");
 
@@ -62,63 +62,69 @@ export default function ProductBatchesPage() {
     fetchBatches(pid || undefined);
   };
 
-  const filtered = batches.filter((b) => {
-    if (expiryFilter === "ALL") return true;
-    return (b.expiryStatus ?? "NO_EXPIRY") === expiryFilter;
-  });
+  const filtered = batches.filter((b) =>
+    expiryFilter === "ALL" || (b.expiryStatus ?? "NO_EXPIRY") === expiryFilter
+  );
 
-  const stats = {
-    total:        batches.length,
-    expired:      batches.filter((b) => b.expiryStatus === "EXPIRED").length,
-    expiringSoon: batches.filter((b) => b.expiryStatus === "EXPIRING_SOON").length,
-    valid:        batches.filter((b) => !b.expiryStatus || b.expiryStatus === "VALID" || b.expiryStatus === "NO_EXPIRY").length,
-  };
+  const stats = [
+    { label: "Total Batches",     value: batches.length,                                                                               icon: Package,       color: "text-indigo-500",  bg: "bg-indigo-500/10" },
+    { label: "Valid",             value: batches.filter(b => !b.expiryStatus || b.expiryStatus === "VALID" || b.expiryStatus === "NO_EXPIRY").length, icon: CheckCircle2,  color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: "Expiring Soon",     value: batches.filter(b => b.expiryStatus === "EXPIRING_SOON").length,                               icon: Clock,         color: "text-amber-500",   bg: "bg-amber-500/10" },
+    { label: "Expired",           value: batches.filter(b => b.expiryStatus === "EXPIRED").length,                                     icon: AlertTriangle, color: "text-rose-500",    bg: "bg-rose-500/10" },
+  ];
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-6">
+    <div className="max-w-7xl mx-auto space-y-4 md:space-y-8 animate-in fade-in duration-700 px-4 sm:px-0">
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-violet-500/10 border border-violet-500/20">
-            <PackageCheck className="w-6 h-6 text-violet-400" />
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-3 md:py-4 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 md:p-2.5 bg-emerald-600 rounded-lg md:rounded-xl shadow-lg shadow-emerald-600/20 shrink-0">
+              <PackageCheck size={18} className="text-white md:hidden" />
+              <PackageCheck size={20} className="text-white hidden md:block" />
+            </div>
+            <h1 className="text-xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
+              Product <span className="text-slate-400 font-medium ml-1 tracking-tighter italic hidden sm:inline">Batches</span>
+            </h1>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Product Batches</h1>
-            <p className="text-sm text-zinc-400">Track expiry status and batch quantities</p>
-          </div>
+          <p className="text-slate-500 dark:text-slate-400 mt-1.5 font-medium ml-10 md:ml-12 uppercase tracking-widest text-[7px] md:text-[9px]">
+            Expiry tracking & batch quantity management
+          </p>
         </div>
         <button
           onClick={() => fetchBatches(productFilter || undefined)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300 transition-colors"
+          className="p-2.5 md:p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg md:rounded-xl hover:border-slate-300 transition-all shadow-sm group shrink-0"
         >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
+          <RefreshCw size={14} className={clsx("text-slate-400 group-hover:rotate-180 transition-transform duration-500 md:w-4 md:h-4", loading && "animate-spin")} />
         </button>
-      </div>
+      </header>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: "Total Batches",   value: stats.total,        color: "text-white" },
-          { label: "Expired",         value: stats.expired,      color: "text-red-400" },
-          { label: "Expiring Soon",   value: stats.expiringSoon, color: "text-amber-400" },
-          { label: "Valid / No Expiry", value: stats.valid,      color: "text-emerald-400" },
-        ].map((s) => (
-          <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <p className="text-xs text-zinc-500 mb-1">{s.label}</p>
-            <p className={clsx("text-2xl font-bold", s.color)}>{s.value}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
+        {stats.map((s, i) => (
+          <div key={i} className="bg-white dark:bg-card/40 backdrop-blur-sm p-4 md:p-6 rounded-[24px] md:rounded-[32px] border border-slate-100 dark:border-white/5 shadow-lg shadow-black/[0.01]">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <div className={clsx("p-2.5 md:p-3 rounded-lg md:rounded-xl", s.bg, s.color)}>
+                <s.icon size={18} className="md:w-5 md:h-5" />
+              </div>
+              <span className="text-[7px] md:text-[9px] font-black text-slate-300 tracking-[0.3em] uppercase">Metric</span>
+            </div>
+            <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{s.label}</p>
+            <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter tabular-nums">{s.value}</h3>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2">
-          <Filter className="w-4 h-4 text-zinc-400" />
+      <div className="flex flex-col sm:flex-row gap-3">
+        {/* Product filter */}
+        <div className="flex items-center gap-2 bg-white dark:bg-card/40 border border-slate-100 dark:border-white/5 rounded-xl px-4 py-2.5 shadow-sm">
+          <Filter size={14} className="text-slate-400 shrink-0" />
           <select
             value={productFilter}
             onChange={(e) => handleProductFilter(e.target.value)}
-            className="bg-transparent text-sm text-zinc-300 outline-none"
+            className="bg-transparent text-[11px] font-black text-slate-600 dark:text-slate-300 outline-none uppercase tracking-widest cursor-pointer"
           >
             <option value="">All Products</option>
             {products.map((p: any) => (
@@ -127,16 +133,17 @@ export default function ProductBatchesPage() {
           </select>
         </div>
 
-        <div className="flex gap-2">
-          {["ALL", "VALID", "EXPIRING_SOON", "EXPIRED", "NO_EXPIRY"].map((f) => (
+        {/* Expiry filter tabs */}
+        <div className="flex gap-2 flex-wrap">
+          {FILTER_TABS.map((f) => (
             <button
               key={f}
               onClick={() => setExpiryFilter(f)}
               className={clsx(
-                "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                "px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all",
                 expiryFilter === f
-                  ? "bg-violet-500/20 border-violet-500/40 text-violet-300"
-                  : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-300"
+                  ? "bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-600/20"
+                  : "bg-white dark:bg-card/40 border-slate-100 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:border-slate-300"
               )}
             >
               {f === "ALL" ? "All" : f === "NO_EXPIRY" ? "No Expiry" : f.replace("_", " ")}
@@ -145,75 +152,96 @@ export default function ProductBatchesPage() {
         </div>
       </div>
 
-      {/* Batch Table */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20 text-zinc-500">
-          <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-          Loading batches...
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
-          <PackageCheck className="w-10 h-10 mb-3 opacity-30" />
-          <p className="text-sm">No batches found</p>
-        </div>
-      ) : (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-zinc-800 text-zinc-400 text-xs">
-                <th className="px-4 py-3 text-left font-medium">Batch Code</th>
-                <th className="px-4 py-3 text-left font-medium">Product</th>
-                <th className="px-4 py-3 text-right font-medium">Quantity</th>
-                <th className="px-4 py-3 text-left font-medium">Produced</th>
-                <th className="px-4 py-3 text-left font-medium">Expiry Date</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-800">
+      {/* Batch List */}
+      <div className="space-y-3 md:space-y-4">
+        <h2 className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-3 ml-2">
+          <PackageCheck size={12} /> Batch Registry
+        </h2>
+
+        {loading ? (
+          <div className="py-16 text-center flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Loading Batches...</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="py-16 bg-slate-50 dark:bg-white/[0.02] rounded-[24px] md:rounded-[32px] border-2 border-dashed border-slate-200 dark:border-white/5 text-center px-6 md:px-8">
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-white dark:bg-card rounded-xl md:rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-4 text-slate-200 dark:text-white/10">
+              <PackageCheck size={28} className="md:w-8 md:h-8" />
+            </div>
+            <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">No Batches Found</p>
+            <p className="text-[10px] text-slate-500 mt-1">No batches match the current filter.</p>
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-card/40 backdrop-blur-md rounded-[24px] md:rounded-[32px] border border-slate-100 dark:border-white/5 overflow-hidden shadow-lg">
+            {/* Table header */}
+            <div className="grid grid-cols-[1fr_1.5fr_0.7fr_1fr_1fr_1fr] px-5 py-3 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.01]">
+              {["Batch Code", "Product", "Qty", "Produced", "Expiry Date", "Status"].map((h) => (
+                <p key={h} className="text-[8px] font-black text-slate-400 uppercase tracking-[0.25em]">{h}</p>
+              ))}
+            </div>
+
+            {/* Rows */}
+            <div className="divide-y divide-slate-50 dark:divide-white/[0.03]">
               {filtered.map((batch: any) => {
                 const status: ExpiryStatus = batch.expiryStatus ?? "NO_EXPIRY";
+                const conf = EXPIRY_CONFIG[status];
                 return (
-                  <tr key={batch.id} className="hover:bg-zinc-800/40 transition-colors">
-                    <td className="px-4 py-3 font-mono text-violet-300 text-xs">{batch.batchCode}</td>
-                    <td className="px-4 py-3 text-zinc-200">{batch.product?.name ?? "—"}</td>
-                    <td className="px-4 py-3 text-right text-zinc-200 font-medium">
+                  <div
+                    key={batch.id}
+                    className="grid grid-cols-[1fr_1.5fr_0.7fr_1fr_1fr_1fr] px-5 py-4 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors items-center"
+                  >
+                    {/* Batch Code */}
+                    <p className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-wider font-mono">
+                      {batch.batchCode ?? "—"}
+                    </p>
+
+                    {/* Product */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                        <Package size={12} className="text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <p className="text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-tight truncate">
+                        {batch.product?.name ?? "—"}
+                      </p>
+                    </div>
+
+                    {/* Quantity */}
+                    <p className="text-[13px] font-black text-slate-900 dark:text-white tabular-nums">
                       {batch.quantity}
                       {batch.product?.unit && (
-                        <span className="text-zinc-500 ml-1 text-xs">{batch.product.unit}</span>
+                        <span className="text-[9px] text-slate-400 ml-1 font-bold uppercase">{batch.product.unit}</span>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-400">
+                    </p>
+
+                    {/* Produced date */}
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
                       {batch.createdAt
-                        ? new Date(batch.createdAt).toLocaleDateString("en-IN", {
-                            day: "2-digit", month: "short", year: "numeric",
-                          })
+                        ? new Date(batch.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                         : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-400">
-                      {batch.expiryDate
-                        ? new Date(batch.expiryDate).toLocaleDateString("en-IN", {
-                            day: "2-digit", month: "short", year: "numeric",
-                          })
-                        : <span className="text-zinc-600">—</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={clsx(
-                          "inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-medium",
-                          EXPIRY_STYLES[status]
-                        )}
-                      >
-                        {EXPIRY_ICONS[status]}
-                        {expiryLabel(status)}
-                      </span>
-                    </td>
-                  </tr>
+                    </p>
+
+                    {/* Expiry date */}
+                    <p className={clsx("text-[10px] font-bold", status === "EXPIRED" ? "text-rose-500" : status === "EXPIRING_SOON" ? "text-amber-500" : "text-slate-500 dark:text-slate-400")}>
+                      {getEffectiveExpiry(batch)
+                        ? new Date(getEffectiveExpiry(batch)!).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                        : <span className="text-slate-300 dark:text-white/20">—</span>}
+                    </p>
+
+                    {/* Status badge */}
+                    <span className={clsx(
+                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest w-fit",
+                      conf.bg, conf.text, conf.border
+                    )}>
+                      <span className={clsx("w-1.5 h-1.5 rounded-full shrink-0", conf.dot, status !== "NO_EXPIRY" && "animate-pulse")} />
+                      {conf.label}
+                    </span>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

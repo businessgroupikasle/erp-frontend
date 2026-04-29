@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { rawMaterialsApi, inventoryApi } from "@/lib/api";
 import { ITEM_CATEGORIES, UNITS } from "@/lib/constants";
+import { clsx } from "clsx";
 
 function EditMaterialForm() {
   const router = useRouter();
@@ -20,6 +21,8 @@ function EditMaterialForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState<string | null>(null);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [sourceType, setSourceType] = useState<"VENDOR" | "DIRECT">("DIRECT");
   
   const [form, setForm] = useState({
     name: "",
@@ -27,6 +30,10 @@ function EditMaterialForm() {
     unit: "kg",
     minimumStock: 10,
     category: "RAW_MATERIAL",
+    hsnCode: "",
+    gstRate: 5,
+    currentStock: 0,
+    vendorId: "",
   });
 
   useEffect(() => {
@@ -36,26 +43,37 @@ function EditMaterialForm() {
       return;
     }
 
-    const fetchMaterial = async () => {
+    const fetchData = async () => {
       try {
-        const res = await inventoryApi.getItem(id as string);
-        const m = res.data;
+        const [matRes, vendRes] = await Promise.all([
+          inventoryApi.getItem(id as string),
+          import("@/lib/api").then(api => api.vendorsApi.getAll())
+        ]);
+
+        const m = matRes.data;
+        setVendors(vendRes.data);
+        setSourceType(m.vendorId ? "VENDOR" : "DIRECT");
+        
         setForm({
           name: m.name,
           sku: m.sku ?? "",
           unit: m.unit ?? "kg",
           minimumStock: m.minimumStock ?? 10,
           category: m.category ?? "RAW_MATERIAL",
+          hsnCode: m.hsnCode ?? "",
+          gstRate: m.gstRate ?? 5,
+          currentStock: m.currentStock ?? 0,
+          vendorId: m.vendorId ?? "",
         });
       } catch (e: any) {
         console.error(e);
         const msg = e.response?.data?.error || e.response?.data?.message || e.message;
-        setError(`Failed to fetch material details: ${msg}`);
+        setError(`Failed to fetch details: ${msg}`);
       } finally {
         setLoading(false);
       }
     };
-    fetchMaterial();
+    fetchData();
   }, [id]);
 
   const handleSave = async () => {
@@ -64,15 +82,23 @@ function EditMaterialForm() {
       setError("Material name is required");
       return;
     }
+    if (sourceType === "VENDOR" && !form.vendorId) {
+      setError("Please select a vendor or switch to Direct Stock.");
+      return;
+    }
 
     setSaving(true);
     setError(null);
     try {
-      await rawMaterialsApi.update(id as string, form);
+      const { currentStock, ...updateData } = form;
+      await rawMaterialsApi.update(id as string, {
+        ...updateData,
+        vendorId: sourceType === "VENDOR" ? form.vendorId : null,
+      });
       router.push("/inventory/stock");
     } catch (e: any) {
       console.error(e);
-      setError(e.response?.data?.message || "Failed to update material. Please try again.");
+      setError(e.response?.data?.error || e.response?.data?.message || "Failed to update material. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -161,12 +187,50 @@ function EditMaterialForm() {
         {/* Main Configuration */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white dark:bg-card rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-sm">
-            <div className="flex items-center gap-2 mb-6 text-gray-400">
-              <Layers size={16} />
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em]">Material Definition</h2>
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2 text-gray-400">
+                <Layers size={16} />
+                <h2 className="text-[10px] font-black uppercase tracking-[0.2em]">Material Sourcing</h2>
+              </div>
+              <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
+                <button 
+                  onClick={() => setSourceType("DIRECT")}
+                  className={clsx("px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", 
+                    sourceType === "DIRECT" ? "bg-white dark:bg-slate-800 text-blue-500 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+                >
+                  Direct Stock
+                </button>
+                <button 
+                  onClick={() => setSourceType("VENDOR")}
+                  className={clsx("px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", 
+                    sourceType === "VENDOR" ? "bg-white dark:bg-slate-800 text-purple-500 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+                >
+                  From Vendor
+                </button>
+              </div>
             </div>
-            
+
             <div className="space-y-6">
+              {sourceType === "VENDOR" && (
+                <div className="p-6 bg-purple-500/5 border border-purple-500/10 rounded-3xl space-y-4 animate-in slide-in-from-top-2 mb-6">
+                   <label className="block text-[11px] font-black text-purple-500 uppercase tracking-widest ml-1">Link Registered Vendor *</label>
+                   <div className="relative">
+                      <select 
+                        value={form.vendorId} 
+                        onChange={(e) => setForm((f) => ({ ...f, vendorId: e.target.value }))}
+                        className="w-full appearance-none bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-purple-500/10 dark:text-white transition-all shadow-sm"
+                      >
+                        <option value="">Select Vendor</option>
+                        {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                      </select>
+                      <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-purple-300 pointer-events-none" />
+                   </div>
+                   <p className="text-[10px] font-bold text-purple-400 uppercase tracking-tight flex items-center gap-1.5 ml-1">
+                      <Sparkles size={12} /> Resource sourcing affects procurement history and GRN automation.
+                   </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Material Name *</label>
                 <input 
@@ -198,6 +262,32 @@ function EditMaterialForm() {
                       className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
                     >
                       {ITEM_CATEGORIES.map((c) => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
+                    </select>
+                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">HSN Code</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 1006" 
+                    value={form.hsnCode}
+                    onChange={(e) => setForm((f) => ({ ...f, hsnCode: e.target.value }))}
+                    className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-white/10" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">GST Rate (%)</label>
+                  <div className="relative">
+                    <select 
+                      value={form.gstRate} 
+                      onChange={(e) => setForm((f) => ({ ...f, gstRate: Number(e.target.value) }))}
+                      className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
+                    >
+                      {[0, 5, 12, 18, 28].map((rate) => <option key={rate} value={rate}>{rate}%</option>)}
                     </select>
                     <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
@@ -245,6 +335,29 @@ function EditMaterialForm() {
 
         {/* Sidebar Controls */}
         <div className="space-y-6">
+          <div className="bg-white dark:bg-card rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-sm">
+             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Stock Availability</h3>
+             <div className="flex items-end gap-2 mb-2">
+                <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{(form.currentStock || 0).toFixed(1)}</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{form.unit}</span>
+             </div>
+             <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-6">Current Inventory Balance</p>
+             
+             <div className="space-y-3 pt-4 border-t border-slate-50 dark:border-white/5">
+                <div className="flex justify-between items-center">
+                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alert Threshold</span>
+                   <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{form.minimumStock} {form.unit}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</span>
+                   <span className={clsx("px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider", 
+                      form.currentStock <= form.minimumStock ? "bg-red-50 text-red-500" : "bg-emerald-50 text-emerald-500")}>
+                      {form.currentStock <= form.minimumStock ? "CRITICAL" : "HEALTHY"}
+                   </span>
+                </div>
+             </div>
+          </div>
+
           <div className="bg-white dark:bg-card rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-sm">
              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Stock Integrity</h3>
              <p className="text-xs font-medium text-gray-500 leading-relaxed">

@@ -22,19 +22,28 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
     if (!user && !isPublicPath) {
       router.replace("/login");
-    } else if (user && isPublicPath) {
+    } else if (user) {
       const role = (
         (user as any).role?.name ||
         (user as any).role ||
         ""
       ).toUpperCase();
 
-      if (role === "FRANCHISE_ADMIN") {
-        router.replace("/franchise/dashboard");
-      } else if (role === "STAFF") {
-        router.replace("/pos");
-      } else {
-        router.replace("/");
+      if (isPublicPath) {
+        if (role === "FRANCHISE_ADMIN" || role === "FRANCHISEE") {
+          router.replace("/franchise/dashboard");
+        } else if (role === "STAFF") {
+          router.replace("/pos");
+        } else {
+          router.replace("/");
+        }
+      } else if (pathname === "/") {
+        // Handle direct access to root path
+        if (role === "FRANCHISE_ADMIN" || role === "FRANCHISEE" || role === "MANAGER") {
+          router.replace("/franchise/dashboard");
+        } else if (role === "STAFF") {
+          router.replace("/pos");
+        }
       }
     }
   }, [user, loading, isPublicPath, router]);

@@ -4,13 +4,21 @@ import { usePurchaseOrder, LineItem } from "@/context/PurchaseOrderContext";
 import { rawMaterialsApi } from "@/lib/api";
 
 export default function LineItemsTable() {
-  const { items, addItem, removeItem, updateItem, getVendorPrice } = usePurchaseOrder();
+  const { items, addItem, removeItem, updateItem, getVendorPrice, selectedVendor, autoFilledIds, setAutoFilledIds } = usePurchaseOrder();
   const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
   const [materials, setMaterials] = useState<any[]>([]);
   const [loadingMaterials, setLoadingMaterials] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [autoFilledIds, setAutoFilledIds] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLDivElement>(null);
+  const prevActiveSearchId = useRef<string | null>(null);
+
+  // Reset search query when switching items
+  useEffect(() => {
+    if (activeSearchId !== prevActiveSearchId.current) {
+      setSearchQuery("");
+      prevActiveSearchId.current = activeSearchId;
+    }
+  }, [activeSearchId]);
 
   useEffect(() => {
     const fetchMaterials = async () => {
@@ -39,9 +47,21 @@ export default function LineItemsTable() {
     }
   };
 
-  const filteredMaterials = materials.filter(m =>
-    m.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMaterials = materials.filter(m => {
+    // 1. Must match search query
+    const matchSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchSearch) return false;
+
+    // 2. If vendor selected, show materials linked to that vendor (either by cross-ref or direct vendorId)
+    if (selectedVendor) {
+      const isSupplied = selectedVendor.suppliedMaterials?.some(sm => sm.materialId === m.id);
+      const isPrimary = m.vendorId === selectedVendor.id;
+      return isSupplied || isPrimary;
+    }
+
+    // 3. If no vendor selected, don't show any materials (to force vendor selection first)
+    return false;
+  });
 
   return (
     <div className="space-y-6 pt-10">
@@ -154,7 +174,9 @@ export default function LineItemsTable() {
                                   );
                                 })
                             ) : (
-                                <div className="p-4 text-xs text-[#999] font-medium italic text-center">No materials found</div>
+                                <div className="p-4 text-xs text-[#999] font-medium italic text-center">
+                                   {!selectedVendor ? "Please select a vendor first" : "No materials linked to this vendor"}
+                                </div>
                             )}
                          </div>
                       </div>
