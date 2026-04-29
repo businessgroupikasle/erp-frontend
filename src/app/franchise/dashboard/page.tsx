@@ -241,11 +241,11 @@ export default function FranchiseDashboardPage() {
                               {batch.quantity} {batch.product?.unit ?? "units"}
                               {isLow && <span className="ml-1">⚠️</span>}
                             </span>
-                            {batch.expiryDate && (
+                            {(batch.expiryDate || batch.production?.expiryDate) && (
                               <>
                                 <span className="text-zinc-700">·</span>
                                 <span className="text-xs text-zinc-500">
-                                  Exp: {new Date(batch.expiryDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                                  Exp: {new Date(batch.expiryDate || batch.production?.expiryDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                                 </span>
                               </>
                             )}

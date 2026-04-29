@@ -102,6 +102,8 @@ export const recipesApi = {
 export const productionApi = {
   getHistory: (franchiseId?: string) => api.get('/api/production/history', { params: { franchiseId } }),
   startBatch: (data: any) => api.post('/api/production/batch', data),
+  stopBatch: (id: string) => api.post(`/api/production/${id}/stop`),
+  approveBatch: (id: string) => api.post(`/api/production/${id}/approve`),
   updateStatus: (id: string, status: string) => api.patch(`/api/production/${id}/status`, { status }),
 };
 
@@ -198,7 +200,7 @@ export const vendorsApi = {
   linkMaterial: (data: { vendorId: string; materialId: string; price: number }) =>
     api.post('/api/vendors/link-material', data),
   getLedger: (id: string, params: any = {}) => api.get(`/api/vendors/${id}/ledger`, { params }),
-  recordPayment: (id: string, data: { amount: number; note: string; referenceId?: string }) => api.post(`/api/vendors/${id}/payment`, data),
+  recordPayment: (id: string, data: { amount: number; note: string; paymentMode?: string; referenceId?: string }) => api.post(`/api/vendors/${id}/payment`, data),
   recordAdjustment: (id: string, data: { amount: number; type: 'CREDIT' | 'DEBIT'; note: string; referenceType?: string }) => api.post(`/api/vendors/${id}/adjustment`, data),
 };
 

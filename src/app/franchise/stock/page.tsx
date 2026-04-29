@@ -185,8 +185,9 @@ export default function FranchiseStockPage() {
             const status  = (batch.expiryStatus ?? "NO_EXPIRY") as ExpiryStatus;
             const style   = EXPIRY_CARD[status];
             const isLow   = batch.quantity < 10;
-            const daysLeft = batch.expiryDate
-              ? Math.ceil((new Date(batch.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+            const effectiveExpiry = batch.expiryDate || batch.production?.expiryDate;
+            const daysLeft = effectiveExpiry
+              ? Math.ceil((new Date(effectiveExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
               : null;
 
             return (
@@ -229,10 +230,10 @@ export default function FranchiseStockPage() {
                   </div>
                   <div className="bg-zinc-800/60 rounded-xl p-3">
                     <p className="text-[10px] text-zinc-600 uppercase tracking-wider font-bold mb-1">Expiry</p>
-                    {batch.expiryDate ? (
+                    {effectiveExpiry ? (
                       <>
                         <p className="text-sm font-bold text-zinc-300">
-                          {new Date(batch.expiryDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                          {new Date(effectiveExpiry).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
                         </p>
                         <p className={clsx("text-[10px] mt-0.5 font-medium",
                           daysLeft !== null && daysLeft < 0 ? "text-red-400" :
@@ -251,7 +252,7 @@ export default function FranchiseStockPage() {
                 </div>
 
                 {/* Expiry bar */}
-                {batch.expiryDate && daysLeft !== null && daysLeft >= 0 && (
+                {(batch.expiryDate || batch.production?.expiryDate) && daysLeft !== null && daysLeft >= 0 && (
                   <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
                     <div
                       className={clsx("h-full rounded-full transition-all", style.bar)}

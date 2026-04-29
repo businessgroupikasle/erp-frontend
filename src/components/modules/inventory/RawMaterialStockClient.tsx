@@ -3,22 +3,22 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Layers, Plus, Search, AlertTriangle, CheckCircle2,
-  RefreshCw, TrendingDown, TrendingUp, Trash2,
-  ArrowDownCircle, Scale, MoveUp, MoveDown,
-  Truck, Edit2, Lock
+  RefreshCw, TrendingDown, TrendingUp, Trash2, X,
+  ArrowDownCircle, Truck, Edit2, Lock
 } from "lucide-react";
 import { clsx } from "clsx";
 import { rawMaterialsApi, inventoryApi } from "@/lib/api";
 
-import { ITEM_CATEGORIES, UNITS, CATEGORY_COLORS } from "@/lib/constants";
+import { ITEM_CATEGORIES } from "@/lib/constants";
 import Link from "next/link";
 
 export default function RawMaterialStockClient() {
-  const [items, setItems]   = useState<any[]>([]); 
-  const [loading, setLoading] = useState(true); 
-  const [search, setSearch] = useState(""); 
-  const [category, setCategory] = useState("ALL"); 
-  const [sourceFilter, setSourceFilter] = useState("ALL"); 
+  const [items, setItems]   = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("ALL");
+  const [sourceFilter, setSourceFilter] = useState("ALL");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -36,43 +36,49 @@ export default function RawMaterialStockClient() {
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    setDeleteError(null);
     try {
       await rawMaterialsApi.delete(id);
       fetchItems();
     } catch (e: any) {
-      alert(e?.response?.data?.error ?? "Failed to delete item. Ensure it has no stock history.");
+      setDeleteError(e?.response?.data?.error ?? "Cannot delete — item may have stock history or linked purchase orders.");
     }
   };
 
   const filtered = items.filter((it) => {
-    const matchSearch = !search || 
-      it.name?.toLowerCase().includes(search.toLowerCase()) || 
+    const matchSearch = !search ||
+      it.name?.toLowerCase().includes(search.toLowerCase()) ||
       it.sku?.toLowerCase().includes(search.toLowerCase()) ||
       it.hsnCode?.toLowerCase().includes(search.toLowerCase());
     const matchCat = category === "ALL" || it.category === category;
-    const matchSource = sourceFilter === "ALL" || 
-      (sourceFilter === "PURCHASED" && it.isPurchased) || 
+    const matchSource = sourceFilter === "ALL" ||
+      (sourceFilter === "PURCHASED" && it.isPurchased) ||
       (sourceFilter === "MANUAL" && !it.isPurchased);
     return matchSearch && matchCat && matchSource;
   });
 
-  const lowStock   = items.filter((it) => it.status === "LOW").length;
-  const totalIn    = items.reduce((s: number, it: any) => s + (it.inbound ?? 0), 0);
-  const totalOut   = items.reduce((s: number, it: any) => s + (it.outbound ?? 0), 0);
-  const totalQty   = items.reduce((s: number, it: any) => s + (it.currentStock ?? 0), 0);
-  const totalValue = items.reduce((s: number, it: any) => s + (it.currentStock * 150), 0);
-
   return (
     <div className="max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700">
+      {deleteError && (
+        <div className="flex items-center justify-between gap-4 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl text-red-600 dark:text-red-400 text-sm font-bold animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <AlertTriangle size={16} className="shrink-0" />
+            {deleteError}
+          </div>
+          <button onClick={() => setDeleteError(null)} className="shrink-0 text-red-400 hover:text-red-600 transition-colors">
+            <X size={14} />
+          </button>
+        </div>
+      )}
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 py-4 border-b border-slate-200 dark:border-slate-800">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
              <div className="p-2 md:p-2.5 bg-orange-500 rounded-lg md:rounded-xl shadow-lg shadow-orange-500/20 shrink-0">
                 <Layers size={20} className="text-white" />
              </div>
-             <h1 className="text-lg md:text-xl lg:text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase transition-all">
-                Raw Material <span className="text-slate-400 font-medium ml-1 tracking-tighter italic">Stock Intelligence</span>
-             </h1>
+              <h1 className="text-lg md:text-xl lg:text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase transition-all">
+                 Inventory & <span className="text-slate-400 font-medium ml-1 tracking-tighter italic">Stock Intelligence</span>
+              </h1>
           </div>
           <p className="text-slate-500 dark:text-slate-400 font-medium ml-12 text-xs leading-relaxed">
             Strategic inventory control and <span className="text-orange-500 font-bold underline decoration-orange-500/30">real-time movement</span> tracking.
@@ -86,30 +92,10 @@ export default function RawMaterialStockClient() {
              href="/inventory/stock/add"
              className="flex items-center justify-center gap-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:shadow-xl hover:translate-y-[-1px] transition-all active:translate-y-0 shadow-slate-200 dark:shadow-none"
            >
-            <Plus size={16} strokeWidth={3} /> Add Material
+             <Plus size={16} strokeWidth={3} /> Add Item
           </Link>
         </div>
       </header>
-
-      {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          { label: "Inventory Equity", value: `₹${(totalValue / 1000).toFixed(1)}K`, icon: Scale, color: "text-blue-500", bg: "bg-blue-500/10" },
-          { label: "Critical SKU Count", value: lowStock, icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
-          { label: "Inbound Today", value: `${totalIn.toFixed(1)} Un`, icon: MoveUp, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-          { label: "Outbound Today", value: `${totalOut.toFixed(1)} Un`, icon: MoveDown, color: "text-orange-500", bg: "bg-orange-500/10" },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white dark:bg-card/40 backdrop-blur-sm p-6 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-xl shadow-black/[0.02] group">
-            <div className="flex items-center justify-between mb-4">
-               <div className={clsx("p-3 rounded-2xl transition-transform group-hover:scale-110 duration-500", stat.bg, stat.color)}>
-                  <stat.icon size={20} />
-               </div>
-               <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Live View</span>
-            </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{stat.value}</h3>
-          </div>
-        ))}
-      </div> */}
 
       <div className="flex flex-col gap-6">
          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -120,8 +106,8 @@ export default function RawMaterialStockClient() {
                    onClick={() => setCategory(cat)}
                    className={clsx(
                      "px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-                     category === cat 
-                       ? "bg-white dark:bg-card text-slate-900 dark:text-white shadow-md border border-slate-100 dark:border-white/10" 
+                     category === cat
+                       ? "bg-white dark:bg-card text-slate-900 dark:text-white shadow-md border border-slate-100 dark:border-white/10"
                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                    )}
                  >
@@ -141,8 +127,8 @@ export default function RawMaterialStockClient() {
                      onClick={() => setSourceFilter(src.id)}
                      className={clsx(
                         "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-                        sourceFilter === src.id 
-                           ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md" 
+                        sourceFilter === src.id
+                           ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md"
                            : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                      )}
                   >
@@ -154,9 +140,9 @@ export default function RawMaterialStockClient() {
 
          <div className="relative group w-full">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search by SKU or Item Name..." 
+            <input
+              type="text"
+              placeholder="Search by SKU or Item Name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-14 pr-6 py-4 bg-white dark:bg-card border-none rounded-3xl outline-none focus:ring-4 ring-orange-500/10 text-sm font-bold shadow-xl shadow-black/[0.02] transition-all"
@@ -171,7 +157,7 @@ export default function RawMaterialStockClient() {
             <div key={item.id} className="bg-white dark:bg-card/40 backdrop-blur-md border border-slate-200 dark:border-white/5 rounded-3xl p-5 shadow-lg space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] border shrink-0", 
+                  <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] border shrink-0",
                     item.status === "LOW" ? "bg-red-50 text-red-500 border-red-100" : "bg-emerald-50 text-emerald-500 border-emerald-100"
                   )}>
                      {item.name.substring(0,2).toUpperCase()}
@@ -183,18 +169,35 @@ export default function RawMaterialStockClient() {
                         item.status === "LOW" ? "text-red-500" : "text-slate-400")}>
                         {item.sku}
                       </span>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.category?.replace("_", " ")}</span>
+                      {item.isPurchased ? (
+                        <span className="px-1.5 py-0.5 bg-purple-500/10 text-purple-500 border border-purple-500/20 rounded text-[7px] font-black uppercase tracking-widest">Vendor</span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded text-[7px] font-black uppercase tracking-widest">Direct</span>
+                      )}
                     </div>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
-                  <span className="text-[10px] font-black text-slate-600 dark:text-slate-300">{(item.minimumStock || 10).toFixed(0)} {item.unit}</span>
+                  <span className="text-[10px] font-black text-slate-600 dark:text-slate-300">{(item.currentStock || 0).toFixed(0)} {item.unit}</span>
                   <span className={clsx("px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-wider border", 
                     item.status === "LOW" ? "bg-red-50 dark:bg-red-500/10 text-red-600 border-red-100 dark:border-red-500/20" : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border-emerald-100 dark:border-emerald-500/20")}>
                     {item.status === "LOW" ? "LOW" : "SAFE"}
                   </span>
                 </div>
               </div>
+              
+              <div className="px-3 py-2 bg-slate-50 dark:bg-white/[0.02] rounded-xl border border-slate-100 dark:border-white/5">
+                 {item.isPurchased ? (
+                    <div className="flex items-center gap-2 text-[9px] font-black text-purple-600 uppercase tracking-tight">
+                       <Truck size={10} /> {item.vendor?.name || 'Linked Vendor'}
+                    </div>
+                 ) : (
+                    <div className="flex items-center gap-2 text-[9px] font-black text-blue-500 uppercase tracking-tight">
+                       <Plus size={10} /> Manual Stock
+                    </div>
+                 )}
+              </div>
+
               <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-white/5">
                 <div className="flex gap-2">
                   <Link href={`/inventory/stock/edit?id=${item.id}`} className="p-2.5 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-xl"><Edit2 size={14} /></Link>
@@ -226,15 +229,22 @@ export default function RawMaterialStockClient() {
                     <tr key={item.id} className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
                       <td className="px-10 py-6">
                          <div className="flex items-start gap-4">
-                            <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xs border transition-all group-hover:shadow-lg shrink-0 mt-1", 
+                            <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xs border transition-all group-hover:shadow-lg shrink-0 mt-1",
                               isLow ? "bg-red-50 text-red-500 border-red-100 shadow-red-500/10" : "bg-emerald-50 text-emerald-500 border-emerald-100 shadow-emerald-500/10"
                             )}>
                                {item.name.substring(0,2).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1 space-y-2">
-                               <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-[15px] leading-tight truncate">{item.name}</p>
+                               <div className="flex items-center gap-3">
+                                  <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-[15px] leading-tight truncate">{item.name}</p>
+                                  {item.isPurchased ? (
+                                    <span className="px-2 py-0.5 bg-purple-500/10 text-purple-500 border border-purple-500/20 rounded-md text-[8px] font-black uppercase tracking-widest">Vendor</span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-md text-[8px] font-black uppercase tracking-widest">Direct</span>
+                                  )}
+                               </div>
                                <div className="flex items-center gap-2">
-                                  <span className={clsx("text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 uppercase tracking-tighter", 
+                                  <span className={clsx("text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 uppercase tracking-tighter",
                                     isLow ? "text-red-500" : "text-slate-400")}>
                                     {item.sku}
                                   </span>
@@ -242,15 +252,15 @@ export default function RawMaterialStockClient() {
                                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.category?.replace("_", " ")}</span>
                                </div>
                                {(item.isPurchased || item.incomingStock > 0) ? (
-                                  <div className="flex flex-col gap-1.5 p-2 bg-slate-50/50 dark:bg-white/[0.02] rounded-xl border border-slate-100/50 dark:border-white/5">
-                                     <span className="text-[9px] font-black text-purple-500 uppercase tracking-tight flex items-center gap-1.5">
-                                        <ArrowDownCircle size={10} className="shrink-0" /> 
-                                        {item.incomingStock > 0 && !item.vendorId ? "Incoming from Vendor" : `Vendor: ${item.vendor?.name || 'Linked Vendor'}`}
+                                  <div className="flex flex-col gap-1.5 p-2 bg-purple-50/50 dark:bg-purple-500/[0.02] rounded-xl border border-purple-100/50 dark:border-purple-500/10">
+                                     <span className="text-[9px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-tight flex items-center gap-1.5">
+                                        <Truck size={10} className="shrink-0" />
+                                        {item.vendor?.name || 'Linked Vendor'}
                                      </span>
                                   </div>
                                ) : (
-                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-tight px-1">
-                                     <Plus size={10} className="text-slate-300" /> Direct Add / Manual Stock
+                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-blue-500 uppercase tracking-tight px-1 bg-blue-50/50 dark:bg-blue-500/[0.02] py-1.5 rounded-lg border border-blue-100/50 dark:border-blue-500/10">
+                                     <Plus size={10} className="text-blue-500" /> Manual Stock / Direct Add
                                   </div>
                                )}
                             </div>
@@ -276,9 +286,9 @@ export default function RawMaterialStockClient() {
                                </span>
                             </div>
                             <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                               <div 
-                                  className={clsx("h-full rounded-full transition-all duration-1000", isLow ? "bg-red-500" : "bg-emerald-500")} 
-                                  style={{ width: `${Math.min(100, (item.currentStock / (item.minimumStock * 2)) * 100)}%` }} 
+                               <div
+                                  className={clsx("h-full rounded-full transition-all duration-1000", isLow ? "bg-red-500" : "bg-emerald-500")}
+                                  style={{ width: `${Math.min(100, (item.currentStock / (item.minimumStock * 2)) * 100)}%` }}
                                 />
                             </div>
                          </div>
@@ -303,7 +313,7 @@ export default function RawMaterialStockClient() {
                          )}
                       </td>
                       <td className="px-10 py-6 text-right">
-                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100">
+                         <div className="flex justify-end gap-2">
                             <Link href={`/inventory/stock/edit?id=${item.id}`} className="p-2 bg-slate-50 dark:bg-white/5 text-slate-400 rounded-2xl hover:bg-slate-900 dark:hover:bg-white hover:text-white dark:hover:text-slate-900 transition-all border border-slate-100 dark:border-white/5"><Edit2 size={14} /></Link>
                             <button onClick={() => handleDelete(item.id, item.name)} className="p-2 bg-red-50 dark:bg-red-500/10 text-red-400 rounded-2xl hover:bg-red-500 hover:text-white transition-all border border-red-100 dark:border-red-500/20"><Trash2 size={14} /></button>
                          </div>
