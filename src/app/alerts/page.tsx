@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 
-type AlertType = "stock" | "sales" | "kitchen" | "security" | "system";
+type AlertType = "inventory" | "order" | "payment" | "dispatch" | "system";
 type AlertSeverity = "critical" | "warning" | "info" | "success";
 
 interface Alert {
@@ -35,24 +35,24 @@ interface Alert {
 }
 
 const INITIAL_ALERTS: Alert[] = [
-  { id: "1",  type: "stock",    severity: "critical", title: "Critical: Dry Red Chilli Stock Very Low",    message: "Dry Red Chilli at 12 kg remaining. Minimum threshold is 50 kg. Reorder from Spice Valley Suppliers immediately.", time: "5 min ago",  read: false, actionLabel: "Reorder", actionHref: "/purchases" },
-  { id: "2",  type: "kitchen",  severity: "warning",  title: "Production Batch #B-204 Delayed",            message: "Garam Masala Blend batch B-204 is 40 minutes behind schedule. Review production floor status.",               time: "8 min ago",  read: false, actionLabel: "View Production", actionHref: "/production" },
-  { id: "3",  type: "stock",    severity: "warning",  title: "Urad Dal Running Low",                       message: "Urad Dal at 80 kg. Minimum is 100 kg. Batter production will be affected. Restock before next batch.",        time: "12 min ago", read: false, actionLabel: "Reorder", actionHref: "/purchases" },
-  { id: "4",  type: "sales",    severity: "success",  title: "Daily Dispatch Target Achieved!",            message: "Today's dispatch value hit ₹1,20,000 target. Current total: ₹1,28,750. All franchises performing well.",        time: "1h ago",     read: false },
-  { id: "5",  type: "stock",    severity: "warning",  title: "Glass Jars (500g) Low",                      message: "Glass jars at 380 pcs. Minimum threshold: 400 pcs. Pickle packing will be delayed if not restocked.",         time: "2h ago",     read: true,  actionLabel: "Reorder", actionHref: "/purchases" },
-  { id: "6",  type: "security", severity: "warning",  title: "Unusual Discount on Wholesale Order",        message: "35% discount applied to Wholesale Order #W-112 (₹4,200 waived) by user: sales01. Please verify.",            time: "2h ago",     read: true,  actionLabel: "Review", actionHref: "/reports" },
-  { id: "7",  type: "sales",    severity: "info",     title: "Franchise B Restock Request Pending",        message: "Distribution Centre B has placed a stock request for 200kg Chilli Powder and 150L Groundnut Oil. Approve now.", time: "3h ago",     read: true,  actionLabel: "Approve", actionHref: "/franchise" },
-  { id: "8",  type: "system",   severity: "info",     title: "Production Module Sync Restored",            message: "Production tracking module reconnected after brief server interruption at 3:12 PM. All data is in sync.",       time: "4h ago",     read: true  },
-  { id: "9",  type: "stock",    severity: "critical", title: "PET Bottles (500ml) Almost Empty",           message: "PET bottles at 210 pcs. Minimum is 500 pcs. Oil bottling line will halt without immediate restock.",           time: "4h ago",     read: true,  actionLabel: "Reorder", actionHref: "/purchases" },
-  { id: "10", type: "sales",    severity: "success",  title: "Mango Pickle Sales Record",                  message: "Raw Mango Pickle 500g sold 340 units this week — new weekly record! Previous record was 280 units.",           time: "5h ago",     read: true  },
+  { id: "1",  type: "inventory",  severity: "critical", title: "Critical: Dry Red Chilli Stock Very Low",    message: "Dry Red Chilli at 12 kg remaining. Minimum threshold is 50 kg. Reorder from Spice Valley Suppliers immediately.", time: "5 min ago",  read: false, actionLabel: "Reorder", actionHref: "/purchases" },
+  { id: "2",  type: "order",      severity: "warning",  title: "Franchise Order #B-204 Delayed",             message: "Wholesale order for Zone B is 40 minutes behind dispatch schedule.",               time: "8 min ago",  read: false, actionLabel: "View Order", actionHref: "/franchise/requests" },
+  { id: "3",  type: "inventory",  severity: "warning",  title: "Urad Dal Running Low",                       message: "Urad Dal at 80 kg. Minimum is 100 kg. Batter production will be affected. Restock before next batch.",        time: "12 min ago", read: false, actionLabel: "Reorder", actionHref: "/purchases" },
+  { id: "4",  type: "dispatch",   severity: "success",  title: "Daily Dispatch Target Achieved!",            message: "Today's dispatch value hit ₹1,20,000 target. Current total: ₹1,28,750. All franchises performing well.",        time: "1h ago",     read: false },
+  { id: "5",  type: "inventory",  severity: "warning",  title: "Glass Jars (500g) Low",                      message: "Glass jars at 380 pcs. Minimum threshold: 400 pcs. Pickle packing will be delayed if not restocked.",         time: "2h ago",     read: true,  actionLabel: "Reorder", actionHref: "/purchases" },
+  { id: "6",  type: "payment",    severity: "warning",  title: "Unusual Discount on Wholesale Order",        message: "35% discount applied to Wholesale Order #W-112 (₹4,200 waived) by user: sales01. Please verify.",            time: "2h ago",     read: true,  actionLabel: "Review", actionHref: "/reports" },
+  { id: "7",  type: "order",      severity: "info",     title: "Franchise B Restock Request Pending",        message: "Distribution Centre B has placed a stock request for 200kg Chilli Powder and 150L Groundnut Oil. Approve now.", time: "3h ago",     read: true,  actionLabel: "Approve", actionHref: "/franchise" },
+  { id: "8",  type: "system",     severity: "info",     title: "Billing Module Sync Restored",               message: "POS billing module reconnected after brief server interruption at 3:12 PM. All data is in sync.",       time: "4h ago",     read: true  },
+  { id: "9",  type: "inventory",  severity: "critical", title: "PET Bottles (500ml) Almost Empty",           message: "PET bottles at 210 pcs. Minimum is 500 pcs. Oil bottling line will halt without immediate restock.",           time: "4h ago",     read: true,  actionLabel: "Reorder", actionHref: "/purchases" },
+  { id: "10", type: "order",      severity: "success",  title: "Mango Pickle Order Record",                  message: "Raw Mango Pickle 500g sold 340 units this week — new weekly record! Previous record was 280 units.",           time: "5h ago",     read: true  },
 ];
 
 const TYPE_CONFIG: Record<AlertType, { label: string; icon: any; color: string; bg: string }> = {
-  stock:    { label: "Low Stock",  icon: Package,      color: "text-orange-500",  bg: "bg-orange-50 dark:bg-orange-900/20" },
-  sales:    { label: "Sales",      icon: TrendingUp,   color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
-  kitchen:  { label: "Production", icon: Clock,        color: "text-blue-500",    bg: "bg-blue-50 dark:bg-blue-900/20" },
-  security: { label: "Security",   icon: Shield,       color: "text-purple-500",  bg: "bg-purple-50 dark:bg-purple-900/20" },
-  system:   { label: "System",     icon: RefreshCw,    color: "text-gray-500",    bg: "bg-gray-50 dark:bg-white/10" },
+  inventory: { label: "Inventory", icon: Package,      color: "text-orange-500",  bg: "bg-orange-50 dark:bg-orange-900/20" },
+  order:     { label: "Order",     icon: ShoppingCart, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
+  payment:   { label: "Payment",   icon: Shield,       color: "text-purple-500",  bg: "bg-purple-50 dark:bg-purple-900/20" },
+  dispatch:  { label: "Dispatch",  icon: TrendingUp,   color: "text-blue-500",    bg: "bg-blue-50 dark:bg-blue-900/20" },
+  system:    { label: "System",    icon: RefreshCw,    color: "text-gray-500",    bg: "bg-gray-50 dark:bg-white/10" },
 };
 
 const SEVERITY_STYLES: Record<AlertSeverity, string> = {
@@ -72,7 +72,7 @@ const SEVERITY_BADGE: Record<AlertSeverity, string> = {
 function mapApiAlerts(apiItems: any[]): Alert[] {
   return apiItems.map((item: any, i: number) => ({
     id: item.id ?? String(i),
-    type: "stock" as AlertType,
+    type: "inventory" as AlertType,
     severity: item.currentStock === 0 ? "critical" : "warning",
     title: item.currentStock === 0
       ? `Critical: ${item.name} Out of Stock`
@@ -144,8 +144,8 @@ export default function AlertsPage() {
         {[
           { label: "Unread",    value: unreadCount,  color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-900/10",    icon: Bell },
           { label: "Critical",  value: criticalCount, color: "text-red-500",   bg: "bg-red-50 dark:bg-red-900/10",          icon: AlertTriangle },
-          { label: "Low Stock", value: alerts.filter((a) => a.type === "stock").length,    color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-900/10", icon: Package },
-          { label: "Today",     value: alerts.length, color: "text-blue-500",  bg: "bg-blue-50 dark:bg-blue-900/10",        icon: ShoppingCart },
+          { label: "Inventory", value: alerts.filter((a) => a.type === "inventory").length,    color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-900/10", icon: Package },
+          { label: "Orders",    value: alerts.filter((a) => a.type === "order").length, color: "text-emerald-500",  bg: "bg-emerald-50 dark:bg-emerald-900/10",        icon: ShoppingCart },
         ].map((s) => (
           <div key={s.label} className={clsx("rounded-2xl border border-gray-100 dark:border-white/5 p-4 flex items-center gap-3", s.bg)}>
             <div className="w-9 h-9 rounded-xl bg-white dark:bg-card flex items-center justify-center shadow-sm">
@@ -164,7 +164,7 @@ export default function AlertsPage() {
         <Filter size={14} className="text-gray-400" />
 
         <div className="flex gap-1.5 flex-wrap">
-          {(["all", "stock", "sales", "kitchen", "security", "system"] as const).map((t) => (
+          {(["all", "inventory", "order", "payment", "dispatch", "system"] as const).map((t) => (
             <button key={t} onClick={() => setFilterType(t)}
               className={clsx("px-3 py-1.5 rounded-xl text-[11px] font-bold capitalize transition-all",
                 filterType === t ? "bg-orange-500 text-white" : "bg-gray-100 dark:bg-white/5 text-gray-500 hover:bg-orange-50 hover:text-orange-600"

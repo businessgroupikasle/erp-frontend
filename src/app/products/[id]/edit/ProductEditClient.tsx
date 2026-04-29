@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   Package, X, IndianRupee, ChevronDown, Save, ArrowLeft,
@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { productsFullApi } from "@/lib/api";
 import Link from "next/link";
+import { PREDEFINED_SIZES, getCategoryDefaults, generateSKU } from "@/lib/utils/erp";
 
 export default function ProductEditClient() {
   const router = useRouter();
@@ -32,12 +33,25 @@ export default function ProductEditClient() {
     isActive: true,
   });
 
+  const [size, setSize] = useState("1KG");
+  
+  const prevCategory = useRef(form.category);
+  const isInitialLoad = useRef(true);
+
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) return;
       try {
         const res = await productsFullApi.getById(id);
         const p = res.data;
+
+        let initialSize = "1KG";
+        if (p.sku) {
+           const parts = p.sku.split('-');
+           if (parts.length >= 2) initialSize = parts[parts.length - 1];
+        }
+        setSize(initialSize);
+
         setForm({
           name: p.name,
           sku: p.sku ?? "",
@@ -56,10 +70,26 @@ export default function ProductEditClient() {
         setError("Failed to fetch product details.");
       } finally {
         setLoading(false);
+        setTimeout(() => { isInitialLoad.current = false; }, 500);
       }
     };
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+    if (form.category !== prevCategory.current) {
+      const defs = getCategoryDefaults(form.category);
+      setForm((f) => ({ ...f, hsnCode: defs.hsnCode, taxPercent: defs.taxPercent }));
+      prevCategory.current = form.category;
+    }
+  }, [form.category]);
+
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+    const sku = generateSKU(form.category, form.name, size);
+    setForm((f) => ({ ...f, sku }));
+  }, [form.category, form.name, size]);
 
   const handleSave = async () => {
     if (!form.name) {
@@ -68,6 +98,10 @@ export default function ProductEditClient() {
     }
     if (form.basePrice <= 0) {
       setError("Base price must be greater than 0");
+      return;
+    }
+    if (form.taxPercent > 0 && !form.hsnCode) {
+      setError("HSN Code is required when GST > 0");
       return;
     }
 
@@ -192,17 +226,7 @@ export default function ProductEditClient() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">SKU Identification</label>
-                  <input 
-                    type="text" 
-                    placeholder="SKU-001" 
-                    value={form.sku}
-                    onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
-                    className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-white/10" 
-                  />
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Category Classification</label>
                   <div className="relative">
@@ -215,6 +239,28 @@ export default function ProductEditClient() {
                     </select>
                     <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Size</label>
+                  <div className="relative">
+                    <select 
+                      value={size} 
+                      onChange={(e) => setSize(e.target.value)}
+                      className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
+                    >
+                      {PREDEFINED_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-orange-500 uppercase tracking-widest ml-1">SKU (Auto)</label>
+                  <input 
+                    type="text" 
+                    value={form.sku}
+                    readOnly
+                    className="w-full px-6 py-4 text-base font-black bg-orange-500/5 dark:bg-orange-500/10 border-none rounded-2xl outline-none text-orange-600 dark:text-orange-400 cursor-not-allowed transition-all" 
+                  />
                 </div>
               </div>
 

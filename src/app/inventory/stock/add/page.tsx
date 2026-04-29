@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   ArrowLeft, Save, Info, 
   Sparkles, ChevronDown, 
@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { rawMaterialsApi } from "@/lib/api";
 import { ITEM_CATEGORIES, UNITS } from "@/lib/constants";
+import { PREDEFINED_SIZES, getCategoryDefaults, generateSKU } from "@/lib/utils/erp";
 
 export default function AddMaterialPage() {
   const router = useRouter();
@@ -24,11 +25,34 @@ export default function AddMaterialPage() {
     minimumStock: 10,
     category: "RAW_MATERIAL",
     initialStock: 0,
+    hsnCode: "",
+    taxPercent: 0,
   });
+
+  const [size, setSize] = useState("1KG");
+  
+  const prevCategory = useRef(form.category);
+
+  useEffect(() => {
+    if (form.category !== prevCategory.current) {
+      const defs = getCategoryDefaults(form.category);
+      setForm((f) => ({ ...f, hsnCode: defs.hsnCode, taxPercent: defs.taxPercent }));
+      prevCategory.current = form.category;
+    }
+  }, [form.category]);
+
+  useEffect(() => {
+    const sku = generateSKU(form.category, form.name, size);
+    setForm((f) => ({ ...f, sku }));
+  }, [form.category, form.name, size]);
 
   const handleSave = async () => {
     if (!form.name) {
       setError("Material name is required");
+      return;
+    }
+    if (form.taxPercent > 0 && !form.hsnCode) {
+      setError("HSN Code is required when GST > 0");
       return;
     }
 
@@ -120,17 +144,7 @@ export default function AddMaterialPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">SKU / Material Code</label>
-                  <input 
-                    type="text" 
-                    placeholder="RM-RIC-001" 
-                    value={form.sku}
-                    onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value.toUpperCase() }))}
-                    className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-white/10" 
-                  />
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Classification</label>
                   <div className="relative">
@@ -142,6 +156,55 @@ export default function AddMaterialPage() {
                       {ITEM_CATEGORIES.map((c) => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
                     </select>
                     <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Size</label>
+                  <div className="relative">
+                    <select 
+                      value={size} 
+                      onChange={(e) => setSize(e.target.value)}
+                      className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
+                    >
+                      {PREDEFINED_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-orange-500 uppercase tracking-widest ml-1">SKU (Auto)</label>
+                  <input 
+                    type="text" 
+                    value={form.sku}
+                    readOnly
+                    className="w-full px-6 py-4 text-base font-black bg-orange-500/5 dark:bg-orange-500/10 border-none rounded-2xl outline-none text-orange-600 dark:text-orange-400 cursor-not-allowed transition-all" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">HSN Code (GST)</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 1006" 
+                    value={form.hsnCode}
+                    onChange={(e) => setForm((f) => ({ ...f, hsnCode: e.target.value }))}
+                    className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-white/10" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Tax Protocol (%)</label>
+                  <div className="relative">
+                    <input 
+                      type="number" 
+                      min={0} 
+                      max={100} 
+                      value={form.taxPercent}
+                      onChange={(e) => setForm((f) => ({ ...f, taxPercent: Number(e.target.value) }))}
+                      className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all" 
+                    />
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</div>
                   </div>
                 </div>
               </div>
