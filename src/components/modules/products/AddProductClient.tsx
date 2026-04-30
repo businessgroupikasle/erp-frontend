@@ -55,7 +55,7 @@ export default function AddProductClient() {
     setSaving(true);
     try {
       await productsFullApi.create(form);
-      router.push("/inventory");
+      router.push("/products");
     } catch (e: any) {
       setError(e.response?.data?.message || "Failed to create product.");
     } finally {
@@ -67,15 +67,23 @@ export default function AddProductClient() {
     <div className="max-w-3xl mx-auto py-8 px-4 animate-in fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-6">
-        <div>
-          <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-            <Package className="text-orange-500" /> New Product
-          </h1>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Register items to your digital catalog</p>
+        <div className="flex items-center gap-4">
+          <Link 
+            href="/products" 
+            className="w-10 h-10 rounded-xl bg-gray-50 text-gray-400 hover:text-orange-500 transition-all flex items-center justify-center group"
+          >
+            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+              <Package className="text-orange-500" /> New Product
+            </h1>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Register items to your digital catalog</p>
+          </div>
         </div>
-        <button onClick={() => router.back()} className="text-xs font-black text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest">
+        <Link href="/products" className="text-xs font-black text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest">
           Cancel
-        </button>
+        </Link>
       </div>
 
       {error && (
