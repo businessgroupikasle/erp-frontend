@@ -5,7 +5,7 @@ import {
   ArrowLeft, Save, Trash2, Info, 
   Sparkles, ChevronDown, 
   AlertCircle, CheckCircle2,
-  Layers, Package, Scale
+  Layers, Package, Scale, Lock
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -32,7 +32,10 @@ function EditMaterialForm() {
     minimumStock: 10,
     category: "RAW_MATERIAL",
     hsnCode: "",
-    taxPercent: 0,
+    gstRate: 0,
+    vendorId: "",
+    currentStock: 0,
+    isActive: true,
   });
 
   const [size, setSize] = useState("1KG");
@@ -74,10 +77,9 @@ function EditMaterialForm() {
           category: m.category ?? "RAW_MATERIAL",
           hsnCode: m.hsnCode ?? "",
           gstRate: m.gstRate ?? 5,
-          currentStock: m.currentStock ?? 0,
           vendorId: m.vendorId ?? "",
-          hsnCode: m.hsnCode ?? "",
-          taxPercent: m.taxPercent ?? 0,
+          currentStock: m.currentStock ?? 0,
+          isActive: m.isActive ?? true,
         });
       } catch (e: any) {
         console.error(e);
@@ -95,7 +97,7 @@ function EditMaterialForm() {
     if (isInitialLoad.current) return;
     if (form.category !== prevCategory.current) {
       const defs = getCategoryDefaults(form.category);
-      setForm((f) => ({ ...f, hsnCode: defs.hsnCode, taxPercent: defs.taxPercent }));
+      setForm((f) => ({ ...f, hsnCode: defs.hsnCode, gstRate: defs.taxPercent }));
       prevCategory.current = form.category;
     }
   }, [form.category]);
@@ -116,7 +118,7 @@ function EditMaterialForm() {
       setError("Please select a vendor or switch to Direct Stock.");
       return;
     }
-    if (form.taxPercent > 0 && !form.hsnCode) {
+    if (form.gstRate > 0 && !form.hsnCode) {
       setError("HSN Code is required when GST > 0");
       return;
     }
@@ -138,15 +140,51 @@ function EditMaterialForm() {
     }
   };
 
+  const handleDeactivate = async () => {
+    if (!id || !confirm(`Mark ${form.name} as INACTIVE? This will hide it from active lists but keep history safe.`)) return;
+    setSaving(true);
+    try {
+      await rawMaterialsApi.deactivate(id as string);
+      router.push("/inventory/stock");
+    } catch (e: any) {
+      setError(e.response?.data?.error || "Failed to deactivate material");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleActivate = async () => {
+    if (!id) return;
+    setSaving(true);
+    try {
+      await rawMaterialsApi.activate(id as string);
+      setForm(f => ({ ...f, isActive: true }));
+    } catch (e: any) {
+      setError(e.response?.data?.error || "Failed to reactivate material");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!id) return;
-    if (!confirm("Are you sure you want to delete this material record? This action cannot be undone if there are no movements.")) return;
+    if (!confirm("Are you sure you want to delete this material record? This action cannot be undone.")) return;
+    setSaving(true);
+    setError(null);
     try {
       await rawMaterialsApi.delete(id as string);
       router.push("/inventory/stock");
     } catch (e: any) {
-      console.error(e);
-      setError(e.response?.data?.error || "Failed to delete material. Ensure it has no stock history.");
+      const serverError = e?.response?.data?.error;
+      if (serverError && serverError.includes("history")) {
+         if (confirm(`${form.name} has recorded stock history and cannot be deleted permanently.\n\nWould you like to MARK AS INACTIVE instead?`)) {
+            await handleDeactivate();
+         }
+      } else {
+        setError(serverError || "Failed to delete material.");
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -326,33 +364,6 @@ function EditMaterialForm() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Tax Protocol (%)</label>
-                  <div className="relative">
-                    <input 
-                      type="number" 
-                      min={0} 
-                      max={100} 
-                      value={form.taxPercent}
-                      onChange={(e) => setForm((f) => ({ ...f, taxPercent: Number(e.target.value) }))}
-                      className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all" 
-                    />
-                    <div className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">HSN Code</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. 1006" 
-                    value={form.hsnCode}
-                    onChange={(e) => setForm((f) => ({ ...f, hsnCode: e.target.value }))}
-                    className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-white/10" 
-                  />
-                </div>
-                <div className="space-y-2">
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">GST Rate (%)</label>
                   <div className="relative">
                     <select 
@@ -457,12 +468,30 @@ function EditMaterialForm() {
             </button>
           </div>
 
-          <button 
-            onClick={handleDelete}
-            className="w-full py-4 rounded-2xl border border-red-200 dark:border-red-900/20 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
-          >
-            Archive Material
-          </button>
+          <div className="pt-4 space-y-4">
+            {form.isActive ? (
+               <button 
+                  onClick={handleDeactivate}
+                  className="w-full py-4 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-100 dark:border-white/5 flex items-center justify-center gap-2"
+               >
+                  <Lock size={12} /> Mark as Inactive
+               </button>
+            ) : (
+               <button 
+                  onClick={handleActivate}
+                  className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2"
+               >
+                  <CheckCircle2 size={12} /> Restore Material
+               </button>
+            )}
+            
+            <button 
+               onClick={handleDelete}
+               className="w-full py-4 text-red-400 hover:text-red-500 text-[9px] font-black uppercase tracking-widest transition-all"
+            >
+               Permanent Delete (Audit Risk)
+            </button>
+          </div>
         </div>
       </div>
       

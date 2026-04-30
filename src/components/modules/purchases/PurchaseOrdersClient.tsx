@@ -1,49 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import {
-  ShoppingCart, Plus, X, CheckCircle2, Clock, Truck,
-  Store, Package, IndianRupee, Search, ChevronDown,
-  Wallet, AlertCircle, RefreshCw, Ban, Trash2, Calendar as CalendarIcon,
-  ChevronLeft, ChevronRight, FileText, Cog
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { 
+  ShoppingCart, Plus, Search, Filter, Calendar as CalendarIcon, 
+  ChevronDown, Store, Clock, CheckCircle2, XCircle, AlertCircle, 
+  Trash2, Wallet, RefreshCw, ChevronLeft, ChevronRight, Download, X
 } from "lucide-react";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday } from "date-fns";
+import { vendorsApi, purchaseOrdersApi, rawMaterialsApi, settingsApi } from "../../../lib/api";
 import { clsx } from "clsx";
-import {
-  format, addMonths, subMonths, startOfMonth, endOfMonth,
-  startOfWeek, endOfWeek, isSameDay, isSameMonth, addDays, parseISO,
-  isBefore, startOfDay
-} from "date-fns";
-import { purchaseOrdersApi, vendorsApi, rawMaterialsApi, settingsApi } from "@/lib/api";
-import GSTInvoice from "@/components/documents/GSTInvoice";
-import { useToast } from "@/context/ToastContext";
-import { UNITS } from "@/lib/constants";
-
-const FALLBACK_COMPANY = {
-  name: "Your Company Ltd",
-  address: "Please update address in System Settings",
-  gstin: "Not Configured",
-  state: "Select State",
-  email: "admin@company.com",
-  phone: "Contact Not Set"
-};
-
-const STATUS_STYLES: Record<string, string> = {
-  PENDING: "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
-  APPROVED: "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
-  RECEIVED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
-  CANCELLED: "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400",
-};
-
-const STATUS_ICONS: Record<string, any> = {
-  PENDING: Clock,
-  APPROVED: CheckCircle2,
-  RECEIVED: Truck,
-  CANCELLED: X,
-};
-
-function fmt(n: number) {
-  return "₹" + Math.round(n).toLocaleString("en-IN");
-}
+import GSTInvoice from "../../documents/GSTInvoice";
 
 interface POItem {
   inventoryItemId: string;
@@ -55,8 +21,32 @@ interface POItem {
   gstRate: number;
 }
 
+const STATUS_STYLES: Record<string, string> = {
+  PENDING: "bg-amber-50 text-amber-600 border border-amber-200 shadow-sm shadow-amber-500/10",
+  APPROVED: "bg-indigo-50 text-indigo-600 border border-indigo-200 shadow-sm shadow-indigo-500/10",
+  RECEIVED: "bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-sm shadow-emerald-500/10",
+  CANCELLED: "bg-red-50 text-red-600 border border-red-200 shadow-sm shadow-red-500/10",
+};
+
+const STATUS_ICONS: Record<string, any> = {
+  PENDING: Clock,
+  APPROVED: CheckCircle2,
+  RECEIVED: Store,
+  CANCELLED: XCircle,
+};
+
+const FALLBACK_COMPANY = {
+  name: "My Restaurant",
+  gstin: "",
+  address: "",
+  phone: "",
+  email: "",
+  state: "Tamil Nadu"
+};
+
+const fmt = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+
 export default function PurchaseOrdersClient() {
-  const { showToast } = useToast();
   const [orders, setOrders] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
@@ -64,43 +54,37 @@ export default function PurchaseOrdersClient() {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL");
-  const [vendorFilter, setVendorFilter] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const [companyProfile, setCompanyProfile] = useState<any>(null);
-
+  // Form State
   const [vendorId, setVendorId] = useState("");
   const [expectedDate, setExpectedDate] = useState("");
   const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<POItem[]>([
-    { inventoryItemId: "", itemName: "", unit: "kg", quantity: 0, price: 0, hsnCode: "", gstRate: 5 },
-  ]);
-  const [saving, setSaving] = useState(false);
-
-  const [showVendorList, setShowVendorList] = useState(false);
-  const [vendorSearch, setVendorSearch] = useState("");
-  const [showMaterialList, setShowMaterialList] = useState<number | null>(null);
-  const [materialSearch, setMaterialSearch] = useState("");
+  const [items, setItems] = useState<POItem[]>([{ inventoryItemId: "", itemName: "", unit: "kg", quantity: 0, price: 0, hsnCode: "", gstRate: 5 }]);
+  const [companyProfile, setCompanyProfile] = useState<any>(null);
+  const [editingProfile, setEditingProfile] = useState<any>(null);
+  const [showSettings, setShowSettings] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [viewDate, setViewDate] = useState(new Date());
-  const [showUnitList, setShowUnitList] = useState(false);
 
-  const [showMaterialForm, setShowMaterialForm] = useState(false);
-  const [newMat, setNewMat] = useState({ name: "", unit: "kg", hsnCode: "", gstRate: 5 });
-  const [matSaving, setMatSaving] = useState(false);
-  const [viewingPO, setViewingPO] = useState<any>(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const [editingProfile, setEditingProfile] = useState<any>(FALLBACK_COMPANY);
-  const [forceShowAllMaterials, setForceShowAllMaterials] = useState(false);
-
+  // Payment Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState(0);
-  const [paymentNote, setPaymentNote] = useState("");
   const [payingPO, setPayingPO] = useState<any>(null);
-  const [paymentMode, setPaymentMode] = useState<"CASH" | "UPI" | "CARD" | undefined>(undefined);
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [paymentMode, setPaymentMode] = useState<"CASH" | "UPI" | "CARD">("CASH");
+  const [paymentNote, setPaymentNote] = useState("");
+
+  const [viewingPO, setViewingPO] = useState<any>(null);
   const [lastPayment, setLastPayment] = useState<any>(null);
 
   const selectedVendor = vendors.find((v: any) => v.id === vendorId);
   const currentCompany = companyProfile || FALLBACK_COMPANY;
+  const [manualGst, setManualGst] = useState(false);
+  const [customGstRate, setCustomGstRate] = useState<number>(5);
+  const [customCgst, setCustomCgst] = useState<number>(0);
+  const [customSgst, setCustomSgst] = useState<number>(0);
+  const [customIgst, setCustomIgst] = useState<number>(0);
+
   const isProfileComplete = companyProfile && companyProfile.gstin && companyProfile.address;
 
   const fetchAll = useCallback(async () => {
@@ -153,7 +137,6 @@ export default function PurchaseOrdersClient() {
       const cleanVal = (field === "quantity" || field === "price") ? Math.max(0, value) : value;
       if (field === "inventoryItemId") {
         if (prev.some((item, index) => index !== i && item.inventoryItemId === value)) {
-          showToast("This material is already in your order list.", "warning");
           return it;
         }
         const mat = materials.find((m: any) => m.id === value);
@@ -189,7 +172,22 @@ export default function PurchaseOrdersClient() {
     return acc;
   }, { cgst: 0, sgst: 0, igst: 0 });
 
-  const totalGst = round(taxDetails.cgst + taxDetails.sgst + taxDetails.igst);
+  useEffect(() => {
+    if (manualGst) {
+      const calculatedTotal = round(subtotal * (customGstRate / 100));
+      if (isSameState) {
+        setCustomCgst(round(calculatedTotal / 2));
+        setCustomSgst(round(calculatedTotal / 2));
+        setCustomIgst(0);
+      } else {
+        setCustomCgst(0);
+        setCustomSgst(0);
+        setCustomIgst(calculatedTotal);
+      }
+    }
+  }, [manualGst, customGstRate, subtotal, isSameState]);
+
+  const totalGst = manualGst ? round(customCgst + customSgst + customIgst) : round(taxDetails.cgst + taxDetails.sgst + taxDetails.igst);
   const grandTotal = round(subtotal + totalGst);
   const availableAdvance = Math.max(0, selectedVendor?.balance ?? 0);
   const autoApplied = Math.min(availableAdvance, grandTotal);
@@ -205,9 +203,11 @@ export default function PurchaseOrdersClient() {
         expectedDeliveryDate: expectedDate,
         notes,
         items: items.map(({ inventoryItemId, quantity, price, hsnCode, gstRate }) => ({ inventoryItemId, quantity, price, hsnCode, gstRate })),
+        manualTax: manualGst ? { cgst: customCgst, sgst: customSgst, igst: customIgst } : undefined
       });
       setShowForm(false);
       setVendorId(""); setExpectedDate(""); setNotes("");
+      setManualGst(false); setCustomCgst(0); setCustomSgst(0); setCustomIgst(0);
       setItems([{ inventoryItemId: "", itemName: "", unit: "kg", quantity: 0, price: 0, hsnCode: "", gstRate: 5 }]);
       fetchAll();
     } catch (e: any) {
@@ -323,7 +323,7 @@ export default function PurchaseOrdersClient() {
                   <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0"><Store size={18} className="text-orange-500" /></div>
                   <div>
                     <p className="font-bold text-gray-900 dark:text-white text-sm">{po.vendor?.name ?? "Unknown"}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">PO-{po.id?.slice(0, 8).toUpperCase()} · {new Date(po.createdAt).toLocaleDateString()}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">PO-{po.id?.slice(0, 8).toUpperCase()} · {format(new Date(po.createdAt), "dd/MM/yyyy")}</p>
                   </div>
                 </div>
                 <span className={clsx("flex items-center gap-1 px-3 py-1 rounded-xl text-[10px] font-black uppercase", STATUS_STYLES[po.status] || STATUS_STYLES.PENDING)}><StatusIcon size={11} /> {po.status}</span>
@@ -334,6 +334,19 @@ export default function PurchaseOrdersClient() {
                 <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center"><p className="text-[10px] text-gray-400 uppercase font-bold">GST</p><p className="text-[12px] font-black">{fmt(po.cgst + po.sgst + po.igst)}</p></div>
                 <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-3 text-center"><p className="text-[10px] text-emerald-600 uppercase font-bold">Paid</p><p className="text-sm font-black text-emerald-700">{fmt(currentPaid)}</p></div>
                 <div className={clsx("rounded-xl p-3 text-center", balance > 0 ? "bg-red-50" : "bg-gray-50")}><p className="text-[10px] uppercase font-bold">Balance</p><p className="text-sm font-black">{fmt(balance)}</p></div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 px-1">Order Items</p>
+                <div className="flex flex-wrap gap-2">
+                  {po.poItems?.map((item: any, idx: number) => (
+                    <div key={idx} className="px-3 py-1.5 bg-slate-50/50 dark:bg-white/[0.03] rounded-2xl border border-slate-100 dark:border-white/5 flex items-center gap-3">
+                      <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight">{item.inventoryItem?.name || 'Material'}</span>
+                      <span className="text-[10px] font-black text-orange-600 px-2 py-0.5 bg-orange-50 dark:bg-orange-500/10 rounded-full">{item.quantity} {item.inventoryItem?.unit || 'unit'}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="mt-4 flex gap-2">
@@ -366,7 +379,7 @@ export default function PurchaseOrdersClient() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-[200]">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Vendor *</label>
                 <div className="relative">
@@ -381,14 +394,65 @@ export default function PurchaseOrdersClient() {
                    <ChevronDown size={16} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Expected Delivery Date</label>
-                <input 
-                  type="date" 
-                  value={expectedDate} 
-                  onChange={(e) => setExpectedDate(e.target.value)}
-                  className="w-full h-14 bg-slate-50 dark:bg-white/5 px-5 rounded-2xl font-bold text-sm outline-none focus:ring-4 ring-orange-500/10 border border-slate-200 dark:border-white/10"
-                />
+                <button 
+                   onClick={() => setShowDatePicker(!showDatePicker)}
+                   className="w-full h-14 bg-slate-50 dark:bg-white/5 px-5 rounded-2xl font-bold text-sm flex items-center justify-between border border-slate-200 dark:border-white/10 hover:border-orange-500/50 transition-all"
+                >
+                  <span className={clsx(expectedDate ? "text-slate-900 dark:text-white" : "text-slate-400")}>
+                    {expectedDate ? format(new Date(expectedDate), "dd/MM/yyyy") : "Select Date"}
+                  </span>
+                  <CalendarIcon size={18} className="text-slate-400" />
+                </button>
+
+                {showDatePicker && (
+                  <div 
+                    className="absolute top-full left-0 mt-3 z-[1000] isolate opacity-100 bg-white dark:bg-[#1a1c23] border border-slate-200 dark:border-white/10 rounded-[2.5rem] shadow-[0_25px_60px_rgba(0,0,0,0.4)] p-6 w-[320px] animate-in fade-in slide-in-from-top-2 duration-200"
+                    style={{ backgroundColor: 'white' }}
+                  >
+                    <div className="flex items-center justify-between mb-4 px-2">
+                       <p className="text-[13px] font-black uppercase tracking-widest text-slate-800 dark:text-white">{format(viewDate, "MMMM yyyy")}</p>
+                       <div className="flex gap-1">
+                          <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors"><ChevronLeft size={16}/></button>
+                          <button onClick={() => setViewDate(addMonths(viewDate, 1))} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors"><ChevronRight size={16}/></button>
+                       </div>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 text-center mb-3">
+                       {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(d => (
+                         <div key={d} className="text-[10px] font-black text-slate-400 uppercase py-1 tracking-tighter">{d}</div>
+                       ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                       {(() => {
+                         const start = startOfWeek(startOfMonth(viewDate));
+                         const end = endOfWeek(endOfMonth(viewDate));
+                         const days = [];
+                         let curr = start;
+                         while (curr <= end) {
+                           days.push(curr);
+                           curr = addDays(curr, 1);
+                         }
+                         return days.map(d => (
+                           <button
+                             key={d.toISOString()}
+                             onClick={() => {
+                               setExpectedDate(format(d, "yyyy-MM-dd"));
+                               setShowDatePicker(false);
+                             }}
+                             className={clsx(
+                               "w-9 h-9 rounded-xl text-[10px] font-bold transition-all flex items-center justify-center",
+                               !isSameMonth(d, viewDate) ? "text-slate-300 dark:text-gray-700" : "text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-orange-500/10",
+                               expectedDate && isSameDay(d, new Date(expectedDate)) ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-500" : ""
+                             )}
+                           >
+                             {format(d, "d")}
+                           </button>
+                         ));
+                       })()}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -413,7 +477,7 @@ export default function PurchaseOrdersClient() {
                         <option value="">Select Item...</option>
                         {materials
                           .filter(m => {
-                            if (!vendorId) return true; // Show all if no vendor selected yet
+                            if (!vendorId) return true;
                             const isSupplied = selectedVendor?.suppliedMaterials?.some((sm: any) => sm.materialId === m.id);
                             const isPrimary = m.vendorId === vendorId;
                             return isSupplied || isPrimary;
@@ -474,9 +538,64 @@ export default function PurchaseOrdersClient() {
                      <span>Subtotal</span>
                      <span>₹{subtotal.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200 dark:border-white/10 pb-4">
-                     <span>GST ({isSameState ? "CGST + SGST" : "IGST"})</span>
-                     <span>₹{totalGst.toLocaleString()}</span>
+                  <div className="space-y-3 border-b border-slate-200 dark:border-white/10 pb-4">
+                     <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tax (GST)</span>
+                        <button 
+                           onClick={() => {
+                             if (!manualGst) {
+                               const currentRate = subtotal > 0 ? (totalGst / subtotal) * 100 : 5;
+                               setCustomGstRate(round(currentRate));
+                             }
+                             setManualGst(!manualGst);
+                           }}
+                           className="text-[9px] font-black text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-2 py-1 rounded"
+                        >
+                           {manualGst ? "RESET TO AUTO" : "EDIT TAXES"}
+                        </button>
+                     </div>
+                     
+                     {manualGst ? (
+                        <div className="space-y-4">
+                           <div className="space-y-1.5">
+                             <div className="flex justify-between items-center">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Manual GST Rate (%)</label>
+                                <span className="text-[10px] font-black text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-2 py-0.5 rounded-full">₹{totalGst.toLocaleString()}</span>
+                             </div>
+                             <input 
+                               type="number" 
+                               value={customGstRate} 
+                               onChange={(e) => setCustomGstRate(Number(e.target.value))} 
+                               placeholder="e.g. 18"
+                               className="w-full h-11 bg-white dark:bg-black/20 rounded-xl px-4 text-sm font-black outline-none border-2 border-orange-200 dark:border-orange-500/20 focus:border-orange-500 transition-all" 
+                             />
+                           </div>
+                           <div className="grid grid-cols-2 gap-3 opacity-60">
+                              {isSameState ? (
+                                <>
+                                  <div className="bg-slate-50 dark:bg-white/5 p-2 rounded-xl text-center">
+                                    <p className="text-[8px] font-black text-slate-400 uppercase">CGST (Calc)</p>
+                                    <p className="text-[11px] font-black">₹{customCgst.toLocaleString()}</p>
+                                  </div>
+                                  <div className="bg-slate-50 dark:bg-white/5 p-2 rounded-xl text-center">
+                                    <p className="text-[8px] font-black text-slate-400 uppercase">SGST (Calc)</p>
+                                    <p className="text-[11px] font-black">₹{customSgst.toLocaleString()}</p>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="col-span-2 bg-slate-50 dark:bg-white/5 p-2 rounded-xl text-center">
+                                  <p className="text-[8px] font-black text-slate-400 uppercase">IGST (Calc)</p>
+                                  <p className="text-[11px] font-black">₹{customIgst.toLocaleString()}</p>
+                                </div>
+                              )}
+                           </div>
+                        </div>
+                     ) : (
+                        <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                           <span>{isSameState ? "CGST + SGST" : "IGST"}</span>
+                           <span>₹{totalGst.toLocaleString()}</span>
+                        </div>
+                     )}
                   </div>
                   <div className="flex justify-between items-center pt-2">
                      <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Grand Total</span>
@@ -623,6 +742,82 @@ export default function PurchaseOrdersClient() {
       )}
 
       {viewingPO && <GSTInvoice order={viewingPO} vendor={viewingPO.vendor} companyDetails={currentCompany} onClose={() => setViewingPO(null)} />}
+
+      {showSettings && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+           <div className="bg-white dark:bg-[#0f1117] w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/5 overflow-hidden">
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                      <Cog size={22} className="text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Company Profile</h2>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Required for GST Invoices</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowSettings(false)} className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-400"><X size={18} /></button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Name</label><input type="text" value={editingProfile.name} onChange={(e) => setEditingProfile({...editingProfile, name: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border border-slate-200 dark:border-white/10" /></div>
+                    <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">GSTIN</label><input type="text" value={editingProfile.gstin} onChange={(e) => setEditingProfile({...editingProfile, gstin: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border border-slate-200 dark:border-white/10" /></div>
+                  </div>
+                  <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Address</label><textarea value={editingProfile.address} onChange={(e) => setEditingProfile({...editingProfile, address: e.target.value})} className="w-full h-20 bg-slate-50 dark:bg-white/5 p-4 rounded-xl font-bold text-xs border border-slate-200 dark:border-white/10 resize-none" /></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone</label><input type="text" value={editingProfile.phone} onChange={(e) => setEditingProfile({...editingProfile, phone: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border border-slate-200 dark:border-white/10" /></div>
+                    <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label><input type="email" value={editingProfile.email} onChange={(e) => setEditingProfile({...editingProfile, email: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border border-slate-200 dark:border-white/10" /></div>
+                  </div>
+                  <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">State</label><input type="text" value={editingProfile.state} onChange={(e) => setEditingProfile({...editingProfile, state: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border border-slate-200 dark:border-white/10" /></div>
+                </div>
+
+                <div className="mt-8 flex gap-3">
+                  <button onClick={() => setShowSettings(false)} className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Cancel</button>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const res = await settingsApi.updateCompanyProfile(editingProfile);
+                        setCompanyProfile(res.data);
+                        setShowSettings(false);
+                      } catch (e) { alert("Failed to update profile"); }
+                    }} 
+                    className="flex-[2] py-4 bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20"
+                  >Save Changes</button>
+                </div>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function Cog(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" />
+      <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="m4.93 4.93 1.41 1.41" />
+      <path d="m17.66 17.66 1.41 1.41" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="m19.07 4.93-1.41 1.41" />
+      <path d="m6.34 17.66-1.41 1.41" />
+    </svg>
+  )
 }

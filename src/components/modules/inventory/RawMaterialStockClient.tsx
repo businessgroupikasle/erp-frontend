@@ -18,12 +18,13 @@ export default function RawMaterialStockClient() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("ALL");
   const [sourceFilter, setSourceFilter] = useState("ALL");
+  const [showInactive, setShowInactive] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await inventoryApi.getInventory();
+      const res = await rawMaterialsApi.getAll(showInactive);
       setItems(res.data ?? []);
     } catch (e) {
       console.error("Failed to fetch inventory:", e);
@@ -32,16 +33,45 @@ export default function RawMaterialStockClient() {
     }
   }, []);
 
-  useEffect(() => { fetchItems(); }, [fetchItems]);
+  useEffect(() => { fetchItems(); }, [fetchItems, showInactive]);
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-    setDeleteError(null);
+  const handleDeactivate = async (id: string, name: string) => {
+    if (!confirm(`Archive "${name}"? It will be hidden from main lists but history will be preserved.`)) return;
     try {
+      await rawMaterialsApi.deactivate(id);
+      fetchItems();
+    } catch (e: any) {
+      setDeleteError(e?.response?.data?.error || "Failed to deactivate item.");
+    }
+  };
+
+  const handleActivate = async (id: string) => {
+    try {
+      await rawMaterialsApi.activate(id);
+      fetchItems();
+    } catch (e: any) {
+      setDeleteError(e?.response?.data?.error || "Failed to reactivate item.");
+    }
+  };
+
+  const handleDelete = async (item: any) => {
+    const { id, name } = item;
+    setDeleteError(null);
+
+    try {
+      // First try to delete
       await rawMaterialsApi.delete(id);
       fetchItems();
     } catch (e: any) {
-      setDeleteError(e?.response?.data?.error ?? "Cannot delete — item may have stock history or linked purchase orders.");
+       const serverError = e?.response?.data?.error;
+       if (serverError && serverError.includes("history")) {
+         // If history exists, offer deactivation
+         if (confirm(`${name} has stock history and cannot be deleted permanently.\n\nWould you like to MARK AS INACTIVE instead? (It will be hidden but safe for audits)`)) {
+           handleDeactivate(id, name);
+         }
+       } else {
+         setDeleteError(serverError ?? "Delete failed.");
+       }
     }
   };
 
@@ -136,6 +166,15 @@ export default function RawMaterialStockClient() {
                   </button>
                ))}
             </div>
+
+            <button 
+              onClick={() => setShowInactive(!showInactive)}
+              className={clsx("flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all", 
+                showInactive ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-400 border-slate-100 hover:border-slate-200")}
+            >
+              <Lock size={12} className={showInactive ? "text-orange-500" : "text-slate-300"} />
+              {showInactive ? "Viewing All (Inc. Archived)" : "Active Only"}
+            </button>
          </div>
 
          <div className="relative group w-full">
@@ -201,7 +240,11 @@ export default function RawMaterialStockClient() {
               <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-white/5">
                 <div className="flex gap-2">
                   <Link href={`/inventory/stock/edit?id=${item.id}`} className="p-2.5 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-xl"><Edit2 size={14} /></Link>
-                  <button onClick={() => handleDelete(item.id, item.name)} className="p-2.5 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl"><Trash2 size={14} /></button>
+                  {item.isActive ? (
+                    <button onClick={() => handleDelete(item)} className="p-2.5 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl"><Trash2 size={14} /></button>
+                  ) : (
+                    <button onClick={() => handleActivate(item.id)} className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-[8px] font-black uppercase tracking-widest uppercase">Activate</button>
+                  )}
                 </div>
               </div>
             </div>
@@ -315,7 +358,11 @@ export default function RawMaterialStockClient() {
                       <td className="px-10 py-6 text-right">
                          <div className="flex justify-end gap-2">
                             <Link href={`/inventory/stock/edit?id=${item.id}`} className="p-2 bg-slate-50 dark:bg-white/5 text-slate-400 rounded-2xl hover:bg-slate-900 dark:hover:bg-white hover:text-white dark:hover:text-slate-900 transition-all border border-slate-100 dark:border-white/5"><Edit2 size={14} /></Link>
-                            <button onClick={() => handleDelete(item.id, item.name)} className="p-2 bg-red-50 dark:bg-red-500/10 text-red-400 rounded-2xl hover:bg-red-500 hover:text-white transition-all border border-red-100 dark:border-red-500/20"><Trash2 size={14} /></button>
+                            {item.isActive ? (
+                               <button onClick={() => handleDelete(item)} className="p-2 bg-red-50 dark:bg-red-500/10 text-red-400 rounded-2xl hover:bg-red-500 hover:text-white transition-all border border-red-100 dark:border-red-500/20"><Trash2 size={14} /></button>
+                            ) : (
+                               <button onClick={() => handleActivate(item.id)} className="px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-2xl hover:bg-emerald-500 hover:text-white transition-all text-[9px] font-black uppercase tracking-widest">Restore</button>
+                            )}
                          </div>
                       </td>
                     </tr>

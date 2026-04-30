@@ -148,7 +148,7 @@ export default function GSTInvoice({ order, vendor, companyDetails, onClose }: G
                 </p>
                 <div className="flex flex-col md:items-end gap-1">
                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">
-                     Date: {new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                     Date: {new Date(order.createdAt || Date.now()).toLocaleDateString('en-GB')}
                    </p>
                    <div className={clsx(
                      "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
@@ -339,7 +339,7 @@ export default function GSTInvoice({ order, vendor, companyDetails, onClose }: G
            <div className="flex items-center gap-3">
               <Clock size={14} className="text-slate-400" />
               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">
-                Generated on {new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                Generated on {new Date().toLocaleDateString('en-GB')} {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
               </p>
            </div>
            <p className="text-[9px] text-slate-400/70 font-medium italic tracking-wide">

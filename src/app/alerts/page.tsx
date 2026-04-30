@@ -34,18 +34,7 @@ interface Alert {
   actionHref?: string;
 }
 
-const INITIAL_ALERTS: Alert[] = [
-  { id: "1",  type: "inventory",  severity: "critical", title: "Critical: Dry Red Chilli Stock Very Low",    message: "Dry Red Chilli at 12 kg remaining. Minimum threshold is 50 kg. Reorder from Spice Valley Suppliers immediately.", time: "5 min ago",  read: false, actionLabel: "Reorder", actionHref: "/purchases" },
-  { id: "2",  type: "order",      severity: "warning",  title: "Franchise Order #B-204 Delayed",             message: "Wholesale order for Zone B is 40 minutes behind dispatch schedule.",               time: "8 min ago",  read: false, actionLabel: "View Order", actionHref: "/franchise/requests" },
-  { id: "3",  type: "inventory",  severity: "warning",  title: "Urad Dal Running Low",                       message: "Urad Dal at 80 kg. Minimum is 100 kg. Batter production will be affected. Restock before next batch.",        time: "12 min ago", read: false, actionLabel: "Reorder", actionHref: "/purchases" },
-  { id: "4",  type: "dispatch",   severity: "success",  title: "Daily Dispatch Target Achieved!",            message: "Today's dispatch value hit ₹1,20,000 target. Current total: ₹1,28,750. All franchises performing well.",        time: "1h ago",     read: false },
-  { id: "5",  type: "inventory",  severity: "warning",  title: "Glass Jars (500g) Low",                      message: "Glass jars at 380 pcs. Minimum threshold: 400 pcs. Pickle packing will be delayed if not restocked.",         time: "2h ago",     read: true,  actionLabel: "Reorder", actionHref: "/purchases" },
-  { id: "6",  type: "payment",    severity: "warning",  title: "Unusual Discount on Wholesale Order",        message: "35% discount applied to Wholesale Order #W-112 (₹4,200 waived) by user: sales01. Please verify.",            time: "2h ago",     read: true,  actionLabel: "Review", actionHref: "/reports" },
-  { id: "7",  type: "order",      severity: "info",     title: "Franchise B Restock Request Pending",        message: "Distribution Centre B has placed a stock request for 200kg Chilli Powder and 150L Groundnut Oil. Approve now.", time: "3h ago",     read: true,  actionLabel: "Approve", actionHref: "/franchise" },
-  { id: "8",  type: "system",     severity: "info",     title: "Billing Module Sync Restored",               message: "POS billing module reconnected after brief server interruption at 3:12 PM. All data is in sync.",       time: "4h ago",     read: true  },
-  { id: "9",  type: "inventory",  severity: "critical", title: "PET Bottles (500ml) Almost Empty",           message: "PET bottles at 210 pcs. Minimum is 500 pcs. Oil bottling line will halt without immediate restock.",           time: "4h ago",     read: true,  actionLabel: "Reorder", actionHref: "/purchases" },
-  { id: "10", type: "order",      severity: "success",  title: "Mango Pickle Order Record",                  message: "Raw Mango Pickle 500g sold 340 units this week — new weekly record! Previous record was 280 units.",           time: "5h ago",     read: true  },
-];
+const INITIAL_ALERTS: Alert[] = [];
 
 const TYPE_CONFIG: Record<AlertType, { label: string; icon: any; color: string; bg: string }> = {
   inventory: { label: "Inventory", icon: Package,      color: "text-orange-500",  bg: "bg-orange-50 dark:bg-orange-900/20" },

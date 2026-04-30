@@ -29,14 +29,7 @@ interface WasteEntry {
 
 const REASONS = ["Spoilage / Expired", "Overcooked / Burnt", "Over-preparation", "Customer Return", "Contamination", "Storage Error", "Other"];
 
-const INITIAL_WASTE: WasteEntry[] = [
-  { id: "1", date: "2026-04-17", item: "Chicken",        emoji: "🍗", qty: 1.5,  unit: "kg",     reason: "Spoilage / Expired",   cost: 360, recordedBy: "Chef Ramesh" },
-  { id: "2", date: "2026-04-17", item: "Biryani Rice",   emoji: "🍚", qty: 2,    unit: "kg",     reason: "Over-preparation",     cost: 120, recordedBy: "Chef Ramesh" },
-  { id: "3", date: "2026-04-16", item: "Paneer",         emoji: "🧀", qty: 0.8,  unit: "kg",     reason: "Storage Error",        cost: 280, recordedBy: "Chef Suresh" },
-  { id: "4", date: "2026-04-16", item: "Dosa Batter",    emoji: "🥘", qty: 3,    unit: "litres", reason: "Spoilage / Expired",   cost: 90,  recordedBy: "Chef Ramesh" },
-  { id: "5", date: "2026-04-15", item: "Chicken Curry",  emoji: "🍛", qty: 2,    unit: "plates", reason: "Customer Return",      cost: 560, recordedBy: "Chef Suresh" },
-  { id: "6", date: "2026-04-15", item: "Cooking Oil",    emoji: "🫙", qty: 1,    unit: "litre",  reason: "Contamination",        cost: 150, recordedBy: "Chef Ramesh" },
-];
+const INITIAL_WASTE: WasteEntry[] = [];
 
 const REASON_COLORS: Record<string, string> = {
   "Spoilage / Expired":   "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400",

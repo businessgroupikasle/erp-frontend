@@ -227,11 +227,6 @@ export default function GRNPage() {
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Items Received</p>
                           <p className="text-sm font-black text-slate-900 dark:text-white">{grn.items?.length || 0} SKUs</p>
                         </div>
-                        <button 
-                          className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl hover:bg-slate-900 dark:hover:bg-white hover:text-white dark:hover:text-slate-900 transition-all text-slate-400"
-                        >
-                          <ArrowRight size={18} />
-                        </button>
                       </div>
                     </div>
 

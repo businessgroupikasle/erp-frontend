@@ -214,7 +214,7 @@ export default function Dashboard() {
             </div>
             <div>
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Inventory Stock</p>
-                <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">1.2k SKU</div>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">{stats?.inventoryCount ?? '0'} SKU</div>
             </div>
         </div>
 

@@ -197,7 +197,7 @@ export const vendorsApi = {
   create: (data: any) => api.post('/api/vendors', data),
   update: (id: string, data: any) => api.patch(`/api/vendors/${id}`, data),
   delete: (id: string) => api.delete(`/api/vendors/${id}`),
-  linkMaterial: (data: { vendorId: string; materialId: string; price: number }) =>
+  linkMaterial: (data: { vendorId: string; materialId: string; price: number; quantity: number }) =>
     api.post('/api/vendors/link-material', data),
   getLedger: (id: string, params: any = {}) => api.get(`/api/vendors/${id}/ledger`, { params }),
   recordPayment: (id: string, data: { amount: number; note: string; paymentMode?: string; referenceId?: string }) => api.post(`/api/vendors/${id}/payment`, data),
@@ -213,7 +213,8 @@ export const purchaseOrdersApi = {
     advancePaid?: number; 
     expectedDeliveryDate?: string;
     notes?: string;
-    items: { inventoryItemId: string; quantity: number; price: number }[] 
+    items: { inventoryItemId: string; quantity: number; price: number; hsnCode?: string; gstRate?: number }[];
+    manualTax?: { cgst: number, sgst: number, igst: number };
   }) => api.post('/api/purchase-orders', data),
   receive: (id: string) => api.post(`/api/purchase-orders/${id}/receive`),
   recordAdvance: (id: string, advancePaid: number) =>
@@ -226,10 +227,12 @@ export const purchaseOrdersApi = {
 
 // --- Raw Materials ---
 export const rawMaterialsApi = {
-  getAll: () => api.get('/api/raw-materials'),
+  getAll: (includeInactive = false) => api.get('/api/raw-materials', { params: { includeInactive } }),
   getById: (id: string) => api.get(`/api/raw-materials/${id}`),
   create: (data: any) => api.post('/api/raw-materials', data),
   update: (id: string, data: any) => api.patch(`/api/raw-materials/${id}`, data),
+  deactivate: (id: string) => api.patch(`/api/raw-materials/${id}/deactivate`),
+  activate: (id: string) => api.patch(`/api/raw-materials/${id}/activate`),
   delete: (id: string) => api.delete(`/api/raw-materials/${id}`),
 };
 
