@@ -478,9 +478,13 @@ export default function PurchaseOrdersClient() {
                         {materials
                           .filter(m => {
                             if (!vendorId) return true;
-                            const isSupplied = selectedVendor?.suppliedMaterials?.some((sm: any) => sm.materialId === m.id);
-                            const isPrimary = m.vendorId === vendorId;
-                            return isSupplied || isPrimary;
+                            const vendorMaterials = selectedVendor?.suppliedMaterials ?? [];
+                            // If vendor has no linked materials recorded, show all materials
+                            if (vendorMaterials.length === 0) return true;
+                            const isSupplied = vendorMaterials.some(
+                              (sm: any) => sm.materialId === m.id || sm.material?.id === m.id
+                            );
+                            return isSupplied || m.vendorId === vendorId;
                           })
                           .map(m => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)
                         }

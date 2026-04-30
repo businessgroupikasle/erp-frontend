@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Store, Plus, X, Search,
   Star, RefreshCw, ShoppingCart, Edit2, Trash2,
@@ -49,6 +49,21 @@ export default function VendorsClient() {
 
   const [linkModal, setLinkModal] = useState<any>(null);
   const [linkData, setLinkData]   = useState({ materialId: "", price: "", quantity: "", isNew: false, newName: "", newUnit: "kg" });
+
+  // Merge materials from API + materials embedded in vendors' suppliedMaterials so the
+  // "Existing" dropdown is never empty even if rawMaterialsApi.getAll() returns nothing.
+  const allKnownMaterials = useMemo(() => {
+    const seen = new Set<string>();
+    const result: any[] = [];
+    materials.forEach(m => { if (!seen.has(m.id)) { seen.add(m.id); result.push(m); } });
+    vendors.forEach(v => {
+      (v.suppliedMaterials || []).forEach((sm: any) => {
+        const m = sm.material;
+        if (m && !seen.has(m.id)) { seen.add(m.id); result.push(m); }
+      });
+    });
+    return result;
+  }, [materials, vendors]);
 
   const [confirmModal, setConfirmModal] = useState<{ show: boolean, vendor: any } | null>(null);
   const [errorMessage, setErrorMessage] = useState<{ title: string; message: string } | null>(null);
@@ -506,16 +521,22 @@ export default function VendorsClient() {
                     ) : (
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Select Material</label>
-                        <select 
-                          value={linkData.materialId} 
+                        <select
+                          value={linkData.materialId}
                           onChange={(e) => setLinkData({ ...linkData, materialId: e.target.value })}
                           className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none appearance-none cursor-pointer"
                         >
                             <option value="">Choose Material...</option>
-                            {materials.map(m => (
-                              <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
-                            ))}
+                            {allKnownMaterials
+                              .filter(m => !(linkModal?.suppliedMaterials || []).some((sm: any) => sm.materialId === m.id || sm.material?.id === m.id))
+                              .map(m => (
+                                <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                              ))
+                            }
                         </select>
+                        {allKnownMaterials.filter(m => !(linkModal?.suppliedMaterials || []).some((sm: any) => sm.materialId === m.id || sm.material?.id === m.id)).length === 0 && (
+                          <p className="text-[10px] text-slate-400 italic ml-1">All materials are already linked to this vendor.</p>
+                        )}
                       </div>
                     )}
                   </>
@@ -631,13 +652,13 @@ export default function VendorsClient() {
                 ) : (
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Select Material</label>
-                    <select 
-                      value={linkData.materialId} 
+                    <select
+                      value={linkData.materialId}
                       onChange={(e) => setLinkData({ ...linkData, materialId: e.target.value })}
                       className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-semibold outline-none"
                     >
                         <option value="">Select an option...</option>
-                        {materials.map(m => (
+                        {allKnownMaterials.map(m => (
                           <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
                         ))}
                     </select>
