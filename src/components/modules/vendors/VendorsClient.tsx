@@ -180,17 +180,10 @@ export default function VendorsClient() {
         const res = await rawMaterialsApi.create({ 
           name: linkData.newName, 
           unit: linkData.newUnit,
-          initialStock: qty,
+          initialStock: 0,
           franchiseId: user?.franchiseId || "hq-001"
         });
         finalMaterialId = res.data.id;
-      } else if (!linkData.isNew && finalMaterialId && qty > 0) {
-        await inventoryApi.stockIn({
-          itemId: finalMaterialId,
-          quantity: qty,
-          type: "PURCHASE_IN",
-          note: `Initial Linked Material during Vendor Creation`
-        });
       }
 
       if (finalMaterialId) {
@@ -198,7 +191,7 @@ export default function VendorsClient() {
           vendorId: newVendorId,
           materialId: finalMaterialId,
           price: Number(linkData.price) || 0,
-          quantity: qty
+          quantity: Number(linkData.quantity) || 0
         });
       }
 
@@ -266,18 +259,10 @@ export default function VendorsClient() {
         const res = await rawMaterialsApi.create({ 
           name: linkData.newName, 
           unit: linkData.newUnit,
-          initialStock: qty,
+          initialStock: 0, // Linking doesn't mean purchasing
           franchiseId: user?.franchiseId || "hq-001"
         });
         finalMaterialId = res.data.id;
-      } else if (qty > 0 && !linkEditing) {
-        // Only stock-in if we are linking for the first time, not editing an existing link
-        await inventoryApi.stockIn({
-          itemId: finalMaterialId,
-          quantity: qty,
-          type: "PURCHASE_IN",
-          note: `Linked to Vendor: ${linkModal.name}`
-        });
       }
 
       await vendorsApi.linkMaterial({

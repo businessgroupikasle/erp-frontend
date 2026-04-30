@@ -201,7 +201,16 @@ export const vendorsApi = {
     api.post('/api/vendors/link-material', data),
   getLedger: (id: string, params: any = {}) => api.get(`/api/vendors/${id}/ledger`, { params }),
   recordPayment: (id: string, data: { amount: number; note: string; paymentMode?: string; referenceId?: string }) => api.post(`/api/vendors/${id}/payment`, data),
-  recordAdjustment: (id: string, data: { amount: number; type: 'CREDIT' | 'DEBIT'; note: string; referenceType?: string }) => api.post(`/api/vendors/${id}/adjustment`, data),
+  recordAdjustment: (id: string, data: { amount: number; type: 'CREDIT' | 'DEBIT'; note: string; referenceType?: string, referenceId?: string }) => api.post(`/api/vendors/${id}/adjustment`, data),
+};
+
+// --- Purchase Returns ---
+export const purchaseReturnsApi = {
+  getAll: (params: any = {}) => api.get('/api/purchase/returns', { params }),
+  create: (data: { vendorId: string; reason: string; items: any[] }) =>
+    api.post('/api/purchase/returns', data),
+  updateStatus: (id: string, status: string) =>
+    api.patch(`/api/purchase/returns/${id}`, { status }),
 };
 
 // --- Purchase Orders (with advance/balance tracking) ---

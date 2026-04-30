@@ -62,8 +62,12 @@ export default function PurchaseOrdersClient() {
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<POItem[]>([{ inventoryItemId: "", itemName: "", unit: "kg", quantity: 0, price: 0, hsnCode: "", gstRate: 5 }]);
   const [companyProfile, setCompanyProfile] = useState<any>(null);
-  const [editingProfile, setEditingProfile] = useState<any>(null);
+  const EMPTY_PROFILE = { name: "", gstin: "", address: "", phone: "", email: "", state: "" };
+  const [editingProfile, setEditingProfile] = useState<any>(EMPTY_PROFILE);
   const [showSettings, setShowSettings] = useState(false);
+  const [profileRequiredForInvoice, setProfileRequiredForInvoice] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [viewDate, setViewDate] = useState(new Date());
 
@@ -85,7 +89,7 @@ export default function PurchaseOrdersClient() {
   const [customSgst, setCustomSgst] = useState<number>(0);
   const [customIgst, setCustomIgst] = useState<number>(0);
 
-  const isProfileComplete = companyProfile && companyProfile.gstin && companyProfile.address;
+  const isProfileComplete = !!(companyProfile?.name && companyProfile?.gstin && companyProfile?.address);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -102,6 +106,8 @@ export default function PurchaseOrdersClient() {
       if (cpRes.data) {
         setCompanyProfile(cpRes.data);
         setEditingProfile(cpRes.data);
+      } else {
+        setEditingProfile({ name: "", gstin: "", address: "", phone: "", email: "", state: "" });
       }
     } catch (e) {
       console.error(e);
@@ -192,6 +198,56 @@ export default function PurchaseOrdersClient() {
   const availableAdvance = Math.max(0, selectedVendor?.balance ?? 0);
   const autoApplied = Math.min(availableAdvance, grandTotal);
   const balanceDue = Math.max(0, grandTotal - autoApplied);
+
+  const handleSaveProfile = async () => {
+    const errors: Record<string, string> = {};
+    const p = editingProfile;
+
+    if (!p.name?.trim()) errors.name = "Company name is required.";
+    if (!p.gstin?.trim()) {
+      errors.gstin = "GSTIN is required.";
+    } else if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(p.gstin.trim())) {
+      errors.gstin = "Invalid GSTIN — must be 15 characters (e.g. 22AAAAA0000A1Z5).";
+    }
+    if (!p.address?.trim()) errors.address = "Address is required.";
+    if (!p.phone?.trim()) {
+      errors.phone = "Phone number is required.";
+    } else if (!/^\d{10}$/.test(p.phone.trim())) {
+      errors.phone = "Phone must be exactly 10 digits.";
+    }
+    if (!p.state?.trim()) errors.state = "State is required.";
+    if (p.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email.trim())) {
+      errors.email = "Enter a valid email address.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setProfileErrors(errors);
+      return;
+    }
+
+    setProfileSaving(true);
+    try {
+      const res = await settingsApi.updateCompanyProfile({
+        ...p,
+        name: p.name.trim(),
+        gstin: p.gstin.trim().toUpperCase(),
+        address: p.address.trim(),
+        phone: p.phone.trim(),
+        email: p.email?.trim() || null,
+        state: p.state.trim(),
+      });
+      setCompanyProfile(res.data);
+      setEditingProfile(res.data);
+      setProfileErrors({});
+      setShowSettings(false);
+      setProfileRequiredForInvoice(false);
+    } catch (e: any) {
+      const msg = e?.response?.data?.error || e?.response?.data?.message || "Failed to save profile. Please try again.";
+      setProfileErrors({ _api: msg });
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   const handleCreate = async () => {
     if (!vendorId || items.some((it) => !it.inventoryItemId || it.quantity <= 0 || it.price <= 0)) return;
@@ -351,7 +407,24 @@ export default function PurchaseOrdersClient() {
 
               <div className="mt-4 flex gap-2">
                 {balance > 0 && <button onClick={() => { setPayingPO(po); setPaymentAmount(balance); setShowPaymentModal(true); }} className="px-4 py-2 bg-orange-100 text-orange-600 rounded-xl text-[12px] font-bold">Pay Balance</button>}
-                <button onClick={() => setViewingPO(po)} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[12px] font-black">View GST Invoice</button>
+                <button
+                  onClick={() => {
+                    if (!isProfileComplete) {
+                      setProfileRequiredForInvoice(true);
+                      setShowSettings(true);
+                      return;
+                    }
+                    setViewingPO(po);
+                  }}
+                  className={clsx(
+                    "px-4 py-2 rounded-xl text-[12px] font-black",
+                    isProfileComplete
+                      ? "bg-indigo-50 text-indigo-600"
+                      : "bg-amber-50 text-amber-700 border border-amber-200"
+                  )}
+                >
+                  {isProfileComplete ? "View GST Invoice" : "Setup Profile for Invoice"}
+                </button>
                 {po.status === "PENDING" && <button onClick={() => handleCancel(po.id)} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-[12px] font-bold">Cancel</button>}
               </div>
             </div>
@@ -749,49 +822,134 @@ export default function PurchaseOrdersClient() {
 
       {showSettings && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-           <div className="bg-white dark:bg-[#0f1117] w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/5 overflow-hidden">
-              <div className="p-8">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                      <Cog size={22} className="text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Company Profile</h2>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Required for GST Invoices</p>
-                    </div>
+          <div className="bg-white dark:bg-[#0f1117] w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/5 overflow-hidden">
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <Cog size={22} className="text-white" />
                   </div>
-                  <button onClick={() => setShowSettings(false)} className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-400"><X size={18} /></button>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Company Profile</h2>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Required for GST Invoices</p>
+                  </div>
+                </div>
+                <button onClick={() => { setShowSettings(false); setProfileRequiredForInvoice(false); setProfileErrors({}); }} className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-400"><X size={18} /></button>
+              </div>
+
+              {profileRequiredForInvoice && !profileErrors._api && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-800 font-semibold">
+                  Complete your company profile to generate GST Invoices. Fields marked * are required.
+                </div>
+              )}
+
+              {profileErrors._api && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-300 rounded-xl text-xs text-red-700 font-semibold">
+                  {profileErrors._api}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                      Company Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editingProfile.name}
+                      placeholder="My Restaurant"
+                      onChange={(e) => { setEditingProfile({...editingProfile, name: e.target.value}); setProfileErrors({...profileErrors, name: ""}); }}
+                      className={clsx("w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border", profileErrors.name ? "border-red-400 focus:ring-red-200" : "border-slate-200 dark:border-white/10")}
+                    />
+                    {profileErrors.name && <p className="text-[10px] text-red-500 ml-1 mt-0.5">{profileErrors.name}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                      GSTIN <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editingProfile.gstin}
+                      placeholder="22AAAAA0000A1Z5"
+                      maxLength={15}
+                      onChange={(e) => { setEditingProfile({...editingProfile, gstin: e.target.value.toUpperCase()}); setProfileErrors({...profileErrors, gstin: ""}); }}
+                      className={clsx("w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border font-mono tracking-widest", profileErrors.gstin ? "border-red-400" : "border-slate-200 dark:border-white/10")}
+                    />
+                    {profileErrors.gstin && <p className="text-[10px] text-red-500 ml-1 mt-0.5">{profileErrors.gstin}</p>}
+                  </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Name</label><input type="text" value={editingProfile.name} onChange={(e) => setEditingProfile({...editingProfile, name: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border border-slate-200 dark:border-white/10" /></div>
-                    <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">GSTIN</label><input type="text" value={editingProfile.gstin} onChange={(e) => setEditingProfile({...editingProfile, gstin: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border border-slate-200 dark:border-white/10" /></div>
-                  </div>
-                  <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Address</label><textarea value={editingProfile.address} onChange={(e) => setEditingProfile({...editingProfile, address: e.target.value})} className="w-full h-20 bg-slate-50 dark:bg-white/5 p-4 rounded-xl font-bold text-xs border border-slate-200 dark:border-white/10 resize-none" /></div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone</label><input type="text" value={editingProfile.phone} onChange={(e) => setEditingProfile({...editingProfile, phone: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border border-slate-200 dark:border-white/10" /></div>
-                    <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label><input type="email" value={editingProfile.email} onChange={(e) => setEditingProfile({...editingProfile, email: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border border-slate-200 dark:border-white/10" /></div>
-                  </div>
-                  <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">State</label><input type="text" value={editingProfile.state} onChange={(e) => setEditingProfile({...editingProfile, state: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border border-slate-200 dark:border-white/10" /></div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                    Address <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={editingProfile.address}
+                    placeholder="Full registered address..."
+                    onChange={(e) => { setEditingProfile({...editingProfile, address: e.target.value}); setProfileErrors({...profileErrors, address: ""}); }}
+                    className={clsx("w-full h-20 bg-slate-50 dark:bg-white/5 p-4 rounded-xl font-bold text-xs border resize-none", profileErrors.address ? "border-red-400" : "border-slate-200 dark:border-white/10")}
+                  />
+                  {profileErrors.address && <p className="text-[10px] text-red-500 ml-1 mt-0.5">{profileErrors.address}</p>}
                 </div>
 
-                <div className="mt-8 flex gap-3">
-                  <button onClick={() => setShowSettings(false)} className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Cancel</button>
-                  <button 
-                    onClick={async () => {
-                      try {
-                        const res = await settingsApi.updateCompanyProfile(editingProfile);
-                        setCompanyProfile(res.data);
-                        setShowSettings(false);
-                      } catch (e) { alert("Failed to update profile"); }
-                    }} 
-                    className="flex-[2] py-4 bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20"
-                  >Save Changes</button>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                      Phone <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editingProfile.phone}
+                      placeholder="10-digit mobile"
+                      maxLength={10}
+                      onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 10); setEditingProfile({...editingProfile, phone: v}); setProfileErrors({...profileErrors, phone: ""}); }}
+                      className={clsx("w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border", profileErrors.phone ? "border-red-400" : "border-slate-200 dark:border-white/10")}
+                    />
+                    {profileErrors.phone && <p className="text-[10px] text-red-500 ml-1 mt-0.5">{profileErrors.phone}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
+                    <input
+                      type="email"
+                      value={editingProfile.email}
+                      placeholder="optional@company.com"
+                      onChange={(e) => { setEditingProfile({...editingProfile, email: e.target.value}); setProfileErrors({...profileErrors, email: ""}); }}
+                      className={clsx("w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border", profileErrors.email ? "border-red-400" : "border-slate-200 dark:border-white/10")}
+                    />
+                    {profileErrors.email && <p className="text-[10px] text-red-500 ml-1 mt-0.5">{profileErrors.email}</p>}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                    State <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editingProfile.state}
+                    placeholder="Tamil Nadu"
+                    onChange={(e) => { setEditingProfile({...editingProfile, state: e.target.value}); setProfileErrors({...profileErrors, state: ""}); }}
+                    className={clsx("w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border", profileErrors.state ? "border-red-400" : "border-slate-200 dark:border-white/10")}
+                  />
+                  {profileErrors.state && <p className="text-[10px] text-red-500 ml-1 mt-0.5">{profileErrors.state}</p>}
                 </div>
               </div>
-           </div>
+
+              <div className="mt-8 flex gap-3">
+                <button onClick={() => { setShowSettings(false); setProfileRequiredForInvoice(false); setProfileErrors({}); }} className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Cancel</button>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={profileSaving}
+                  className="flex-[2] py-4 bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {profileSaving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
