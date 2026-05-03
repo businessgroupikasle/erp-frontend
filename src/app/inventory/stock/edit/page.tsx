@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import { 
-  ArrowLeft, Save, Trash2, Info, 
+  ArrowLeft, Save, Trash2, Info, X,
   Sparkles, ChevronDown, 
   AlertCircle, CheckCircle2,
-  Layers, Package, Scale
+  Layers, Package, Scale, Lock
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { rawMaterialsApi, inventoryApi } from "@/lib/api";
 import { ITEM_CATEGORIES, UNITS } from "@/lib/constants";
+import { clsx } from "clsx";
+import { PREDEFINED_SIZES, getCategoryDefaults, generateSKU } from "@/lib/utils/erp";
 
 function EditMaterialForm() {
   const router = useRouter();
@@ -20,6 +22,8 @@ function EditMaterialForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState<string | null>(null);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [sourceType, setSourceType] = useState<"VENDOR" | "DIRECT">("DIRECT");
   
   const [form, setForm] = useState({
     name: "",
@@ -27,7 +31,17 @@ function EditMaterialForm() {
     unit: "kg",
     minimumStock: 10,
     category: "RAW_MATERIAL",
+    hsnCode: "",
+    gstRate: 0,
+    vendorId: "",
+    currentStock: 0,
+    isActive: true,
   });
+
+  const [size, setSize] = useState("1KG");
+  
+  const prevCategory = useRef(form.category);
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     if (!id) {
@@ -36,27 +50,63 @@ function EditMaterialForm() {
       return;
     }
 
-    const fetchMaterial = async () => {
+    const fetchData = async () => {
       try {
-        const res = await inventoryApi.getItem(id as string);
-        const m = res.data;
+        const [matRes, vendRes] = await Promise.all([
+          inventoryApi.getItem(id as string),
+          import("@/lib/api").then(api => api.vendorsApi.getAll())
+        ]);
+
+        const m = matRes.data;
+        setVendors(vendRes.data);
+        setSourceType(m.vendorId ? "VENDOR" : "DIRECT");
+        
+
+        let initialSize = "1KG";
+        if (m.sku) {
+           const parts = m.sku.split('-');
+           if (parts.length >= 2) initialSize = parts[parts.length - 1];
+        }
+        setSize(initialSize);
+
         setForm({
           name: m.name,
           sku: m.sku ?? "",
           unit: m.unit ?? "kg",
           minimumStock: m.minimumStock ?? 10,
           category: m.category ?? "RAW_MATERIAL",
+          hsnCode: m.hsnCode ?? "",
+          gstRate: m.gstRate ?? 5,
+          vendorId: m.vendorId ?? "",
+          currentStock: m.currentStock ?? 0,
+          isActive: m.isActive ?? true,
         });
       } catch (e: any) {
         console.error(e);
         const msg = e.response?.data?.error || e.response?.data?.message || e.message;
-        setError(`Failed to fetch material details: ${msg}`);
+        setError(`Failed to fetch details: ${msg}`);
       } finally {
         setLoading(false);
+        setTimeout(() => { isInitialLoad.current = false; }, 500);
       }
     };
-    fetchMaterial();
+    fetchData();
   }, [id]);
+
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+    if (form.category !== prevCategory.current) {
+      const defs = getCategoryDefaults(form.category);
+      setForm((f) => ({ ...f, hsnCode: defs.hsnCode, gstRate: defs.taxPercent }));
+      prevCategory.current = form.category;
+    }
+  }, [form.category]);
+
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+    const sku = generateSKU(form.category, form.name, size);
+    setForm((f) => ({ ...f, sku }));
+  }, [form.category, form.name, size]);
 
   const handleSave = async () => {
     if (!id) return;
@@ -64,15 +114,53 @@ function EditMaterialForm() {
       setError("Material name is required");
       return;
     }
+    if (sourceType === "VENDOR" && !form.vendorId) {
+      setError("Please select a vendor or switch to Direct Stock.");
+      return;
+    }
+    if (form.gstRate > 0 && !form.hsnCode) {
+      setError("HSN Code is required when GST > 0");
+      return;
+    }
 
     setSaving(true);
     setError(null);
     try {
-      await rawMaterialsApi.update(id as string, form);
+      const { currentStock, ...updateData } = form;
+      await rawMaterialsApi.update(id as string, {
+        ...updateData,
+        vendorId: sourceType === "VENDOR" ? form.vendorId : null,
+      });
       router.push("/inventory/stock");
     } catch (e: any) {
       console.error(e);
-      setError(e.response?.data?.message || "Failed to update material. Please try again.");
+      setError(e.response?.data?.error || e.response?.data?.message || "Failed to update material. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    if (!id || !confirm(`Mark ${form.name} as INACTIVE? This will hide it from active lists but keep history safe.`)) return;
+    setSaving(true);
+    try {
+      await rawMaterialsApi.deactivate(id as string);
+      router.push("/inventory/stock");
+    } catch (e: any) {
+      setError(e.response?.data?.error || "Failed to deactivate material");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleActivate = async () => {
+    if (!id) return;
+    setSaving(true);
+    try {
+      await rawMaterialsApi.activate(id as string);
+      setForm(f => ({ ...f, isActive: true }));
+    } catch (e: any) {
+      setError(e.response?.data?.error || "Failed to reactivate material");
     } finally {
       setSaving(false);
     }
@@ -80,13 +168,23 @@ function EditMaterialForm() {
 
   const handleDelete = async () => {
     if (!id) return;
-    if (!confirm("Are you sure you want to delete this material record? This action cannot be undone if there are no movements.")) return;
+    if (!confirm("Are you sure you want to delete this material record? This action cannot be undone.")) return;
+    setSaving(true);
+    setError(null);
     try {
       await rawMaterialsApi.delete(id as string);
       router.push("/inventory/stock");
     } catch (e: any) {
-      console.error(e);
-      setError(e.response?.data?.error || "Failed to delete material. Ensure it has no stock history.");
+      const serverError = e?.response?.data?.error;
+      if (serverError && serverError.includes("history")) {
+         if (confirm(`${form.name} has recorded stock history and cannot be deleted permanently.\n\nWould you like to MARK AS INACTIVE instead?`)) {
+            await handleDeactivate();
+         }
+      } else {
+        setError(serverError || "Failed to delete material.");
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -161,12 +259,50 @@ function EditMaterialForm() {
         {/* Main Configuration */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white dark:bg-card rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-sm">
-            <div className="flex items-center gap-2 mb-6 text-gray-400">
-              <Layers size={16} />
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em]">Material Definition</h2>
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2 text-gray-400">
+                <Layers size={16} />
+                <h2 className="text-[10px] font-black uppercase tracking-[0.2em]">Material Sourcing</h2>
+              </div>
+              <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
+                <button 
+                  onClick={() => setSourceType("DIRECT")}
+                  className={clsx("px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", 
+                    sourceType === "DIRECT" ? "bg-white dark:bg-slate-800 text-blue-500 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+                >
+                  Direct Stock
+                </button>
+                <button 
+                  onClick={() => setSourceType("VENDOR")}
+                  className={clsx("px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", 
+                    sourceType === "VENDOR" ? "bg-white dark:bg-slate-800 text-purple-500 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+                >
+                  From Vendor
+                </button>
+              </div>
             </div>
-            
+
             <div className="space-y-6">
+              {sourceType === "VENDOR" && (
+                <div className="p-6 bg-purple-500/5 border border-purple-500/10 rounded-3xl space-y-4 animate-in slide-in-from-top-2 mb-6">
+                   <label className="block text-[11px] font-black text-purple-500 uppercase tracking-widest ml-1">Link Registered Vendor *</label>
+                   <div className="relative">
+                      <select 
+                        value={form.vendorId} 
+                        onChange={(e) => setForm((f) => ({ ...f, vendorId: e.target.value }))}
+                        className="w-full appearance-none bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-purple-500/10 dark:text-white transition-all shadow-sm"
+                      >
+                        <option value="">Select Vendor</option>
+                        {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                      </select>
+                      <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-purple-300 pointer-events-none" />
+                   </div>
+                   <p className="text-[10px] font-bold text-purple-400 uppercase tracking-tight flex items-center gap-1.5 ml-1">
+                      <Sparkles size={12} /> Resource sourcing affects procurement history and GRN automation.
+                   </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Material Name *</label>
                 <input 
@@ -178,17 +314,7 @@ function EditMaterialForm() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">SKU / Material Code</label>
-                  <input 
-                    type="text" 
-                    placeholder="RM-RIC-001" 
-                    value={form.sku}
-                    onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value.toUpperCase() }))}
-                    className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-white/10" 
-                  />
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Classification</label>
                   <div className="relative">
@@ -198,6 +324,86 @@ function EditMaterialForm() {
                       className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
                     >
                       {ITEM_CATEGORIES.map((c) => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
+                    </select>
+                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Size Regulation</label>
+                  <div className="flex flex-wrap gap-2">
+                    {["1KG", "500G", "250G", "100G"].map((s) => (
+                      <button 
+                        key={s}
+                        type="button"
+                        onClick={() => setSize(s)}
+                        className={clsx(
+                          "px-5 py-3 rounded-[1.25rem] font-black text-[10px] uppercase tracking-widest transition-all",
+                          size === s ? "bg-slate-900 dark:bg-orange-500 text-white shadow-lg" : "bg-slate-50 dark:bg-white/5 text-gray-400 hover:bg-slate-100"
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                    {!["1KG", "500G", "250G", "100G", "OTHER"].includes(size) ? (
+                      <div className="flex items-center gap-2 bg-slate-900 dark:bg-orange-500 text-white px-5 py-3 rounded-[1.25rem] shadow-lg animate-in zoom-in-95">
+                        <span className="font-black text-[10px] uppercase tracking-widest">{size}</span>
+                        <button onClick={() => setSize("1KG")} className="opacity-60 hover:opacity-100 transition-opacity">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        type="button"
+                        onClick={() => setSize("OTHER")}
+                        className={clsx(
+                          "px-5 py-3 rounded-[1.25rem] font-black text-[10px] uppercase tracking-widest transition-all border border-dashed text-gray-400",
+                          size === "OTHER" ? "border-slate-900 dark:border-orange-500 text-slate-900 dark:text-orange-500" : "border-gray-200 dark:border-white/10 hover:border-gray-300"
+                        )}
+                      >
+                        + Add New
+                      </button>
+                    )}
+                  </div>
+                  {size === "OTHER" && (
+                    <input 
+                      autoFocus
+                      onChange={(e) => setSize(e.target.value.toUpperCase())}
+                      placeholder="Custom Size (e.g. 10KG)"
+                      className="mt-2 w-full px-6 py-4 bg-slate-50 dark:bg-white/5 border-2 border-slate-900/20 dark:border-orange-500/20 rounded-2xl font-bold text-base focus:ring-4 ring-orange-500/10 outline-none animate-in slide-in-from-top-2"
+                    />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-orange-500 uppercase tracking-widest ml-1">SKU (Auto)</label>
+                  <input 
+                    type="text" 
+                    value={form.sku}
+                    readOnly
+                    className="w-full px-6 py-4 text-base font-black bg-orange-500/5 dark:bg-orange-500/10 border-none rounded-2xl outline-none text-orange-600 dark:text-orange-400 cursor-not-allowed transition-all" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">HSN Code (GST)</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 1006" 
+                    value={form.hsnCode}
+                    onChange={(e) => setForm((f) => ({ ...f, hsnCode: e.target.value }))}
+                    className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-white/10" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">GST Rate (%)</label>
+                  <div className="relative">
+                    <select 
+                      value={form.gstRate} 
+                      onChange={(e) => setForm((f) => ({ ...f, gstRate: Number(e.target.value) }))}
+                      className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
+                    >
+                      {[0, 5, 12, 18, 28].map((rate) => <option key={rate} value={rate}>{rate}%</option>)}
                     </select>
                     <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
@@ -246,6 +452,29 @@ function EditMaterialForm() {
         {/* Sidebar Controls */}
         <div className="space-y-6">
           <div className="bg-white dark:bg-card rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-sm">
+             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Stock Availability</h3>
+             <div className="flex items-end gap-2 mb-2">
+                <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{(form.currentStock || 0).toFixed(1)}</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{form.unit}</span>
+             </div>
+             <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-6">Current Inventory Balance</p>
+             
+             <div className="space-y-3 pt-4 border-t border-slate-50 dark:border-white/5">
+                <div className="flex justify-between items-center">
+                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alert Threshold</span>
+                   <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{form.minimumStock} {form.unit}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</span>
+                   <span className={clsx("px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider", 
+                      form.currentStock <= form.minimumStock ? "bg-red-50 text-red-500" : "bg-emerald-50 text-emerald-500")}>
+                      {form.currentStock <= form.minimumStock ? "CRITICAL" : "HEALTHY"}
+                   </span>
+                </div>
+             </div>
+          </div>
+
+          <div className="bg-white dark:bg-card rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-sm">
              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Stock Integrity</h3>
              <p className="text-xs font-medium text-gray-500 leading-relaxed">
                Modifying the unit or category may affect existing recipes and stock records. Proceed with caution.
@@ -271,12 +500,30 @@ function EditMaterialForm() {
             </button>
           </div>
 
-          <button 
-            onClick={handleDelete}
-            className="w-full py-4 rounded-2xl border border-red-200 dark:border-red-900/20 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
-          >
-            Archive Material
-          </button>
+          <div className="pt-4 space-y-4">
+            {form.isActive ? (
+               <button 
+                  onClick={handleDeactivate}
+                  className="w-full py-4 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-100 dark:border-white/5 flex items-center justify-center gap-2"
+               >
+                  <Lock size={12} /> Mark as Inactive
+               </button>
+            ) : (
+               <button 
+                  onClick={handleActivate}
+                  className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2"
+               >
+                  <CheckCircle2 size={12} /> Restore Material
+               </button>
+            )}
+            
+            <button 
+               onClick={handleDelete}
+               className="w-full py-4 text-red-400 hover:text-red-500 text-[9px] font-black uppercase tracking-widest transition-all"
+            >
+               Permanent Delete (Audit Risk)
+            </button>
+          </div>
         </div>
       </div>
       

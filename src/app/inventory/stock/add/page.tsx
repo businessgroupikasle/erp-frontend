@@ -1,21 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
-  ArrowLeft, Save, Info, 
+  ArrowLeft, Save, Info, X,
   Sparkles, ChevronDown, 
   AlertCircle, CheckCircle2,
   Layers, Package, Scale
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { rawMaterialsApi } from "@/lib/api";
+import { rawMaterialsApi, franchiseApi } from "@/lib/api";
 import { ITEM_CATEGORIES, UNITS } from "@/lib/constants";
+import { useAuth } from "@/context/AuthContext";
+import { clsx } from "clsx";
+import { PREDEFINED_SIZES, generateSKU } from "@/lib/utils/erp";
 
 export default function AddMaterialPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const [franchises, setFranchises] = useState<any[]>([]);
+  const [vendors, setVendors]         = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState<string | null>(null);
+  const [sourceType, setSourceType] = useState<"VENDOR" | "DIRECT">("DIRECT");
   
   const [form, setForm] = useState({
     name: "",
@@ -24,7 +31,19 @@ export default function AddMaterialPage() {
     minimumStock: 10,
     category: "RAW_MATERIAL",
     initialStock: 0,
+    vendorId: "",
+    hsnCode: "",
+    taxPercent: 0,
+    gstRate: 0,
+    franchiseId: "",
   });
+
+  const [size, setSize] = useState("1KG");
+
+  useEffect(() => {
+    const sku = generateSKU(form.category, form.name, size);
+    setForm((f) => ({ ...f, sku }));
+  }, [form.category, form.name, size]);
 
   const handleSave = async () => {
     if (!form.name) {
@@ -37,12 +56,13 @@ export default function AddMaterialPage() {
     try {
       await rawMaterialsApi.create({
         ...form,
+        vendorId: sourceType === "VENDOR" ? form.vendorId : null,
         initialStock: Number(form.initialStock) || 0,
       });
       router.push("/inventory/stock");
     } catch (e: any) {
       console.error(e);
-      setError(e.response?.data?.message || "Failed to create material. Please try again.");
+      setError(e.response?.data?.error || "Failed to create material. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -103,12 +123,50 @@ export default function AddMaterialPage() {
         {/* Main Configuration */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white dark:bg-card rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-sm">
-            <div className="flex items-center gap-2 mb-6 text-gray-400">
-              <Layers size={16} />
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em]">Material Definition</h2>
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2 text-gray-400">
+                <Layers size={16} />
+                <h2 className="text-[10px] font-black uppercase tracking-[0.2em]">Material Sourcing</h2>
+              </div>
+              <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
+                <button 
+                  onClick={() => setSourceType("DIRECT")}
+                  className={clsx("px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", 
+                    sourceType === "DIRECT" ? "bg-white dark:bg-slate-800 text-blue-500 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+                >
+                  Direct Stock
+                </button>
+                <button 
+                  onClick={() => setSourceType("VENDOR")}
+                  className={clsx("px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", 
+                    sourceType === "VENDOR" ? "bg-white dark:bg-slate-800 text-purple-500 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+                >
+                  From Vendor
+                </button>
+              </div>
             </div>
             
             <div className="space-y-6">
+              {sourceType === "VENDOR" && (
+                <div className="p-6 bg-purple-500/5 border border-purple-500/10 rounded-3xl space-y-4 animate-in slide-in-from-top-2">
+                   <label className="block text-[11px] font-black text-purple-500 uppercase tracking-widest ml-1">Link Registered Vendor *</label>
+                   <div className="relative">
+                      <select 
+                        value={form.vendorId} 
+                        onChange={(e) => setForm((f) => ({ ...f, vendorId: e.target.value }))}
+                        className="w-full appearance-none bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-purple-500/10 dark:text-white transition-all shadow-sm"
+                      >
+                        <option value="">Select Vendor</option>
+                        {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                      </select>
+                      <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-purple-300 pointer-events-none" />
+                   </div>
+                   <p className="text-[10px] font-bold text-purple-400 uppercase tracking-tight flex items-center gap-1.5 ml-1">
+                      <Sparkles size={12} /> Link this material to a specific supplier for auto-GRN and price tracking.
+                   </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Material Name *</label>
                 <input 
@@ -120,17 +178,7 @@ export default function AddMaterialPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">SKU / Material Code</label>
-                  <input 
-                    type="text" 
-                    placeholder="RM-RIC-001" 
-                    value={form.sku}
-                    onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value.toUpperCase() }))}
-                    className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-white/10" 
-                  />
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Classification</label>
                   <div className="relative">
@@ -144,7 +192,131 @@ export default function AddMaterialPage() {
                     <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
+                <div className="space-y-4">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Size Regulation</label>
+                  <div className="flex flex-wrap gap-2">
+                    {["1KG", "500G", "250G", "100G"].map((s) => (
+                      <button 
+                        key={s}
+                        type="button"
+                        onClick={() => setSize(s)}
+                        className={clsx(
+                          "px-5 py-3 rounded-[1.25rem] font-black text-[10px] uppercase tracking-widest transition-all",
+                          size === s ? "bg-slate-900 dark:bg-orange-500 text-white shadow-lg" : "bg-slate-50 dark:bg-white/5 text-gray-400 hover:bg-slate-100"
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                    {!["1KG", "500G", "250G", "100G", "OTHER"].includes(size) ? (
+                      <div className="flex items-center gap-2 bg-slate-900 dark:bg-orange-500 text-white px-5 py-3 rounded-[1.25rem] shadow-lg animate-in zoom-in-95">
+                        <span className="font-black text-[10px] uppercase tracking-widest">{size}</span>
+                        <button onClick={() => setSize("1KG")} className="opacity-60 hover:opacity-100 transition-opacity">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        type="button"
+                        onClick={() => setSize("OTHER")}
+                        className={clsx(
+                          "px-5 py-3 rounded-[1.25rem] font-black text-[10px] uppercase tracking-widest transition-all border border-dashed text-gray-400",
+                          size === "OTHER" ? "border-slate-900 dark:border-orange-500 text-slate-900 dark:text-orange-500" : "border-gray-200 dark:border-white/10 hover:border-gray-300"
+                        )}
+                      >
+                        + Add New
+                      </button>
+                    )}
+                  </div>
+                  {size === "OTHER" && (
+                    <input 
+                      autoFocus
+                      onChange={(e) => setSize(e.target.value.toUpperCase())}
+                      placeholder="Custom Size (e.g. 10KG)"
+                      className="mt-2 w-full px-6 py-4 bg-slate-50 dark:bg-white/5 border-2 border-slate-900/20 dark:border-orange-500/20 rounded-2xl font-bold text-base focus:ring-4 ring-orange-500/10 outline-none animate-in slide-in-from-top-2"
+                    />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-orange-500 uppercase tracking-widest ml-1">SKU (Auto)</label>
+                  <input 
+                    type="text" 
+                    value={form.sku}
+                    readOnly
+                    className="w-full px-6 py-4 text-base font-black bg-orange-500/5 dark:bg-orange-500/10 border-none rounded-2xl outline-none text-orange-600 dark:text-orange-400 cursor-not-allowed transition-all" 
+                  />
+                </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">HSN Code (GST)</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 1006" 
+                    value={form.hsnCode}
+                    onChange={(e) => setForm((f) => ({ ...f, hsnCode: e.target.value }))}
+                    className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-white/10" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Tax Protocol (%)</label>
+                  <div className="relative">
+                    <input 
+                      type="number" 
+                      min={0} 
+                      max={100} 
+                      value={form.taxPercent}
+                      onChange={(e) => setForm((f) => ({ ...f, taxPercent: Number(e.target.value) }))}
+                      className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all" 
+                    />
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">HSN Code</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 1006" 
+                    value={form.hsnCode}
+                    onChange={(e) => setForm((f) => ({ ...f, hsnCode: e.target.value }))}
+                    className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-white/10" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">GST Rate (%)</label>
+                  <div className="relative">
+                    <select 
+                      value={form.gstRate} 
+                      onChange={(e) => setForm((f) => ({ ...f, gstRate: Number(e.target.value) }))}
+                      className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
+                    >
+                      {[0, 5, 12, 18, 28].map((rate) => <option key={rate} value={rate}>{rate}%</option>)}
+                    </select>
+                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
+              {user?.role === "SUPER_ADMIN" && (
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Assign to Franchise</label>
+                  <div className="relative">
+                    <select 
+                      value={form.franchiseId} 
+                      onChange={(e) => setForm((f) => ({ ...f, franchiseId: e.target.value }))}
+                      className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
+                    >
+                      <option value="">Select Franchise</option>
+                      {franchises.map((fran) => <option key={fran.id} value={fran.id}>{fran.name}</option>)}
+                    </select>
+                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

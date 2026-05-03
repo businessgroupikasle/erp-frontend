@@ -54,10 +54,4 @@ export interface Recipe {
   category?: string;
 }
 
-export interface Attendance {
-  id: string;
-  userId: string;
-  checkIn: string;
-  checkOut?: string;
-  status: 'PRESENT' | 'LATE' | 'ABSENT';
-}
+

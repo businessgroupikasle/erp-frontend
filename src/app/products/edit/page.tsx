@@ -2,12 +2,13 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { 
-  ArrowLeft, Save, Trash2, Info, 
+  ArrowLeft, Save, Trash2, Info, X,
   IndianRupee, Sparkles, ChevronDown, 
   AlertCircle, CheckCircle2 
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { clsx } from "clsx";
 import { productsFullApi } from "@/lib/api";
 
 function EditProductForm() {
@@ -213,19 +214,47 @@ function EditProductForm() {
                     className="w-full px-6 py-4 text-base font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-white/10" 
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Category Classification</label>
-                  <div className="relative">
-                    <select 
-                      value={form.category} 
-                      onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                      className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
-                    >
-                      {["BATTER", "SNACK", "BEVERAGE", "CONDIMENT", "OTHER"].map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <div className="space-y-4">
+                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Category Classification</label>
+                    <div className="flex flex-wrap gap-2">
+                      <button 
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, category: "BATTER" }))}
+                        className={clsx(
+                          "px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all",
+                          form.category === "BATTER" ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20" : "bg-slate-50 dark:bg-white/5 text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10"
+                        )}
+                      >
+                        Batter
+                      </button>
+                      {form.category !== "BATTER" ? (
+                        <div className="flex-1 min-w-[200px] flex items-center gap-3 bg-white dark:bg-slate-800 border-2 border-orange-500 rounded-2xl px-4 py-2 animate-in slide-in-from-left-2">
+                          <input 
+                            autoFocus
+                            value={form.category === "OTHER" ? "" : form.category}
+                            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value.toUpperCase() }))}
+                            placeholder="New Category..."
+                            className="flex-1 bg-transparent border-none outline-none font-black text-xs uppercase tracking-widest text-orange-600 dark:text-orange-400 placeholder:text-orange-200"
+                          />
+                          <button 
+                            type="button"
+                            onClick={() => setForm((f) => ({ ...f, category: "BATTER" }))}
+                            className="p-1.5 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-xl text-orange-500 transition-colors"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, category: "OTHER" }))}
+                          className="px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all border border-dashed border-gray-200 dark:border-white/10 text-gray-400 hover:border-orange-500 hover:text-orange-500"
+                        >
+                          + Add New
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-6">

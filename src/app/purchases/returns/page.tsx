@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search } from "lucide-react";
+import { Package, Plus, Search, ArrowRight, History, CheckCircle2, XCircle, Clock, CheckCircle, Loader2 } from "lucide-react";
 import api from "@/lib/api";
+import { clsx } from "clsx";
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: "bg-yellow-100 text-yellow-700",
-  APPROVED: "bg-green-100 text-green-700",
-  REJECTED: "bg-red-100 text-red-700",
-  COMPLETED: "bg-blue-100 text-blue-700"
+  PENDING: "bg-amber-50 text-amber-600 border-amber-100/50",
+  APPROVED: "bg-emerald-50 text-emerald-600 border-emerald-100/50",
+  REJECTED: "bg-rose-50 text-rose-600 border-rose-100/50",
+  COMPLETED: "bg-blue-50 text-blue-600 border-blue-100/50"
 };
 
 export default function PurchaseReturnsPage() {
@@ -70,129 +71,172 @@ export default function PurchaseReturnsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Purchase Returns</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage returns to vendors</p>
-        </div>
-        <div className="flex gap-2">
-          <a href="/purchases/rfq" className="border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">RFQ</a>
-          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
-            <Plus className="w-4 h-4" /> New Return
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-4">
-        {["PENDING","APPROVED","REJECTED","COMPLETED"].map(s => (
-          <div key={s} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
-            <div className="text-2xl font-bold text-gray-900">{returns.filter(r => r.status === s).length}</div>
-            <div className="text-xs text-gray-500 mt-1">{s}</div>
+    <div className="min-h-screen bg-white dark:bg-slate-950 p-6 space-y-8 animate-in fade-in duration-500">
+      <div className="max-w-[1500px] mx-auto space-y-8">
+        
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+             <div className="w-14 h-14 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+                <History size={28} />
+             </div>
+             <div>
+                <h1 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Purchase Returns</h1>
+                <p className="text-sm text-gray-500 mt-0.5 font-medium flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                  Monitor rejected goods and manage vendor refund claims
+                </p>
+             </div>
           </div>
-        ))}
-      </div>
+          <div className="flex gap-2">
+            <a href="/purchases/rfq" className="px-6 py-2.5 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:bg-gray-100 transition-all flex items-center gap-2">RFQ</a>
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-6 py-2.5 bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all flex items-center gap-2"
+            >
+              <Plus size={16} /> New Return
+            </button>
+          </div>
+        </header>
 
-      <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search returns..." className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { label: "Pending", status: "PENDING", icon: Clock, color: "text-amber-500", bg: "bg-amber-50/30 dark:bg-amber-500/5" },
+            { label: "Approved", status: "APPROVED", icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-50/30 dark:bg-emerald-500/5" },
+            { label: "Rejected", status: "REJECTED", icon: XCircle, color: "text-rose-500", bg: "bg-rose-50/30 dark:bg-rose-500/5" },
+            { label: "Completed", status: "COMPLETED", icon: CheckCircle, color: "text-blue-500", bg: "bg-blue-50/30 dark:bg-blue-500/5" },
+          ].map(s => (
+            <div key={s.label} className={clsx("rounded-[2rem] p-8 border border-gray-100 dark:border-white/5 shadow-xl shadow-black/[0.02] text-center bg-white dark:bg-[#12141c]")}>
+               <div className={clsx("text-4xl font-black tracking-tighter mb-2", s.color)}>
+                 {returns.filter(r => r.status === s.status).length}
+               </div>
+               <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">{s.label}</p>
+            </div>
+          ))}
         </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
-          <option value="">All Status</option>
-          {["PENDING","APPROVED","REJECTED","COMPLETED"].map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-100">
-            <tr>
-              {["Return #","Vendor","Items","Refund Amount","Reason","Status","Actions"].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {loading ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
-            ) : returns.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No purchase returns</td></tr>
-            ) : returns.map((r) => (
-              <tr key={r.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-mono text-xs text-blue-600">{r.returnNumber}</td>
-                <td className="px-4 py-3">
-                  <div className="font-medium text-gray-900">{r.vendor?.name}</div>
-                  <div className="text-xs text-gray-400">{r.vendor?.contact}</div>
-                </td>
-                <td className="px-4 py-3 text-gray-600">{r.items?.length || 0}</td>
-                <td className="px-4 py-3 font-semibold text-orange-600">₹{r.refundAmount?.toLocaleString()}</td>
-                <td className="px-4 py-3 text-gray-600 max-w-[150px] truncate">{r.reason}</td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[r.status] || ""}`}>{r.status}</span>
-                </td>
-                <td className="px-4 py-3">
-                  {r.status === "PENDING" && (
-                    <div className="flex gap-2">
-                      <button onClick={() => updateStatus(r.id, "APPROVED")} className="text-green-600 hover:underline text-xs">Approve</button>
-                      <button onClick={() => updateStatus(r.id, "REJECTED")} className="text-red-600 hover:underline text-xs">Reject</button>
-                    </div>
-                  )}
-                  {r.status === "APPROVED" && (
-                    <button onClick={() => updateStatus(r.id, "COMPLETED")} className="text-blue-600 hover:underline text-xs">Complete</button>
-                  )}
-                </td>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search returns..."
+              className="w-full pl-12 pr-6 py-3.5 bg-white dark:bg-[#12141c] border border-gray-100 dark:border-white/5 rounded-2xl text-sm font-bold shadow-xl shadow-black/[0.02] outline-none focus:ring-2 ring-orange-500/10 focus:border-orange-500 transition-all"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-6 py-3.5 text-sm bg-white dark:bg-[#12141c] border border-gray-100 dark:border-white/5 rounded-2xl font-black uppercase tracking-widest outline-none ring-orange-500/10 focus:ring-4 transition-all"
+          >
+            <option value="">All Status</option>
+            {["PENDING","APPROVED","REJECTED","COMPLETED"].map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+
+        <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-black/[0.02] overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
+              <tr>
+                {["Return #","Vendor","Items","Refund Amount","Reason","Status","Actions"].map(h => (
+                  <th key={h} className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.15em]">{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+              {loading ? (
+                <tr><td colSpan={7} className="px-8 py-16 text-center"><Loader2 className="mx-auto text-orange-500 animate-spin" /></td></tr>
+              ) : returns.length === 0 ? (
+                <tr><td colSpan={7} className="px-8 py-16 text-center text-gray-400 font-bold uppercase text-xs tracking-widest">No purchase returns found</td></tr>
+              ) : returns.map((r) => (
+                <tr key={r.id} className="hover:bg-gray-50/30 dark:hover:bg-white/[0.02] transition-colors group">
+                  <td className="px-8 py-5 font-bold text-xs text-orange-600 font-mono tracking-tighter">{r.returnNumber}</td>
+                  <td className="px-8 py-5">
+                    <div className="font-black text-gray-900 dark:text-white uppercase text-xs">{r.vendor?.name}</div>
+                    <div className="text-[10px] text-gray-400 font-bold uppercase mt-0.5 tracking-tight">{r.vendor?.contact}</div>
+                  </td>
+                  <td className="px-8 py-5 text-gray-600 font-black text-xs">{r.items?.length || 0}</td>
+                  <td className="px-8 py-5">
+                     <span className="text-sm font-black text-orange-600">₹{r.refundAmount?.toLocaleString()}</span>
+                  </td>
+                  <td className="px-8 py-5 text-gray-400 text-xs font-medium max-w-[200px] truncate">{r.reason}</td>
+                  <td className="px-8 py-5">
+                    <span className={clsx(
+                      "px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border",
+                      STATUS_COLORS[r.status]
+                    )}>
+                      {r.status}
+                    </span>
+                  </td>
+                  <td className="px-8 py-5">
+                    {r.status === "PENDING" && (
+                      <div className="flex gap-3">
+                        <button onClick={() => updateStatus(r.id, "APPROVED")} className="text-emerald-600 hover:scale-110 transition-transform font-bold text-xs">Approve</button>
+                        <button onClick={() => updateStatus(r.id, "REJECTED")} className="text-rose-600 hover:scale-110 transition-transform font-bold text-xs">Reject</button>
+                      </div>
+                    )}
+                    {r.status === "APPROVED" && (
+                      <button onClick={() => updateStatus(r.id, "COMPLETED")} className="text-blue-600 hover:scale-110 transition-transform font-bold text-xs uppercase tracking-widest">Mark Completed</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-xl shadow-xl my-4">
-            <div className="p-6 border-b border-gray-100"><h2 className="text-lg font-semibold">Create Purchase Return</h2></div>
-            <form onSubmit={handleCreate} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor *</label>
-                  <select required value={form.vendorId} onChange={(e) => setForm({ ...form, vendorId: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-xl p-10 space-y-8 relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/5 rounded-bl-[150px] -mr-16 -mt-16" />
+             
+             <div>
+                <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Manual Purchase Return</h2>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Record a new return document</p>
+             </div>
+
+            <form onSubmit={handleCreate} className="space-y-6 relative z-10">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Vendor *</label>
+                  <select required value={form.vendorId} onChange={(e) => setForm({ ...form, vendorId: e.target.value })} className="w-full px-4 py-3.5 bg-gray-50 dark:bg-white/5 border border-gray-200 rounded-2xl text-sm font-bold outline-none ring-orange-500/10 focus:ring-4 transition-all">
                     <option value="">Select vendor...</option>
                     {vendors.map((v: any) => <option key={v.id} value={v.id}>{v.name}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
-                  <input required value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Reason *</label>
+                  <input required value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className="w-full px-4 py-3.5 bg-gray-50 dark:bg-white/5 border border-gray-200 rounded-2xl text-sm font-bold outline-none ring-orange-500/10 focus:ring-4 transition-all" />
                 </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-700">Items *</label>
-                  <button type="button" onClick={addItem} className="text-blue-600 text-xs hover:underline">+ Add Item</button>
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Returned Items</label>
+                  <button type="button" onClick={addItem} className="text-orange-600 text-[10px] font-black uppercase tracking-widest">+ Add Row</button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-orange-200">
                   {form.items.map((item, i) => (
-                    <div key={i} className="grid grid-cols-10 gap-2 items-center">
-                      <div className="col-span-4"><input placeholder="Item name" required value={item.itemName} onChange={(e) => updateItem(i, "itemName", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" /></div>
-                      <div className="col-span-2"><input type="number" placeholder="Qty" min="0.01" step="0.01" value={item.quantity} onChange={(e) => updateItem(i, "quantity", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required /></div>
-                      <div className="col-span-2"><input placeholder="Unit" value={item.unit} onChange={(e) => updateItem(i, "unit", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" /></div>
-                      <div className="col-span-1"><input type="number" placeholder="Rate" min="0" step="0.01" value={item.rate} onChange={(e) => updateItem(i, "rate", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required /></div>
-                      <div className="col-span-1 text-right">{form.items.length > 1 && <button type="button" onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600 text-xs font-bold">✕</button>}</div>
+                    <div key={i} className="grid grid-cols-12 gap-3 items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                      <div className="col-span-5"><input placeholder="Item name" required value={item.itemName} onChange={(e) => updateItem(i, "itemName", e.target.value)} className="w-full bg-transparent text-sm font-bold outline-none" /></div>
+                      <div className="col-span-2 text-center border-l border-gray-200"><input type="number" placeholder="Qty" min="0.01" step="0.01" value={item.quantity} onChange={(e) => updateItem(i, "quantity", e.target.value)} className="w-full bg-transparent text-center text-sm font-black outline-none" required /></div>
+                      <div className="col-span-2 text-center border-l border-gray-200"><input placeholder="Unit" value={item.unit} onChange={(e) => updateItem(i, "unit", e.target.value)} className="w-full bg-transparent text-center text-xs font-bold text-gray-400 outline-none" /></div>
+                      <div className="col-span-2 text-center border-l border-gray-200"><input type="number" placeholder="Rate" min="0" step="0.01" value={item.rate} onChange={(e) => updateItem(i, "rate", e.target.value)} className="w-full bg-transparent text-center text-sm font-black text-orange-600 outline-none" required /></div>
+                      <div className="col-span-1 text-right">{form.items.length > 1 && <button type="button" onClick={() => removeItem(i)} className="text-rose-400 hover:text-rose-600 transition-colors">✕</button>}</div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-orange-50 rounded-lg px-4 py-3 flex items-center justify-between text-sm font-semibold">
-                <span className="text-gray-700">Total Refund</span>
-                <span className="text-orange-600">₹{refundTotal.toFixed(2)}</span>
+              <div className="bg-orange-600/5 rounded-2xl px-6 py-5 flex items-center justify-between border border-orange-500/10">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Refund Value</span>
+                <span className="text-2xl font-black text-orange-600 tracking-tighter">₹{refundTotal.toLocaleString()}</span>
               </div>
 
-              <div className="flex gap-3">
-                <button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700">Submit Return</button>
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-gray-200 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+              <div className="flex gap-4 pt-4">
+                <button type="submit" className="flex-[2] bg-orange-600 text-white py-5 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-orange-500/20 hover:bg-orange-700 transition-all">Submit Return Claim</button>
+                <button type="button" onClick={() => setShowForm(false)} className="flex-1 border-2 border-gray-100 py-5 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 hover:bg-gray-50 transition-all">Cancel</button>
               </div>
             </form>
           </div>

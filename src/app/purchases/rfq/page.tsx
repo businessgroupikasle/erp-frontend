@@ -172,7 +172,7 @@ export default function PurchaseRFQPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Response Deadline</label>
-                  <input type="date" value={form.responseDeadline} onChange={(e) => setForm({ ...form, responseDeadline: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  <input type="date" value={form.responseDeadline} min={new Date().toISOString().split("T")[0]} onChange={(e) => setForm({ ...form, responseDeadline: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
                 </div>
               </div>
 

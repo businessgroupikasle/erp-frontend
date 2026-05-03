@@ -218,7 +218,7 @@ export default function NewLeadPage() {
 
               <div className="space-y-2">
                 <label className={LABEL}>Follow Up Date</label>
-                <input value={form.followUpDate} onChange={set("followUpDate")} type="date" className={FIELD} />
+                <input value={form.followUpDate} onChange={set("followUpDate")} type="date" min={new Date().toISOString().split("T")[0]} className={FIELD} />
               </div>
             </div>
           </FormAccordion>

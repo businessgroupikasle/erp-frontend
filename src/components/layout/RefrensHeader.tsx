@@ -40,7 +40,7 @@ interface Notification {
 const MOCK_NOTIFICATIONS: Notification[] = [
   { id: "1", type: "success",  title: "Order Completed",    message: "Table #5 order ₹840 paid via UPI.",         time: "2m ago",    read: false },
   { id: "2", type: "alert",    title: "Low Stock ⚠️",        message: "Chicken stock below 2kg threshold.",          time: "15m ago",   read: false },
-  { id: "3", type: "warning",  title: "Kitchen Delay",      message: "Order #47 waiting 18 mins in queue.",         time: "20m ago",   read: false },
+  { id: "3", type: "warning",  title: "Fulfillment Delay",  message: "Order #47 waiting 18 mins in queue.",         time: "20m ago",   read: false },
   { id: "4", type: "success",  title: "Daily Target Hit",   message: "Today's sales crossed ₹25,000 🎉",            time: "1h ago",    read: true  },
   { id: "5", type: "info",     title: "Recipe Updated",     message: "Biryani recipe modified by Chef Ramesh.",     time: "3h ago",    read: true  },
 ];

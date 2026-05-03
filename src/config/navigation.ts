@@ -11,12 +11,10 @@ import {
   Building2,
   Send,
   ArrowRightLeft,
-  FlaskConical,
   Factory,
   Store,
   UserCheck,
   Layers,
-  Clock,
   Landmark,
   ChefHat,
   Truck,
@@ -52,6 +50,7 @@ const SUPER_ONLY = ["SUPER_ADMIN"];
 const FRANCHISE_ROLES = ["SUPER_ADMIN", "FRANCHISE_ADMIN", "ADMIN", "MANAGER"];
 
 export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
+  // 1. Overview
   {
     title: "Overview",
     items: [
@@ -63,82 +62,8 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       },
     ],
   },
-  {
-    title: "Sales",
-    items: [
-      {
-        icon: ShoppingCart,
-        label: "POS Billing",
-        href: "/pos",
-        roles: ALL_ROLES,
-      },
-      {
-        icon: FileText,
-        label: "Sales Orders",
-        href: "/sales/orders",
-        roles: ADMIN_ROLES,
-      },
-      {
-        icon: Users,
-        label: "Customers",
-        href: "/customers",
-        roles: ADMIN_ROLES,
-      },
-    ],
-  },
-  {
-    title: "Inventory",
-    items: [
-      {
-        icon: Package,
-        label: "Products",
-        href: "/products",
-        roles: ADMIN_ROLES,
-      },
-      {
-        icon: Layers,
-        label: "Raw Materials",
-        href: "/inventory/stock",
-        roles: FRANCHISE_ROLES,
-      },
-      {
-        icon: ArrowRightLeft,
-        label: "Stock Movement",
-        href: "/inventory/movements",
-        roles: ADMIN_ROLES,
-        isComingSoon: true,
-      },
-      {
-        icon: TrendingUp,
-        label: "Inventory Value",
-        href: "/inventory/stock-value",
-        roles: ADMIN_ROLES,
-      },
-      {
-        icon: PackageCheck,
-        label: "Product Batches",
-        href: "/production/batches",
-        roles: FRANCHISE_ROLES,
-      },
-    ],
-  },
-  {
-    title: "Production",
-    items: [
-      {
-        icon: ChefHat,
-        label: "Recipes",
-        href: "/recipes",
-        roles: ADMIN_ROLES,
-      },
-      {
-        icon: Factory,
-        label: "Production Batches",
-        href: "/production",
-        roles: FRANCHISE_ROLES,
-      },
-    ],
-  },
+
+  // 2. Procurement — buy raw materials first
   {
     title: "Procurement",
     items: [
@@ -168,6 +93,90 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       },
     ],
   },
+
+  // 3. Inventory — stock raw materials & finished goods
+  {
+    title: "Inventory",
+    items: [
+      {
+        icon: Package,
+        label: "Products",
+        href: "/products",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: Layers,
+        label: "Inventory Stock",
+        href: "/inventory/stock",
+        roles: FRANCHISE_ROLES,
+      },
+      {
+        icon: TrendingUp,
+        label: "Inventory Value",
+        href: "/inventory/stock-value",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: PackageCheck,
+        label: "Product Batches",
+        href: "/production/batches",
+        roles: FRANCHISE_ROLES,
+      },
+      {
+        icon: ArrowRightLeft,
+        label: "Stock Movement",
+        href: "/inventory/movements",
+        roles: ADMIN_ROLES,
+        isComingSoon: true,
+      },
+    ],
+  },
+
+  // 4. Production — convert raw materials into finished goods
+  {
+    title: "Production",
+    items: [
+      {
+        icon: ChefHat,
+        label: "Recipes",
+        href: "/recipes",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: Factory,
+        label: "Production Batches",
+        href: "/production",
+        roles: FRANCHISE_ROLES,
+      },
+    ],
+  },
+
+  // 5. Sales — sell to customers
+  {
+    title: "Sales",
+    items: [
+      {
+        icon: Users,
+        label: "Customers",
+        href: "/customers",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: ShoppingCart,
+        label: "POS Billing",
+        href: "/pos",
+        roles: ALL_ROLES,
+      },
+      {
+        icon: FileText,
+        label: "Sales Orders",
+        href: "/sales/orders",
+        roles: ADMIN_ROLES,
+      },
+    ],
+  },
+
+  // 6. Franchise — distribute to franchise branches
   {
     title: "Franchise",
     items: [
@@ -197,29 +206,33 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       },
     ],
   },
+
+  // 7. Accounts — track money
   {
     title: "Accounts",
     items: [
       {
         icon: CreditCard,
         label: "Payments",
-        href: "/accounting/vouchers?type=payment",
+        href: "/accounting/payments",
         roles: ADMIN_ROLES,
       },
       {
         icon: TrendingUp,
         label: "Expenses",
-        href: "/accounting/vouchers?type=expense",
+        href: "/accounting/expenses",
         roles: ADMIN_ROLES,
       },
       {
         icon: FileText,
         label: "Vendor Ledger",
-        href: "/accounting/ledgers?type=vendor",
+        href: "/accounting/ledgers",
         roles: ADMIN_ROLES,
       },
     ],
   },
+
+  // 8. Reports — analyse performance
   {
     title: "Reports",
     items: [
@@ -257,6 +270,8 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       },
     ],
   },
+
+  // 9. HR & Payroll
   {
     title: "HR & Payroll",
     items: [
@@ -267,12 +282,6 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         roles: ADMIN_ROLES,
       },
       {
-        icon: Clock,
-        label: "Attendance",
-        href: "/hr/attendance",
-        roles: ALL_ROLES,
-      },
-      {
         icon: Landmark,
         label: "Payroll & Payslips",
         href: "/hr/payroll",
@@ -280,6 +289,8 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       },
     ],
   },
+
+  // 10. System Settings
   {
     title: "System Settings",
     items: [
@@ -302,7 +313,8 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
 export const menuItems = SUPER_ADMIN_SIDEBAR.flatMap((s) => s.items);
 
 // ─── FRANCHISE_ADMIN dedicated sidebar ────────────────────────────────────────
-const FRANCHISE_ADMIN_ONLY = ["SUPER_ADMIN", "FRANCHISE_ADMIN"];
+const FRANCHISE_ADMIN_ONLY = ["SUPER_ADMIN", "FRANCHISE_ADMIN", "MANAGER", "FRANCHISEE"];
+const FRANCHISE_ALL = ["SUPER_ADMIN", "FRANCHISE_ADMIN", "MANAGER", "FRANCHISEE", "STAFF"];
 
 export const franchiseMenuSections: MenuSection[] = [
   {
@@ -363,9 +375,32 @@ export const franchiseMenuSections: MenuSection[] = [
     title: "Sales",
     items: [
       {
+        icon: ShoppingCart,
+        label: "POS Billing",
+        href: "/pos",
+        roles: FRANCHISE_ALL,
+      },
+      {
+        icon: Users,
+        label: "Customers",
+        href: "/customers",
+        roles: FRANCHISE_ADMIN_ONLY,
+      },
+      {
         icon: BarChart3,
         label: "Sales Reports",
         href: "/reports",
+        roles: FRANCHISE_ADMIN_ONLY,
+      },
+    ],
+  },
+  {
+    title: "HR & Staff",
+    items: [
+      {
+        icon: UserCheck,
+        label: "Employee Master",
+        href: "/hr/employees",
         roles: FRANCHISE_ADMIN_ONLY,
       },
     ],
