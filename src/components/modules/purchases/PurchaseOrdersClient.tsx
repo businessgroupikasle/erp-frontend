@@ -6,7 +6,7 @@ import {
   ChevronDown, Store, Clock, CheckCircle2, XCircle, AlertCircle, 
   Trash2, Wallet, RefreshCw, ChevronLeft, ChevronRight, Download, X
 } from "lucide-react";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday } from "date-fns";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday, startOfDay, isBefore } from "date-fns";
 import { vendorsApi, purchaseOrdersApi, rawMaterialsApi, settingsApi } from "../../../lib/api";
 import { clsx } from "clsx";
 import GSTInvoice from "../../documents/GSTInvoice";
@@ -506,22 +506,28 @@ export default function PurchaseOrdersClient() {
                            days.push(curr);
                            curr = addDays(curr, 1);
                          }
-                         return days.map(d => (
-                           <button
-                             key={d.toISOString()}
-                             onClick={() => {
-                               setExpectedDate(format(d, "yyyy-MM-dd"));
-                               setShowDatePicker(false);
-                             }}
-                             className={clsx(
-                               "w-9 h-9 rounded-xl text-[10px] font-bold transition-all flex items-center justify-center",
-                               !isSameMonth(d, viewDate) ? "text-slate-300 dark:text-gray-700" : "text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-orange-500/10",
-                               expectedDate && isSameDay(d, new Date(expectedDate)) ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-500" : ""
-                             )}
-                           >
-                             {format(d, "d")}
-                           </button>
-                         ));
+                         return days.map(d => {
+                           const isPast = isBefore(d, startOfDay(new Date()));
+                           return (
+                             <button
+                               key={d.toISOString()}
+                               disabled={isPast}
+                               onClick={() => {
+                                 if (isPast) return;
+                                 setExpectedDate(format(d, "yyyy-MM-dd"));
+                                 setShowDatePicker(false);
+                               }}
+                               className={clsx(
+                                 "w-9 h-9 rounded-xl text-[10px] font-bold transition-all flex items-center justify-center",
+                                 isPast ? "text-slate-200 dark:text-slate-800 cursor-not-allowed" : 
+                                 (!isSameMonth(d, viewDate) ? "text-slate-300 dark:text-gray-700" : "text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-orange-500/10"),
+                                 expectedDate && isSameDay(d, new Date(expectedDate)) ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-500" : ""
+                               )}
+                             >
+                               {format(d, "d")}
+                             </button>
+                           );
+                         });
                        })()}
                     </div>
                   </div>

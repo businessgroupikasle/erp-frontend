@@ -319,3 +319,11 @@ export const accountingApi = {
   getExpenses: (params?: any) => api.get('/api/accounting/expenses', { params }),
   recordExpense: (data: any) => api.post('/api/accounting/expenses', data),
 };
+
+// --- Reports & Analytics ---
+export const reportsApi = {
+  getInventoryValue: (franchiseId?: string) => api.get('/api/reports/inventory-value', { params: { franchiseId } }),
+  getSales: (params?: any) => api.get('/api/reports/sales', { params }),
+  getExpenses: (params?: any) => api.get('/api/reports/expenses', { params }),
+  getProfit: (params?: any) => api.get('/api/reports/profit', { params }),
+};

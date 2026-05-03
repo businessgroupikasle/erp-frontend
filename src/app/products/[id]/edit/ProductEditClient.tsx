@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { productsFullApi } from "@/lib/api";
 import Link from "next/link";
+import { clsx } from "clsx";
 import { PREDEFINED_SIZES, getCategoryDefaults, generateSKU } from "@/lib/utils/erp";
 
 export default function ProductEditClient() {
@@ -227,31 +228,95 @@ export default function ProductEditClient() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
+                {/* Category Section */}
+                <div className="space-y-4">
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Category Classification</label>
-                  <div className="relative">
-                    <select 
-                      value={form.category} 
-                      onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                      className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
+                  <div className="flex flex-wrap gap-2">
+                    <button 
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, category: "BATTER" }))}
+                      className={clsx(
+                        "px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all",
+                        form.category === "BATTER" ? "bg-orange-500 text-white shadow-lg" : "bg-slate-50 dark:bg-white/5 text-gray-400 hover:bg-slate-100"
+                      )}
                     >
-                      {["BATTER", "SNACK", "BEVERAGE", "CONDIMENT", "OTHER"].map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      Batter
+                    </button>
+                    {form.category !== "BATTER" && form.category !== "OTHER" ? (
+                      <div className="flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-2xl shadow-lg animate-in zoom-in-95">
+                        <span className="font-black text-xs uppercase tracking-widest">{form.category}</span>
+                        <button onClick={() => setForm((f) => ({ ...f, category: "BATTER" }))} className="opacity-60 hover:opacity-100 transition-opacity">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, category: "OTHER" }))}
+                        className={clsx(
+                          "px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all border border-dashed",
+                          form.category === "OTHER" ? "border-orange-500 text-orange-500" : "border-gray-200 dark:border-white/10 text-gray-400 hover:border-gray-300"
+                        )}
+                      >
+                        + Add New
+                      </button>
+                    )}
                   </div>
+                  {form.category === "OTHER" && (
+                    <input 
+                      autoFocus
+                      onChange={(e) => setForm((f) => ({ ...f, category: e.target.value.toUpperCase() }))}
+                      placeholder="Type custom category (e.g. SPICES)"
+                      className="mt-2 w-full px-6 py-4 bg-slate-50 dark:bg-white/5 border-2 border-orange-500/20 rounded-2xl font-bold text-base focus:ring-4 ring-orange-500/10 outline-none animate-in slide-in-from-top-2"
+                    />
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Size</label>
-                  <div className="relative">
-                    <select 
-                      value={size} 
-                      onChange={(e) => setSize(e.target.value)}
-                      className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
-                    >
-                      {PREDEFINED_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+
+                {/* Size Section */}
+                <div className="space-y-4">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Size Regulation</label>
+                  <div className="flex flex-wrap gap-2">
+                    {["1KG", "500G", "250G", "100G"].map((s) => (
+                      <button 
+                        key={s}
+                        type="button"
+                        onClick={() => setSize(s)}
+                        className={clsx(
+                          "px-5 py-3 rounded-[1.25rem] font-black text-[10px] uppercase tracking-widest transition-all",
+                          size === s ? "bg-slate-900 dark:bg-orange-500 text-white shadow-lg" : "bg-slate-50 dark:bg-white/5 text-gray-400 hover:bg-slate-100"
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                    {!["1KG", "500G", "250G", "100G", "OTHER"].includes(size) ? (
+                      <div className="flex items-center gap-2 bg-slate-900 dark:bg-orange-500 text-white px-5 py-3 rounded-[1.25rem] shadow-lg animate-in zoom-in-95">
+                        <span className="font-black text-[10px] uppercase tracking-widest">{size}</span>
+                        <button onClick={() => setSize("1KG")} className="opacity-60 hover:opacity-100 transition-opacity">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        type="button"
+                        onClick={() => setSize("OTHER")}
+                        className={clsx(
+                          "px-5 py-3 rounded-[1.25rem] font-black text-[10px] uppercase tracking-widest transition-all border border-dashed text-gray-400",
+                          size === "OTHER" ? "border-slate-900 dark:border-orange-500 text-slate-900 dark:text-orange-500" : "border-gray-200 dark:border-white/10 hover:border-gray-300"
+                        )}
+                      >
+                        + Add New
+                      </button>
+                    )}
                   </div>
+                  {size === "OTHER" && (
+                    <input 
+                      autoFocus
+                      onChange={(e) => setSize(e.target.value.toUpperCase())}
+                      placeholder="Custom Size (e.g. 10KG)"
+                      className="mt-2 w-full px-6 py-4 bg-slate-50 dark:bg-white/5 border-2 border-slate-900/20 dark:border-orange-500/20 rounded-2xl font-bold text-base focus:ring-4 ring-orange-500/10 outline-none animate-in slide-in-from-top-2"
+                    />
+                  )}
                 </div>
                 <div className="space-y-2">
                   <label className="block text-[11px] font-black text-orange-500 uppercase tracking-widest ml-1">SKU (Auto)</label>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { 
-  ArrowLeft, Save, Info, 
+  ArrowLeft, Save, Info, X,
   Sparkles, ChevronDown, 
   AlertCircle, CheckCircle2,
   Layers, Package, Scale
@@ -11,6 +11,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { rawMaterialsApi, franchiseApi } from "@/lib/api";
 import { ITEM_CATEGORIES, UNITS } from "@/lib/constants";
+import { useAuth } from "@/context/AuthContext";
+import { clsx } from "clsx";
+import { PREDEFINED_SIZES, generateSKU } from "@/lib/utils/erp";
 
 export default function AddMaterialPage() {
   const router = useRouter();
@@ -28,7 +31,19 @@ export default function AddMaterialPage() {
     minimumStock: 10,
     category: "RAW_MATERIAL",
     initialStock: 0,
+    vendorId: "",
+    hsnCode: "",
+    taxPercent: 0,
+    gstRate: 0,
+    franchiseId: "",
   });
+
+  const [size, setSize] = useState("1KG");
+
+  useEffect(() => {
+    const sku = generateSKU(form.category, form.name, size);
+    setForm((f) => ({ ...f, sku }));
+  }, [form.category, form.name, size]);
 
   const handleSave = async () => {
     if (!form.name) {
@@ -177,18 +192,50 @@ export default function AddMaterialPage() {
                     <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Size</label>
-                  <div className="relative">
-                    <select 
-                      value={size} 
-                      onChange={(e) => setSize(e.target.value)}
-                      className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-base font-bold focus:outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
-                    >
-                      {PREDEFINED_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <div className="space-y-4">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Size Regulation</label>
+                  <div className="flex flex-wrap gap-2">
+                    {["1KG", "500G", "250G", "100G"].map((s) => (
+                      <button 
+                        key={s}
+                        type="button"
+                        onClick={() => setSize(s)}
+                        className={clsx(
+                          "px-5 py-3 rounded-[1.25rem] font-black text-[10px] uppercase tracking-widest transition-all",
+                          size === s ? "bg-slate-900 dark:bg-orange-500 text-white shadow-lg" : "bg-slate-50 dark:bg-white/5 text-gray-400 hover:bg-slate-100"
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                    {!["1KG", "500G", "250G", "100G", "OTHER"].includes(size) ? (
+                      <div className="flex items-center gap-2 bg-slate-900 dark:bg-orange-500 text-white px-5 py-3 rounded-[1.25rem] shadow-lg animate-in zoom-in-95">
+                        <span className="font-black text-[10px] uppercase tracking-widest">{size}</span>
+                        <button onClick={() => setSize("1KG")} className="opacity-60 hover:opacity-100 transition-opacity">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        type="button"
+                        onClick={() => setSize("OTHER")}
+                        className={clsx(
+                          "px-5 py-3 rounded-[1.25rem] font-black text-[10px] uppercase tracking-widest transition-all border border-dashed text-gray-400",
+                          size === "OTHER" ? "border-slate-900 dark:border-orange-500 text-slate-900 dark:text-orange-500" : "border-gray-200 dark:border-white/10 hover:border-gray-300"
+                        )}
+                      >
+                        + Add New
+                      </button>
+                    )}
                   </div>
+                  {size === "OTHER" && (
+                    <input 
+                      autoFocus
+                      onChange={(e) => setSize(e.target.value.toUpperCase())}
+                      placeholder="Custom Size (e.g. 10KG)"
+                      className="mt-2 w-full px-6 py-4 bg-slate-50 dark:bg-white/5 border-2 border-slate-900/20 dark:border-orange-500/20 rounded-2xl font-bold text-base focus:ring-4 ring-orange-500/10 outline-none animate-in slide-in-from-top-2"
+                    />
+                  )}
                 </div>
                 <div className="space-y-2">
                   <label className="block text-[11px] font-black text-orange-500 uppercase tracking-widest ml-1">SKU (Auto)</label>

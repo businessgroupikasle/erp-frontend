@@ -6,7 +6,11 @@ import {
   ArrowLeft, Package, AlertTriangle, TrendingUp, TrendingDown,
   RefreshCw, Search, Loader2, BarChart3, ArrowUpRight, ArrowDownRight
 } from "lucide-react";
-import { inventoryApi } from "@/lib/api";
+import { inventoryApi, rawMaterialsApi } from "@/lib/api";
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
+  ResponsiveContainer, Cell 
+} from 'recharts';
 
 interface InventoryItem {
   id: string;
@@ -35,6 +39,10 @@ export default function InventoryDashboardPage() {
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("ALL");
   const [filterStatus, setFilterStatus] = useState("ALL");
+  
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -53,6 +61,21 @@ export default function InventoryDashboardPage() {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateThreshold = async (itemId: string) => {
+    setUpdating(true);
+    try {
+      const val = parseFloat(editValue);
+      if (isNaN(val)) return;
+      await rawMaterialsApi.update(itemId, { minimumStock: val });
+      setEditingId(null);
+      fetchData();
+    } catch (e) {
+      console.error("Failed to update threshold", e);
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -133,20 +156,60 @@ export default function InventoryDashboardPage() {
 
         {/* Low Stock Alert Banner */}
         {lowStockCount > 0 && (
-          <div className="flex items-center gap-4 p-4 bg-red-50 border border-red-100 rounded-2xl mb-6">
-            <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
-              <AlertTriangle className="text-red-600" size={18} />
+          <div className="flex flex-col lg:flex-row gap-6 mb-8">
+            <div className="flex-1 flex items-center gap-4 p-4 bg-red-50 border border-red-100 rounded-2xl">
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
+                <AlertTriangle className="text-red-600" size={18} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-black text-red-900">{lowStockCount} item{lowStockCount > 1 ? "s" : ""} below minimum stock</p>
+                <p className="text-xs text-red-700 font-medium">Raise a PO or GRN to replenish these items immediately.</p>
+              </div>
+              <button
+                onClick={() => setFilterStatus("LOW")}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-all text-nowrap"
+              >
+                Focus Low Stock
+              </button>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-black text-red-900">{lowStockCount} item{lowStockCount > 1 ? "s" : ""} below minimum stock</p>
-              <p className="text-xs text-red-700 font-medium">Raise a PO or GRN to replenish these items immediately.</p>
+            
+            <div className="flex-1 bg-white border border-[#F0EAF0] p-5 rounded-2xl shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">At-Risk Stock Monitor</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-red-500 rounded-full" />
+                    <span className="text-[9px] font-bold text-slate-500">Critical Status</span>
+                  </div>
+                </div>
+                <div className="h-[120px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={items.filter(i => (i.currentStock / i.minimumStock) <= 1.5).sort((a,b) => (a.currentStock/a.minimumStock) - (b.currentStock/b.minimumStock)).slice(0, 6)}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" hide />
+                      <YAxis hide />
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                             const data = payload[0].payload;
+                             return (
+                               <div className="bg-white p-3 border border-slate-100 shadow-xl rounded-xl">
+                                 <p className="text-[10px] font-black uppercase text-slate-900 mb-1">{data.name}</p>
+                                 <p className="text-[9px] font-bold text-red-500">{data.currentStock} / {data.minimumStock} {data.unit}</p>
+                               </div>
+                             );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar dataKey="currentStock" radius={[4, 4, 0, 0]}>
+                        {items.filter(i => (i.currentStock / i.minimumStock) <= 1.5).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.currentStock <= entry.minimumStock ? "#ef4444" : "#f59e0b"} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
             </div>
-            <button
-              onClick={() => setFilterStatus("LOW")}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-all"
-            >
-              Show Low Stock
-            </button>
           </div>
         )}
 
@@ -239,8 +302,36 @@ export default function InventoryDashboardPage() {
                           />
                         </div>
                         <div className="flex justify-between text-[10px] text-[#999] font-medium">
-                          <span>Min: {item.minimumStock} {item.unit}</span>
-                          <span>{pct}% stocked</span>
+                           <div className="flex items-center gap-1 group/edit">
+                              <span>Min:</span>
+                              {editingId === item.id ? (
+                                <div className="flex items-center gap-1">
+                                  <input 
+                                    autoFocus
+                                    className="w-12 bg-white border border-slate-200 rounded px-1 py-0.5 text-[10px] focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                    value={editValue}
+                                    onChange={e => setEditValue(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleUpdateThreshold(item.id)}
+                                    disabled={updating}
+                                  />
+                                  <button onClick={() => handleUpdateThreshold(item.id)} className="text-emerald-500 hover:text-emerald-600">
+                                    <TrendingUp size={10} />
+                                  </button>
+                                  <button onClick={() => setEditingId(null)} className="text-slate-400">
+                                    <ArrowLeft size={10} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button 
+                                  onClick={() => { setEditingId(item.id); setEditValue(item.minimumStock.toString()); }}
+                                  className="flex items-center gap-1 hover:text-purple-600 transition-colors"
+                                >
+                                  <span className="underline decoration-dotted">{item.minimumStock} {item.unit}</span>
+                                  <ArrowUpRight size={10} className="opacity-0 group-hover/edit:opacity-100 transition-opacity" />
+                                </button>
+                              )}
+                           </div>
+                           <span>{pct}% stocked</span>
                         </div>
                       </div>
                     </div>

@@ -2,7 +2,7 @@ export const PREDEFINED_SIZES = [
   "1KG", "500G", "250G", "100G",
   "25KG", "5KG", "2KG",
   "1L", "500ML", "250ML",
-  "PCS", "BOTTLE", "PACKET", "BOX"
+  "PCS", "BOTTLE", "PACKET", "BOX", "OTHER"
 ];
 
 export const getCategoryDefaults = (category: string) => {

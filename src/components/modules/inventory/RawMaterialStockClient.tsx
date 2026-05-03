@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Layers, Plus, Search, AlertTriangle, CheckCircle2,
   RefreshCw, TrendingDown, TrendingUp, Trash2, X,
-  ArrowDownCircle, Truck, Edit2, Lock
+  ArrowDownCircle, Truck, Edit2, Lock, ArrowLeft, ArrowUpRight
 } from "lucide-react";
 import { clsx } from "clsx";
 import { rawMaterialsApi, inventoryApi } from "@/lib/api";
@@ -21,6 +21,10 @@ export default function RawMaterialStockClient() {
   const [showInactive, setShowInactive] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
+  const [updating, setUpdating] = useState(false);
+
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
@@ -31,7 +35,22 @@ export default function RawMaterialStockClient() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showInactive]);
+
+  const handleUpdateThreshold = async (itemId: string) => {
+    setUpdating(true);
+    try {
+      const val = parseFloat(editValue);
+      if (isNaN(val)) return;
+      await rawMaterialsApi.update(itemId, { minimumStock: val });
+      setEditingId(null);
+      fetchItems();
+    } catch (e) {
+      console.error("Failed to update threshold", e);
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   useEffect(() => { fetchItems(); }, [fetchItems, showInactive]);
 
@@ -225,17 +244,13 @@ export default function RawMaterialStockClient() {
                 </div>
               </div>
               
-              <div className="px-3 py-2 bg-slate-50 dark:bg-white/[0.02] rounded-xl border border-slate-100 dark:border-white/5">
-                 {item.isPurchased ? (
-                    <div className="flex items-center gap-2 text-[9px] font-black text-purple-600 uppercase tracking-tight">
-                       <Truck size={10} /> {item.vendor?.name || 'Linked Vendor'}
-                    </div>
-                 ) : (
-                    <div className="flex items-center gap-2 text-[9px] font-black text-blue-500 uppercase tracking-tight">
-                       <Plus size={10} /> Manual Stock
-                    </div>
-                 )}
-              </div>
+              {item.isPurchased && (
+                <div className="px-3 py-2 bg-purple-50/50 dark:bg-purple-500/[0.02] rounded-xl border border-purple-100/50 dark:border-purple-500/10">
+                  <div className="flex items-center gap-2 text-[9px] font-black text-purple-600 uppercase tracking-tight">
+                    <Truck size={10} /> {item.vendor?.name || 'Linked Vendor'}
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-white/5">
                 <div className="flex gap-2">
@@ -277,33 +292,25 @@ export default function RawMaterialStockClient() {
                             )}>
                                {item.name.substring(0,2).toUpperCase()}
                             </div>
-                            <div className="min-w-0 flex-1 space-y-2">
+                            <div className="min-w-0 flex-1 space-y-1.5">
                                <div className="flex items-center gap-3">
                                   <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-[15px] leading-tight truncate">{item.name}</p>
                                   {item.isPurchased ? (
-                                    <span className="px-2 py-0.5 bg-purple-500/10 text-purple-500 border border-purple-500/20 rounded-md text-[8px] font-black uppercase tracking-widest">Vendor</span>
+                                    <span className="px-2 py-0.5 bg-purple-500/10 text-purple-500 border border-purple-500/20 rounded-md text-[8px] font-black uppercase tracking-widest">Vendor Driven</span>
                                   ) : (
-                                    <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-md text-[8px] font-black uppercase tracking-widest">Direct</span>
+                                    <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-md text-[8px] font-black uppercase tracking-widest">Direct Stock</span>
                                   )}
                                </div>
-                               <div className="flex items-center gap-2">
+                               <div className="flex items-center gap-2.5">
                                   <span className={clsx("text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 uppercase tracking-tighter",
                                     isLow ? "text-red-500" : "text-slate-400")}>
                                     {item.sku}
                                   </span>
-                                  <span className="w-1 h-1 rounded-full bg-slate-200" />
-                                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.category?.replace("_", " ")}</span>
+                                  <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">/ {item.category?.replace("_", " ")}</span>
                                </div>
-                               {(item.isPurchased || item.incomingStock > 0) ? (
-                                  <div className="flex flex-col gap-1.5 p-2 bg-purple-50/50 dark:bg-purple-500/[0.02] rounded-xl border border-purple-100/50 dark:border-purple-500/10">
-                                     <span className="text-[9px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-tight flex items-center gap-1.5">
-                                        <Truck size={10} className="shrink-0" />
-                                        {item.vendor?.name || 'Linked Vendor'}
-                                     </span>
-                                  </div>
-                               ) : (
-                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-blue-500 uppercase tracking-tight px-1 bg-blue-50/50 dark:bg-blue-500/[0.02] py-1.5 rounded-lg border border-blue-100/50 dark:border-blue-500/10">
-                                     <Plus size={10} className="text-blue-500" /> Manual Stock / Direct Add
+                               {item.isPurchased && (
+                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-purple-500 dark:text-purple-400 uppercase tracking-tight px-2 py-1 bg-purple-50/50 dark:bg-purple-500/[0.02] rounded-lg border border-purple-100/50 dark:border-purple-500/10 w-fit">
+                                     <Truck size={10} /> {item.vendor?.name || 'Linked Vendor'}
                                   </div>
                                )}
                             </div>
@@ -337,8 +344,45 @@ export default function RawMaterialStockClient() {
                          </div>
                       </td>
                       <td className="px-8 py-6">
-                         <p className="text-sm font-black text-slate-900 dark:text-white tracking-tight">{(item.minimumStock || 10).toFixed(1)} {item.unit}</p>
-                         <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Safe Threshold</p>
+                         <div className="group/edit relative">
+                            {editingId === item.id ? (
+                               <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
+                                  <input 
+                                     autoFocus
+                                     className="w-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                                     value={editValue}
+                                     onChange={e => setEditValue(e.target.value)}
+                                     onKeyDown={e => e.key === 'Enter' && handleUpdateThreshold(item.id)}
+                                     disabled={updating}
+                                  />
+                                  <button 
+                                     onClick={() => handleUpdateThreshold(item.id)}
+                                     className="p-1.5 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 transition-colors shadow-sm"
+                                  >
+                                     <TrendingUp size={12} />
+                                  </button>
+                                  <button 
+                                     onClick={() => setEditingId(null)}
+                                     className="p-1.5 bg-slate-100 dark:bg-white/5 text-slate-400 rounded-md"
+                                  >
+                                     <X size={12} />
+                                  </button>
+                               </div>
+                            ) : (
+                               <div 
+                                  onClick={() => { setEditingId(item.id); setEditValue((item.minimumStock || 10).toString()); }}
+                                  className="cursor-pointer group-hover/edit:translate-x-1 transition-all"
+                               >
+                                  <div className="flex items-center gap-1.5">
+                                    <p className="text-sm font-black text-slate-900 dark:text-white tracking-tight border-b border-dotted border-slate-300 dark:border-slate-700">
+                                       {(item.minimumStock || 10).toFixed(1)} {item.unit}
+                                    </p>
+                                    <ArrowUpRight size={12} className="text-orange-500 opacity-0 group-hover/edit:opacity-100 transition-opacity" />
+                                  </div>
+                                  <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase mt-0.5">Safe Threshold</p>
+                               </div>
+                            )}
+                         </div>
                       </td>
                       <td className="px-8 py-6 text-center">
                          {item.incomingStock > 0 ? (

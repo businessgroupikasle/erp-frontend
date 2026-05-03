@@ -160,7 +160,7 @@ function ProductionContent() {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-3 md:py-4 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2.5">
-             <div className="p-2 md:p-2.5 bg-indigo-600 rounded-lg md:rounded-xl shadow-lg shadow-indigo-600/20 shrink-0">
+             <div className="p-2 md:p-2.5 bg-[#F97316] rounded-lg md:rounded-xl shadow-lg shadow-orange-600/20 shrink-0">
                 <Factory size={18} className="text-white md:hidden" />
                 <Factory size={20} className="text-white hidden md:block" />
              </div>
@@ -178,9 +178,9 @@ function ProductionContent() {
            </button>
            <button
              onClick={() => setShowForm(true)}
-             className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-indigo-600 text-white px-5 md:px-6 py-3 md:py-3.5 rounded-xl md:rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-widest hover:shadow-xl hover:translate-y-[-1px] transition-all active:translate-y-0 shadow-lg shadow-indigo-600/10"
+             className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#F97316] text-white px-5 md:px-6 py-3 md:py-3.5 rounded-xl md:rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-widest hover:shadow-xl hover:translate-y-[-1px] transition-all active:translate-y-0 shadow-lg shadow-orange-600/10"
            >
-            <Play size={14} className="md:w-4 md:h-4" fill="currentColor" /> Start Batch
+            <Play size={14} className="md:w-4 md:h-4" fill="currentColor" /> Start Engine Batch
           </button>
         </div>
       </header>
@@ -190,7 +190,7 @@ function ProductionContent() {
         {[
           { label: "Active Cycles", value: history.filter(h => h.status === 'IN_PROGRESS').length, icon: Clock, color: "text-blue-500", bg: "bg-blue-500/10" },
           { label: "Completed Batches", value: completedCount, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-          { label: "Units Synthesized", value: totalProduced.toFixed(0), icon: Package, color: "text-indigo-500", bg: "bg-indigo-500/10" },
+          { label: "Units Synthesized", value: totalProduced.toFixed(0), icon: Package, color: "text-[#F97316]", bg: "bg-orange-500/10" },
         ].map((stat, i) => (
           <div key={i} className="bg-white dark:bg-card/40 backdrop-blur-sm p-4 md:p-6 rounded-[24px] md:rounded-[32px] border border-slate-100 dark:border-white/5 shadow-lg shadow-black/[0.01]">
             <div className="flex items-center justify-between mb-3 md:mb-4">
@@ -213,7 +213,7 @@ function ProductionContent() {
 
         {loading ? (
           <div className="py-16 text-center flex flex-col items-center gap-3">
-             <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+             <div className="w-8 h-8 border-3 border-[#F97316] border-t-transparent rounded-full animate-spin" />
              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Hydrating History...</p>
           </div>
         ) : history.length === 0 ? (
@@ -241,7 +241,7 @@ function ProductionContent() {
                       <div className={clsx(
                         "w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-105 shrink-0",
                         batch.status === 'COMPLETED' ? "bg-emerald-500 shadow-emerald-500/20" : 
-                        batch.status === 'IN_PROGRESS' ? "bg-blue-500 shadow-blue-500/20" : "bg-indigo-500 shadow-indigo-500/20"
+                        batch.status === 'IN_PROGRESS' ? "bg-blue-500 shadow-blue-500/20" : "bg-[#F97316] shadow-orange-500/20"
                       )}>
                          <ChefHat size={20} className="md:w-7 md:h-7" />
                       </div>
@@ -264,7 +264,7 @@ function ProductionContent() {
                              })()}
                          </div>
                          <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium italic truncate">
-                            Synthesized {(batch.quantity * (batch.recipe?.yieldQty || 1)).toFixed(1)} units of <span className="text-indigo-600 dark:text-indigo-400 font-bold">{batch.recipe?.product?.name || "Uncategorized"}</span>
+                            Synthesized {(batch.quantity * (batch.recipe?.yieldQty || 1)).toFixed(1)} units of <span className="text-[#F97316] dark:text-orange-400 font-bold">{batch.recipe?.product?.name || "Uncategorized"}</span>
                          </p>
                          <div className="flex items-center gap-2.5 md:gap-4 mt-2 flex-wrap">
                             <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
@@ -352,194 +352,180 @@ function ProductionContent() {
 
       {/* High-Impact Production Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in zoom-in duration-500">
-          <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/90 backdrop-blur-xl" onClick={() => setShowForm(false)} />
-          <div className="relative bg-white dark:bg-[#0f1117] rounded-[32px] md:rounded-[40px] shadow-2xl w-full max-w-lg border border-slate-200 dark:border-white/5 p-6 md:p-8 overflow-hidden max-h-[90vh] overflow-y-auto">
-             <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-5 mb-6 md:mb-8">
-                <div className="w-14 h-14 md:w-16 md:h-16 rounded-[20px] md:rounded-[24px] bg-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-600/30 shrink-0">
-                   <Play size={28} className="md:hidden" fill="currentColor" />
-                   <Play size={32} className="hidden md:block" fill="currentColor" />
-                </div>
-                <div>
-                   <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-tight">Initialize Cycle</h2>
-                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-0.5">Executing Recipe Blueprint</p>
-                </div>
-             </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in zoom-in duration-500 text-slate-900">
+           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setShowForm(false)} />
+           <div className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-lg border border-slate-100 p-6 md:p-8 overflow-hidden max-h-[92vh] overflow-y-auto custom-scrollbar">
+              <div className="flex items-center gap-4 mb-6">
+                 <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 shrink-0">
+                    <Play size={20} fill="currentColor" />
+                 </div>
+                 <div>
+                    <h2 className="text-xl font-black tracking-tight uppercase">New Production</h2>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Start a new batch from recipe</p>
+                 </div>
+              </div>
 
-             <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-2xl mb-8 border border-slate-200 dark:border-white/5 shadow-inner">
-                <button 
-                  onClick={() => { setAllocationType("FRANCHISE"); setCustomerId(""); }}
-                  className={clsx("flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all", 
-                    allocationType === "FRANCHISE" ? "bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-lg" : "text-slate-400 hover:text-slate-600")}
-                >
-                  To Franchise
-                </button>
-                <button 
-                  onClick={() => { setAllocationType("CUSTOMER"); setFranchiseId(franchiseId); }}
-                  className={clsx("flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all", 
-                    allocationType === "CUSTOMER" ? "bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-lg" : "text-slate-400 hover:text-slate-600")}
-                >
-                  To Customer
-                </button>
-             </div>
+              <div className="flex p-1 bg-slate-50 rounded-xl mb-6">
+                 <button 
+                   onClick={() => { setAllocationType("FRANCHISE"); setCustomerId(""); }}
+                   className={clsx("flex-1 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all", 
+                     allocationType === "FRANCHISE" ? "bg-white text-orange-600 shadow-sm border border-slate-100" : "text-slate-400 hover:text-slate-600")}
+                 >
+                   Send to Branch
+                 </button>
+                 <button 
+                   onClick={() => { setAllocationType("CUSTOMER"); setFranchiseId(franchiseId); }}
+                   className={clsx("flex-1 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all", 
+                     allocationType === "CUSTOMER" ? "bg-white text-orange-600 shadow-sm border border-slate-100" : "text-slate-400 hover:text-slate-600")}
+                 >
+                   Direct Customer
+                 </button>
+              </div>
 
-             <div className="space-y-6 md:space-y-8">
-                 <div className="grid grid-cols-1 gap-6">
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Active Recipe *</label>
-                       <select 
-                         value={recipeId} 
-                         onChange={(e) => setRecipeId(e.target.value)}
-                         className="w-full h-12 md:h-14 bg-slate-50 dark:bg-white/5 px-4 md:px-5 rounded-xl md:rounded-2xl font-black text-[11px] md:text-xs outline-none focus:ring-4 ring-indigo-500/10 appearance-none dark:text-white cursor-pointer border border-slate-100 dark:border-white/5"
-                       >
-                          <option value="">Choose Blueprint...</option>
-                          {recipes.map(r => <option key={r.id} value={r.id}>{r.name} (Yield: {r.yieldQty})</option>)}
-                       </select>
+              <div className="space-y-5">
+                  <div className="grid grid-cols-1 gap-5">
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Recipe *</label>
+                        <select 
+                          value={recipeId} 
+                          onChange={(e) => setRecipeId(e.target.value)}
+                          className="w-full h-11 bg-slate-50 px-4 rounded-xl font-bold text-xs outline-none focus:ring-4 ring-orange-100 border border-slate-100 transition-all appearance-none cursor-pointer"
+                        >
+                           <option value="">Choose a recipe...</option>
+                           {recipes.map(r => <option key={r.id} value={r.id}>{r.name} (Yield: {r.yieldQty})</option>)}
+                        </select>
+                     </div>
+
+                     {allocationType === "FRANCHISE" ? (
+                        <div className="space-y-1.5">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Target Branch *</label>
+                           <select 
+                             value={franchiseId} 
+                             onChange={(e) => setFranchiseId(e.target.value)}
+                             className="w-full h-11 bg-slate-50 px-4 rounded-xl font-bold text-xs outline-none focus:ring-4 ring-orange-100 border border-slate-100 transition-all appearance-none cursor-pointer"
+                           >
+                              <option value="">Select branch location...</option>
+                              {franchises.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                           </select>
+                        </div>
+                     ) : (
+                        <div className="space-y-1.5">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Customer Name *</label>
+                           <select 
+                             value={customerId} 
+                             onChange={(e) => setCustomerId(e.target.value)}
+                             className="w-full h-11 bg-slate-50 px-4 rounded-xl font-bold text-xs outline-none focus:ring-4 ring-orange-100 border border-slate-100 transition-all appearance-none cursor-pointer"
+                           >
+                              <option value="">Select recipient...</option>
+                              {customers.map(c => <option key={c.id} value={c.id}>{c.name} ({c.phone || "No Phone"})</option>)}
+                           </select>
+                           
+                           <div className="mt-4 pt-3 border-t border-slate-50">
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Produce From (Source)</label>
+                              <select 
+                                value={franchiseId} 
+                                onChange={(e) => setFranchiseId(e.target.value)}
+                                className="w-full h-10 mt-1 bg-slate-50/50 px-3 rounded-lg font-bold text-[10px] outline-none border border-slate-100"
+                              >
+                                 <option value="">Select branch...</option>
+                                 {franchises.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                              </select>
+                           </div>
+                        </div>
+                     )}
+                  </div>
+
+                 <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 space-y-4">
+                    <div className="flex items-center justify-between">
+                       <label className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Production Quantity</label>
+                       <span className="text-[8px] font-black text-white bg-orange-500 px-2 py-0.5 rounded-full uppercase">Multiplier: x{quantity}</span>
                     </div>
-
-                    {allocationType === "FRANCHISE" ? (
-                       <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Allocation Franchise *</label>
-                          <select 
-                            value={franchiseId} 
-                            onChange={(e) => setFranchiseId(e.target.value)}
-                            className="w-full h-12 md:h-14 bg-slate-50 dark:bg-white/5 px-4 md:px-5 rounded-xl md:rounded-2xl font-black text-[11px] md:text-xs outline-none focus:ring-4 ring-indigo-500/10 appearance-none dark:text-white cursor-pointer border border-slate-100 dark:border-white/5"
-                          >
-                             <option value="">Target Destination...</option>
-                             {franchises.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                          </select>
+                    <div className="flex items-center gap-4">
+                       <div className="relative flex-1">
+                          <input
+                             type="number"
+                             min={1}
+                             value={quantity}
+                             onChange={(e) => setQuantity(Number(e.target.value))}
+                             className="w-full bg-white border border-orange-200 px-4 py-3 rounded-xl font-black text-3xl outline-none focus:ring-4 ring-orange-500/10 transition-all text-orange-600"
+                          />
                        </div>
-                    ) : (
-                       <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Target Customer *</label>
-                          <div className="relative">
-                             <select 
-                               value={customerId} 
-                               onChange={(e) => setCustomerId(e.target.value)}
-                               className="w-full h-12 md:h-14 bg-slate-50 dark:bg-white/5 px-4 md:px-5 rounded-xl md:rounded-2xl font-black text-[11px] md:text-xs outline-none focus:ring-4 ring-indigo-500/10 appearance-none dark:text-white cursor-pointer border border-slate-100 dark:border-white/5"
-                             >
-                                <option value="">Select Recipient...</option>
-                                {customers.map(c => <option key={c.id} value={c.id}>{c.name} ({c.phone || "No Phone"})</option>)}
-                             </select>
-                             <ChevronDown size={14} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                          </div>
-                          
-                          {/* For customer allocation, we still need to know which branch is producing it.
-                              If user is super admin, show a small picker for 'Producing From'. 
-                              For now, we'll use the first franchise if none selected. */}
-                          <div className="mt-4 pt-4 border-t border-slate-50 dark:border-white/5">
-                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Producing At (Source)</label>
-                             <select 
-                               value={franchiseId} 
-                               onChange={(e) => setFranchiseId(e.target.value)}
-                               className="w-full mt-1.5 h-10 bg-slate-50/50 dark:bg-white/[0.02] px-4 rounded-xl font-bold text-[10px] outline-none dark:text-white border border-slate-100 dark:border-white/5"
-                             >
-                                <option value="">Select Branch...</option>
-                                {franchises.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                             </select>
-                          </div>
+                       <div className="text-right flex flex-col justify-center">
+                          <p className="text-[9px] font-black uppercase text-slate-400">Net Output</p>
+                          <p className="text-2xl font-black tracking-tighter text-slate-900">
+                             {(quantity * (selectedRecipe?.yieldQty || 0)).toFixed(1)} 
+                             <span className="text-[10px] ml-1 text-slate-400">UNITS</span>
+                          </p>
                        </div>
-                    )}
+                    </div>
                  </div>
 
-                <div className="p-5 bg-indigo-50/30 dark:bg-indigo-500/5 rounded-2xl border border-indigo-100/50 dark:border-indigo-500/10 shadow-inner">
-                   <div className="flex items-center justify-between mb-3">
-                      <label className="text-[10px] font-black text-indigo-400 dark:text-indigo-300 uppercase tracking-widest">Target Batch Magnitude</label>
-                      <span className="text-[9px] font-black text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest">Scaling Recipe x{quantity}</span>
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Safe Expiry Date *</label>
+                    <input
+                      type="date"
+                      value={expiryDate}
+                      onChange={(e) => setExpiryDate(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                      className="w-full h-11 bg-slate-50 px-4 rounded-xl font-bold text-xs outline-none focus:ring-4 ring-orange-100 border border-slate-100"
+                    />
+                 </div>
+
+                 {/* Stock Verification Preview */}
+                 {selectedRecipe && (
+                   <div className="space-y-2">
+                       <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Inventory Status</p>
+                       <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
+                          {stockLoading ? (
+                             <div className="py-4 text-center flex items-center justify-center gap-2">
+                                <RefreshCw size={14} className="animate-spin text-slate-300" />
+                                <span className="text-[9px] font-black text-slate-300 uppercase">Checking Stock...</span>
+                             </div>
+                          ) : !franchiseId ? (
+                             <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center">
+                                <p className="text-[9px] font-black text-slate-400 uppercase italic">Select branch to verify stock</p>
+                             </div>
+                          ) : (
+                             ingredientPreview.map((ing, i) => (
+                                <div key={i} className={clsx("flex items-center justify-between p-2.5 rounded-xl border transition-all", 
+                                  ing.sufficient ? "bg-emerald-50/30 border-emerald-100" : "bg-rose-50 border-rose-100")}>
+                                   <div className="flex items-center gap-2.5">
+                                      <div className={clsx("w-5 h-5 rounded-md flex items-center justify-center shrink-0", ing.sufficient ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600")}>
+                                         {ing.sufficient ? <CheckCircle2 size={10} /> : <AlertTriangle size={10} />}
+                                      </div>
+                                      <div className="min-w-0">
+                                         <p className="text-[10px] font-black text-slate-800 uppercase tracking-tight truncate">{ing.name}</p>
+                                         <p className="text-[8px] font-bold text-slate-400">Need {ing.needed} {ing.unit}</p>
+                                      </div>
+                                   </div>
+                                   <div className="text-[10px] font-black text-slate-900">
+                                      {ing.available}
+                                   </div>
+                                </div>
+                             ))
+                          )}
+                       </div>
                    </div>
-                   <div className="flex items-center gap-4">
-                      <div className="relative flex-1">
-                         <input
-                            type="number"
-                            min={1}
-                            value={quantity}
-                            onChange={(e) => setQuantity(Number(e.target.value))}
-                            className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 px-5 py-3 md:py-4 rounded-xl font-black text-2xl md:text-3xl outline-none focus:ring-4 ring-indigo-500/10 dark:text-white transition-all shadow-sm"
-                         />
-                      </div>
-                      <div className="text-right shrink-0 px-2">
-                         <p className="text-[9px] font-black uppercase tracking-widest opacity-60 dark:text-slate-400">Projected Yield</p>
-                         <p className="text-xl md:text-2xl font-black tracking-tighter text-indigo-600 dark:text-indigo-400">
-                            {(quantity * (selectedRecipe?.yieldQty || 0)).toFixed(1)} 
-                            <span className="text-xs ml-1 opacity-60">UNITS</span>
-                         </p>
-                      </div>
-                   </div>
-                </div>
+                 )}
 
-                <div className="space-y-2">
-                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Batch Expiry Date *</label>
-                   <input
-                     type="date"
-                     value={expiryDate}
-                     onChange={(e) => setExpiryDate(e.target.value)}
-                     min={new Date().toISOString().split("T")[0]}
-                     className="w-full h-10 md:h-12 bg-slate-50 dark:bg-white/5 px-4 md:px-5 rounded-xl md:rounded-2xl font-bold text-xs outline-none focus:ring-4 ring-indigo-500/10 dark:text-white border border-slate-100 dark:border-white/5"
-                   />
-                </div>
+                 {error && (
+                    <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-center">
+                       <p className="text-[9px] font-black text-rose-600 uppercase tracking-widest">{error}</p>
+                    </div>
+                 )}
 
-                {/* Raw Material Verification Ledger */}
-                {selectedRecipe && (
-                  <div className="space-y-3">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Verification</p>
-                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                         {stockLoading ? (
-                            <div className="py-8 text-center flex flex-col items-center gap-2">
-                               <RefreshCw size={20} className="animate-spin text-indigo-500/50" />
-                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Checking Inventory...</p>
-                            </div>
-                         ) : !franchiseId ? (
-                            <div className="p-6 bg-slate-50 dark:bg-white/5 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl text-center">
-                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Select a franchise to verify stock</p>
-                            </div>
-                         ) : (
-                            ingredientPreview.map((ing, i) => (
-                               <div key={i} className="space-y-2">
-                                  <div className={clsx("flex items-center justify-between p-3 md:p-4 rounded-xl md:rounded-2xl border transition-all", 
-                                    ing.sufficient 
-                                      ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20" 
-                                      : "bg-rose-50/50 dark:bg-rose-500/5 border-rose-100 dark:border-rose-500/20")}>
-                                     <div className="flex items-center gap-3">
-                                        <div className={clsx("w-6 h-6 md:w-7 md:h-7 rounded-lg flex items-center justify-center shrink-0 shadow-sm", ing.sufficient ? "bg-emerald-500 text-white" : "bg-rose-500 text-white")}>
-                                           {ing.sufficient ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
-                                        </div>
-                                        <div className="min-w-0">
-                                           <p className="text-[10px] md:text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-tight truncate">{ing.name}</p>
-                                           <p className={clsx("text-[8px] md:text-[9px] font-bold tracking-widest uppercase", ing.sufficient ? "text-emerald-600/70" : "text-rose-600/70")}>Required: {ing.needed} {ing.unit}</p>
-                                        </div>
-                                     </div>
-                                     <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                                        <p className={clsx("text-[10px] font-black", ing.sufficient ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400 flex items-center gap-1.5 uppercase")}>
-                                           {!ing.sufficient && ing.available !== "-" && <Minus size={8} />} {ing.available} <span className="text-[8px] opacity-60 ml-1 uppercase">Stock</span>
-                                        </p>
-                                     </div>
-                                  </div>
-
-                               </div>
-                            ))
-                         )}
-                      </div>
-                  </div>
-                )}
-
-                {error && (
-                   <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl animate-shake">
-                      <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center">{error}</p>
-                   </div>
-                )}
-
-                <div className="pt-2 flex flex-col sm:flex-row gap-3">
-                   <button onClick={() => setShowForm(false)} className="flex-1 py-4 md:py-5 bg-slate-100 dark:bg-white/5 rounded-xl md:rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 transition-all">Abort</button>
-                   <button 
-                     onClick={handleStart} 
-                     disabled={saving || !recipeId || !franchiseId || !expiryDate || ingredientPreview.some(i => !i.sufficient)} 
-                     className="flex-[2] py-4 md:py-5 bg-indigo-600 text-white rounded-xl md:rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:hover:scale-100"
-                   >
-                      {saving ? "Processing..." : "Authorize Cycle"}
-                   </button>
-                </div>
-             </div>
-          </div>
+                 <div className="pt-2 flex gap-3">
+                    <button onClick={() => setShowForm(false)} className="flex-1 py-3.5 bg-slate-100 rounded-xl font-black text-[10px] uppercase tracking-widest text-slate-400 hover:bg-slate-200 transition-all">Cancel</button>
+                    <button 
+                      onClick={handleStart} 
+                      disabled={saving || !recipeId || !franchiseId || !expiryDate || ingredientPreview.some(i => !i.sufficient)} 
+                      className="flex-[2] py-3.5 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:shadow-xl transition-all disabled:opacity-30 disabled:grayscale"
+                    >
+                       {saving ? "Processing..." : "Start Production"}
+                    </button>
+                 </div>
+              </div>
+           </div>
         </div>
       )}
     </div>
@@ -550,7 +536,7 @@ export default function ProductionPage() {
   return (
     <Suspense fallback={
       <div className="flex h-[50vh] items-center justify-center">
-        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-[#F97316] border-t-transparent rounded-full animate-spin" />
       </div>
     }>
       <ProductionContent />

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Save, ArrowLeft, Sparkles, CheckCircle2, AlertCircle, Info, IndianRupee, ChevronDown, Package
+  Save, ArrowLeft, Sparkles, CheckCircle2, AlertCircle, Info, IndianRupee, ChevronDown, Package, X, Tag, Layers, Scale, Hash, Copy, ListFilter, RefreshCw
 } from "lucide-react";
 import { productsFullApi } from "@/lib/api";
 import Link from "next/link";
@@ -64,115 +64,246 @@ export default function AddProductClient() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4 animate-in fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-6">
+    <div className="max-w-4xl mx-auto py-12 px-6 animate-in fade-in duration-700">
+      {/* Elegant Header */}
+      <div className="flex items-center justify-between mb-12 border-b border-slate-100 pb-8">
         <div className="flex items-center gap-4">
           <Link 
             href="/products" 
-            className="w-10 h-10 rounded-xl bg-gray-50 text-gray-400 hover:text-orange-500 transition-all flex items-center justify-center group"
+            className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-all flex items-center justify-center active:scale-90"
           >
-            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+            <ArrowLeft size={20} />
           </Link>
           <div>
-            <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-              <Package className="text-orange-500" /> New Product
-            </h1>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Register items to your digital catalog</p>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Register Item</h1>
+            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mt-1">Catalog Expansion Project</p>
           </div>
         </div>
-        <Link href="/products" className="text-xs font-black text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest">
-          Cancel
+        <Link href="/products" className="text-[10px] font-black text-slate-300 hover:text-slate-900 transition-colors uppercase tracking-widest">
+          Quit Session
         </Link>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-600 text-sm font-bold flex items-center gap-2">
-          <AlertCircle size={16} /> {error}
+        <div className="mb-8 p-4 rounded-2xl bg-red-50 border border-red-100/50 text-red-600 text-xs font-bold flex items-center gap-3">
+          <AlertCircle size={14} /> {error}
         </div>
       )}
 
-      {/* Main Form Card */}
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 space-y-8">
-        {/* Basic Info */}
-        <div className="space-y-4">
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">Core Identity</label>
-          <input 
-            placeholder="Product Name (e.g. Rice Batter)" 
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full px-5 py-4 bg-gray-50 rounded-2xl font-bold text-gray-900 border-none outline-none focus:ring-2 ring-orange-100 transition-all"
-          />
-          <textarea 
-            placeholder="Short description..." 
-            rows={3}
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="w-full px-5 py-4 bg-gray-50 rounded-2xl font-bold text-gray-900 border-none outline-none focus:ring-2 ring-orange-100 transition-all resize-none"
-          />
-        </div>
+      {/* Modern Integrated Form */}
+      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/30 p-8 space-y-12">
+        
+        {/* Section: Core Identity */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-5 bg-orange-500 rounded-full" />
+            <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-[0.15em]">Core Identity</h3>
+          </div>
 
-        {/* Classification */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Category</label>
-            <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full px-5 py-4 bg-gray-50 rounded-2xl font-bold border-none outline-none focus:ring-2 ring-orange-100 transition-all">
-              {["BATTER", "SNACK", "BEVERAGE", "CONDIMENT", "OTHER"].map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Size</label>
-            <select value={size} onChange={(e) => setSize(e.target.value)} className="w-full px-5 py-4 bg-gray-50 rounded-2xl font-bold border-none outline-none focus:ring-2 ring-orange-100 transition-all">
-              {PREDEFINED_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2 col-span-2 md:col-span-1">
-            <label className="text-[10px] font-black text-orange-500 uppercase tracking-widest ml-1">SKU (Auto)</label>
-            <input value={form.sku} readOnly className="w-full px-5 py-4 bg-orange-50 text-orange-600 font-mono font-black text-xs rounded-2xl border-none outline-none" />
-          </div>
-        </div>
-
-        {/* Financials */}
-        <div className="grid grid-cols-2 gap-6 pt-4 border-t border-gray-50">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Base Price (₹)</label>
-            <input type="number" value={form.basePrice} onChange={(e) => setForm({ ...form, basePrice: Number(e.target.value) })} className="w-full px-5 py-4 bg-gray-50 rounded-2xl font-bold border-none outline-none focus:ring-2 ring-orange-100 transition-all" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">GST (%)</label>
-            <input type="number" value={form.taxPercent} onChange={(e) => setForm({ ...form, taxPercent: Number(e.target.value) })} className="w-full px-5 py-4 bg-gray-50 rounded-2xl font-bold border-none outline-none focus:ring-2 ring-orange-100 transition-all" />
-          </div>
-        </div>
-
-        {/* Toggles */}
-        <div className="flex flex-wrap gap-6 pt-4">
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <div className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked={form.isVeg} onChange={(e) => setForm({...form, isVeg: e.target.checked})} className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2 col-span-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Product Designation</label>
+              <input 
+                placeholder="Product Name (e.g. Masala Podi)" 
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full px-5 py-4 bg-slate-50/50 rounded-xl font-bold text-slate-900 border-none outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all placeholder:text-slate-300"
+              />
             </div>
-            <span className="text-[11px] font-black text-gray-500 uppercase tracking-widest">{form.isVeg ? "Vegetarian" : "Non-Veg"}</span>
-          </label>
-
-          <label className="flex items-center gap-3 cursor-pointer group border-l border-gray-100 pl-6">
-            <div className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked={form.is_menu_item} onChange={(e) => setForm({...form, is_menu_item: e.target.checked})} className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+            <div className="space-y-2 col-span-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Narrative Description</label>
+              <textarea 
+                placeholder="Short description... (Optional)" 
+                rows={2}
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className="w-full px-5 py-3.5 bg-slate-50/50 rounded-xl font-bold text-slate-900 border-none outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all resize-none placeholder:text-slate-300"
+              />
             </div>
-            <span className="text-[11px] font-black text-gray-500 uppercase tracking-widest">Show in Menu</span>
-          </label>
+          </div>
         </div>
 
-        {/* Action Button */}
-        <button 
-          onClick={handleSave} 
-          disabled={saving}
-          className="w-full py-5 bg-orange-500 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-orange-500/20 hover:bg-orange-600 transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50"
-        >
-          {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Sparkles size={16} />}
-          {saving ? "Processing..." : "Launch Product"}
-        </button>
+        {/* Section: Specification & Logic */}
+        <div className="pt-2 space-y-6 border-t border-slate-50">
+          <div className="flex items-center justify-between mt-6">
+            <div className="flex items-center gap-3">
+              <div className="w-1.5 h-5 bg-slate-900 rounded-full" />
+              <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-[0.15em]">Specification</h3>
+            </div>
+            <div className="bg-slate-50 px-3 py-1.5 rounded-lg flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-mono font-bold text-slate-500 tracking-tighter">
+                {form.sku || "GENERATING..."}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            {/* Category */}
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                Primary Category
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {["BATTER", "SNACK", "BEVERAGE"].map((cat) => (
+                  <button 
+                    key={cat}
+                    type="button"
+                    onClick={() => setForm({ ...form, category: cat })}
+                    className={clsx(
+                      "px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all",
+                      form.category === cat 
+                        ? "bg-slate-900 text-white shadow-lg" 
+                        : "bg-slate-50 text-slate-400 hover:bg-slate-100 active:scale-95"
+                    )}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              <input 
+                placeholder="Custom Category..."
+                value={!["BATTER", "SNACK", "BEVERAGE"].includes(form.category) ? form.category : ""}
+                onChange={(e) => setForm({ ...form, category: e.target.value.toUpperCase() })}
+                className="w-full px-4 py-2.5 bg-slate-50/30 border border-slate-100 rounded-xl font-bold text-xs text-orange-600 focus:bg-white outline-none transition-all placeholder:text-slate-300"
+              />
+            </div>
+
+            {/* Size */}
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                Pack Dimension
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {["1KG", "500G", "250G"].map((s) => (
+                  <button 
+                    key={s}
+                    type="button"
+                    onClick={() => setSize(s)}
+                    className={clsx(
+                      "px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all",
+                      size === s 
+                        ? "bg-slate-900 text-white shadow-lg" 
+                        : "bg-slate-50 text-slate-400 hover:bg-slate-100 active:scale-95"
+                    )}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              <input 
+                placeholder="Custom Size..."
+                value={!["1KG", "500G", "250G"].includes(size) ? size : ""}
+                onChange={(e) => setSize(e.target.value.toUpperCase())}
+                className="w-full px-4 py-2.5 bg-slate-50/30 border border-slate-100 rounded-xl font-bold text-xs text-slate-900 focus:bg-white outline-none transition-all placeholder:text-slate-300"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Section: Commercials */}
+        <div className="pt-2 space-y-6 border-t border-slate-50">
+          <div className="flex items-center gap-3 mt-6">
+            <div className="w-1.5 h-5 bg-emerald-500 rounded-full" />
+            <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-[0.15em]">Commercials</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Base Valuation (₹)
+              </label>
+              <input 
+                type="number" 
+                value={form.basePrice} 
+                onChange={(e) => setForm({ ...form, basePrice: Number(e.target.value) })} 
+                className="w-full px-6 py-4 bg-slate-50/50 rounded-xl font-black text-2xl text-slate-900 border-none outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all placeholder:text-slate-300" 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Tax Obligation (%)
+              </label>
+              <div className="flex gap-2">
+                {[0, 5, 12, 18].map((rate) => (
+                  <button
+                    key={rate}
+                    type="button"
+                    onClick={() => setForm({ ...form, taxPercent: rate })}
+                    className={clsx(
+                      "flex-1 py-3 rounded-lg font-black text-[10px] transition-all",
+                      form.taxPercent === rate 
+                        ? "bg-slate-900 text-white shadow-lg" 
+                        : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+                    )}
+                  >
+                    {rate}%
+                  </button>
+                ))}
+                <input 
+                  type="number"
+                  placeholder="Custom"
+                  value={![0, 5, 12, 18].includes(form.taxPercent) ? form.taxPercent : ""}
+                  onChange={(e) => setForm({ ...form, taxPercent: Number(e.target.value) })}
+                  className="w-16 py-3 px-2 bg-slate-50 rounded-lg font-black text-[10px] text-center border-none outline-none focus:bg-white transition-all placeholder:text-slate-300"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section: Flags & Action */}
+        <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-6 border-t border-slate-50">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setForm({...form, isVeg: !form.isVeg})}
+              className={clsx(
+                "flex items-center gap-2.5 px-5 py-3.5 rounded-xl border transition-all",
+                form.isVeg 
+                  ? "border-emerald-100 bg-emerald-50 text-emerald-700" 
+                  : "border-slate-50 bg-slate-50 text-slate-400"
+              )}
+            >
+              <div className={clsx("w-2 h-2 rounded-full", form.isVeg ? "bg-emerald-500" : "bg-slate-300")} />
+              <span className="text-[9px] font-black tracking-widest uppercase">{form.isVeg ? "Pure Veg" : "Non-Veg"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setForm({...form, is_menu_item: !form.is_menu_item})}
+              className={clsx(
+                "flex items-center gap-2.5 px-5 py-3.5 rounded-xl border transition-all",
+                form.is_menu_item 
+                  ? "border-orange-100 bg-orange-50 text-orange-700" 
+                  : "border-slate-50 bg-slate-50 text-slate-400"
+              )}
+            >
+              <div className={clsx("w-2 h-2 rounded-full", form.is_menu_item ? "bg-orange-500" : "bg-slate-300")} />
+              <span className="text-[9px] font-black tracking-widest uppercase">{form.is_menu_item ? "Visible" : "Hidden"}</span>
+            </button>
+          </div>
+
+          <button 
+            onClick={handleSave} 
+            disabled={saving}
+            className="w-full md:w-auto px-10 py-4 bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-xl shadow-xl shadow-slate-900/10 hover:bg-black hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+          >
+            {saving ? (
+              <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                <Sparkles size={14} className="text-orange-400" />
+                <span>Launch Item</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      <p className="text-center mt-12 text-[9px] font-bold text-slate-300 uppercase tracking-widest flex items-center justify-center gap-2">
+        <Info size={12} /> Items are published immediately to the digital catalog
+      </p>
     </div>
   );
 }
