@@ -22,9 +22,11 @@ export default function EmployeesPage() {
   const [department, setDepartment] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [form, setForm] = useState({
     userId: "", department: "", designation: "", dateOfJoining: "",
-    gender: "", address: "", bankAccount: "", ifscCode: "", panNumber: "", pfNumber: "", esiNumber: ""
+    gender: "", address: "", bankAccount: "", ifscCode: "", panNumber: "", pfNumber: "", esiNumber: "",
+    salary: ""
   });
 
   async function loadData() {
@@ -42,17 +44,49 @@ export default function EmployeesPage() {
 
   useEffect(() => { loadData(); }, [search, department]);
 
-  async function handleCreate(e: React.FormEvent) {
+  const handleOpenForm = (emp: Employee | null = null) => {
+    if (emp) {
+      setSelectedEmployee(emp);
+      setForm({
+        userId: emp.userId,
+        department: emp.department || "",
+        designation: emp.designation || "",
+        dateOfJoining: emp.dateOfJoining ? new Date(emp.dateOfJoining).toISOString().split('T')[0] : "",
+        gender: (emp as any).gender || "",
+        address: (emp as any).address || "",
+        bankAccount: (emp as any).bankAccount || "",
+        ifscCode: (emp as any).ifscCode || "",
+        panNumber: (emp as any).panNumber || "",
+        pfNumber: (emp as any).pfNumber || "",
+        esiNumber: (emp as any).esiNumber || "",
+        salary: (emp as any).salary ? String((emp as any).salary) : ""
+      });
+    } else {
+      setSelectedEmployee(null);
+      setForm({
+        userId: "", department: "", designation: "", dateOfJoining: "",
+        gender: "", address: "", bankAccount: "", ifscCode: "", panNumber: "", pfNumber: "", esiNumber: "",
+        salary: ""
+      });
+    }
+    setShowForm(true);
+  };
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await api.post("/api/employees", form);
+      if (selectedEmployee) {
+        await api.patch(`/api/employees/${selectedEmployee.id}`, { ...form, salary: form.salary ? Number(form.salary) : undefined });
+      } else {
+        await api.post("/api/employees", { ...form, salary: form.salary ? Number(form.salary) : undefined });
+      }
       setShowForm(false);
-      setForm({ userId: "", department: "", designation: "", dateOfJoining: "", gender: "", address: "", bankAccount: "", ifscCode: "", panNumber: "", pfNumber: "", esiNumber: "" });
       loadData();
     } catch {}
   }
 
   const departments = Array.from(new Set(employees.map((e: any) => e.department).filter(Boolean)));
+  const selectedUser = users.find(u => u.id === form.userId);
 
   return (
     <div className="p-6 space-y-6">
@@ -64,7 +98,7 @@ export default function EmployeesPage() {
         <div className="flex gap-2">
           <Link href="/hr/leaves" className="border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Leave Requests</Link>
           <Link href="/hr/shifts" className="border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Shifts</Link>
-          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
+          <button onClick={() => handleOpenForm()} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
             <Plus className="w-4 h-4" /> Add Employee
           </button>
         </div>
@@ -102,7 +136,7 @@ export default function EmployeesPage() {
         ) : employees.length === 0 ? (
           <div className="col-span-3 text-center py-8 text-gray-400">No employees found</div>
         ) : employees.map((emp) => (
-          <Link key={emp.id} href={`/hr/employees/${emp.id}`} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div key={emp.id} onClick={() => handleOpenForm(emp)} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all cursor-pointer">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <User className="w-5 h-5 text-blue-600" />
@@ -120,29 +154,47 @@ export default function EmployeesPage() {
                 </div>
               </div>
             </div>
-            {emp.salaryStructure && (
-              <div className="mt-3 pt-3 border-t border-gray-50 text-xs text-gray-500">
-                Salary: {emp.salaryStructure.name}
+            {(emp as any).salary && (
+              <div className="mt-3 pt-3 border-t border-gray-50 text-xs font-bold text-blue-600">
+                Basic Salary: ₹{Number((emp as any).salary).toLocaleString()}
               </div>
             )}
-          </Link>
+            {emp.salaryStructure && (
+              <div className="mt-1 text-[10px] text-gray-500">
+                Structure: {emp.salaryStructure.name}
+              </div>
+            )}
+          </div>
         ))}
       </div>
 
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl my-4">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-lg font-semibold">Add Employee</h2>
-            </div>
-            <form onSubmit={handleCreate} className="p-6 space-y-4">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">User Account *</label>
-                <select required value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
-                  <option value="">Select user...</option>
-                  {users.map((u: any) => <option key={u.id} value={u.id}>{u.fullName} ({u.email})</option>)}
-                </select>
+                <h2 className="text-lg font-semibold">{selectedEmployee ? "Edit Employee" : "Add Employee"}</h2>
+                {selectedUser && (
+                  <p className="text-xs text-blue-600 font-medium">Configuring profile for <span className="font-bold uppercase">{selectedUser.fullName}</span></p>
+                )}
               </div>
+              {selectedEmployee && (
+                <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{selectedEmployee.employeeCode}</span>
+              )}
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {!selectedEmployee && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-gray-700">User Account *</label>
+                    <Link href="/admin/users" className="text-xs text-blue-600 hover:underline">Create new user</Link>
+                  </div>
+                  <select required value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                    <option value="">Select user...</option>
+                    {users.map((u: any) => <option key={u.id} value={u.id}>{u.fullName} ({u.email})</option>)}
+                  </select>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
@@ -155,6 +207,10 @@ export default function EmployeesPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Date of Joining *</label>
                   <input required type="date" value={form.dateOfJoining} onChange={(e) => setForm({ ...form, dateOfJoining: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Basic Salary</label>
+                  <input type="number" placeholder="0.00" value={form.salary} onChange={(e) => setForm({ ...form, salary: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
@@ -181,13 +237,19 @@ export default function EmployeesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Bank Account</label>
                   <input value={form.bankAccount} onChange={(e) => setForm({ ...form, bankAccount: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
                 </div>
-                <div className="col-span-2">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">IFSC Code</label>
                   <input value={form.ifscCode} onChange={(e) => setForm({ ...form, ifscCode: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
                 </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                  <textarea rows={2} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                </div>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700">Add Employee</button>
+                <button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+                  {selectedEmployee ? "Update Employee" : "Add Employee"}
+                </button>
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-gray-200 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
               </div>
             </form>

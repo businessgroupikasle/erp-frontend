@@ -102,7 +102,7 @@ export default function UserManagement() {
       accessor: (user: any) => (
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white font-black text-xs shadow-sm shadow-slate-200 dark:shadow-none border border-slate-200 dark:border-slate-800">
-            {user.fullName?.[0].toUpperCase() || user.name?.[0].toUpperCase() || "U"}
+            {user.fullName?.[0]?.toUpperCase() || user.name?.[0]?.toUpperCase() || "U"}
           </div>
           <div>
             <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-xs">{user.fullName || user.name}</p>

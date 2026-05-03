@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   CreditCard, 
   ArrowUpRight, 
@@ -15,29 +15,41 @@ import {
   Landmark
 } from "lucide-react";
 import { clsx } from "clsx";
+import api from "@/lib/api";
 
 type FlowType = "ALL" | "IN" | "OUT";
-
-const MOCK_PAYMENTS = [
-  { id: 'PAY-1001', date: new Date().toISOString(), entity: 'Walk-in Customer', flow: 'IN', method: 'UPI', amount: 850, status: 'PAID', reference: 'POS-8902', type: 'DIRECT' },
-  { id: 'PAY-1002', date: new Date(Date.now() - 86400000).toISOString(), entity: 'Spice Valley', flow: 'OUT', method: 'BANK_TRANSFER', amount: 15400, status: 'PAID', reference: 'PO-104', type: 'PO_LINKED' },
-  { id: 'PAY-1003', date: new Date(Date.now() - 172800000).toISOString(), entity: 'Franchise B', flow: 'IN', method: 'NEFT', amount: 24000, status: 'PENDING', reference: 'FRA-42', type: 'DIRECT' },
-  { id: 'PAY-1004', date: new Date(Date.now() - 259200000).toISOString(), entity: 'Fresh Farms', flow: 'OUT', method: 'CASH', amount: 3200, status: 'PAID', reference: 'ADV-1005', type: 'ADVANCE' },
-  { id: 'PAY-1005', date: new Date(Date.now() - 345600000).toISOString(), entity: 'Walk-in Customer', flow: 'IN', method: 'CARD', amount: 1200, status: 'FAILED', reference: 'POS-8890', type: 'DIRECT' },
-];
 
 export default function PaymentsPage() {
   const [activeTab, setActiveTab] = useState<FlowType>("ALL");
   const [search, setSearch] = useState("");
+  const [payments, setPayments] = useState<any[]>([]);
+  const [stats, setStats] = useState({ inflow: 0, outflow: 0 });
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
 
-  const filtered = MOCK_PAYMENTS.filter(p => {
-    if (activeTab !== "ALL" && p.flow !== activeTab) return false;
-    if (search && !p.entity.toLowerCase().includes(search.toLowerCase()) && !p.id.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [pRes, sRes] = await Promise.all([
+        api.get("/api/finance/payments", { 
+          params: { 
+            flowType: activeTab === "ALL" ? undefined : activeTab === "IN" ? "INFLOW" : "OUTFLOW",
+            search 
+          } 
+        }),
+        api.get("/api/finance/payments/stats")
+      ]);
+      setPayments(pRes.data);
+      setStats(sRes.data);
+    } catch {}
+    setLoading(false);
+  };
 
-  const totalIn = MOCK_PAYMENTS.filter(p => p.flow === 'IN' && p.status === 'PAID').reduce((sum, p) => sum + p.amount, 0);
-  const totalOut = MOCK_PAYMENTS.filter(p => p.flow === 'OUT' && p.status === 'PAID').reduce((sum, p) => sum + p.amount, 0);
+  useEffect(() => { loadData(); }, [activeTab, search]);
+
+  const totalIn = stats.inflow;
+  const totalOut = stats.outflow;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -49,7 +61,7 @@ export default function PaymentsPage() {
           </h1>
           <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Unified money control centre tracing all income and accounts payable.</p>
         </div>
-        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 active:scale-95">
+        <button onClick={() => setShowModal(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 active:scale-95">
           <Plus size={16} /> Record Manual Payment
         </button>
       </div>
@@ -117,7 +129,9 @@ export default function PaymentsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-              {filtered.map(payment => (
+              {loading ? (
+                <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-400">Loading transactions...</td></tr>
+              ) : payments.map(payment => (
                 <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                   <td className="px-6 py-4">
                     <p className="text-xs font-bold text-gray-900 dark:text-white uppercase">
@@ -128,7 +142,12 @@ export default function PaymentsPage() {
                     </p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-xs font-black text-blue-600 dark:text-blue-400">{payment.id}</p>
+                    <button 
+                      onClick={() => setSelectedPayment(payment)}
+                      className="text-xs font-black text-blue-600 dark:text-blue-400 hover:underline text-left"
+                    >
+                      {payment.id}
+                    </button>
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-slate-300">
                         {payment.type}
@@ -140,7 +159,7 @@ export default function PaymentsPage() {
                     <p className="text-sm font-bold text-gray-900 dark:text-white">{payment.entity}</p>
                   </td>
                   <td className="px-6 py-4">
-                    {payment.flow === 'IN' ? (
+                    {payment.flowType === 'INFLOW' ? (
                       <div className="flex items-center gap-1.5 text-emerald-500">
                         <ArrowDownRight size={14} strokeWidth={3} />
                         <span className="text-[10px] font-black uppercase tracking-widest">Inflow</span>
@@ -176,14 +195,14 @@ export default function PaymentsPage() {
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <p className={clsx("text-sm font-black", payment.flow === 'IN' ? "text-emerald-500" : "text-gray-900 dark:text-white")}>
-                      {payment.flow === 'IN' ? '+' : '-'}₹{payment.amount.toLocaleString()}
+                    <p className={clsx("text-sm font-black", payment.flowType === 'INFLOW' ? "text-emerald-500" : "text-gray-900 dark:text-white")}>
+                      {payment.flowType === 'INFLOW' ? '+' : '-'}₹{payment.amount.toLocaleString()}
                     </p>
                   </td>
                 </tr>
               ))}
               
-              {filtered.length === 0 && (
+              {payments.length === 0 && !loading && (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center text-gray-400">
@@ -197,6 +216,154 @@ export default function PaymentsPage() {
           </table>
         </div>
       </div>
+      
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02]">
+              <h2 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Record Manual Payment</h2>
+            </div>
+            <form 
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const data = Object.fromEntries(formData.entries());
+                try {
+                  await api.post("/api/finance/payments", {
+                    ...data,
+                    amount: Number(data.amount)
+                  });
+                  setShowModal(false);
+                  loadData();
+                } catch { alert("Failed to record payment"); }
+              }}
+              className="p-6 space-y-4"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-1 block">Entity Name / Payee</label>
+                  <input name="entity" required className="w-full bg-gray-100 dark:bg-black/20 border-none rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-bold" placeholder="e.g. Ravi / Spice Valley" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-1 block">Flow Type</label>
+                  <select name="flowType" className="w-full bg-gray-100 dark:bg-black/20 border-none rounded-xl px-4 py-2.5 text-sm outline-none font-bold">
+                    <option value="OUTFLOW">Outflow (Pay)</option>
+                    <option value="INFLOW">Inflow (Receive)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-1 block">Entity Type</label>
+                  <select name="entityType" className="w-full bg-gray-100 dark:bg-black/20 border-none rounded-xl px-4 py-2.5 text-sm outline-none font-bold">
+                    <option value="EMPLOYEE">Employee</option>
+                    <option value="VENDOR">Vendor</option>
+                    <option value="CUSTOMER">Customer</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-1 block">Amount</label>
+                  <input name="amount" type="number" required className="w-full bg-gray-100 dark:bg-black/20 border-none rounded-xl px-4 py-2.5 text-sm outline-none font-bold text-blue-600" placeholder="0.00" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-1 block">Method</label>
+                  <select name="method" className="w-full bg-gray-100 dark:bg-black/20 border-none rounded-xl px-4 py-2.5 text-sm outline-none font-bold">
+                    <option value="UPI">UPI</option>
+                    <option value="CASH">Cash</option>
+                    <option value="BANK_TRANSFER">Bank Transfer</option>
+                    <option value="CARD">Card</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-1 block">Reference / Note</label>
+                  <input name="reference" className="w-full bg-gray-100 dark:bg-black/20 border-none rounded-xl px-4 py-2.5 text-sm outline-none font-bold" placeholder="Optional reference #" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-1 block">Payment Category (Type)</label>
+                  <select name="type" className="w-full bg-gray-100 dark:bg-black/20 border-none rounded-xl px-4 py-2.5 text-sm outline-none font-bold">
+                    <option value="GENERAL">General</option>
+                    <option value="PAYROLL">Payroll</option>
+                    <option value="INVENTORY_PURCHASE">Inventory Purchase</option>
+                    <option value="UTILITY_BILL">Utility Bill</option>
+                    <option value="RENT">Rent</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 active:scale-95">Record Payment</button>
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 bg-gray-100 dark:bg-white/5 text-gray-500 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-white/10 transition-all">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {selectedPayment && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] w-full max-w-xl shadow-2xl overflow-hidden border border-gray-100 dark:border-white/5">
+            <div className="p-8 border-b border-gray-100 dark:border-white/5 flex justify-between items-center">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 mb-1">Transaction Details</p>
+                <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">{selectedPayment.id}</h2>
+              </div>
+              <button onClick={() => setSelectedPayment(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors">
+                <XCircle size={24} className="text-gray-400" />
+              </button>
+            </div>
+            
+            <div className="p-8 space-y-8">
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block">Party / Entity</label>
+                  <p className="text-lg font-black text-gray-900 dark:text-white">{selectedPayment.entity}</p>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-gray-100 dark:bg-white/10 rounded text-gray-500">{selectedPayment.entityType}</span>
+                </div>
+                <div className="text-right">
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block">Amount</label>
+                  <p className={clsx("text-3xl font-black", selectedPayment.flowType === 'INFLOW' ? "text-emerald-500" : "text-gray-900 dark:text-white")}>
+                    {selectedPayment.flowType === 'INFLOW' ? '+' : '-'}₹{selectedPayment.amount.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-1 block">Method</label>
+                  <p className="text-xs font-black uppercase text-gray-900 dark:text-white">{selectedPayment.method}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-1 block">Category</label>
+                  <p className="text-xs font-black uppercase text-gray-900 dark:text-white">{selectedPayment.type || 'General'}</p>
+                </div>
+                <div className="text-right">
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-1 block">Reference</label>
+                  <p className="text-xs font-black text-gray-900 dark:text-white">{selectedPayment.reference || 'N/A'}</p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-white/[0.02] p-6 rounded-2xl">
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block">Description / Notes</label>
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium italic">
+                  {selectedPayment.description || "No additional notes provided for this transaction."}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between pt-4">
+                 <div className="flex items-center gap-2">
+                    <div className={clsx("w-2 h-2 rounded-full", selectedPayment.status === 'PAID' ? "bg-emerald-500" : "bg-amber-500")}></div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{selectedPayment.status}</span>
+                 </div>
+                 <p className="text-[10px] font-bold text-gray-400">Recorded on {new Date(selectedPayment.createdAt).toLocaleString()}</p>
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-50 dark:bg-white/[0.02] border-t border-gray-100 dark:border-white/5 flex gap-3">
+               <button onClick={() => window.print()} className="flex-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Print Receipt</button>
+               <button onClick={() => setSelectedPayment(null)} className="flex-1 bg-gray-900 dark:bg-blue-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all">Close Details</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
