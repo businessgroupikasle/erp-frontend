@@ -7,7 +7,7 @@ import { clsx } from "clsx";
 
 export default function GeneralSettingsPage() {
   const [expandedSections, setExpandedSections] = useState<string[]>([
-    "Refrens Premium Subscription", "PDF & Reports Configurations", "Time and Currency", "Security"
+    "Security"
   ]);
 
   const toggleSection = (section: string) => {
@@ -40,7 +40,7 @@ export default function GeneralSettingsPage() {
         <h2 className="text-[17px] font-black text-[#1A1A1A] dark:text-white mb-6">General Settings</h2>
 
         {/* Subscription */}
-        <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
+        {/* <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
            <SectionHeader title="Refrens Premium Subscription" />
            {expandedSections.includes("Refrens Premium Subscription") && (
              <div className="pb-8 space-y-6 pt-2">
@@ -65,10 +65,10 @@ export default function GeneralSettingsPage() {
                 </div>
              </div>
            )}
-        </div>
+        </div> */}
 
         {/* PDF & Reports */}
-        <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
+        {/* <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
            <SectionHeader title="PDF & Reports Configurations" />
            {expandedSections.includes("PDF & Reports Configurations") && (
              <div className="pb-8 space-y-8 pt-2">
@@ -93,10 +93,10 @@ export default function GeneralSettingsPage() {
                 </div>
              </div>
            )}
-        </div>
+        </div> */}
 
         {/* Time and Currency */}
-        <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
+        {/* <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
            <SectionHeader title="Time and Currency" />
            {expandedSections.includes("Time and Currency") && (
              <div className="pb-8 space-y-8 pt-2">
@@ -131,7 +131,7 @@ export default function GeneralSettingsPage() {
                 </div>
              </div>
            )}
-        </div>
+        </div> */}
 
         {/* Security */}
         <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
