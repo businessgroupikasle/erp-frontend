@@ -298,7 +298,8 @@ export default function PurchaseOrdersClient() {
         amount: paymentAmount,
         note: paymentNote || `Payment for PO #${payingPO.id.substring(0, 8)}`,
         paymentMode,
-        referenceId: payingPO.id
+        referenceId: payingPO.id,
+        accountId: ""
       });
       setLastPayment(res.data);
       setShowPaymentModal(false);
@@ -434,6 +435,7 @@ export default function PurchaseOrdersClient() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="absolute inset-0" onClick={() => setShowForm(false)} />
           <div className="bg-white dark:bg-[#0f1117] rounded-[2.5rem] shadow-2xl w-full max-w-4xl p-8 space-y-8 relative my-8">
             <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/5 rounded-bl-[100px] -mr-16 -mt-16" />
             
@@ -720,7 +722,8 @@ export default function PurchaseOrdersClient() {
 
       {showPaymentModal && payingPO && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-          <div className="bg-white dark:bg-[#0f1117] w-full max-w-md rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/5 overflow-hidden animate-in zoom-in-95 duration-300">
+          <div className="absolute inset-0" onClick={() => { setShowPaymentModal(false); setPayingPO(null); }} />
+          <div className="bg-white dark:bg-[#0f1117] w-full max-w-md rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/5 overflow-hidden animate-in zoom-in-95 duration-300 relative">
             {/* Header */}
             <div className="p-8 pb-0">
               <div className="flex items-center justify-between mb-6">

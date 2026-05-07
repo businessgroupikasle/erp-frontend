@@ -138,7 +138,7 @@ export default function GeneralSettingsPage() {
            <SectionHeader title="Security" />
            {expandedSections.includes("Security") && (
              <div className="pb-8 space-y-8 pt-4 px-2">
-                <div className="flex items-center justify-between max-w-3xl">
+                {/* <div className="flex items-center justify-between max-w-3xl">
                    <div className="space-y-1">
                       <p className="text-[13px] font-bold text-[#1A1A1A] dark:text-white">Change Profile to Public</p>
                       <p className="text-[11px] font-medium text-[#999]">Enable to ensure that your Business Profile is visible and discoverable to everyone.</p>
@@ -165,7 +165,8 @@ export default function GeneralSettingsPage() {
                    <button className="px-8 py-2 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[11px] font-black hover:bg-red-50 transition-all text-red-500 uppercase tracking-widest shadow-sm">
                       REMOVE
                    </button>
-                </div>
+                </div> */}
+                <p className="text-sm text-slate-500 italic">No settings available in this section yet.</p>
              </div>
            )}
         </div>

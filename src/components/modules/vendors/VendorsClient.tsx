@@ -213,7 +213,8 @@ export default function VendorsClient() {
       await vendorsApi.recordPayment(showPayment.id, {
         amount: Number(paymentForm.amount),
         note: paymentForm.note || (paymentForm.type === "ADVANCE" ? "Advance Payment" : "Direct Payment"),
-        referenceId: paymentForm.referenceId || undefined
+        referenceId: paymentForm.referenceId || undefined,
+        accountId: ""
       });
       setShowPayment(null);
       setPaymentForm({ amount: "", note: "", type: "PAYMENT", referenceId: "" });
@@ -441,18 +442,24 @@ export default function VendorsClient() {
 
       {linkModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="absolute inset-0" onClick={() => setLinkModal(null)} />
           <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6 overflow-hidden relative">
              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-bl-[100px] -mr-12 -mt-12" />
              
-             <div className="flex items-center gap-3 relative z-10">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
-                   {linkEditing ? <Edit3 size={20} /> : <Plus size={20} />}
+             <div className="flex items-center justify-between relative z-10 mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+                    {linkEditing ? <Edit3 size={20} /> : <Plus size={20} />}
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-tight">{linkEditing ? "Edit Material" : "Link Material"}</h2>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{linkModal.name}</p>
+                  </div>
                 </div>
-                <div>
-                   <h2 className="text-base font-bold text-gray-900 dark:text-white uppercase">{linkEditing ? "Update Link" : "Link Material"}</h2>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{linkModal.name}</p>
-                </div>
-              </div>
+                <button onClick={() => setLinkModal(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all">
+                  <X size={20} className="text-slate-400" />
+                </button>
+             </div>
 
               {!linkEditing && (
                 <div className="bg-slate-50 dark:bg-white/5 p-1 rounded-xl flex gap-1">
@@ -560,18 +567,24 @@ export default function VendorsClient() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-xl p-8 space-y-6">
+          <div className="absolute inset-0" onClick={() => setShowForm(false)} />
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-xl p-8 space-y-6 relative">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-tight">{editing ? "Edit Vendor" : "Add Vendor"}</h2>
                 {!editing && <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Step {formStep} of 2</p>}
               </div>
-              {!editing && (
-                <div className="flex gap-1">
-                  <div className={clsx("w-5 h-1 rounded-full transition-all", formStep === 1 ? "bg-orange-500" : "bg-slate-200")} />
-                  <div className={clsx("w-5 h-1 rounded-full transition-all", formStep === 2 ? "bg-orange-500" : "bg-slate-200")} />
-                </div>
-              )}
+              <div className="flex items-center gap-4">
+                {!editing && (
+                  <div className="flex gap-1">
+                    <div className={clsx("w-5 h-1 rounded-full transition-all", formStep === 1 ? "bg-orange-500" : "bg-slate-200")} />
+                    <div className={clsx("w-5 h-1 rounded-full transition-all", formStep === 2 ? "bg-orange-500" : "bg-slate-200")} />
+                  </div>
+                )}
+                <button onClick={() => setShowForm(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all">
+                  <X size={20} className="text-slate-400" />
+                </button>
+              </div>
             </div>
 
             {formStep === 1 ? (
@@ -687,8 +700,15 @@ export default function VendorsClient() {
 
       {showPayment && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6">
-            <h2 className="text-lg font-black text-gray-900 dark:text-white">Record Payment - {showPayment.name}</h2>
+          <div className="absolute inset-0" onClick={() => setShowPayment(null)} />
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6 relative">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-black text-gray-900 dark:text-white">Record Payment</h2>
+              <button onClick={() => setShowPayment(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all">
+                <X size={20} className="text-slate-400" />
+              </button>
+            </div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest -mt-4">{showPayment.name}</p>
             <div className="bg-slate-50 p-1.5 rounded-2xl flex gap-1">
               <button onClick={() => setPaymentForm({...paymentForm, type: "PAYMENT"})} className={clsx("flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest", paymentForm.type === "PAYMENT" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400")}>Payment</button>
               <button onClick={() => setPaymentForm({...paymentForm, type: "ADVANCE"})} className={clsx("flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest", paymentForm.type === "ADVANCE" ? "bg-white text-violet-600 shadow-sm" : "text-slate-400")}>Advance</button>
@@ -710,7 +730,11 @@ export default function VendorsClient() {
       
       {confirmModal?.show && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="bg-white dark:bg-[#12141c] rounded-3xl p-8 space-y-6 text-center">
+          <div className="absolute inset-0" onClick={() => setConfirmModal(null)} />
+          <div className="bg-white dark:bg-[#12141c] rounded-3xl p-8 space-y-6 text-center relative max-w-sm w-full">
+            <button onClick={() => setConfirmModal(null)} className="absolute top-4 right-4 p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all">
+              <X size={18} className="text-slate-400" />
+            </button>
             <Trash2 size={48} className="text-red-500 mx-auto" />
             <h2 className="text-xl font-black">Delete {confirmModal.vendor.name}?</h2>
             <div className="flex gap-3">
@@ -723,7 +747,11 @@ export default function VendorsClient() {
       
       {errorMessage && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="bg-white dark:bg-[#12141c] rounded-3xl p-8 space-y-6 text-center">
+          <div className="absolute inset-0" onClick={() => setErrorMessage(null)} />
+          <div className="bg-white dark:bg-[#12141c] rounded-3xl p-8 space-y-6 text-center relative max-w-sm w-full">
+            <button onClick={() => setErrorMessage(null)} className="absolute top-4 right-4 p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all">
+              <X size={18} className="text-slate-400" />
+            </button>
             <AlertCircle size={48} className="text-orange-500 mx-auto" />
             <h2 className="text-xl font-black uppercase">{errorMessage.title}</h2>
             <p className="text-sm text-gray-500">{errorMessage.message}</p>
@@ -734,3 +762,4 @@ export default function VendorsClient() {
     </div>
   );
 }
+

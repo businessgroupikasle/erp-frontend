@@ -6,7 +6,8 @@ import {
   Briefcase, IndianRupee, Trash2, Edit2, MapPin, Landmark,
   ChevronRight, ChevronLeft, CheckCircle2, Upload, FileText,
   CreditCard, Smartphone, ShieldCheck, Heart, UserPlus,
-  Clock, Lock, Users
+  Clock, Lock, Users,
+  X
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -192,7 +193,6 @@ export default function EmployeesClient() {
 
   const validateStep = () => {
     if (formStep === 1) {
-      if (!selectedEmployee && !form.userId) return "Please link a user account";
       if (!form.fullName) return "Full name is required";
       if (!form.employeeCode) return "Employee code is required";
       if (!form.mobile) return "Mobile number is required";
@@ -392,6 +392,10 @@ export default function EmployeesClient() {
       {/* Form Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
+          <div 
+            className="absolute inset-0" 
+            onClick={() => setShowForm(false)} 
+          />
           <div className="bg-white dark:bg-[#12141c] rounded-[1.5rem] sm:rounded-[2.5rem] shadow-2xl w-full max-w-3xl p-5 sm:p-8 my-auto relative">
             
             {/* Modal Header */}
@@ -409,11 +413,19 @@ export default function EmployeesClient() {
                    <p className="text-[9px] sm:text-[10px] font-black text-orange-600 uppercase tracking-widest ml-2">Step {formStep} of 5</p>
                 </div>
               </div>
-              {selectedEmployee && (
-                <span className="hidden sm:inline-block bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-slate-400 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                  {selectedEmployee.employeeCode}
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {selectedEmployee && (
+                  <span className="hidden sm:inline-block bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-slate-400 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    {selectedEmployee.employeeCode}
+                  </span>
+                )}
+                <button 
+                  onClick={() => setShowForm(false)}
+                  className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 transition-all active:scale-95"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             <div className="space-y-6 max-h-[65vh] overflow-y-auto px-1">
@@ -431,20 +443,7 @@ export default function EmployeesClient() {
                         <label htmlFor="photo-upload" className="mt-2 text-[9px] sm:text-[10px] font-black text-orange-600 uppercase cursor-pointer hover:underline">Browse File</label>
                     </div>
                     */}
-                    <div className="md:col-span-3 space-y-4 sm:space-y-5">
-                      {!selectedEmployee && (
-                        <div className="space-y-1">
-                          <label className="text-[9px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest ml-1">Link to User Account *</label>
-                          <select 
-                            value={form.userId} 
-                            onChange={(e) => setForm({ ...form, userId: e.target.value })} 
-                            className="w-full px-4 py-3 bg-white dark:bg-[#1a1c26] border border-slate-300 rounded-xl font-semibold text-sm outline-none focus:border-orange-500 transition-colors"
-                          >
-                            <option value="">Select an account...</option>
-                            {users.map((u: any) => <option key={u.id} value={u.id}>{u.fullName} ({u.email})</option>)}
-                          </select>
-                        </div>
-                      )}
+                    <div className="md:col-span-2 space-y-4 sm:space-y-5">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
                           <label className="text-[9px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest ml-1">Full Name *</label>
@@ -474,11 +473,27 @@ export default function EmployeesClient() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[9px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest ml-1">Mobile *</label>
-                      <input placeholder="10 digits" value={form.mobile} onChange={(e) => setForm({...form, mobile: e.target.value})} className="w-full px-4 py-3 bg-white dark:bg-[#1a1c26] border border-slate-300 rounded-xl text-sm font-semibold outline-none focus:border-orange-500 transition-colors" />
+                      <input 
+                        placeholder="10 digits" 
+                        value={form.mobile} 
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setForm({...form, mobile: val});
+                        }} 
+                        className="w-full px-4 py-3 bg-white dark:bg-[#1a1c26] border border-slate-300 rounded-xl text-sm font-semibold outline-none focus:border-orange-500 transition-colors" 
+                      />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[9px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest ml-1">Alt. Contact</label>
-                      <input placeholder="Optional" value={form.altMobile} onChange={(e) => setForm({...form, altMobile: e.target.value})} className="w-full px-4 py-3 bg-white dark:bg-[#1a1c26] border border-slate-300 rounded-xl text-sm font-semibold outline-none focus:border-orange-500 transition-colors" />
+                      <input 
+                        placeholder="Optional" 
+                        value={form.altMobile} 
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setForm({...form, altMobile: val});
+                        }} 
+                        className="w-full px-4 py-3 bg-white dark:bg-[#1a1c26] border border-slate-300 rounded-xl text-sm font-semibold outline-none focus:border-orange-500 transition-colors" 
+                      />
                     </div>
                   </div>
 
@@ -509,7 +524,15 @@ export default function EmployeesClient() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[9px] sm:text-[10px] font-black text-orange-600 uppercase tracking-widest ml-1">Emergency Number</label>
-                      <input placeholder="Phone" value={form.emergencyContactPhone} onChange={(e) => setForm({...form, emergencyContactPhone: e.target.value})} className="w-full px-4 py-2.5 bg-white border border-orange-100 rounded-xl text-sm font-semibold outline-none" />
+                      <input 
+                        placeholder="Phone" 
+                        value={form.emergencyContactPhone} 
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setForm({...form, emergencyContactPhone: val});
+                        }} 
+                        className="w-full px-4 py-2.5 bg-white border border-orange-100 rounded-xl text-sm font-semibold outline-none" 
+                      />
                     </div>
                   </div>
                 </div>

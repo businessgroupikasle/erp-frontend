@@ -298,26 +298,7 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     ],
   },
 
-  // 10. Administration
-  {
-    title: "Administration",
-    items: [
-      {
-        icon: Users,
-        label: "User Management",
-        href: "/admin/users",
-        roles: ADMIN_ROLES,
-      },
-      {
-        icon: Layers,
-        label: "Roles & Permissions",
-        href: "/admin/roles",
-        roles: ADMIN_ROLES,
-      },
-    ],
-  },
-
-  // 11. System Settings
+  // 10. System Settings
   {
     title: "System Settings",
     items: [
