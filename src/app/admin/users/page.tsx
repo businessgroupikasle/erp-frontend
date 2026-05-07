@@ -8,7 +8,9 @@ import {
   Plus,
   Building,
   Shield,
-  Search
+  Search,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { usersApi } from "@/lib/api";
 import api from "@/lib/api";
@@ -27,6 +29,7 @@ export default function UserManagement() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { user: authUser } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -102,7 +105,7 @@ export default function UserManagement() {
       accessor: (user: any) => (
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white font-black text-xs shadow-sm shadow-slate-200 dark:shadow-none border border-slate-200 dark:border-slate-800">
-            {user.fullName?.[0].toUpperCase() || user.name?.[0].toUpperCase() || "U"}
+            {user.fullName?.[0]?.toUpperCase() || user.name?.[0]?.toUpperCase() || "U"}
           </div>
           <div>
             <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-xs">{user.fullName || user.name}</p>
@@ -237,13 +240,22 @@ export default function UserManagement() {
           {!currentUser && (
             <div className="space-y-1.5">
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Temporary Password</label>
-              <input 
-                type="password" 
-                required
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none font-bold text-sm"
-                value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
-              />
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  required
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none font-bold text-sm pr-12"
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                >
+                  {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                </button>
+              </div>
             </div>
           )}
 

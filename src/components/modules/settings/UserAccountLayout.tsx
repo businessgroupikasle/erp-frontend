@@ -15,9 +15,9 @@ export default function UserAccountLayout({ children }: UserAccountLayoutProps) 
 
   const menuItems = [
     { label: "Personal Information", href: "/settings/user/profile" },
-    { label: "Notification & Alerts", href: "/settings/user/notifications" },
+    // { label: "Notification & Alerts", href: "/settings/user/notifications" },
     { label: "Password & Security", href: "/settings/user/security" },
-    { label: "Configurations", href: "/settings/user/config" },
+    // { label: "Configurations", href: "/settings/user/config" },
   ];
 
   return (

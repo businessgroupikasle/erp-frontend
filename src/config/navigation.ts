@@ -287,6 +287,14 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         href: "/hr/payroll",
         roles: ADMIN_ROLES,
       },
+       {
+        icon: Landmark,
+        label: "Apply Leaves",
+        href: "/hr/leaves",
+        roles: ADMIN_ROLES,
+      },
+
+
     ],
   },
 

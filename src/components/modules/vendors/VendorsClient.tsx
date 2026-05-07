@@ -471,74 +471,157 @@ export default function VendorsClient() {
       {/* --- Vendor Enrollment Modal --- */}
       {showForm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-           <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-200 dark:border-white/10 overflow-hidden">
-              <div className="p-8">
-                 <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase mb-6 flex items-center gap-3">
-                    <Plus className="text-orange-500" /> Register Financial Entity
-                 </h2>
-
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                       <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Entity Legal Name</label>
-                       <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Company Name" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl font-bold text-xs text-slate-900 dark:text-white outline-none focus:border-orange-500/50 transition-all" />
-                    </div>
-                    <div className="space-y-1">
-                       <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Phone</label>
-                       <input value={form.contact} maxLength={10} onChange={e => setForm({...form, contact: e.target.value.replace(/\D/g, '')})} placeholder="Primary Contact" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl font-bold text-xs text-slate-900 dark:text-white outline-none focus:border-orange-500/50 transition-all" />
-                    </div>
-                    <div className="space-y-1">
-                       <label className="text-[9px] font-black text-slate-400 uppercase ml-2">GSTIN</label>
-                       <input value={form.gstNumber} onChange={e => setForm({...form, gstNumber: e.target.value.toUpperCase()})} placeholder="Tax Identity" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl font-bold text-xs text-slate-900 dark:text-white outline-none focus:border-orange-500/50 transition-all" />
-                    </div>
-                    <div className="space-y-1">
-                       <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Email</label>
-                       <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="Billing Email" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl font-bold text-xs text-slate-900 dark:text-white outline-none focus:border-orange-500/50 transition-all" />
-                    </div>
-                    <div className="space-y-1">
-                       <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Category</label>
-                       <input 
-                         value={form.category} 
-                         onChange={e => setForm({...form, category: e.target.value})} 
-                         placeholder="e.g. Raw Material" 
-                         className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl font-bold text-xs text-slate-900 dark:text-white outline-none focus:border-orange-500/50 transition-all" 
-                       />
-                    </div>
-                    <div className="space-y-1">
-                       <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Terms</label>
-                       <select value={form.paymentTerms} onChange={e => setForm({...form, paymentTerms: e.target.value as any})} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl font-bold text-xs text-slate-900 dark:text-white outline-none">
-                          <option value="IMMEDIATE">IMMEDIATE</option>
-                          <option value="NET_7">NET 7 DAYS</option>
-                          <option value="NET_30">NET 30 DAYS</option>
-                       </select>
-                    </div>
-                    <div className="space-y-1 col-span-2">
-                       <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Registered Address</label>
-                       <textarea value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Office Address" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl font-bold text-xs text-slate-900 dark:text-white outline-none focus:border-orange-500/50 transition-all resize-none" rows={2} />
-                    </div>
-                 </div>
-
-                 <div className="flex gap-4 mt-8">
-                    <button onClick={() => setShowForm(false)} className="flex-1 py-3 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 transition-colors">Discard</button>
-                    <button onClick={handleSave} disabled={saving || !form.name} className="flex-[2] py-3 bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase shadow-lg shadow-orange-500/20 active:scale-95 disabled:opacity-50">Commit Record</button>
-                 </div>
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6 overflow-hidden relative">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-bl-[100px] -mr-12 -mt-12" />
+             
+             <div className="flex items-center gap-3 relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+                   {linkEditing ? <Edit3 size={20} /> : <Plus size={20} />}
+                </div>
+                <div>
+                   <h2 className="text-base font-bold text-gray-900 dark:text-white uppercase">{linkEditing ? "Update Link" : "Link Material"}</h2>
+                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{linkModal.name}</p>
+                </div>
               </div>
-           </div>
+
+              {!linkEditing && (
+                <div className="bg-slate-50 dark:bg-white/5 p-1 rounded-xl flex gap-1">
+                  <button 
+                    onClick={() => setLinkData({ ...linkData, isNew: false })}
+                    className={clsx("flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all", !linkData.isNew ? "bg-white dark:bg-card text-indigo-600 shadow-sm" : "text-slate-400")}
+                  >
+                    Existing
+                  </button>
+                  <button 
+                    onClick={() => setLinkData({ ...linkData, isNew: true })}
+                    className={clsx("flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all", linkData.isNew ? "bg-white dark:bg-card text-indigo-600 shadow-sm" : "text-slate-400")}
+                  >
+                    New
+                  </button>
+                </div>
+              )}
+
+              <div className="space-y-4 relative z-10">
+                {linkEditing ? (
+                  <div className="bg-slate-50 dark:bg-white/5 p-4 rounded-xl border border-slate-100 dark:border-white/5">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Selected Material</p>
+                    <p className="text-sm font-bold text-indigo-600 uppercase">{linkEditing.material?.name}</p>
+                  </div>
+                ) : (
+                  <>
+                    {linkData.isNew ? (
+                      <div className="grid grid-cols-1 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Material Name</label>
+                            <input 
+                              placeholder="Ex: Refined Oil" 
+                              value={linkData.newName} 
+                              onChange={(e) => setLinkData({ ...linkData, newName: e.target.value })}
+                              className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Unit</label>
+                            <select 
+                              value={linkData.newUnit} 
+                              onChange={(e) => setLinkData({ ...linkData, newUnit: e.target.value })}
+                              className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-semibold outline-none appearance-none cursor-pointer"
+                            >
+                                {STANDARD_UNITS.map(u => (
+                                  <option key={u.value} value={u.value}>{u.label}</option>
+                                ))}
+                            </select>
+                          </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Select Material</label>
+                        <select
+                          value={linkData.materialId}
+                          onChange={(e) => setLinkData({ ...linkData, materialId: e.target.value })}
+                          className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none appearance-none cursor-pointer"
+                        >
+                            <option value="">Choose Material...</option>
+                            {allKnownMaterials
+                              .filter(m => !(linkModal?.suppliedMaterials || []).some((sm: any) => sm.materialId === m.id || sm.material?.id === m.id))
+                              .map(m => (
+                                <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                              ))
+                            }
+                        </select>
+                        {allKnownMaterials.filter(m => !(linkModal?.suppliedMaterials || []).some((sm: any) => sm.materialId === m.id || sm.material?.id === m.id)).length === 0 && (
+                          <p className="text-[10px] text-slate-400 italic ml-1">All materials are already linked to this vendor.</p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Quantity</label>
+                    <input type="number" placeholder="0" value={linkData.quantity} onChange={(e) => setLinkData({...linkData, quantity: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Base Price (₹)</label>
+                    <input type="number" placeholder="0.00" value={linkData.price} onChange={(e) => setLinkData({...linkData, price: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
+                  </div>
+                </div>
+              </div>
+
+             <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={() => setLinkModal(null)} 
+                  className="px-5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded-lg transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleLinkMaterial} 
+                  disabled={saving || (linkData.isNew ? !linkData.newName : !linkData.materialId)} 
+                  className="flex-1 py-3 bg-indigo-600 text-white rounded-lg text-xs font-bold uppercase transition-all disabled:opacity-50"
+                >
+                  {saving ? "Linking..." : "Confirm"}
+                </button>
+             </div>
+          </div>
         </div>
       )}
 
-      {/* --- COMPACT REFINED Professional Settlement Modal --- */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
-           <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-md border border-slate-200 dark:border-white/10 overflow-hidden relative my-auto">
-              {/* Header */}
-              <div className="p-6 pb-4 text-center">
-                 <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
-                    {paymentForm.type === 'PAYMENT' ? <ArrowRightLeft size={24} /> : <Wallet size={24} />}
-                 </div>
-                 <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">
-                   {paymentForm.type === 'PAYMENT' ? "Pay Vendor Due" : "Give Vendor Advance"}
-                 </h2>
-                 <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Entity: {selectedVendor?.name}</p>
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-xl p-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-tight">{editing ? "Edit Vendor" : "Add Vendor"}</h2>
+                {!editing && <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Step {formStep} of 2</p>}
+              </div>
+              {!editing && (
+                <div className="flex gap-1">
+                  <div className={clsx("w-5 h-1 rounded-full transition-all", formStep === 1 ? "bg-orange-500" : "bg-slate-200")} />
+                  <div className={clsx("w-5 h-1 rounded-full transition-all", formStep === 2 ? "bg-orange-500" : "bg-slate-200")} />
+                </div>
+              )}
+            </div>
+
+            {formStep === 1 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1 col-span-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Vendor Name</label>
+                  <input placeholder="Enter name..." value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Contact Number</label>
+                  <input placeholder="10 digits..." value={form.contact} maxLength={10} onChange={(e) => setForm({...form, contact: e.target.value.replace(/\D/g, "")})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                  <input placeholder="optional@gmail.com" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" />
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Registered Address</label>
+                  <textarea placeholder="Enter full address..." value={form.address} rows={2} onChange={(e) => setForm({...form, address: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20 resize-none" />
+                </div>
               </div>
 
               {/* Toggles */}
@@ -611,75 +694,75 @@ export default function VendorsClient() {
                    </div>
                  )}
 
-                 {/* Account Selection */}
-                 <div className="space-y-4">
-                    <div className="space-y-1">
-                       <label className="text-[8px] font-black text-slate-400 uppercase ml-4">Pay From Account</label>
-                       {accounts.length === 0 ? (
-                         <div className="w-full p-6 bg-rose-50 dark:bg-rose-500/5 border border-rose-100 dark:border-rose-500/10 rounded-2xl flex flex-col items-center gap-3 text-center">
-                            <p className="text-[10px] font-bold text-rose-600">No financial accounts configured yet.</p>
-                            <Link 
-                              href="/banking/accounts" 
-                              className="px-6 py-2.5 bg-rose-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/20"
-                            >
-                               Go to Banking Settings
-                            </Link>
-                         </div>
-                       ) : (
-                         <div className="space-y-2">
-                           <select 
-                             value={paymentForm.accountId} 
-                             onChange={e => setPaymentForm({...paymentForm, accountId: e.target.value})} 
-                             className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-2xl font-bold text-sm text-slate-900 dark:text-white outline-none focus:border-orange-500/50 transition-all"
-                           >
-                              {accounts.map(acc => {
-                                const icon = acc.type === 'CASH' ? '💵' : acc.type === 'BANK' ? '🏦' : '📱';
-                                return (
-                                  <option key={acc.id} value={acc.id} className="text-slate-900 bg-white">
-                                    {icon} {acc.name}
-                                  </option>
-                                );
-                              })}
-                           </select>
-                           <div className="flex items-center justify-between px-4">
-                              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Available Liquidity</span>
-                              <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
-                                ₹{Math.round(accountBalance).toLocaleString()}
-                              </span>
-                           </div>
-                         </div>
-                       )}
-                    </div>
-                    <div className="space-y-1.5">
-                       <label className="text-[10px] font-black text-slate-400 uppercase ml-4">Payment Reference / Note</label>
-                       <input 
-                         value={paymentForm.note} 
-                         onChange={e => setPaymentForm({...paymentForm, note: e.target.value})} 
-                         placeholder={paymentForm.type === 'PAYMENT' ? "Bank Ref ID, Transaction #, etc." : "Advance remarks..."}
-                         className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-2xl font-bold text-sm text-slate-900 dark:text-white outline-none" 
-                       />
-                    </div>
-                 </div>
-              </div>
-
-              {/* Actions */}
-              <div className="p-8 flex gap-6">
-                 <button onClick={() => setShowPaymentModal(false)} className="flex-1 py-4 text-[11px] font-black uppercase text-slate-400 hover:text-slate-600 transition-colors">Abort</button>
-                 <button 
-                   onClick={handlePayment} 
-                   disabled={saving || !paymentForm.amount || accounts.length === 0} 
-                   className={clsx(
-                     "flex-[2] py-4.5 rounded-[1.25rem] text-xs font-black uppercase shadow-2xl transition-all active:scale-95 disabled:opacity-50",
-                     paymentForm.type === 'PAYMENT' ? "bg-orange-500 text-white shadow-orange-500/20" : "bg-indigo-600 text-white shadow-indigo-600/20"
-                   )}
-                 >
-                    {saving ? "Authorizing..." : (paymentForm.type === 'PAYMENT' ? `Confirm Pay ₹${amountNum.toLocaleString()}` : `Confirm Advance ₹${amountNum.toLocaleString()}`)}
-                 </button>
-              </div>
-           </div>
+            <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-white/5">
+              <button 
+                onClick={() => {
+                  if (formStep === 2) setFormStep(1);
+                  else setShowForm(false);
+                }} 
+                className="px-5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded-lg transition-all"
+              >
+                {formStep === 2 ? "Back" : "Cancel"}
+              </button>
+              <button 
+                onClick={handleSave} 
+                className="flex-1 px-8 py-2.5 bg-orange-500 text-white rounded-lg text-xs font-bold uppercase transition-all disabled:opacity-50"
+                disabled={saving}
+              >
+                {saving ? "Saving..." : (editing ? "Save" : (formStep === 1 ? "Next" : "Finish"))}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
+      {showPayment && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6">
+            <h2 className="text-lg font-black text-gray-900 dark:text-white">Record Payment - {showPayment.name}</h2>
+            <div className="bg-slate-50 p-1.5 rounded-2xl flex gap-1">
+              <button onClick={() => setPaymentForm({...paymentForm, type: "PAYMENT"})} className={clsx("flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest", paymentForm.type === "PAYMENT" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400")}>Payment</button>
+              <button onClick={() => setPaymentForm({...paymentForm, type: "ADVANCE"})} className={clsx("flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest", paymentForm.type === "ADVANCE" ? "bg-white text-violet-600 shadow-sm" : "text-slate-400")}>Advance</button>
+            </div>
+            <div className="space-y-1.5 text-center">
+              <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Amount (₹)</label>
+              <input type="text" value={paymentForm.amount} onChange={(e) => setPaymentForm({...paymentForm, amount: e.target.value.replace(/[^0-9.]/g, "")})} className="w-full py-5 text-4xl text-center bg-slate-50 border border-slate-200 rounded-2xl font-black focus:outline-none" />
+            </div>
+            <textarea placeholder="Notes..." value={paymentForm.note} onChange={(e) => setPaymentForm({...paymentForm, note: e.target.value})} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-semibold resize-none" rows={2} />
+            <div className="flex gap-4">
+              <button onClick={() => setShowPayment(null)} className="flex-1 py-4 text-[11px] font-black uppercase tracking-widest text-slate-500">Cancel</button>
+              <button onClick={handleRecordPayment} disabled={saving || !paymentForm.amount} className="flex-[2] py-4 bg-emerald-500 text-white rounded-2xl text-[11px] font-black shadow-lg uppercase tracking-widest">{saving ? "Wait..." : "Confirm"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLedger && <VendorLedgerModal vendor={showLedger} onClose={() => setShowLedger(null)} />}
+      
+      {confirmModal?.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+          <div className="bg-white dark:bg-[#12141c] rounded-3xl p-8 space-y-6 text-center">
+            <Trash2 size={48} className="text-red-500 mx-auto" />
+            <h2 className="text-xl font-black">Delete {confirmModal.vendor.name}?</h2>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmModal(null)} className="flex-1 py-3 px-4 rounded-xl border text-sm font-bold">Cancel</button>
+              <button onClick={confirmDelete} className="flex-1 py-3 px-4 bg-red-500 text-white rounded-xl text-sm font-black shadow-lg">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {errorMessage && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+          <div className="bg-white dark:bg-[#12141c] rounded-3xl p-8 space-y-6 text-center">
+            <AlertCircle size={48} className="text-orange-500 mx-auto" />
+            <h2 className="text-xl font-black uppercase">{errorMessage.title}</h2>
+            <p className="text-sm text-gray-500">{errorMessage.message}</p>
+            <button onClick={() => setErrorMessage(null)} className="w-full py-4 bg-orange-500 text-white rounded-xl text-sm font-black shadow-lg uppercase tracking-widest">Got it</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

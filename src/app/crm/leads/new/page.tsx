@@ -65,8 +65,13 @@ export default function NewLeadPage() {
     }).catch(() => {});
   }, []);
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }));
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    let val = e.target.value;
+    if (k === "phone") {
+      val = val.replace(/\D/g, "").slice(0, 10);
+    }
+    setForm((f) => ({ ...f, [k]: val }));
+  };
 
   const handleSubmit = async () => {
     if (!form.contactName.trim()) { setError("Contact name is required"); return; }
@@ -158,7 +163,7 @@ export default function NewLeadPage() {
 
                 <div className="space-y-2">
                   <label className={LABEL}>Phone</label>
-                  <input value={form.phone} onChange={set("phone")} type="text" placeholder="+91 XXXXX XXXXX" className={FIELD} />
+                  <input value={form.phone} onChange={set("phone")} type="text" placeholder="10 digits" className={FIELD} />
                 </div>
 
                 <div className="space-y-2">

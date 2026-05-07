@@ -19,17 +19,17 @@ export default function SettingsLayout({
 
   const settingsItems = [
     { label: "General Settings", href: "/settings/general" },
-    { label: "All Users", href: "/settings/team" },
-    { label: "Roles & Permissions", href: "/settings/roles", isBeta: true },
-    { label: "Accounting", href: "/settings/accounting" },
-    { label: "Approval Workflow Settings", href: "/settings/approval" },
-    { label: "Inventory", href: "/settings/inventory" },
-    { label: "Advanced Accounting", href: "/settings/advanced" },
-    { label: "Email Settings", href: "/settings/email" },
-    { label: "Lead Management System (CRM)", href: "/settings/crm" },
-    { label: "Custom Fields & Tags", href: "/settings/custom-fields" },
-    { label: "Integrations", href: "/settings/integrations" },
-    { label: "Clients Statement", href: "/settings/clients-statement" },
+    // { label: "All Users", href: "/settings/team" },
+    // { label: "Roles & Permissions", href: "/settings/roles", isBeta: true },
+    // { label: "Accounting", href: "/settings/accounting" },
+    // { label: "Approval Workflow Settings", href: "/settings/approval" },
+    // { label: "Inventory", href: "/settings/inventory" },
+    // { label: "Advanced Accounting", href: "/settings/advanced" },
+    // { label: "Email Settings", href: "/settings/email" },
+    // { label: "Lead Management System (CRM)", href: "/settings/crm" },
+    // { label: "Custom Fields & Tags", href: "/settings/custom-fields" },
+    // { label: "Integrations", href: "/settings/integrations" },
+    // { label: "Clients Statement", href: "/settings/clients-statement" },
   ];
 
   return (

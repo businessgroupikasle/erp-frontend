@@ -7,7 +7,7 @@ import { clsx } from "clsx";
 
 export default function GeneralSettingsPage() {
   const [expandedSections, setExpandedSections] = useState<string[]>([
-    "Refrens Premium Subscription", "PDF & Reports Configurations", "Time and Currency", "Security"
+    "Security"
   ]);
 
   const toggleSection = (section: string) => {
@@ -40,7 +40,7 @@ export default function GeneralSettingsPage() {
         <h2 className="text-[17px] font-black text-[#1A1A1A] dark:text-white mb-6">General Settings</h2>
 
         {/* Subscription */}
-        <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
+        {/* <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
            <SectionHeader title="Refrens Premium Subscription" />
            {expandedSections.includes("Refrens Premium Subscription") && (
              <div className="pb-8 space-y-6 pt-2">
@@ -65,10 +65,10 @@ export default function GeneralSettingsPage() {
                 </div>
              </div>
            )}
-        </div>
+        </div> */}
 
         {/* PDF & Reports */}
-        <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
+        {/* <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
            <SectionHeader title="PDF & Reports Configurations" />
            {expandedSections.includes("PDF & Reports Configurations") && (
              <div className="pb-8 space-y-8 pt-2">
@@ -93,10 +93,10 @@ export default function GeneralSettingsPage() {
                 </div>
              </div>
            )}
-        </div>
+        </div> */}
 
         {/* Time and Currency */}
-        <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
+        {/* <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
            <SectionHeader title="Time and Currency" />
            {expandedSections.includes("Time and Currency") && (
              <div className="pb-8 space-y-8 pt-2">
@@ -131,14 +131,14 @@ export default function GeneralSettingsPage() {
                 </div>
              </div>
            )}
-        </div>
+        </div> */}
 
         {/* Security */}
         <div className="border-b border-[#F0EAF0] dark:border-slate-800 last:border-0">
            <SectionHeader title="Security" />
            {expandedSections.includes("Security") && (
              <div className="pb-8 space-y-8 pt-4 px-2">
-                <div className="flex items-center justify-between max-w-3xl">
+                {/* <div className="flex items-center justify-between max-w-3xl">
                    <div className="space-y-1">
                       <p className="text-[13px] font-bold text-[#1A1A1A] dark:text-white">Change Profile to Public</p>
                       <p className="text-[11px] font-medium text-[#999]">Enable to ensure that your Business Profile is visible and discoverable to everyone.</p>
@@ -165,7 +165,8 @@ export default function GeneralSettingsPage() {
                    <button className="px-8 py-2 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[11px] font-black hover:bg-red-50 transition-all text-red-500 uppercase tracking-widest shadow-sm">
                       REMOVE
                    </button>
-                </div>
+                </div> */}
+                <p className="text-sm text-slate-500 italic">No settings available in this section yet.</p>
              </div>
            )}
         </div>

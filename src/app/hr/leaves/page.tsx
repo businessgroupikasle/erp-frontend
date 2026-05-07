@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Check, X, Calendar } from "lucide-react";
+import Link from "next/link";
 import api from "@/lib/api";
 
 interface Leave {
@@ -165,11 +166,19 @@ export default function LeavesPage() {
             <div className="p-6 border-b border-gray-100"><h2 className="text-lg font-semibold">Apply Leave</h2></div>
             <form onSubmit={handleApply} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Employee *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Employee *</label>
+                  <Link href="/hr/employees" className="text-xs text-blue-600 hover:underline">Manage employees</Link>
+                </div>
                 <select required value={form.employeeId} onChange={(e) => setForm({ ...form, employeeId: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
                   <option value="">Select employee...</option>
                   {employees.map((e: any) => <option key={e.id} value={e.id}>{e.user.fullName} ({e.employeeCode})</option>)}
                 </select>
+                {form.employeeId && (
+                  <p className="mt-1.5 text-xs text-blue-600 font-bold uppercase tracking-tight">
+                    Applying for: {employees.find(e => e.id === form.employeeId)?.user.fullName}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Leave Type *</label>
