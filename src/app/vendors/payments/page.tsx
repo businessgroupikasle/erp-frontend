@@ -6,7 +6,7 @@ import {
   ArrowLeft, Loader2, DollarSign, CheckCircle2, Clock,
   ChevronRight, Plus, Search, CreditCard, Building2
 } from "lucide-react";
-import { vendorsApi, vendorInvoicesApi } from "@/lib/api";
+import { vendorsApi, vendorInvoicesApi, accountsApi } from "@/lib/api";
 
 interface Vendor {
   id: string;
@@ -42,8 +42,11 @@ export default function VendorPaymentPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<string>("");
   const [loadingVendors, setLoadingVendors] = useState(true);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
   const [success, setSuccess] = useState(false);
@@ -58,6 +61,13 @@ export default function VendorPaymentPage() {
     vendorsApi.getAll()
       .then(r => setVendors(r.data?.vendors || r.data || []))
       .finally(() => setLoadingVendors(false));
+
+    accountsApi.getAll()
+      .then(r => {
+        setAccounts(r.data);
+        if (r.data?.length > 0) setSelectedAccount(r.data[0].id);
+      })
+      .finally(() => setLoadingAccounts(false));
   }, []);
 
   const selectVendor = async (vendor: Vendor) => {
@@ -76,14 +86,16 @@ export default function VendorPaymentPage() {
   };
 
   const handlePay = async () => {
-    if (!selectedVendor || !form.amount || parseFloat(form.amount) <= 0) {
-      alert("Enter a valid amount");
+    if (!selectedVendor || !form.amount || parseFloat(form.amount) <= 0 || !selectedAccount) {
+      alert("Please select a vendor, amount, and source account.");
       return;
     }
     setSubmitting(true);
     try {
       await vendorsApi.recordPayment(selectedVendor.id, {
         amount: parseFloat(form.amount),
+        accountId: selectedAccount,
+        referenceId: selectedInvoice?.id,
         note: `${PAYMENT_MODES.find(m => m.key === form.mode)?.label} Payment${form.reference ? ` — Ref: ${form.reference}` : ""}${form.note ? `. ${form.note}` : ""}`,
       });
       setSuccess(true);
@@ -278,6 +290,26 @@ export default function VendorPaymentPage() {
                       className="w-full pl-8 pr-4 py-4 border-2 border-[#F0EAF0] rounded-xl text-lg font-black focus:outline-none focus:border-[#7C3AED] focus:ring-2 focus:ring-[#7C3AED]/10"
                     />
                   </div>
+                </div>
+
+                {/* Account Selection */}
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-[#666] uppercase tracking-widest">Withdraw From Account *</label>
+                  <select 
+                    value={selectedAccount}
+                    onChange={(e) => setSelectedAccount(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-[#F0EAF0] rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED]"
+                  >
+                    {loadingAccounts ? (
+                      <option>Loading accounts...</option>
+                    ) : (
+                      accounts.map(acc => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name} (Balance: ₹{acc.balance.toLocaleString()})
+                        </option>
+                      ))
+                    )}
+                  </select>
                 </div>
 
                 {/* Payment Mode */}
