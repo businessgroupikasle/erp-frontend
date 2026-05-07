@@ -200,7 +200,7 @@ export const vendorsApi = {
   linkMaterial: (data: { vendorId: string; materialId: string; price: number; quantity: number }) =>
     api.post('/api/vendors/link-material', data),
   getLedger: (id: string, params: any = {}) => api.get(`/api/vendors/${id}/ledger`, { params }),
-  recordPayment: (id: string, data: { amount: number; note: string; paymentMode?: string; referenceId?: string }) => api.post(`/api/vendors/${id}/payment`, data),
+  recordPayment: (id: string, data: { amount: number; note: string; accountId: string; paymentMode?: string; referenceId?: string }) => api.post(`/api/vendors/${id}/payment`, data),
   recordAdjustment: (id: string, data: { amount: number; type: 'CREDIT' | 'DEBIT'; note: string; referenceType?: string, referenceId?: string }) => api.post(`/api/vendors/${id}/adjustment`, data),
 };
 
@@ -318,6 +318,12 @@ export const accountingApi = {
   recordPayment: (data: any) => api.post('/api/accounting/payments', data),
   getExpenses: (params?: any) => api.get('/api/accounting/expenses', { params }),
   recordExpense: (data: any) => api.post('/api/accounting/expenses', data),
+  getCashFlow: () => api.get('/api/finance/cash-flow'),
+};
+
+export const accountsApi = {
+  getAll: () => api.get('/api/accounts'),
+  getById: (id: string) => api.get(`/api/accounts/${id}`),
 };
 
 // --- Reports & Analytics ---
@@ -326,4 +332,5 @@ export const reportsApi = {
   getSales: (params?: any) => api.get('/api/reports/sales', { params }),
   getExpenses: (params?: any) => api.get('/api/reports/expenses', { params }),
   getProfit: (params?: any) => api.get('/api/reports/profit', { params }),
+  getDetailedProfit: (params?: any) => api.get('/api/reports/profit', { params: { ...params, detailed: 'true' } }),
 };
