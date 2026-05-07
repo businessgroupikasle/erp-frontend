@@ -17,6 +17,7 @@ import {
   Banknote,
   Smartphone,
   Building2,
+  RotateCcw,
   FileText,
 } from "lucide-react";
 import { clsx } from "clsx";
@@ -28,6 +29,7 @@ type PaymentStatus = "PAID" | "PENDING" | "FAILED";
 
 interface Payment {
   id: string;
+  paymentNumber?: string;
   date: string;
   entity: string;
   flow: "IN" | "OUT";
@@ -36,6 +38,11 @@ interface Payment {
   status: PaymentStatus;
   reference: string;
   type: string;
+  sourceModule?: string;
+  linkedDocType?: string;
+  linkedDocId?: string;
+  isCancelled?: boolean;
+  accountName?: string;
 }
 
 const METHOD_OPTIONS: { key: PaymentMethod; label: string; icon: React.ReactNode }[] = [
@@ -46,6 +53,16 @@ const METHOD_OPTIONS: { key: PaymentMethod; label: string; icon: React.ReactNode
   { key: "CARD",          label: "Card",          icon: <CreditCard size={15} /> },
   { key: "NEFT",          label: "NEFT",          icon: <ArrowUpRight size={15} /> },
 ];
+
+const MODULE_COLORS: Record<string, string> = {
+  POS: "bg-blue-50 text-blue-600 border-blue-100",
+  PROCUREMENT: "bg-purple-50 text-purple-600 border-purple-100",
+  PAYROLL: "bg-pink-50 text-pink-600 border-pink-100",
+  FRANCHISE: "bg-amber-50 text-amber-600 border-amber-100",
+  EXPENSE: "bg-orange-50 text-orange-600 border-orange-100",
+  MANUAL: "bg-slate-50 text-slate-600 border-slate-100",
+  TRANSFER: "bg-indigo-50 text-indigo-600 border-indigo-100",
+};
 
 // Words that indicate an outflow/expense — should NEVER be recorded as Inflow
 const EXPENSE_KEYWORDS = [
@@ -75,35 +92,58 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal state
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [moduleFilter, setModuleFilter] = useState<string>("ALL");
+  const [methodFilter, setMethodFilter] = useState<string>("ALL");
+
   const [showModal, setShowModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [transferForm, setTransferForm] = useState({ fromAccountId: "", toAccountId: "", amount: "", note: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [cashFlow, setCashFlow] = useState<any>(null);
 
-  const fetchPayments = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // Pagination & Detail state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+
+  const fetchFinancials = useCallback(async () => {
     try {
-      const res = await accountingApi.getPayments();
-      const data: Payment[] = res.data?.payments ?? res.data ?? [];
-      setPayments(data);
+      const [paymentsRes, accountsRes, cashFlowRes] = await Promise.all([
+        accountingApi.getPayments(),
+        accountingApi.getAccounts(),
+        accountingApi.getCashFlow()
+      ]);
+      setPayments(paymentsRes.data?.payments ?? paymentsRes.data ?? []);
+      setAccounts(accountsRes.data || []);
+      setCashFlow(cashFlowRes.data || null);
     } catch (err) {
       console.error("Fetch error:", err);
-      setPayments([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchPayments(); }, [fetchPayments]);
+  useEffect(() => { fetchFinancials(); }, [fetchFinancials]);
 
   const filtered = payments.filter((p) => {
     if (activeTab !== "ALL" && p.flow !== activeTab) return false;
-    if (search && !p.entity?.toLowerCase().includes(search.toLowerCase()) && !p.id?.toLowerCase().includes(search.toLowerCase())) return false;
+    if (statusFilter !== "ALL" && p.status !== statusFilter) return false;
+    if (moduleFilter !== "ALL" && p.sourceModule !== moduleFilter) return false;
+    if (methodFilter !== "ALL" && p.method !== methodFilter) return false;
+    if (search && !p.entity?.toLowerCase().includes(search.toLowerCase()) && !p.paymentNumber?.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [activeTab, search, statusFilter, moduleFilter, methodFilter]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const totalIn  = payments.filter(p => p.flow === "IN"  && p.status === "PAID").reduce((s, p) => s + p.amount, 0);
   const totalOut = payments.filter(p => p.flow === "OUT" && p.status === "PAID").reduce((s, p) => s + p.amount, 0);
@@ -157,7 +197,7 @@ export default function PaymentsPage() {
         status: form.status,
       });
       setSubmitSuccess(true);
-      await fetchPayments();
+      await fetchFinancials();
       setTimeout(() => {
         setShowModal(false);
         setSubmitSuccess(false);
@@ -166,6 +206,43 @@ export default function PaymentsPage() {
       setSubmitError(err?.response?.data?.error || err?.response?.data?.message || err.message || "Failed to record payment. Please try again.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleTransfer = async () => {
+    if (!transferForm.fromAccountId || !transferForm.toAccountId || !transferForm.amount) {
+      setSubmitError("Please fill all required transfer fields.");
+      return;
+    }
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await accountingApi.transferFunds({
+        fromAccountId: transferForm.fromAccountId,
+        toAccountId: transferForm.toAccountId,
+        amount: parseFloat(transferForm.amount),
+        note: transferForm.note
+      });
+      setSubmitSuccess(true);
+      await fetchFinancials();
+      setTimeout(() => {
+        setShowTransferModal(false);
+        setSubmitSuccess(false);
+      }, 1500);
+    } catch (err: any) {
+      setSubmitError(err?.response?.data?.error || "Transfer failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCancelPayment = async (id: string) => {
+    if (!confirm("Are you sure you want to cancel and reverse this payment? This will update account balances.")) return;
+    try {
+      await accountingApi.cancelPayment(id);
+      await fetchFinancials();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || "Cancellation failed.");
     }
   };
 
@@ -185,10 +262,16 @@ export default function PaymentsPage() {
         
         <div className="flex items-center gap-4">
           <button
-            onClick={fetchPayments}
+            onClick={fetchFinancials}
             className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-all active:scale-90"
           >
             <RefreshCw size={18} className={clsx(loading && "animate-spin")} />
+          </button>
+          <button
+            onClick={() => { setTransferForm({ fromAccountId: "", toAccountId: "", amount: "", note: "" }); setShowTransferModal(true); }}
+            className="flex items-center gap-3 bg-white border border-slate-200 text-slate-900 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.15em] transition-all hover:bg-slate-50 active:scale-95 shadow-sm"
+          >
+            <RefreshCw size={16} /> Internal Transfer
           </button>
           <button
             onClick={openModal}
@@ -200,49 +283,106 @@ export default function PaymentsPage() {
       </div>
 
       {/* Elegant Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-12 px-2">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-8 px-2">
         <div className="space-y-1">
           <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Total Inflow</p>
-          <p className="text-2xl font-black transition-all tabular-nums text-emerald-500">
-            ₹{totalIn.toLocaleString()}
-          </p>
+          <p className="text-xl font-black tabular-nums text-emerald-500">₹{totalIn.toLocaleString()}</p>
         </div>
         <div className="space-y-1">
           <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Total Outflow</p>
-          <p className="text-2xl font-black transition-all tabular-nums text-orange-500">
-            ₹{totalOut.toLocaleString()}
-          </p>
+          <p className="text-xl font-black tabular-nums text-orange-500">₹{totalOut.toLocaleString()}</p>
+        </div>
+        <div className="space-y-1 border-l border-slate-100 pl-8">
+          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Cash Balance</p>
+          <p className="text-xl font-black tabular-nums text-slate-900">₹{cashFlow?.breakdown?.cash.toLocaleString() || "0"}</p>
         </div>
         <div className="space-y-1">
-          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Total Transactions</p>
-          <p className="text-2xl font-black transition-all tabular-nums text-slate-900">
-            {payments.length}
-          </p>
+          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Bank Balance</p>
+          <p className="text-xl font-black tabular-nums text-slate-900">₹{cashFlow?.breakdown?.bank.toLocaleString() || "0"}</p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">UPI Wallet</p>
+          <p className="text-xl font-black tabular-nums text-slate-900">₹{cashFlow?.breakdown?.upi.toLocaleString() || "0"}</p>
         </div>
       </div>
 
       {/* Minimalist Search & Filter */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-        <div className="flex p-1 bg-slate-50 rounded-2xl">
-          {(["ALL", "IN", "OUT"] as FlowType[]).map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={clsx("px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all",
-                activeTab === tab ? "bg-white text-orange-500 shadow-sm" : "text-slate-400 hover:text-slate-900"
-              )}>
-              {tab === "ALL" ? "All History" : tab === "IN" ? "Customer (IN)" : "Vendor (OUT)"}
-            </button>
-          ))}
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+          <div className="flex p-1 bg-slate-50 rounded-2xl shrink-0">
+            {(["ALL", "IN", "OUT"] as FlowType[]).map(tab => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className={clsx("px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all",
+                  activeTab === tab ? "bg-white text-orange-500 shadow-sm" : "text-slate-400 hover:text-slate-900"
+                )}>
+                {tab === "ALL" ? "All History" : tab === "IN" ? "Customer (IN)" : "Vendor (OUT)"}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative group w-full md:w-auto md:min-w-[400px]">
+            <Search size={16} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-500 transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Search payment # or entity..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border-none rounded-2xl font-bold text-slate-900 placeholder:text-slate-300 focus:bg-white focus:ring-4 focus:ring-slate-100 outline-none transition-all" 
+            />
+          </div>
         </div>
 
-        <div className="relative group w-full md:w-auto md:min-w-[320px]">
-          <Search size={16} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-500 transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search tx or entity..." 
-            value={search} 
-            onChange={e => setSearch(e.target.value)}
-            className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border-none rounded-2xl font-bold text-slate-900 placeholder:text-slate-300 focus:bg-white focus:ring-4 focus:ring-slate-100 outline-none transition-all" 
-          />
+        {/* Advanced Filters Bar */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
+            <Filter size={14} className="text-slate-400" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filters:</span>
+          </div>
+
+          {/* Module Filter */}
+          <select 
+            value={moduleFilter}
+            onChange={e => setModuleFilter(e.target.value)}
+            className="px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-bold text-slate-600 outline-none focus:border-orange-500 transition-all cursor-pointer"
+          >
+            <option value="ALL">All Modules</option>
+            {Object.keys(MODULE_COLORS).map(m => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+
+          {/* Method Filter */}
+          <select 
+            value={methodFilter}
+            onChange={e => setMethodFilter(e.target.value)}
+            className="px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-bold text-slate-600 outline-none focus:border-orange-500 transition-all cursor-pointer"
+          >
+            <option value="ALL">All Methods</option>
+            {METHOD_OPTIONS.map(m => (
+              <option key={m.key} value={m.key}>{m.label}</option>
+            ))}
+          </select>
+
+          {/* Status Filter */}
+          <select 
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-bold text-slate-600 outline-none focus:border-orange-500 transition-all cursor-pointer"
+          >
+            <option value="ALL">All Status</option>
+            <option value="PAID">Paid</option>
+            <option value="PENDING">Pending</option>
+            <option value="FAILED">Failed</option>
+          </select>
+
+          {(statusFilter !== "ALL" || moduleFilter !== "ALL" || methodFilter !== "ALL") && (
+            <button 
+              onClick={() => { setStatusFilter("ALL"); setModuleFilter("ALL"); setMethodFilter("ALL"); }}
+              className="px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-600"
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
       </div>
 
@@ -263,7 +403,7 @@ export default function PaymentsPage() {
           </div>
           <div className="space-y-2">
             <p className="text-red-400 font-medium">{error}</p>
-            <button onClick={fetchPayments} className="text-xs text-orange-500 hover:underline font-bold">Retry connection</button>
+            <button onClick={fetchFinancials} className="text-xs text-orange-500 hover:underline font-bold">Retry connection</button>
           </div>
         </div>
       ) : filtered.length === 0 ? (
@@ -279,34 +419,45 @@ export default function PaymentsPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/50">
-                  <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400">Date</th>
-                  <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400">Tx ID &amp; Ref</th>
-                  <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400">Entity</th>
+                  <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400">Date & No</th>
+                  <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400">Source & Link</th>
+                  <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400">Entity & Account</th>
                   <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400">Flow Type</th>
                   <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400">Method</th>
                   <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400">Status</th>
                   <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400 text-right">Amount</th>
+                  <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filtered.map(payment => (
-                  <tr key={payment.id} className="hover:bg-slate-50/50 transition-colors group">
+                {paginated.map(payment => (
+                  <tr key={payment.id} 
+                    onClick={() => setSelectedPayment(payment)}
+                    className={clsx("hover:bg-slate-50/50 transition-colors group cursor-pointer", payment.isCancelled && "opacity-60 bg-red-50/20")}>
                     <td className="px-6 py-4">
-                      <p className="text-xs font-bold text-slate-900 uppercase">
-                        {new Date(payment.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                      <p className="text-xs font-black text-slate-900 uppercase">
+                        {payment.paymentNumber || "N/A"}
                       </p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                        {new Date(payment.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                        {new Date(payment.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })} • {new Date(payment.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-xs font-black text-slate-700 group-hover:text-orange-500 transition-colors">{payment.id}</p>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        {payment.type && <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-slate-100 text-slate-500">{payment.type}</span>}
-                        {payment.reference && <span className="text-[10px] text-slate-400 font-bold">Ref: {payment.reference}</span>}
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className={clsx("px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border", MODULE_COLORS[payment.sourceModule || "MANUAL"])}>
+                          {payment.sourceModule || "MANUAL"}
+                        </span>
+                        {payment.linkedDocType && (
+                          <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-400">
+                            {payment.linkedDocType}: {payment.linkedDocId || "—"}
+                          </span>
+                        )}
                       </div>
                     </td>
-                    <td className="px-6 py-4"><p className="text-sm font-bold text-slate-900">{payment.entity || "—"}</p></td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-bold text-slate-900">{payment.entity || "—"}</p>
+                      <p className="text-[10px] text-slate-400 font-medium">via {payment.accountName || "Unknown Account"}</p>
+                    </td>
                     <td className="px-6 py-4">
                       {payment.flow === "IN" ? (
                         <div className="flex items-center gap-1.5 text-emerald-500"><ArrowDownRight size={14} strokeWidth={3} /><span className="text-[10px] font-black uppercase tracking-widest">Inflow</span></div>
@@ -318,7 +469,9 @@ export default function PaymentsPage() {
                       <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-50 text-slate-500">{payment.method || "—"}</span>
                     </td>
                     <td className="px-6 py-4">
-                      {payment.status === "PAID" ? (
+                      {payment.isCancelled ? (
+                        <div className="flex items-center gap-1.5 text-red-600"><XCircle size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Cancelled</span></div>
+                      ) : payment.status === "PAID" ? (
                         <div className="flex items-center gap-1.5 text-emerald-500"><CheckCircle2 size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Paid</span></div>
                       ) : payment.status === "PENDING" ? (
                         <div className="flex items-center gap-1.5 text-amber-500"><Clock size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Pending</span></div>
@@ -327,14 +480,149 @@ export default function PaymentsPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <p className={clsx("text-sm font-black tabular-nums", payment.flow === "IN" ? "text-emerald-500" : "text-slate-900")}>
+                      <p className={clsx("text-sm font-black tabular-nums", payment.flow === "IN" ? "text-emerald-500" : "text-slate-900", payment.isCancelled && "line-through")}>
                         {payment.flow === "IN" ? "+" : "-"}₹{payment.amount.toLocaleString()}
                       </p>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {!payment.isCancelled && payment.status === "PAID" && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleCancelPayment(payment.id); }}
+                          className="p-2 hover:bg-red-50 text-slate-300 hover:text-red-500 rounded-lg transition-all active:scale-90"
+                          title="Cancel & Reverse"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-50 flex items-center justify-between">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Showing page {currentPage} of {totalPages} • {filtered.length} total entries
+              </p>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 rounded-xl text-[10px] font-black uppercase bg-white border border-slate-200 text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-all"
+                >
+                  Prev
+                </button>
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 rounded-xl text-[10px] font-black uppercase bg-white border border-slate-200 text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Payment Detail Drawer ── */}
+      {selectedPayment && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-end">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setSelectedPayment(null)} />
+          <div className="relative z-10 w-full max-w-md h-full bg-white shadow-2xl flex flex-col overflow-y-auto animate-in slide-in-from-right duration-500">
+            <div className="px-8 py-10 border-b border-slate-100 sticky top-0 bg-white/80 backdrop-blur-md z-10">
+              <div className="flex justify-between items-start mb-6">
+                <div className={clsx("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border", MODULE_COLORS[selectedPayment.sourceModule || "MANUAL"])}>
+                  {selectedPayment.sourceModule || "MANUAL"} Transaction
+                </div>
+                <button onClick={() => setSelectedPayment(null)} className="p-2 hover:bg-slate-50 rounded-xl transition-all">
+                  <X size={20} />
+                </button>
+              </div>
+              <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-2">
+                {selectedPayment.paymentNumber}
+              </h2>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                ID: {selectedPayment.id}
+              </p>
+            </div>
+
+            <div className="flex-1 p-8 space-y-8">
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Entity</p>
+                  <p className="text-lg font-black text-slate-900">{selectedPayment.entity}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Amount</p>
+                  <p className={clsx("text-lg font-black", selectedPayment.flow === "IN" ? "text-emerald-500" : "text-slate-900")}>
+                    ₹{selectedPayment.amount.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-6 bg-slate-50 p-6 rounded-3xl">
+                <div>
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Linked Document</p>
+                  <p className="text-sm font-bold text-slate-900">
+                    {selectedPayment.linkedDocType || "Direct"} - {selectedPayment.linkedDocId || "No Reference"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Payment Method</p>
+                  <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <CreditCard size={16} /> {selectedPayment.method}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Settled In</p>
+                  <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <Landmark size={16} /> {selectedPayment.accountName}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Reference Note</p>
+                <p className="text-sm text-slate-600 font-medium leading-relaxed italic">
+                  {selectedPayment.reference || "No additional reference notes provided for this transaction."}
+                </p>
+              </div>
+
+              <div className="pt-8 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Audit Status</p>
+                    <div className="flex items-center gap-2">
+                       {selectedPayment.isCancelled ? (
+                         <div className="flex items-center gap-1.5 text-red-600"><XCircle size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Voided</span></div>
+                       ) : (
+                         <div className="flex items-center gap-1.5 text-emerald-500"><CheckCircle2 size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Verified Ledger Entry</span></div>
+                       )}
+                    </div>
+                  </div>
+                  {selectedPayment.isCancelled && (
+                    <div className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest">
+                      Reversed
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {!selectedPayment.isCancelled && selectedPayment.status === "PAID" && (
+              <div className="p-8 border-t border-slate-100 sticky bottom-0 bg-white">
+                <button 
+                  onClick={() => { handleCancelPayment(selectedPayment.id); setSelectedPayment(null); }}
+                  className="w-full py-4 border-2 border-red-100 text-red-500 hover:bg-red-50 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2"
+                >
+                  <RotateCcw size={16} /> Reverse Transaction
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -498,16 +786,19 @@ export default function PaymentsPage() {
               {/* Source Account */}
               <div className="space-y-3">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Source Account <span className="text-red-400">*</span></label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["CASH_ACCOUNT", "BANK_ACCOUNT", "UPI_WALLET"] as const).map(acc => (
-                    <button key={acc} onClick={() => setForm(p => ({ ...p, sourceAccount: acc }))}
-                      className={clsx("py-3 rounded-2xl border-2 text-[9px] font-black uppercase tracking-[0.1em] transition-all flex flex-col items-center justify-center gap-1",
-                        form.sourceAccount === acc
+                <div className="grid grid-cols-2 gap-2">
+                  {accounts.map(acc => (
+                    <button key={acc.id} onClick={() => setForm(p => ({ ...p, sourceAccount: acc.id }))}
+                      className={clsx("px-4 py-3 rounded-2xl border-2 text-[9px] font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3",
+                        form.sourceAccount === acc.id
                           ? "border-blue-500 bg-blue-50 text-blue-600"
                           : "border-slate-100 text-slate-400 hover:border-slate-200 bg-white"
                       )}>
-                      {acc === "CASH_ACCOUNT" ? <Banknote size={16} /> : acc === "BANK_ACCOUNT" ? <Building2 size={16} /> : <Smartphone size={16} />}
-                      <span className="text-center">{acc.replace("_", " ")}</span>
+                      {acc.type === "CASH" ? <Banknote size={16} /> : acc.type === "BANK" ? <Building2 size={16} /> : <Smartphone size={16} />}
+                      <div className="text-left">
+                        <p>{acc.name}</p>
+                        <p className="text-[7px] opacity-60">Bal: ₹{acc.balance.toLocaleString()}</p>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -611,6 +902,91 @@ export default function PaymentsPage() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Internal Transfer Modal ── */}
+      {showTransferModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end">
+          <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" onClick={() => setShowTransferModal(false)} />
+          <div className="relative z-10 w-full max-w-md h-full bg-white shadow-xl flex flex-col overflow-y-auto animate-in slide-in-from-right duration-500">
+            <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 sticky top-0 bg-white/80 backdrop-blur-md z-10">
+              <div>
+                <h2 className="text-lg font-black text-slate-900">Internal Fund Transfer</h2>
+                <p className="text-[11px] font-medium text-slate-400 mt-0.5">Move money between your internal accounts</p>
+              </div>
+              <button onClick={() => setShowTransferModal(false)} className="p-2 rounded-xl hover:bg-slate-50 text-slate-400 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 px-8 py-6 space-y-6">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">From Account</label>
+                <select 
+                  value={transferForm.fromAccountId}
+                  onChange={e => setTransferForm(p => ({ ...p, fromAccountId: e.target.value }))}
+                  className="w-full px-4 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all appearance-none"
+                >
+                  <option value="">Select Source</option>
+                  {accounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.name} (₹{acc.balance.toLocaleString()})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-center -my-2 relative z-10">
+                <div className="bg-white p-2 rounded-full border border-slate-100 shadow-sm">
+                  <ArrowUpRight className="text-slate-300 rotate-90" size={20} />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">To Account</label>
+                <select 
+                  value={transferForm.toAccountId}
+                  onChange={e => setTransferForm(p => ({ ...p, toAccountId: e.target.value }))}
+                  className="w-full px-4 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all appearance-none"
+                >
+                  <option value="">Select Destination</option>
+                  {accounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.name} (₹{acc.balance.toLocaleString()})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Amount (₹)</label>
+                <input
+                  type="number"
+                  value={transferForm.amount}
+                  onChange={e => setTransferForm(p => ({ ...p, amount: e.target.value }))}
+                  placeholder="0.00"
+                  className="w-full px-4 py-4 bg-slate-50 border-none rounded-2xl text-sm font-black text-slate-900 placeholder:text-slate-300 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Note</label>
+                <textarea
+                  value={transferForm.note}
+                  onChange={e => setTransferForm(p => ({ ...p, note: e.target.value }))}
+                  placeholder="Reason for transfer..."
+                  rows={2}
+                  className="w-full px-4 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="px-8 py-6 border-t border-slate-100 sticky bottom-0 bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+              {submitError && <div className="p-4 mb-4 bg-red-50 rounded-2xl text-red-600 text-[10px] font-black uppercase tracking-widest">{submitError}</div>}
+              {submitSuccess && <div className="p-4 mb-4 bg-emerald-50 rounded-2xl text-emerald-600 text-[10px] font-black uppercase tracking-widest">Transfer Successful</div>}
+              <button onClick={handleTransfer} disabled={submitting || submitSuccess}
+                className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 shadow-lg disabled:bg-slate-300">
+                {submitting ? <RefreshCw size={16} className="animate-spin" /> : <><RefreshCw size={16} /> Complete Transfer</>}
+              </button>
             </div>
           </div>
         </div>

@@ -200,7 +200,8 @@ export const vendorsApi = {
   linkMaterial: (data: { vendorId: string; materialId: string; price: number; quantity: number }) =>
     api.post('/api/vendors/link-material', data),
   getLedger: (id: string, params: any = {}) => api.get(`/api/vendors/${id}/ledger`, { params }),
-  recordPayment: (id: string, data: { amount: number; note: string; accountId: string; paymentMode?: string; referenceId?: string }) => api.post(`/api/vendors/${id}/payment`, data),
+  getAging: (id: string) => api.get(`/api/vendors/${id}/aging`),
+  recordPayment: (id: string, data: { amount: number; note: string; accountId: string; type?: string; paymentMode?: string; referenceId?: string }) => api.post(`/api/vendors/${id}/payment`, data),
   recordAdjustment: (id: string, data: { amount: number; type: 'CREDIT' | 'DEBIT'; note: string; referenceType?: string, referenceId?: string }) => api.post(`/api/vendors/${id}/adjustment`, data),
 };
 
@@ -317,13 +318,23 @@ export const accountingApi = {
   getPayments: (params?: any) => api.get('/api/accounting/payments', { params }),
   recordPayment: (data: any) => api.post('/api/accounting/payments', data),
   getExpenses: (params?: any) => api.get('/api/accounting/expenses', { params }),
+  getExpenseById: (id: string) => api.get(`/api/accounting/expenses/${id}`),
   recordExpense: (data: any) => api.post('/api/accounting/expenses', data),
+  recordExpensePayment: (id: string, data: { amount: number, accountId: string, paymentMode: string, note?: string }) => 
+    api.post(`/api/accounting/expenses/${id}/payment`, data),
+  deleteExpense: (id: string) => api.delete(`/api/accounting/expenses/${id}`),
   getCashFlow: () => api.get('/api/finance/cash-flow'),
+  getAccounts: () => api.get('/api/accounts'),
+  transferFunds: (data: any) => api.post('/api/accounting/transfers', data),
+  cancelPayment: (id: string) => api.post(`/api/accounting/payments/${id}/cancel`),
+  getLedgerSummary: (params?: any) => api.get('/api/accounting/ledger-summary', { params }),
 };
 
 export const accountsApi = {
   getAll: () => api.get('/api/accounts'),
   getById: (id: string) => api.get(`/api/accounts/${id}`),
+  create: (data: { name: string, type: 'CASH' | 'BANK' | 'UPI', balance?: number }) => api.post('/api/accounts', data),
+  delete: (id: string) => api.delete(`/api/accounts/${id}`),
 };
 
 // --- Reports & Analytics ---

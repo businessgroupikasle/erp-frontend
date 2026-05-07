@@ -15,11 +15,35 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { clsx } from "clsx";
+import { useEffect, useCallback } from "react";
+import { accountingApi } from "@/lib/api";
 
 export default function CentralReports() {
   const [expandedSections, setExpandedSections] = useState<string[]>([
-    "Invoices Summary", "Purchases and Expenses Summary", "Purchase Order Summary"
+    "Invoices Summary", "Purchases and Expenses Summary"
   ]);
+  const [summary, setSummary] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState({
+    startDate: "2026-04-01",
+    endDate: "2026-04-30"
+  });
+
+  const fetchSummary = useCallback(async () => {
+    try {
+      const res = await accountingApi.getLedgerSummary({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate
+      });
+      setSummary(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [dateRange]);
+
+  useEffect(() => { fetchSummary(); }, [fetchSummary]);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => 
@@ -101,13 +125,10 @@ export default function CentralReports() {
                     </button>
                     {expandedSections.includes("Invoices Summary") && (
                       <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                         <SummaryCard icon={<FileText size={20} />} label="Invoices" value="-" color="blue" />
-                         <SummaryCard icon={<Plus size={20} />} label="Total Amount" value="₹0" color="blue" />
-                         <SummaryCard icon={<BadgeDollarSign size={20} />} label="Amount due" value="₹0" color="green" />
-                         <SummaryCard icon={<BadgeDollarSign size={20} />} label="Payment Received" value="₹0" color="green" />
-                         <SummaryCard icon={<span className="text-[10px] font-bold">GST</span>} label="GST Amount" value="₹0" color="orange" />
-                         <SummaryCard icon={<span className="text-[10px] font-bold">⇌</span>} label="Transaction Charge" value="₹0" color="orange" />
-                         <SummaryCard icon={<span className="text-[10px] font-bold">TAX</span>} label="TDS" value="₹0" color="orange" />
+                         <SummaryCard icon={<FileText size={20} />} label="Invoices" value={summary?.invoices?.count?.toString() || "-"} color="blue" />
+                         <SummaryCard icon={<Plus size={20} />} label="Total Amount" value={`₹${summary?.invoices?.total?.toLocaleString() || "0"}`} color="blue" />
+                         <SummaryCard icon={<BadgeDollarSign size={20} />} label="Amount due" value={`₹${summary?.invoices?.due?.toLocaleString() || "0"}`} color="green" />
+                         <SummaryCard icon={<BadgeDollarSign size={20} />} label="Payment Received" value={`₹${summary?.invoices?.received?.toLocaleString() || "0"}`} color="green" />
                       </div>
                     )}
                  </div>
@@ -123,10 +144,10 @@ export default function CentralReports() {
                     </button>
                     {expandedSections.includes("Purchases and Expenses Summary") && (
                       <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-8">
-                         <SummaryCard icon={<FileText size={20} />} label="Purchases and Expenses" value="0" color="blue" />
-                         <SummaryCard icon={<Plus size={20} />} label="Total Amount" value="0" color="blue" />
-                         <SummaryCard icon={<BadgeDollarSign size={20} />} label="Amount Due" value="0" color="green" />
-                         <SummaryCard icon={<BadgeDollarSign size={20} />} label="Payment Made" value="0" color="green" />
+                         <SummaryCard icon={<FileText size={20} />} label="Total Bills" value={summary?.expenses?.count?.toString() || "0"} color="blue" />
+                         <SummaryCard icon={<Plus size={20} />} label="Total Billed" value={`₹${summary?.expenses?.total?.toLocaleString() || "0"}`} color="blue" />
+                         <SummaryCard icon={<BadgeDollarSign size={20} />} label="Amount Due" value={`₹${summary?.expenses?.due?.toLocaleString() || "0"}`} color="green" />
+                         <SummaryCard icon={<BadgeDollarSign size={20} />} label="Payment Made" value={`₹${summary?.expenses?.paid?.toLocaleString() || "0"}`} color="green" />
                       </div>
                     )}
                  </div>

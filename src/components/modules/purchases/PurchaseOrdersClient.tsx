@@ -7,7 +7,7 @@ import {
   Trash2, Wallet, RefreshCw, ChevronLeft, ChevronRight, Download, X
 } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday, startOfDay, isBefore } from "date-fns";
-import { vendorsApi, purchaseOrdersApi, rawMaterialsApi, settingsApi } from "../../../lib/api";
+import { vendorsApi, purchaseOrdersApi, rawMaterialsApi, settingsApi, accountsApi } from "../../../lib/api";
 import { clsx } from "clsx";
 import GSTInvoice from "../../documents/GSTInvoice";
 
@@ -80,6 +80,8 @@ export default function PurchaseOrdersClient() {
 
   const [viewingPO, setViewingPO] = useState<any>(null);
   const [lastPayment, setLastPayment] = useState<any>(null);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
 
   const selectedVendor = vendors.find((v: any) => v.id === vendorId);
   const currentCompany = companyProfile || FALLBACK_COMPANY;
@@ -94,15 +96,19 @@ export default function PurchaseOrdersClient() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [poRes, vRes, rmRes, cpRes] = await Promise.all([
+      const [poRes, vRes, rmRes, cpRes, aRes] = await Promise.all([
         purchaseOrdersApi.getAll().catch(() => ({ data: [] })),
         vendorsApi.getAll().catch(() => ({ data: [] })),
         rawMaterialsApi.getAll().catch(() => ({ data: [] })),
-        settingsApi.getCompanyProfile().catch(() => ({ data: null }))
+        settingsApi.getCompanyProfile().catch(() => ({ data: null })),
+        accountsApi.getAll().catch(() => ({ data: [] }))
       ]);
       setOrders(poRes.data ?? []);
       setVendors(vRes.data ?? []);
       setMaterials(rmRes.data ?? []);
+      const accs = aRes.data || [];
+      setAccounts(accs);
+      if (accs.length > 0) setSelectedAccountId(accs[0].id);
       if (cpRes.data) {
         setCompanyProfile(cpRes.data);
         setEditingProfile(cpRes.data);
@@ -296,6 +302,7 @@ export default function PurchaseOrdersClient() {
     try {
       const res = await vendorsApi.recordPayment(payingPO.vendorId, {
         amount: paymentAmount,
+        accountId: selectedAccountId,
         note: paymentNote || `Payment for PO #${payingPO.id.substring(0, 8)}`,
         paymentMode,
         referenceId: payingPO.id
@@ -789,6 +796,19 @@ export default function PurchaseOrdersClient() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Withdraw From Account *</label>
+                <select 
+                  value={selectedAccountId}
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                  className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-sm outline-none focus:ring-4 ring-orange-500/10 appearance-none"
+                >
+                  {accounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.name} (₹{(acc.balance || 0).toLocaleString()})</option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-2">
