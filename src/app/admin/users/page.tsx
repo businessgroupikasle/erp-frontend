@@ -267,11 +267,12 @@ export default function UserManagement() {
                 value={formData.franchiseId}
                 onChange={(e) => setFormData({...formData, franchiseId: e.target.value})}
               >
-                <option value="">Headquarters (Global)</option>
-                {franchises.map((f: any) => (
-                  <option key={f.id} value={f.id}>{f.name}</option>
+                <option value="hq-001">Headquarters (Main Operations)</option>
+                {franchises.filter((f: any) => f.id !== 'hq-001').map((f: any) => (
+                  <option key={f.id} value={f.id}>{f.name} (Franchise)</option>
                 ))}
               </select>
+              <p className="text-[9px] text-slate-400 ml-1 font-medium italic">Assigning a specific branch creates a Franchise-specific user.</p>
             </div>
 
             <div className="space-y-1.5">

@@ -321,8 +321,8 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
 export const menuItems = SUPER_ADMIN_SIDEBAR.flatMap((s) => s.items);
 
 // ─── FRANCHISE_ADMIN dedicated sidebar ────────────────────────────────────────
-const FRANCHISE_ADMIN_ONLY = ["SUPER_ADMIN", "FRANCHISE_ADMIN", "MANAGER", "FRANCHISEE"];
-const FRANCHISE_ALL = ["SUPER_ADMIN", "FRANCHISE_ADMIN", "MANAGER", "FRANCHISEE", "STAFF"];
+const FRANCHISE_ADMIN_ONLY = ["SUPER_ADMIN", "ADMIN", "FRANCHISE_ADMIN", "MANAGER", "FRANCHISEE"];
+const FRANCHISE_ALL = ["SUPER_ADMIN", "ADMIN", "FRANCHISE_ADMIN", "MANAGER", "FRANCHISEE", "STAFF"];
 
 export const franchiseMenuSections: MenuSection[] = [
   {
