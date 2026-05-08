@@ -4,7 +4,8 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
-import { ChevronRight, Building } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+
 
 interface UserAccountLayoutProps {
   children: ReactNode;
@@ -47,22 +48,10 @@ export default function UserAccountLayout({ children }: UserAccountLayoutProps) 
            </nav>
         </div>
 
-        {/* Entry point back to Business Settings */}
-        <Link 
-          href="/settings/general"
-          className="group flex items-center justify-between p-4 bg-[#FAF9FA] dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-2xl hover:border-[#7C3AED] transition-all"
-        >
-          <div className="flex items-center gap-3">
-             <div className="w-8 h-8 bg-slate-800 rounded flex items-center justify-center">
-                <Building size={16} className="text-white" />
-             </div>
-             <p className="text-[13px] font-black text-[#1A1A1A] dark:text-slate-200">Business Settings</p>
-          </div>
-          <ChevronRight size={14} className="text-[#999] group-hover:text-[#7C3AED]" />
-        </Link>
       </div>
+ 
+       {/* Content Area */}
 
-      {/* Content Area */}
       <div className="flex-1 p-10 max-w-7xl">
         {children}
       </div>

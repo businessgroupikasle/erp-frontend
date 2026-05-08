@@ -67,6 +67,8 @@ import {
 } from "recharts";
 import { clsx } from "clsx";
 import { dashboardApi, franchiseApi } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
+
 
 const STATUS_STYLES: Record<string, string> = {
   completed: "bg-emerald-50 text-emerald-600 border-emerald-100",
@@ -76,13 +78,10 @@ const STATUS_STYLES: Record<string, string> = {
   cancelled: "bg-rose-50 text-rose-600 border-rose-100",
 };
 
-function fmt(amount: number) {
-  return "₹" + Math.round(amount).toLocaleString("en-IN");
-}
-
 function Skeleton({ className }: { className?: string }) {
   return <div className={clsx("animate-pulse bg-gray-100 dark:bg-white/5 rounded-lg", className)} />;
 }
+
 
 export default function Dashboard() {
   const [data, setData] = useState<any>(null);
@@ -182,7 +181,7 @@ export default function Dashboard() {
             <div>
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Daily Sales</p>
                 <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">
-                  {loading ? <Skeleton className="h-8 w-32" /> : fmt(stats?.revenueToday || 0)}
+                  {loading ? <Skeleton className="h-8 w-32" /> : formatCurrency(stats?.revenueToday || 0)}
                 </div>
             </div>
         </div>
@@ -200,7 +199,7 @@ export default function Dashboard() {
             <div>
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Net Cash Flow Today</p>
                 <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">
-                   {loading ? <Skeleton className="h-8 w-32" /> : fmt(stats?.profitToday || 0)}
+                   {loading ? <Skeleton className="h-8 w-32" /> : formatCurrency(stats?.profitToday || 0)}
                 </div>
             </div>
         </div>

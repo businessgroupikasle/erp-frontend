@@ -304,8 +304,8 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     items: [
       {
         icon: Settings,
-        label: "General Settings",
-        href: "/settings/general",
+        label: "Settings",
+        href: "/settings/user/profile",
         roles: SUPER_ONLY,
       },
       {
@@ -419,7 +419,7 @@ export const franchiseMenuSections: MenuSection[] = [
       {
         icon: Settings,
         label: "Settings",
-        href: "/settings/general",
+        href: "/settings/user/profile",
         roles: FRANCHISE_ADMIN_ONLY,
       },
     ],
