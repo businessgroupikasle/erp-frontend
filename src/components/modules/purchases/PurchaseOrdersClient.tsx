@@ -44,7 +44,8 @@ const FALLBACK_COMPANY = {
   state: "Tamil Nadu"
 };
 
-const fmt = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+import { formatCurrency } from "@/lib/utils";
+
 
 export default function PurchaseOrdersClient() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -351,9 +352,9 @@ export default function PurchaseOrdersClient() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Spend", value: fmt(totalSpend), icon: ShoppingCart, color: "text-indigo-500", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
-          { label: "Total Paid", value: fmt(totalPaid), icon: Wallet, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
-          { label: "Balance Due", value: fmt(totalBalance), icon: AlertCircle, color: "text-red-500", bg: "bg-red-50 dark:bg-red-500/10" },
+          { label: "Total Spend", value: formatCurrency(totalSpend), icon: ShoppingCart, color: "text-indigo-500", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
+          { label: "Total Paid", value: formatCurrency(totalPaid), icon: Wallet, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
+          { label: "Balance Due", value: formatCurrency(totalBalance), icon: AlertCircle, color: "text-red-500", bg: "bg-red-50 dark:bg-red-500/10" },
           { label: "Pending Orders", value: String(pendingCount), icon: Clock, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-500/10" },
         ].map((card) => (
           <div key={card.label} className="bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 p-6 flex items-center gap-5">
@@ -387,10 +388,10 @@ export default function PurchaseOrdersClient() {
               </div>
               
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center"><p className="text-[10px] text-gray-400 uppercase font-bold">Subtotal</p><p className="text-[12px] font-black">{fmt(po.totalAmount - (po.cgst + po.sgst + po.igst))}</p></div>
-                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center"><p className="text-[10px] text-gray-400 uppercase font-bold">GST</p><p className="text-[12px] font-black">{fmt(po.cgst + po.sgst + po.igst)}</p></div>
-                <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-3 text-center"><p className="text-[10px] text-emerald-600 uppercase font-bold">Paid</p><p className="text-sm font-black text-emerald-700">{fmt(currentPaid)}</p></div>
-                <div className={clsx("rounded-xl p-3 text-center", balance > 0 ? "bg-red-50" : "bg-gray-50")}><p className="text-[10px] uppercase font-bold">Balance</p><p className="text-sm font-black">{fmt(balance)}</p></div>
+                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center"><p className="text-[10px] text-gray-400 uppercase font-bold">Subtotal</p><p className="text-[12px] font-black">{formatCurrency(po.totalAmount - (po.cgst + po.sgst + po.igst))}</p></div>
+                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center"><p className="text-[10px] text-gray-400 uppercase font-bold">GST</p><p className="text-[12px] font-black">{formatCurrency(po.cgst + po.sgst + po.igst)}</p></div>
+                <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-3 text-center"><p className="text-[10px] text-emerald-600 uppercase font-bold">Paid</p><p className="text-sm font-black text-emerald-700">{formatCurrency(currentPaid)}</p></div>
+                <div className={clsx("rounded-xl p-3 text-center", balance > 0 ? "bg-red-50" : "bg-gray-50")}><p className="text-[10px] uppercase font-bold">Balance</p><p className="text-sm font-black">{formatCurrency(balance)}</p></div>
               </div>
 
               <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5">
@@ -745,15 +746,15 @@ export default function PurchaseOrdersClient() {
               <div className="grid grid-cols-3 gap-3 mb-6">
                 <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-3 text-center">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total</p>
-                  <p className="text-sm font-black text-slate-900 dark:text-white mt-0.5">{fmt(payingPO.totalAmount ?? 0)}</p>
+                  <p className="text-sm font-black text-slate-900 dark:text-white mt-0.5">{formatCurrency(payingPO.totalAmount ?? 0)}</p>
                 </div>
                 <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl p-3 text-center">
                   <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Paid</p>
-                  <p className="text-sm font-black text-emerald-700 dark:text-emerald-400 mt-0.5">{fmt(payingPO.paid ?? 0)}</p>
+                  <p className="text-sm font-black text-emerald-700 dark:text-emerald-400 mt-0.5">{formatCurrency(payingPO.paid ?? 0)}</p>
                 </div>
                 <div className="bg-red-50 dark:bg-red-500/10 rounded-2xl p-3 text-center">
                   <p className="text-[9px] font-black text-red-500 uppercase tracking-widest">Balance</p>
-                  <p className="text-sm font-black text-red-600 dark:text-red-400 mt-0.5">{fmt(Math.max(0, (payingPO.totalAmount ?? 0) - (payingPO.paid ?? 0)))}</p>
+                  <p className="text-sm font-black text-red-600 dark:text-red-400 mt-0.5">{formatCurrency(Math.max(0, (payingPO.totalAmount ?? 0) - (payingPO.paid ?? 0)))}</p>
                 </div>
               </div>
             </div>
