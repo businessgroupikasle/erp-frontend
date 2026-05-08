@@ -4,8 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { reportsApi, accountingApi } from '@/lib/api';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Wallet, CreditCard, ArrowRight } from 'lucide-react';
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/utils";
+
 
 export default function ProfitLossPage() {
   const [data, setData] = useState<any>(null);
@@ -57,7 +58,7 @@ export default function ProfitLossPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900">₹{data.revenue.toLocaleString('en-IN')}</div>
+            <div className="text-2xl font-bold text-slate-900">{formatCurrency(data.revenue)}</div>
             <p className="text-xs text-slate-400 mt-1">Total POS Sales Invoiced</p>
           </CardContent>
         </Card>
@@ -69,7 +70,7 @@ export default function ProfitLossPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900">₹{data.cogs.toLocaleString('en-IN')}</div>
+            <div className="text-2xl font-bold text-slate-900">{formatCurrency(data.cogs)}</div>
             <p className="text-xs text-slate-400 mt-1">Cost of Materials Consumed</p>
           </CardContent>
         </Card>
@@ -83,7 +84,7 @@ export default function ProfitLossPage() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${data.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-              ₹{data.netProfit.toLocaleString('en-IN')}
+              {formatCurrency(data.netProfit)}
             </div>
             <p className="text-xs text-slate-400 mt-1">Bottom line after all deductions</p>
           </CardContent>
@@ -103,34 +104,33 @@ export default function ProfitLossPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center text-lg">
                 <span className="text-slate-600">(+) Total Indirect/Direct Revenue</span>
-                <span className="font-semibold">₹{data.revenue.toLocaleString('en-IN')}</span>
+                <span className="font-semibold">{formatCurrency(data.revenue)}</span>
               </div>
               <div className="flex justify-between items-center text-lg text-orange-600">
                 <span>(-) Cost of Goods Sold (Recipe Based)</span>
-                <span className="font-semibold">₹{data.cogs.toLocaleString('en-IN')}</span>
+                <span className="font-semibold">{formatCurrency(data.cogs)}</span>
               </div>
               <hr />
               <div className="flex justify-between items-center text-xl font-bold">
                 <span>(=) Gross Profit</span>
-                <span className="text-blue-600">₹{data.grossProfit.toLocaleString('en-IN')}</span>
+                <span className="text-blue-600">{formatCurrency(data.grossProfit)}</span>
               </div>
               <div className="pt-2">
                 <div className="flex justify-between text-xs mb-1">
                   <span>Gross Margin</span>
                   <span>{grossProfitMargin.toFixed(1)}%</span>
                 </div>
-                <Progress value={grossProfitMargin} className="h-2" />
               </div>
               
               <div className="flex justify-between items-center text-lg text-rose-500 pt-4">
                 <span>(-) Operational Expenses (Salary, Rent, Others)</span>
-                <span className="font-semibold">₹{data.expenses.toLocaleString('en-IN')}</span>
+                <span className="font-semibold">{formatCurrency(data.expenses)}</span>
               </div>
               <hr className="border-2 border-slate-900" />
               <div className="flex justify-between items-center text-2xl font-black">
                 <span>Net Earnings</span>
                 <span className={data.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                  ₹{data.netProfit.toLocaleString('en-IN')}
+                  {formatCurrency(data.netProfit)}
                 </span>
               </div>
             </div>
