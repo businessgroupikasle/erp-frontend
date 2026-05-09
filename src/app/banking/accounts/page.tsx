@@ -77,8 +77,8 @@ export default function AccountsPage() {
       {/* Header Section */}
       <div className="flex items-end justify-between border-b border-slate-200 dark:border-white/5 pb-8">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Financial Accounts</h1>
-          <p className="text-slate-500 font-medium mt-1">Manage your company's bank accounts, cash drawers, and digital wallets.</p>
+          <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Business Accounts</h1>
+          <p className="text-slate-500 font-medium mt-1 italic">Internal Financial Tracking System</p>
         </div>
         <button 
           onClick={() => setShowAddForm(true)}
@@ -160,7 +160,9 @@ export default function AccountsPage() {
                 <span className="text-[9px] font-bold text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md">{acc.accountCode}</span>
               </div>
               <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none uppercase mt-2">{acc.name}</h3>
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">{acc.type} ACCOUNT</p>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">
+                {acc.type === 'BANK' ? 'BANK ACCOUNT' : acc.type === 'CASH' ? 'CASH DRAWER' : 'DIGITAL WALLET'}
+              </p>
             </div>
 
             {/* Last Transaction Preview */}
@@ -183,7 +185,7 @@ export default function AccountsPage() {
 
             <div className="pt-6 border-t border-slate-100 dark:border-white/5 flex items-end justify-between">
               <div>
-                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Available Balance</p>
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">System Balance</p>
                 <p className="text-2xl font-black text-slate-900 dark:text-white">₹{acc.balance.toLocaleString()}</p>
               </div>
               <div className="w-10 h-10 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
@@ -234,9 +236,9 @@ export default function AccountsPage() {
                        onChange={e => setFormData({...formData, type: e.target.value})}
                        className="w-full px-8 py-5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-[1.5rem] font-bold outline-none appearance-none"
                      >
-                        <option value="CASH">CASH</option>
-                        <option value="BANK">BANK</option>
-                        <option value="UPI">UPI</option>
+                        <option value="BANK">Bank Account</option>
+                        <option value="CASH">Cash Drawer</option>
+                        <option value="UPI">Digital Wallet (UPI)</option>
                      </select>
                   </div>
                   <div className="space-y-2">

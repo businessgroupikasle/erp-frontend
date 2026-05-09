@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Store, Plus, Search,
   RefreshCw, Edit2, Trash2,
@@ -35,6 +36,7 @@ const VENDOR_STATUS = [
 ];
 
 export default function VendorsClient() {
+  const router = useRouter();
   const { user } = useAuth();
   const { showToast } = useToast();
   
@@ -44,7 +46,7 @@ export default function VendorsClient() {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<'ALL' | 'OWED' | 'ADVANCE'>('ALL');
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
-  const [selectedTab, setSelectedTab] = useState<'OVERVIEW' | 'POS' | 'GRNS' | 'MATERIALS' | 'INVOICES' | 'LEDGER'>('OVERVIEW');
+  const [selectedTab, setSelectedTab] = useState<'OVERVIEW' | 'ANALYTICS' | 'POS' | 'GRNS' | 'MATERIALS' | 'INVOICES' | 'LEDGER'>('OVERVIEW');
   
   const [selectedVendorDetail, setSelectedVendorDetail] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -66,8 +68,11 @@ export default function VendorsClient() {
     accountId: "",
     paymentMode: "CASH",
     referenceId: "",
+    vendorInvoiceId: "",
     date: new Date().toISOString().split('T')[0]
   });
+  const [vendorInvoices, setVendorInvoices] = useState<any[]>([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [accounts, setAccounts] = useState<any[]>([]);
 
   // -- Data Fetching --
@@ -153,7 +158,10 @@ export default function VendorsClient() {
   };
 
   const handlePayment = async () => {
-    if (!selectedVendorId || !paymentForm.amount || !paymentForm.accountId) return;
+    if (!selectedVendorId || !paymentForm.amount || !paymentForm.accountId) {
+      showToast("Please select an account and amount", "error");
+      return;
+    }
     setSaving(true);
     try {
       await vendorsApi.recordPayment(selectedVendorId, {
@@ -161,7 +169,12 @@ export default function VendorsClient() {
         type: paymentForm.type,
         note: paymentForm.note || `${paymentForm.type} Settlement`,
         accountId: paymentForm.accountId,
-        paymentMode: accounts.find(a => a.id === paymentForm.accountId)?.type || "CASH"
+        vendorInvoiceId: paymentForm.vendorInvoiceId || undefined,
+        paymentMode: (() => {
+          const type = accounts.find(a => a.id === paymentForm.accountId)?.type;
+          if (type === 'BANK') return 'BANK_TRANSFER';
+          return type || 'CASH';
+        })()
       });
       showToast("Financial settlement recorded", "success");
       setShowPaymentModal(false);
@@ -170,6 +183,19 @@ export default function VendorsClient() {
     } catch (e: any) {
       showToast(e.response?.data?.error || "Settlement Failed", "error");
     } finally { setSaving(false); }
+  };
+
+  const fetchVendorInvoices = async (vId: string) => {
+    setLoadingInvoices(true);
+    try {
+      const res = await vendorsApi.getById(vId); // Or use vendorInvoicesApi
+      const invs = res.data?.invoices || [];
+      setVendorInvoices(invs.filter((i: any) => i.status !== 'PAID' && i.status !== 'CANCELLED'));
+    } catch (e) {
+      setVendorInvoices([]);
+    } finally {
+      setLoadingInvoices(false);
+    }
   };
 
   const amountNum = Number(paymentForm.amount) || 0;
@@ -296,7 +322,11 @@ export default function VendorsClient() {
               </div>
               <div className="flex items-center gap-2">
                  <button onClick={() => { setEditing(selectedVendor); setForm({ ...selectedVendor }); setShowForm(true); }} className="px-4 py-2 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white rounded-xl text-[9px] font-bold uppercase tracking-widest border border-slate-200 dark:border-white/10 transition-all">Edit Profile</button>
-                 <button onClick={() => { setPaymentForm({ amount: "", note: "", type: "PAYMENT", accountId: accounts[0]?.id || "", paymentMode: "CASH", referenceId: "", date: new Date().toISOString().split('T')[0] }); setShowPaymentModal(true); }} className="px-6 py-2 bg-orange-500 text-white rounded-xl text-[9px] font-bold uppercase tracking-widest shadow-lg shadow-orange-500/20 active:scale-95 transition-all">Record Transaction</button>
+                 <button onClick={() => { 
+                   setPaymentForm({ amount: "", note: "", type: "PAYMENT", accountId: accounts[0]?.id || "", paymentMode: "CASH", referenceId: "", vendorInvoiceId: "", date: new Date().toISOString().split('T')[0] }); 
+                   fetchVendorInvoices(selectedVendorId!);
+                   setShowPaymentModal(true); 
+                 }} className="px-6 py-2 bg-orange-500 text-white rounded-xl text-[9px] font-bold uppercase tracking-widest shadow-lg shadow-orange-500/20 active:scale-95 transition-all">Record Transaction</button>
               </div>
             </div>
 
@@ -304,6 +334,7 @@ export default function VendorsClient() {
             <div className="px-6 flex items-center gap-6 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-transparent">
               {([
                 { id: 'OVERVIEW', label: 'Overview', icon: LayoutDashboard },
+                { id: 'ANALYTICS', label: 'Performance Analytics', icon: TrendingUp },
                 { id: 'POS', label: 'Purchase Orders', icon: Package },
                 { id: 'GRNS', label: 'Receipts (GRN)', icon: Truck },
                 { id: 'MATERIALS', label: 'Materials', icon: Zap },
@@ -370,80 +401,91 @@ export default function VendorsClient() {
                         </div>
                     </div>
                   </div>
+                </div>
+              )}
 
-                  <div className="grid grid-cols-3 gap-4">
-                    {/* Health Scorecard */}
-                    <div className="col-span-1 p-6 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[2.5rem] space-y-6">
-                      <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-900 dark:text-white flex items-center gap-2">
-                        <ShieldCheck size={14} className="text-emerald-500" /> Vendor Health
-                      </h4>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Vendor Rating</span>
-                          <div className="flex items-center gap-0.5">
-                            {[1,2,3,4,5].map(s => <Star key={s} size={10} className={s <= (selectedVendor.rating || 5) ? "text-orange-400 fill-orange-400" : "text-slate-200"} />)}
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Payment Terms</span>
-                          <span className="text-[9px] font-bold text-slate-900 dark:text-white uppercase tracking-tight">{selectedVendor.paymentTerms}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Total Orders</span>
-                          <span className="text-[9px] font-bold text-slate-900 dark:text-white tracking-tight">{selectedVendor._count?.orders || 0}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Status</span>
-                          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded text-[8px] font-bold uppercase tracking-widest">Verified Vendor</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Quick Stats */}
-                    <div className="col-span-2 p-6 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[2.5rem] grid grid-cols-2 gap-8">
-                       <div className="space-y-4">
-                          <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-900 dark:text-white">Business Metrics</h4>
-                          <div className="grid grid-cols-2 gap-4">
-                             <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-3xl border border-slate-100 dark:border-white/5">
-                                <p className="text-[7px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-1">Avg Lead Time</p>
-                                <span className="text-base font-black text-slate-900 dark:text-white tracking-tighter">
-                                  {(() => {
-                                    const orders = selectedVendorDetail?.orders?.filter((o: any) => o.status === 'RECEIVED' && o.goodsReceipts?.length > 0);
-                                    if (!orders || orders.length === 0) return "N/A";
-                                    const totalDays = orders.reduce((sum: number, o: any) => {
-                                      const receivedAt = new Date(o.goodsReceipts[0].createdAt);
-                                      const createdAt = new Date(o.createdAt);
-                                      return sum + (receivedAt.getTime() - createdAt.getTime());
-                                    }, 0);
-                                    const avg = totalDays / orders.length / (1000 * 60 * 60 * 24);
-                                    return `${avg.toFixed(1)} Days`;
-                                  })()}
-                                </span>
+              {selectedTab === 'ANALYTICS' && (
+                <div className="space-y-6 overflow-y-auto custom-scrollbar pr-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="grid grid-cols-3 gap-6">
+                    {/* Performance Scorecards */}
+                    <div className="col-span-2 p-8 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[3rem] space-y-8">
+                       <div>
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-6">Vendor Performance Metrics</h4>
+                          <div className="grid grid-cols-2 gap-6">
+                             <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-[2rem] border border-slate-100 dark:border-white/5 group hover:border-orange-500/20 transition-all">
+                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-2">Avg Lead Time</p>
+                                <div className="flex items-end gap-2">
+                                  <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
+                                    {(() => {
+                                      const orders = selectedVendorDetail?.orders?.filter((o: any) => o.status === 'RECEIVED' && o.goodsReceipts?.length > 0);
+                                      if (!orders || orders.length === 0) return "N/A";
+                                      const totalDays = orders.reduce((sum: number, o: any) => {
+                                        const receivedAt = new Date(o.goodsReceipts[0].createdAt);
+                                        const createdAt = new Date(o.createdAt);
+                                        return sum + (receivedAt.getTime() - createdAt.getTime());
+                                      }, 0);
+                                      const avg = totalDays / orders.length / (1000 * 60 * 60 * 24);
+                                      return `${avg.toFixed(1)}`;
+                                    })()}
+                                  </span>
+                                  <span className="text-[10px] font-black text-slate-400 uppercase mb-2">Days</span>
+                                </div>
+                                <p className="text-[7px] text-slate-500 mt-3">Calculated from {selectedVendorDetail?.orders?.length || 0} order cycles</p>
                              </div>
-                             <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-3xl border border-slate-100 dark:border-white/5">
-                                <p className="text-[7px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-1">QC Pass Rate</p>
-                                <span className="text-base font-black text-emerald-500 tracking-tighter">
-                                  {(() => {
-                                    const items = selectedVendorDetail?.orders?.flatMap((o: any) => o.goodsReceipts || []).flatMap((g: any) => g.items || []);
-                                    if (!items || items.length === 0) return "100%";
-                                    const accepted = items.reduce((s: number, i: any) => s + (i.acceptedQty || 0), 0);
-                                    const received = items.reduce((s: number, i: any) => s + (i.receivedQty || 1), 0);
-                                    return `${((accepted / received) * 100).toFixed(1)}%`;
-                                  })()}
-                                </span>
+                             <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-[2rem] border border-slate-100 dark:border-white/5 group hover:border-emerald-500/20 transition-all">
+                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-2">QC Pass Rate</p>
+                                <div className="flex items-end gap-1">
+                                  <span className="text-4xl font-black text-emerald-500 tracking-tighter">
+                                    {(() => {
+                                      const items = selectedVendorDetail?.orders?.flatMap((o: any) => o.goodsReceipts || []).flatMap((g: any) => g.items || []);
+                                      if (!items || items.length === 0) return "100.0";
+                                      const accepted = items.reduce((s: number, i: any) => s + (i.acceptedQty || 0), 0);
+                                      const received = items.reduce((s: number, i: any) => s + (i.receivedQty || 1), 0);
+                                      return ((accepted / received) * 100).toFixed(1);
+                                    })()}
+                                  </span>
+                                  <span className="text-xl font-black text-emerald-500/50 mb-1.5">%</span>
+                                </div>
+                                <p className="text-[7px] text-slate-500 mt-3">Based on physical quality inspections</p>
                              </div>
                           </div>
                        </div>
-                       <div className="space-y-4">
-                          <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-900 dark:text-white">Operational Info</h4>
-                          <div className="space-y-2.5">
-                             <div className="flex items-center justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest"><span>GST Number</span> <span className="font-black text-slate-900 dark:text-white tracking-normal">{selectedVendor.gstNumber || "Not Provided"}</span></div>
-                             <div className="flex items-center justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest"><span>Category</span> <span className="font-black text-slate-900 dark:text-white tracking-normal uppercase">{selectedVendor.category || "General"}</span></div>
-                             <div className="mt-2 pt-2 border-t border-slate-100 dark:border-white/5">
-                                <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">Office Address</span>
-                                <p className="text-[10px] font-medium text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">{selectedVendor.address}</p>
+
+                       <div className="pt-8 border-t border-slate-100 dark:border-white/5">
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 italic">Trust & Reliability Score</h4>
+                          <div className="flex items-center gap-1">
+                             {[1,2,3,4,5].map(s => (
+                               <Star key={s} size={18} className={s <= (selectedVendor.rating || 5) ? "text-orange-400 fill-orange-400" : "text-slate-200"} />
+                             ))}
+                             <span className="ml-4 px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest">Verified Supplier</span>
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* Operational Master Data */}
+                    <div className="col-span-1 p-8 bg-slate-900 text-white rounded-[3rem] space-y-8 shadow-2xl shadow-slate-900/20">
+                       <div className="space-y-6">
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Operational Master Data</h4>
+                          
+                          <div className="space-y-4">
+                             <div>
+                                <p className="text-[7px] font-black uppercase opacity-40 tracking-[0.1em] mb-1">Tax Registration (GST)</p>
+                                <p className="text-xs font-black tracking-wide">{selectedVendor.gstNumber || "NOT PROVIDED"}</p>
+                             </div>
+                             <div>
+                                <p className="text-[7px] font-black uppercase opacity-40 tracking-[0.1em] mb-1">Settlement Cycle</p>
+                                <p className="text-xs font-black tracking-wide uppercase">{selectedVendor.paymentTerms}</p>
+                             </div>
+                             <div>
+                                <p className="text-[7px] font-black uppercase opacity-40 tracking-[0.1em] mb-1">Business Category</p>
+                                <p className="text-xs font-black tracking-wide uppercase">{selectedVendor.category || "General"}</p>
                              </div>
                           </div>
+                       </div>
+
+                       <div className="pt-8 border-t border-white/10">
+                          <p className="text-[7px] font-black uppercase opacity-40 tracking-[0.1em] mb-3">Registered Office Address</p>
+                          <p className="text-[11px] leading-relaxed opacity-80 font-medium">{selectedVendor.address || "No address recorded."}</p>
                        </div>
                     </div>
                   </div>
@@ -730,15 +772,21 @@ export default function VendorsClient() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Debit From Account</label>
-                <select value={paymentForm.accountId} onChange={e => setPaymentForm({...paymentForm, accountId: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none">
-                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name} (₹{Math.round(a.balance).toLocaleString()})</option>)}
-                </select>
+                {accounts.length === 0 ? (
+                  <div className="px-4 py-2 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl">
+                    <p className="text-[9px] font-bold text-rose-600 dark:text-rose-400">No accounts found. Create one in <span className="underline cursor-pointer" onClick={() => router.push('/banking/accounts')}>Banking</span></p>
+                  </div>
+                ) : (
+                  <select value={paymentForm.accountId} onChange={e => setPaymentForm({...paymentForm, accountId: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none">
+                    {accounts.map(a => <option key={a.id} value={a.id}>{a.name} (₹{Math.round(a.balance).toLocaleString()})</option>)}
+                  </select>
+                )}
               </div>
               <div className="space-y-1">
                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Payment Mode</label>
                 <select value={paymentForm.paymentMode} onChange={e => setPaymentForm({...paymentForm, paymentMode: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none">
                   <option value="CASH">Cash</option>
-                  <option value="BANK">Bank Transfer</option>
+                  <option value="BANK_TRANSFER">Bank Transfer</option>
                   <option value="UPI">UPI / Digital</option>
                   <option value="CHEQUE">Cheque</option>
                 </select>
@@ -747,6 +795,28 @@ export default function VendorsClient() {
                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Reference No.</label>
                 <input placeholder="TXN-123456" value={paymentForm.referenceId} onChange={e => setPaymentForm({...paymentForm, referenceId: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
               </div>
+              {paymentForm.type === 'PAYMENT' && (
+                <div className="space-y-1 col-span-2">
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Allocate to Invoice (Recommended)</label>
+                  <select 
+                    value={paymentForm.vendorInvoiceId} 
+                    onChange={e => {
+                      const inv = vendorInvoices.find(i => i.id === e.target.value);
+                      setPaymentForm({
+                        ...paymentForm, 
+                        vendorInvoiceId: e.target.value,
+                        amount: inv ? inv.amount.toString() : paymentForm.amount
+                      });
+                    }} 
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none"
+                  >
+                    <option value="">Direct Payment (Unallocated)</option>
+                    {vendorInvoices.map(inv => (
+                      <option key={inv.id} value={inv.id}>{inv.invoiceNumber} (₹{inv.amount.toLocaleString()}) - {inv.status}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="space-y-1">
                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Transaction Date</label>
                 <input type="date" value={paymentForm.date} onChange={e => setPaymentForm({...paymentForm, date: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
@@ -767,7 +837,18 @@ export default function VendorsClient() {
             )}
             <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-white/5">
               <button onClick={() => setShowPaymentModal(false)} className="px-5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded-lg transition-all">Cancel</button>
-              <button onClick={handlePayment} className="flex-1 px-8 py-2.5 bg-orange-500 text-white rounded-lg text-xs font-bold uppercase transition-all" disabled={saving || !amountNum || !paymentForm.accountId}>{saving ? "Wait..." : "Confirm"}</button>
+              <button 
+                onClick={handlePayment} 
+                className={clsx(
+                  "flex-1 px-8 py-2.5 rounded-lg text-xs font-bold uppercase transition-all shadow-lg",
+                  saving || !amountNum || !paymentForm.accountId
+                    ? "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none"
+                    : "bg-orange-500 text-white shadow-orange-500/20 hover:bg-orange-600 active:scale-95"
+                )} 
+                disabled={saving || !amountNum || !paymentForm.accountId}
+              >
+                {saving ? "Processing..." : "Confirm Settlement"}
+              </button>
             </div>
           </div>
         </div>

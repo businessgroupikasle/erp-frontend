@@ -202,7 +202,7 @@ export const vendorsApi = {
     api.post('/api/vendors/link-material', data),
   getLedger: (id: string, params: any = {}) => api.get(`/api/vendors/${id}/ledger`, { params }),
   getAging: (id: string) => api.get(`/api/vendors/${id}/aging`),
-  recordPayment: (id: string, data: { amount: number; note: string; accountId: string; type?: string; paymentMode?: string; referenceId?: string }) => api.post(`/api/vendors/${id}/payment`, data),
+  recordPayment: (id: string, data: { amount: number; note: string; accountId: string; type?: string; paymentMode?: string; referenceId?: string; vendorInvoiceId?: string }) => api.post(`/api/vendors/${id}/payment`, data),
   recordAdjustment: (id: string, data: { amount: number; type: 'CREDIT' | 'DEBIT'; note: string; referenceType?: string, referenceId?: string }) => api.post(`/api/vendors/${id}/adjustment`, data),
 };
 
@@ -275,11 +275,27 @@ export const grnApi = {
   cancel: (id: string) => api.patch(`/api/grn/${id}/cancel`),
 };
 
+// --- Quality Control (Enterprise) ---
+export const qcApi = {
+  getPending: () => api.get('/api/qc/pending'),
+  inspect: (data: {
+    grnItemId: string;
+    approvedQty: number;
+    rejectedQty: number;
+    actionTaken: 'APPROVE' | 'REJECT_RETURN' | 'REJECT_SCRAP' | 'REWORK' | 'HOLD';
+    remarks?: string;
+    temperature?: number;
+    moistureContent?: number;
+    packagingOk?: boolean;
+  }) => api.post('/api/qc/inspect', data),
+};
+
 // --- Vendor Invoices & Matching ---
 export const vendorInvoicesApi = {
   getAll: (params: any = {}) => api.get('/api/vendor-invoices', { params }),
   create: (data: any) => api.post('/api/vendor-invoices', data),
   match: (id: string) => api.post(`/api/vendor-invoices/${id}/match`),
+  approve: (id: string) => api.post(`/api/vendor-invoices/${id}/approve`),
   updateStatus: (id: string, status: string) => api.patch(`/api/vendor-invoices/${id}/status`, { status }),
 };
 

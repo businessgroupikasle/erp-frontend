@@ -77,7 +77,8 @@ export default function VendorPaymentPage() {
     try {
       const res = await vendorInvoicesApi.getAll({ vendorId: vendor.id });
       const all = res.data?.invoices || res.data || [];
-      setInvoices(all.filter((i: Invoice) => i.status !== "PAID"));
+      // Only show Approved invoices for payment (Liability recognized)
+      setInvoices(all.filter((i: Invoice) => i.status === "APPROVED"));
     } catch {
       setInvoices([]);
     } finally {
@@ -95,12 +96,13 @@ export default function VendorPaymentPage() {
       await vendorsApi.recordPayment(selectedVendor.id, {
         amount: parseFloat(form.amount),
         accountId: selectedAccount,
-        referenceId: selectedInvoice?.id,
+        vendorInvoiceId: selectedInvoice?.id,
+        paymentMode: form.mode,
         note: `${PAYMENT_MODES.find(m => m.key === form.mode)?.label} Payment${form.reference ? ` — Ref: ${form.reference}` : ""}${form.note ? `. ${form.note}` : ""}`,
       });
       setSuccess(true);
-    } catch {
-      alert("Payment failed. Please try again.");
+    } catch (e: any) {
+      alert(e.response?.data?.error || "Payment failed. Please try again.");
     } finally {
       setSubmitting(false);
     }

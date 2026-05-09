@@ -9,11 +9,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { rawMaterialsApi, franchiseApi } from "@/lib/api";
+import { rawMaterialsApi, franchiseApi, vendorsApi } from "@/lib/api";
 import { ITEM_CATEGORIES, UNITS } from "@/lib/constants";
 import { useAuth } from "@/context/AuthContext";
 import { clsx } from "clsx";
-import { PREDEFINED_SIZES, generateSKU } from "@/lib/utils/erp";
+import { PREDEFINED_SIZES, generateSKU, getCategoryDefaults } from "@/lib/utils/erp";
 
 export default function AddMaterialPage() {
   const router = useRouter();
@@ -60,6 +60,15 @@ export default function AddMaterialPage() {
     const sku = generateSKU(form.category, form.name, size);
     setForm((f) => ({ ...f, sku }));
   }, [form.category, form.name, size]);
+
+  const prevCategory = useRef(form.category);
+  useEffect(() => {
+    if (form.category !== prevCategory.current) {
+      const defs = getCategoryDefaults(form.category);
+      setForm((f) => ({ ...f, hsnCode: defs.hsnCode, gstRate: defs.taxPercent }));
+      prevCategory.current = form.category;
+    }
+  }, [form.category]);
 
   const handleSave = async () => {
     if (!form.name) {
