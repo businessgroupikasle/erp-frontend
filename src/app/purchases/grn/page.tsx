@@ -36,6 +36,9 @@ interface GRNItem {
   acceptedQty: number;
   rejectedQty: number;
   price: number;
+  vendorBatchNo?: string;
+  mfgDate?: string;
+  expDate?: string;
   inventoryItem?: { name: string; unit: string };
 }
 
@@ -58,10 +61,19 @@ export default function GRNPage() {
     setLoading(true);
     if (view === "NEW") {
       purchaseOrdersApi.getAll().then(r => {
-        const pending = (r.data.orders || r.data || []).filter(
-          (p: PO) => p.status === "PENDING" || p.status === "APPROVED"
+        const orders = r.data.orders || r.data || [];
+        const pending = orders.filter(
+          (p: PO) => p.status === "PENDING" || p.status === "APPROVED" || p.status === "SENT" || p.status === "PARTIALLY_RECEIVED"
         );
         setPOs(pending);
+        
+        // Auto-select if PO ID provided in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const poId = urlParams.get('poId');
+        if (poId) {
+          const po = pending.find((p: PO) => p.id === poId);
+          if (po) selectPO(po);
+        }
       }).finally(() => setLoading(false));
     } else {
       grnApi.getAll().then(r => {
@@ -80,6 +92,9 @@ export default function GRNPage() {
         acceptedQty: item.quantity,
         rejectedQty: 0,
         price: item.price,
+        vendorBatchNo: "",
+        mfgDate: "",
+        expDate: "",
         inventoryItem: item.inventoryItem,
       }))
     );
@@ -98,6 +113,15 @@ export default function GRNPage() {
         currentItem.acceptedQty = Math.max(0, received - rejected);
       }
       
+      next[idx] = currentItem;
+      return next;
+    });
+  };
+
+  const updateItemStr = (idx: number, field: keyof GRNItem, val: string) => {
+    setGrnItems(prev => {
+      const next = [...prev];
+      const currentItem = { ...next[idx], [field]: val };
       next[idx] = currentItem;
       return next;
     });
@@ -131,15 +155,8 @@ export default function GRNPage() {
             }))
           });
 
-          // Record Ledger Adjustment for Financial Accuracy
-          const totalRejectedValue = rejectedItems.reduce((sum, item) => sum + (item.rejectedQty * item.price), 0);
-          await vendorsApi.recordAdjustment(vendorId, {
-            amount: totalRejectedValue,
-            type: 'CREDIT',
-            note: `Auto-Adjustment: Credit for Rejected Goods on GRN: ${grnId.substring(0,8)}`,
-            referenceType: 'ADJUSTMENT',
-            referenceId: grnId
-          });
+          // Purchase Return document is created for vendor tracking
+          // Liability is automatically calculated on accepted goods only in the backend
         }
       }
 
@@ -333,6 +350,7 @@ export default function GRNPage() {
                 <thead className="bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
                   <tr>
                     <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Material</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Traceability</th>
                     <th className="px-8 py-5 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Ordered</th>
                     <th className="px-8 py-5 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Received</th>
                     <th className="px-8 py-5 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Rejected</th>
@@ -348,6 +366,15 @@ export default function GRNPage() {
                         <td className="px-8 py-6">
                           <div className="font-black text-gray-900 dark:text-white uppercase text-xs">{originalItem?.inventoryItem.name}</div>
                           <div className="text-[9px] text-gray-400 font-black uppercase tracking-widest mt-1 opacity-70">UNIT: {originalItem?.inventoryItem.unit}</div>
+                        </td>
+                        <td className="px-8 py-6">
+                          <div className="space-y-2">
+                             <input type="text" placeholder="Batch/Lot No." value={item.vendorBatchNo} onChange={e => updateItemStr(idx, "vendorBatchNo", e.target.value)} className="w-32 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-xs outline-none focus:border-orange-500" />
+                             <div className="flex gap-2">
+                                <input type="date" title="Mfg Date" value={item.mfgDate} onChange={e => updateItemStr(idx, "mfgDate", e.target.value)} className="w-32 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-[10px] outline-none" />
+                                <input type="date" title="Exp Date" value={item.expDate} onChange={e => updateItemStr(idx, "expDate", e.target.value)} className="w-32 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-[10px] outline-none" />
+                             </div>
+                          </div>
                         </td>
                         <td className="px-8 py-6 text-center">
                            <span className="px-3 py-1.5 bg-gray-50 dark:bg-white/5 rounded-lg text-xs font-black text-gray-400 uppercase">{item.quantity}</span>

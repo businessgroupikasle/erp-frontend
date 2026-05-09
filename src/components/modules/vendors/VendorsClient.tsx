@@ -166,7 +166,7 @@ export default function VendorsClient() {
       showToast("Financial settlement recorded", "success");
       setShowPaymentModal(false);
       fetchData();
-      fetchLedger(selectedVendorId);
+      fetchVendorDetails(selectedVendorId);
     } catch (e: any) {
       showToast(e.response?.data?.error || "Settlement Failed", "error");
     } finally { setSaving(false); }

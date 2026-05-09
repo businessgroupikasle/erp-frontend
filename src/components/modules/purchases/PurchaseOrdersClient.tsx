@@ -4,12 +4,14 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { 
   ShoppingCart, Plus, Search, Filter, Calendar as CalendarIcon, 
   ChevronDown, Store, Clock, CheckCircle2, XCircle, AlertCircle, 
-  Trash2, Wallet, RefreshCw, ChevronLeft, ChevronRight, Download, X
+  Trash2, Wallet, RefreshCw, ChevronLeft, ChevronRight, Download, X, Settings
 } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday, startOfDay, isBefore } from "date-fns";
 import { vendorsApi, purchaseOrdersApi, rawMaterialsApi, settingsApi, accountsApi } from "../../../lib/api";
 import { clsx } from "clsx";
 import GSTInvoice from "../../documents/GSTInvoice";
+import api from "../../../lib/api";
+import AddMaterialDrawer from "../inventory/AddMaterialDrawer";
 
 interface POItem {
   inventoryItemId: string;
@@ -22,16 +24,24 @@ interface POItem {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  PENDING: "bg-amber-50 text-amber-600 border border-amber-200 shadow-sm shadow-amber-500/10",
+  DRAFT: "bg-slate-100 text-slate-600 border border-slate-200 shadow-sm",
+  PENDING_APPROVAL: "bg-amber-50 text-amber-600 border border-amber-200 shadow-sm shadow-amber-500/10",
   APPROVED: "bg-indigo-50 text-indigo-600 border border-indigo-200 shadow-sm shadow-indigo-500/10",
+  SENT: "bg-blue-50 text-blue-600 border border-blue-200 shadow-sm shadow-blue-500/10",
+  PARTIALLY_RECEIVED: "bg-orange-50 text-orange-600 border border-orange-200 shadow-sm shadow-orange-500/10",
   RECEIVED: "bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-sm shadow-emerald-500/10",
+  CLOSED: "bg-emerald-900 text-white border border-emerald-800 shadow-sm",
   CANCELLED: "bg-red-50 text-red-600 border border-red-200 shadow-sm shadow-red-500/10",
 };
 
 const STATUS_ICONS: Record<string, any> = {
-  PENDING: Clock,
+  DRAFT: Clock,
+  PENDING_APPROVAL: Clock,
   APPROVED: CheckCircle2,
+  SENT: CheckCircle2,
+  PARTIALLY_RECEIVED: Store,
   RECEIVED: Store,
+  CLOSED: CheckCircle2,
   CANCELLED: XCircle,
 };
 
@@ -61,6 +71,11 @@ export default function PurchaseOrdersClient() {
   const [vendorId, setVendorId] = useState("");
   const [expectedDate, setExpectedDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [internalNotes, setInternalNotes] = useState("");
+  const [vendorNotes, setVendorNotes] = useState("");
+  const [deliveryInstructions, setDeliveryInstructions] = useState("");
+  const [freightCost, setFreightCost] = useState<number>(0);
+  const [unloadingCost, setUnloadingCost] = useState<number>(0);
   const [items, setItems] = useState<POItem[]>([{ inventoryItemId: "", itemName: "", unit: "kg", quantity: 0, price: 0, hsnCode: "", gstRate: 5 }]);
   const [companyProfile, setCompanyProfile] = useState<any>(null);
   const EMPTY_PROFILE = { name: "", gstin: "", address: "", phone: "", email: "", state: "" };
@@ -80,9 +95,12 @@ export default function PurchaseOrdersClient() {
   const [paymentNote, setPaymentNote] = useState("");
 
   const [viewingPO, setViewingPO] = useState<any>(null);
+  const [viewingDetailsPO, setViewingDetailsPO] = useState<any>(null);
+  const [poDetailsTab, setPoDetailsTab] = useState<"OVERVIEW" | "ITEMS" | "GRN" | "AUDIT">("OVERVIEW");
   const [lastPayment, setLastPayment] = useState<any>(null);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+  const [showAddMaterialDrawer, setShowAddMaterialDrawer] = useState(false);
 
   const selectedVendor = vendors.find((v: any) => v.id === vendorId);
   const currentCompany = companyProfile || FALLBACK_COMPANY;
@@ -256,7 +274,7 @@ export default function PurchaseOrdersClient() {
     }
   };
 
-  const handleCreate = async () => {
+  const handleCreate = async (status: string = "PENDING_APPROVAL") => {
     if (!vendorId || items.some((it) => !it.inventoryItemId || it.quantity <= 0 || it.price <= 0)) return;
     setSaving(true);
     try {
@@ -265,11 +283,17 @@ export default function PurchaseOrdersClient() {
         advancePaid: autoApplied,
         expectedDeliveryDate: expectedDate,
         notes,
+        internalNotes,
+        vendorNotes,
+        deliveryInstructions,
+        status,
+        freightCost,
+        unloadingCost,
         items: items.map(({ inventoryItemId, quantity, price, hsnCode, gstRate }) => ({ inventoryItemId, quantity, price, hsnCode, gstRate })),
         manualTax: manualGst ? { cgst: customCgst, sgst: customSgst, igst: customIgst } : undefined
       });
       setShowForm(false);
-      setVendorId(""); setExpectedDate(""); setNotes("");
+      setVendorId(""); setExpectedDate(""); setNotes(""); setInternalNotes(""); setVendorNotes(""); setDeliveryInstructions(""); setFreightCost(0); setUnloadingCost(0);
       setManualGst(false); setCustomCgst(0); setCustomSgst(0); setCustomIgst(0);
       setItems([{ inventoryItemId: "", itemName: "", unit: "kg", quantity: 0, price: 0, hsnCode: "", gstRate: 5 }]);
       fetchAll();
@@ -294,6 +318,16 @@ export default function PurchaseOrdersClient() {
       fetchAll();
     } catch (e: any) {
       alert(e?.response?.data?.error ?? "Failed to cancel PO");
+    }
+  };
+
+  const handleApprove = async (id: string) => {
+    if (!confirm("Approve this purchase order?")) return;
+    try {
+      await api.patch(`/api/purchase-orders/${id}/approve`);
+      fetchAll();
+    } catch (e: any) {
+      alert(e?.response?.data?.error ?? "Failed to approve PO");
     }
   };
 
@@ -350,18 +384,18 @@ export default function PurchaseOrdersClient() {
           <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Buy raw materials from vendors</p>
         </div>
         <div className="flex gap-2">
-           <button onClick={() => setShowSettings(true)} className="p-2 rounded-xl border border-gray-200 dark:border-white/10 group"><Cog size={16} className="text-gray-400 group-hover:text-orange-500 transition-colors" /></button>
-           <button onClick={fetchAll} className="p-2 rounded-xl border border-gray-200 dark:border-white/10"><RefreshCw size={16} className="text-gray-400" /></button>
-           <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded-xl text-sm font-bold"><Plus size={16} /> New PO</button>
+           <button type="button" onClick={() => setShowSettings(true)} className="p-2 rounded-xl border border-gray-200 dark:border-white/10 group"><Settings size={16} className="text-gray-400 group-hover:text-orange-500 transition-colors" /></button>
+           <button type="button" onClick={fetchAll} className="p-2 rounded-xl border border-gray-200 dark:border-white/10"><RefreshCw size={16} className="text-gray-400" /></button>
+           <button type="button" onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded-xl text-sm font-bold"><Plus size={16} /> New PO</button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Spend", value: formatCurrency(totalSpend), icon: ShoppingCart, color: "text-indigo-500", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
-          { label: "Total Paid", value: formatCurrency(totalPaid), icon: Wallet, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
-          { label: "Balance Due", value: formatCurrency(totalBalance), icon: AlertCircle, color: "text-red-500", bg: "bg-red-50 dark:bg-red-500/10" },
-          { label: "Pending Orders", value: String(pendingCount), icon: Clock, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-500/10" },
+          { label: "Pending GRNs", value: String(orders.filter(o => o.status === 'APPROVED' || o.status === 'SENT').length), icon: Store, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-500/10" },
+          { label: "Pending Invoices", value: String(orders.filter(o => o.invoiceStatus === 'PENDING').length), icon: AlertCircle, color: "text-red-500", bg: "bg-red-50 dark:bg-red-500/10" },
+          { label: "Pending Approval", value: String(orders.filter(o => o.status === 'PENDING_APPROVAL').length), icon: Clock, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-500/10" },
         ].map((card) => (
           <div key={card.label} className="bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 p-6 flex items-center gap-5">
             <div className={clsx("w-14 h-14 rounded-2xl flex items-center justify-center shrink-0", card.bg)}><card.icon size={24} className={card.color} /></div>
@@ -375,90 +409,153 @@ export default function PurchaseOrdersClient() {
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search orders..." className="w-full pl-9 pr-4 py-2.5 text-sm bg-white dark:bg-card border border-gray-200 rounded-xl" />
       </div>
 
-      <div className="space-y-3">
-        {filtered.map((po) => {
-          const currentPaid = po.paid ?? 0;
-          const balance = Math.max(0, (po.totalAmount ?? 0) - currentPaid);
-          const StatusIcon = STATUS_ICONS[po.status] ?? Clock;
-          return (
-            <div key={po.id} className="bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0"><Store size={18} className="text-orange-500" /></div>
-                  <div>
-                    <p className="font-bold text-gray-900 dark:text-white text-sm">{po.vendor?.name ?? "Unknown"}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">PO-{po.id?.slice(0, 8).toUpperCase()} · {format(new Date(po.createdAt), "dd/MM/yyyy")}</p>
-                  </div>
-                </div>
-                <span className={clsx("flex items-center gap-1 px-3 py-1 rounded-xl text-[10px] font-black uppercase", STATUS_STYLES[po.status] || STATUS_STYLES.PENDING)}><StatusIcon size={11} /> {po.status}</span>
-              </div>
-              
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center"><p className="text-[10px] text-gray-400 uppercase font-bold">Subtotal</p><p className="text-[12px] font-black">{formatCurrency(po.totalAmount - (po.cgst + po.sgst + po.igst))}</p></div>
-                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center"><p className="text-[10px] text-gray-400 uppercase font-bold">GST</p><p className="text-[12px] font-black">{formatCurrency(po.cgst + po.sgst + po.igst)}</p></div>
-                <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-3 text-center"><p className="text-[10px] text-emerald-600 uppercase font-bold">Paid</p><p className="text-sm font-black text-emerald-700">{formatCurrency(currentPaid)}</p></div>
-                <div className={clsx("rounded-xl p-3 text-center", balance > 0 ? "bg-red-50" : "bg-gray-50")}><p className="text-[10px] uppercase font-bold">Balance</p><p className="text-sm font-black">{formatCurrency(balance)}</p></div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 px-1">Order Items</p>
-                <div className="flex flex-wrap gap-2">
-                  {po.poItems?.map((item: any, idx: number) => (
-                    <div key={idx} className="px-3 py-1.5 bg-slate-50/50 dark:bg-white/[0.03] rounded-2xl border border-slate-100 dark:border-white/5 flex items-center gap-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight">{item.inventoryItem?.name || 'Material'}</span>
-                      <span className="text-[10px] font-black text-orange-600 px-2 py-0.5 bg-orange-50 dark:bg-orange-500/10 rounded-full">{item.quantity} {item.inventoryItem?.unit || 'unit'}</span>
+      <div className="bg-white dark:bg-card rounded-3xl border border-gray-100 dark:border-white/5 overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02]">
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">PO No</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Vendor</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Delivery</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Payment</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Details</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-16 h-16 rounded-3xl bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-300">
+                        <ShoppingCart size={32} />
+                      </div>
+                      <p className="text-sm font-bold text-slate-400">No Purchase Orders found.</p>
+                      <button onClick={() => setShowForm(true)} className="text-xs font-black text-orange-500 uppercase tracking-widest mt-2">Create your first PO</button>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-4 flex gap-2">
-                {balance > 0 && <button onClick={() => { setPayingPO(po); setPaymentAmount(balance); setShowPaymentModal(true); }} className="px-4 py-2 bg-orange-100 text-orange-600 rounded-xl text-[12px] font-bold">Pay Balance</button>}
-                <button
-                  onClick={() => {
-                    if (!isProfileComplete) {
-                      setProfileRequiredForInvoice(true);
-                      setShowSettings(true);
-                      return;
-                    }
-                    setViewingPO(po);
-                  }}
-                  className={clsx(
-                    "px-4 py-2 rounded-xl text-[12px] font-black",
-                    isProfileComplete
-                      ? "bg-indigo-50 text-indigo-600"
-                      : "bg-amber-50 text-amber-700 border border-amber-200"
-                  )}
-                >
-                  {isProfileComplete ? "View GST Invoice" : "Setup Profile for Invoice"}
-                </button>
-                {po.status === "PENDING" && <button onClick={() => handleCancel(po.id)} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-[12px] font-bold">Cancel</button>}
-              </div>
-            </div>
-          );
-        })}
+                  </td>
+                </tr>
+              ) : filtered.map((po) => {
+                const currentPaid = po.paid ?? 0;
+                const balance = Math.max(0, (po.totalAmount ?? 0) - currentPaid);
+                const StatusIcon = STATUS_ICONS[po.status] || Clock;
+                return (
+                  <tr key={po.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors group">
+                    <td className="px-6 py-4">
+                      <p className="text-xs font-black text-gray-900 dark:text-white uppercase">PO-{po.poNumber?.split('-').pop() || po.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="text-[10px] text-gray-400 mt-1">{format(new Date(po.createdAt), "dd MMM yyyy")}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0"><Store size={14} /></div>
+                        <div>
+                          <p className="text-xs font-black text-gray-900 dark:text-white">{po.vendor?.name || "Unknown"}</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">{po.vendor?.category || 'General Supplier'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-xs font-black text-gray-900 dark:text-white">{formatCurrency(po.totalAmount)}</p>
+                      <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-tighter">Items: {po.poItems?.length || 0}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={clsx("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider whitespace-nowrap", STATUS_STYLES[po.status] || STATUS_STYLES.DRAFT)}>
+                        <StatusIcon size={10} />
+                        {po.status.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {po.expectedDeliveryDate ? (
+                        <div>
+                          <p className={clsx("text-xs font-black", isBefore(new Date(po.expectedDeliveryDate), new Date()) && po.status !== 'RECEIVED' ? "text-red-500" : "text-gray-900 dark:text-white")}>
+                            {format(new Date(po.expectedDeliveryDate), "dd MMM")}
+                          </p>
+                          <p className="text-[9px] text-gray-400 mt-1 uppercase">Expected</p>
+                        </div>
+                      ) : (
+                        <p className="text-xs font-bold text-gray-300 italic">Not set</p>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className={clsx("text-xs font-black", balance <= 0 ? "text-emerald-500" : "text-orange-500")}>
+                          {balance <= 0 ? "FULLY PAID" : formatCurrency(balance)}
+                        </p>
+                        <p className="text-[9px] text-gray-400 mt-1 uppercase">{balance <= 0 ? "Success" : "Pending"}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button type="button" onClick={() => setViewingDetailsPO(po)} className="text-indigo-600 hover:text-indigo-700 text-[10px] font-black uppercase tracking-widest">View Details</button>
+                    </td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                         {po.status === 'DRAFT' && (
+                           <button type="button" onClick={() => handleApprove(po.id)} className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all">Submit</button>
+                         )}
+                         {po.status === 'PENDING_APPROVAL' && (
+                           <div className="flex gap-1">
+                              <button type="button" onClick={() => handleApprove(po.id)} className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all">Approve</button>
+                              <button type="button" onClick={() => handleCancel(po.id)} className="px-3 py-1.5 bg-red-50 dark:bg-red-500/10 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all">Reject</button>
+                           </div>
+                         )}
+                         {po.status === 'APPROVED' && (
+                           <button type="button" onClick={async () => { await purchaseOrdersApi.updateStatus(po.id, 'SENT'); fetchAll(); }} className="px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all">Send to Vendor</button>
+                         )}
+                         {(po.status === 'SENT' || po.status === 'PARTIALLY_RECEIVED') && (
+                           <button type="button" onClick={() => window.location.href=`/purchases/grn?poId=${po.id}`} className="px-3 py-1.5 bg-orange-50 dark:bg-orange-500/10 text-orange-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-orange-100 transition-all">Receive Goods</button>
+                         )}
+                         
+                         <button 
+                            type="button"
+                            onClick={() => {
+                              if (!isProfileComplete) {
+                                setProfileRequiredForInvoice(true);
+                                setShowSettings(true);
+                                return;
+                              }
+                              setViewingPO(po);
+                            }}
+                            className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg text-indigo-500 transition-colors"
+                            title="Invoice"
+                         >
+                           <Download size={14} />
+                         </button>
+                         <button type="button" onClick={() => { setPayingPO(po); setPaymentAmount(balance); setShowPaymentModal(true); }} className="p-2 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-lg text-orange-500 transition-colors" title="Pay">
+                           <Wallet size={14} />
+                         </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-y-auto">
           <div className="absolute inset-0" onClick={() => setShowForm(false)} />
-          <div className="bg-white dark:bg-[#0f1117] rounded-[2.5rem] shadow-2xl w-full max-w-4xl p-8 space-y-8 relative my-8">
-            <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/5 rounded-bl-[100px] -mr-16 -mt-16" />
+          <div className="bg-white dark:bg-[#0f1117] rounded-[2.5rem] shadow-2xl w-full max-w-4xl px-10 pb-10 pt-14 space-y-10 relative my-8">
             
-            <div className="flex items-center justify-between relative z-10">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-xl shadow-orange-500/20">
-                  <ShoppingCart size={28} />
+            <div className="space-y-6 relative z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-5">
+                  <div className="w-16 h-16 rounded-[2rem] bg-orange-500 flex items-center justify-center text-white shadow-2xl shadow-orange-500/30">
+                    <ShoppingCart size={32} />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight uppercase leading-none">Initialize Order</h2>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-3">Procurement Workflow</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight uppercase">Initialize Purchase Order</h2>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Buy raw materials from vendors</p>
-                </div>
+                <button type="button" onClick={() => setShowForm(false)} className="p-3 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-all text-slate-300 hover:text-slate-500">
+                  <X size={32} />
+                </button>
               </div>
-              <button onClick={() => setShowForm(false)} className="p-3 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-all">
-                <X size={24} className="text-slate-400" />
-              </button>
+              <div className="h-px bg-slate-100 dark:bg-white/5 w-full" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-[200]">
@@ -475,6 +572,12 @@ export default function PurchaseOrdersClient() {
                    </select>
                    <ChevronDown size={16} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 </div>
+                {selectedVendor && (
+                  <div className="flex items-center gap-2 mt-2 ml-1">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Terms:</span>
+                    <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded uppercase">{selectedVendor.paymentTerms || 'Net 30'}</span>
+                  </div>
+                )}
               </div>
               <div className="space-y-2 relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Expected Delivery Date</label>
@@ -547,13 +650,17 @@ export default function PurchaseOrdersClient() {
             <div className="space-y-4 relative z-10">
               <div className="flex items-center justify-between">
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Order Items</p>
-                 <button onClick={addItem} className="text-[10px] font-black text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-3 py-1.5 rounded-lg uppercase tracking-widest flex items-center gap-2 hover:bg-orange-100 transition-all">
+                 <button 
+                   type="button"
+                   onClick={addItem} 
+                   className="text-[10px] font-black text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-3 py-1.5 rounded-lg uppercase tracking-widest flex items-center gap-2 hover:bg-orange-100 transition-all"
+                 >
                     <Plus size={12} /> Add Material
                  </button>
               </div>
               
               <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
-                {items.map((it, idx) => (
+                  {items.map((it, idx) => (
                   <div key={idx} className="bg-slate-50/50 dark:bg-white/5 p-4 rounded-3xl border border-slate-100 dark:border-white/5 grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                     <div className="md:col-span-4 space-y-1.5">
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Material</label>
@@ -563,20 +670,43 @@ export default function PurchaseOrdersClient() {
                         className="w-full h-11 bg-white dark:bg-card px-4 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-white/10"
                       >
                         <option value="">Select Item...</option>
-                        {materials
-                          .filter(m => {
-                            if (!vendorId) return true;
-                            const vendorMaterials = selectedVendor?.suppliedMaterials ?? [];
-                            // If vendor has no linked materials recorded, show all materials
-                            if (vendorMaterials.length === 0) return true;
-                            const isSupplied = vendorMaterials.some(
-                              (sm: any) => sm.materialId === m.id || sm.material?.id === m.id
-                            );
-                            return isSupplied || m.vendorId === vendorId;
-                          })
-                          .map(m => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)
-                        }
+                        {materials.map(m => (
+                          <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                        ))}
                       </select>
+                      <div className="flex items-center justify-between mt-1 px-1">
+                        {it.inventoryItemId ? (
+                          <div className="flex gap-2">
+                            {(() => {
+                              const mat = materials.find(m => m.id === it.inventoryItemId);
+                              const vendorMat = selectedVendor?.suppliedMaterials?.find((sm: any) => sm.materialId === it.inventoryItemId);
+                              return (
+                                <>
+                                  <span className={clsx("text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded", (mat?.currentStock || 0) < (mat?.minimumStock || 0) ? "bg-red-50 text-red-500" : "bg-emerald-50 text-emerald-600")}>
+                                    Stock: {mat?.currentStock || 0} {it.unit}
+                                  </span>
+                                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter bg-slate-50 dark:bg-white/5 px-1.5 py-0.5 rounded">
+                                    Min: {mat?.minimumStock || 0}
+                                  </span>
+                                  {vendorMat?.price && (
+                                    <span className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter bg-indigo-50 dark:bg-indigo-500/10 px-1.5 py-0.5 rounded">
+                                      Last: ₹{vendorMat.price}
+                                    </span>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          <button 
+                            type="button"
+                            onClick={() => setShowAddMaterialDrawer(true)}
+                            className="text-[8px] font-black text-indigo-500 uppercase tracking-widest hover:underline flex items-center gap-1"
+                          >
+                            <Plus size={8} /> Request New Material
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="md:col-span-2 space-y-1.5">
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Qty ({it.unit})</label>
@@ -603,7 +733,11 @@ export default function PurchaseOrdersClient() {
                        </div>
                     </div>
                     <div className="md:col-span-1 flex justify-center">
-                      <button onClick={() => removeItem(idx)} className="p-3 text-slate-300 hover:text-red-500 transition-colors">
+                      <button 
+                        type="button"
+                        onClick={() => removeItem(idx)} 
+                        className="p-3 text-slate-300 hover:text-red-500 transition-colors"
+                      >
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -611,17 +745,41 @@ export default function PurchaseOrdersClient() {
                 ))}
               </div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-slate-100 dark:border-white/5 relative z-10">
                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Additional Notes</label>
-                    <textarea 
-                      value={notes} 
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Special instructions or terms..."
-                      className="w-full h-32 bg-slate-50 dark:bg-white/5 p-5 rounded-3xl font-bold text-sm outline-none border border-slate-200 dark:border-white/10 resize-none"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                     <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Freight Cost (₹)</label>
+                       <input 
+                         type="number"
+                         value={freightCost} 
+                         onChange={(e) => setFreightCost(Number(e.target.value))}
+                         className="w-full h-11 bg-white dark:bg-card px-4 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-white/10"
+                       />
+                     </div>
+                     <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unloading Cost (₹)</label>
+                       <input 
+                         type="number"
+                         value={unloadingCost} 
+                         onChange={(e) => setUnloadingCost(Number(e.target.value))}
+                         className="w-full h-11 bg-white dark:bg-card px-4 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-white/10"
+                       />
+                     </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Internal Notes</label>
+                      <textarea value={internalNotes} onChange={e => setInternalNotes(e.target.value)} placeholder="Staff eyes only..." className="w-full h-24 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl text-xs font-bold border border-slate-100 dark:border-white/5 resize-none" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Vendor Notes</label>
+                      <textarea value={vendorNotes} onChange={e => setVendorNotes(e.target.value)} placeholder="Print on PO..." className="w-full h-24 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl text-xs font-bold border border-slate-100 dark:border-white/5 resize-none" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Delivery Info</label>
+                      <textarea value={deliveryInstructions} onChange={e => setDeliveryInstructions(e.target.value)} placeholder="Warehouse instructions..." className="w-full h-24 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl text-xs font-bold border border-slate-100 dark:border-white/5 resize-none" />
+                    </div>
                   </div>
                </div>
                
@@ -634,6 +792,7 @@ export default function PurchaseOrdersClient() {
                      <div className="flex justify-between items-center">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tax (GST)</span>
                         <button 
+                           type="button"
                            onClick={() => {
                              if (!manualGst) {
                                const currentRate = subtotal > 0 ? (totalGst / subtotal) * 100 : 5;
@@ -689,9 +848,9 @@ export default function PurchaseOrdersClient() {
                         </div>
                      )}
                   </div>
-                  <div className="flex justify-between items-center pt-2">
+                  <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-white/10 mt-2">
                      <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Grand Total</span>
-                     <span className="text-2xl font-black text-orange-600">₹{grandTotal.toLocaleString()}</span>
+                     <span className="text-2xl font-black text-orange-600">₹{(grandTotal + freightCost + unloadingCost).toLocaleString()}</span>
                   </div>
                   
                   {autoApplied > 0 && (
@@ -710,17 +869,27 @@ export default function PurchaseOrdersClient() {
 
             <div className="flex gap-4 pt-4 relative z-10">
               <button 
+                type="button"
                 onClick={() => setShowForm(false)} 
                 className="flex-1 py-5 text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-all"
               >
                 Abort
               </button>
               <button 
-                onClick={handleCreate} 
+                type="button"
+                onClick={() => handleCreate("DRAFT")} 
+                disabled={saving || !vendorId || items.some(it => !it.inventoryItemId || it.quantity <= 0)} 
+                className="flex-1 py-5 bg-slate-100 dark:bg-white/5 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:bg-slate-200"
+              >
+                Save Draft
+              </button>
+              <button 
+                type="button"
+                onClick={() => handleCreate("PENDING_APPROVAL")} 
                 disabled={saving || !vendorId || items.some(it => !it.inventoryItemId || it.quantity <= 0)} 
                 className="flex-[2] py-5 bg-orange-500 text-white rounded-2xl text-[11px] font-black shadow-xl shadow-orange-500/20 uppercase tracking-[0.3em] transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale"
               >
-                {saving ? "Processing..." : "Authorize Order"}
+                {saving ? "Processing..." : "Submit for Approval"}
               </button>
             </div>
           </div>
@@ -981,34 +1150,150 @@ export default function PurchaseOrdersClient() {
           </div>
         </div>
       )}
+      {viewingDetailsPO && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-end bg-black/60 backdrop-blur-sm">
+          <div className="absolute inset-0" onClick={() => setViewingDetailsPO(null)} />
+          <div className="bg-white dark:bg-[#0f1117] w-full max-w-2xl h-full shadow-2xl relative flex flex-col animate-in slide-in-from-right duration-500">
+            {/* Header */}
+            <div className="p-8 border-b border-gray-100 dark:border-white/5">
+               <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                     <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+                        <ShoppingCart size={22} />
+                     </div>
+                     <div>
+                        <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">PO-{viewingDetailsPO.poNumber?.split('-').pop() || viewingDetailsPO.id.slice(0, 8).toUpperCase()}</h2>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{viewingDetailsPO.vendor?.name}</p>
+                     </div>
+                  </div>
+                  <button onClick={() => setViewingDetailsPO(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-all">
+                     <X size={20} className="text-slate-400" />
+                  </button>
+               </div>
+               
+               <div className="flex gap-4">
+                  {["OVERVIEW", "ITEMS", "GRN", "AUDIT"].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setPoDetailsTab(tab as any)}
+                      className={clsx(
+                        "text-[10px] font-black uppercase tracking-[0.2em] pb-2 border-b-2 transition-all",
+                        poDetailsTab === tab ? "border-orange-500 text-orange-600" : "border-transparent text-slate-400 hover:text-slate-600"
+                      )}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+               </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+               {poDetailsTab === "OVERVIEW" && (
+                 <div className="space-y-8">
+                    <div className="grid grid-cols-2 gap-4">
+                       <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-3xl">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Status</p>
+                          <span className={clsx("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider", STATUS_STYLES[viewingDetailsPO.status] || STATUS_STYLES.DRAFT)}>
+                            {viewingDetailsPO.status.replace(/_/g, ' ')}
+                          </span>
+                       </div>
+                       <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-3xl">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Grand Total</p>
+                          <p className="text-xl font-black text-orange-600">{formatCurrency(viewingDetailsPO.totalAmount)}</p>
+                       </div>
+                    </div>
+
+                    <div className="space-y-4">
+                       <h3 className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-widest px-1">Order Intelligence</h3>
+                       <div className="grid grid-cols-1 gap-3">
+                          <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-3xl border border-slate-100 dark:border-white/5">
+                             <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-2">Internal Workflow Notes</p>
+                             <p className="text-xs font-bold text-slate-600 dark:text-slate-400 italic">
+                                {viewingDetailsPO.internalNotes || "No internal notes recorded for this workflow."}
+                             </p>
+                          </div>
+                          <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-3xl border border-slate-100 dark:border-white/5">
+                             <p className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-2">Vendor Communication</p>
+                             <p className="text-xs font-bold text-slate-600 dark:text-slate-400 italic">
+                                {viewingDetailsPO.vendorNotes || "No specific notes for the vendor."}
+                             </p>
+                          </div>
+                          <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-3xl border border-slate-100 dark:border-white/5">
+                             <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-2">Delivery Instructions</p>
+                             <p className="text-xs font-bold text-slate-600 dark:text-slate-400 italic">
+                                {viewingDetailsPO.deliveryInstructions || "Standard delivery protocol applies."}
+                             </p>
+                          </div>
+                       </div>
+                    </div>
+                 </div>
+               )}
+
+               {poDetailsTab === "ITEMS" && (
+                 <div className="space-y-4">
+                    {viewingDetailsPO.poItems?.map((item: any, idx: number) => (
+                      <div key={idx} className="bg-slate-50 dark:bg-white/5 p-5 rounded-3xl border border-slate-100 dark:border-white/5 flex items-center justify-between">
+                         <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-2xl bg-white dark:bg-card flex items-center justify-center text-orange-500 shadow-sm"><Store size={18} /></div>
+                            <div>
+                               <p className="text-sm font-black text-gray-900 dark:text-white uppercase">{item.inventoryItem?.name}</p>
+                               <p className="text-[10px] text-gray-400 mt-0.5">{item.quantity} {item.inventoryItem?.unit} @ {formatCurrency(item.price)}</p>
+                            </div>
+                         </div>
+                         <div className="text-right">
+                            <p className="text-sm font-black text-gray-900 dark:text-white">{formatCurrency(item.quantity * item.price)}</p>
+                            <p className="text-[10px] text-emerald-500 font-bold uppercase mt-0.5">{item.gstRate}% GST</p>
+                         </div>
+                      </div>
+                    ))}
+                 </div>
+               )}
+
+               {poDetailsTab === "AUDIT" && (
+                 <div className="space-y-6">
+                    <div className="relative pl-8 border-l-2 border-slate-100 dark:border-white/5 ml-2 space-y-8">
+                       <div className="relative">
+                          <div className="absolute -left-[41px] top-0 w-4 h-4 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/20" />
+                          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">PO Created</p>
+                          <p className="text-xs font-bold text-gray-900 dark:text-white">{format(new Date(viewingDetailsPO.createdAt), "dd MMM yyyy · HH:mm")}</p>
+                          <p className="text-[10px] text-gray-400 mt-1 uppercase">System Entry</p>
+                       </div>
+                       {viewingDetailsPO.approvedAt && (
+                         <div className="relative">
+                            <div className="absolute -left-[41px] top-0 w-4 h-4 rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/20" />
+                            <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">Approved</p>
+                            <p className="text-xs font-bold text-gray-900 dark:text-white">{format(new Date(viewingDetailsPO.approvedAt), "dd MMM yyyy · HH:mm")}</p>
+                            <p className="text-[10px] text-gray-400 mt-1 uppercase">By: {viewingDetailsPO.approvedBy || 'Admin'}</p>
+                         </div>
+                       )}
+                    </div>
+                 </div>
+               )}
+            </div>
+
+            {/* Actions */}
+            <div className="p-8 border-t border-gray-100 dark:border-white/5 flex gap-4">
+               {viewingDetailsPO.status === 'PENDING_APPROVAL' && (
+                 <button onClick={() => { handleApprove(viewingDetailsPO.id); setViewingDetailsPO(null); }} className="flex-1 py-4 bg-emerald-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-500/20">Approve PO</button>
+               )}
+               {viewingDetailsPO.status === 'APPROVED' && (
+                 <button onClick={async () => { await purchaseOrdersApi.updateStatus(viewingDetailsPO.id, 'SENT'); fetchAll(); setViewingDetailsPO(null); }} className="flex-1 py-4 bg-blue-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20">Send to Vendor</button>
+               )}
+               <button onClick={() => { setViewingPO(viewingDetailsPO); setViewingDetailsPO(null); }} className="flex-1 py-4 bg-slate-100 dark:bg-white/5 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest">Download PDF</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <AddMaterialDrawer 
+        isOpen={showAddMaterialDrawer}
+        onClose={() => setShowAddMaterialDrawer(false)}
+        onSuccess={() => {
+          fetchAll(); // Refresh material list
+          setShowAddMaterialDrawer(false);
+        }}
+      />
     </div>
   );
 }
 
-function Cog(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" />
-      <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
-      <path d="M12 2v2" />
-      <path d="M12 20v2" />
-      <path d="m4.93 4.93 1.41 1.41" />
-      <path d="m17.66 17.66 1.41 1.41" />
-      <path d="M2 12h2" />
-      <path d="M20 12h2" />
-      <path d="m19.07 4.93-1.41 1.41" />
-      <path d="m6.34 17.66-1.41 1.41" />
-    </svg>
-  )
-}

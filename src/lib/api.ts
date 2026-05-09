@@ -223,9 +223,16 @@ export const purchaseOrdersApi = {
     advancePaid?: number; 
     expectedDeliveryDate?: string;
     notes?: string;
+    internalNotes?: string;
+    vendorNotes?: string;
+    deliveryInstructions?: string;
+    status?: string;
+    freightCost?: number;
+    unloadingCost?: number;
     items: { inventoryItemId: string; quantity: number; price: number; hsnCode?: string; gstRate?: number }[];
     manualTax?: { cgst: number, sgst: number, igst: number };
   }) => api.post('/api/purchase-orders', data),
+  updateStatus: (id: string, status: string) => api.patch(`/api/purchase-orders/${id}/status`, { status }),
   receive: (id: string) => api.post(`/api/purchase-orders/${id}/receive`),
   recordAdvance: (id: string, advancePaid: number) =>
     api.patch(`/api/purchase-orders/${id}/advance`, { advancePaid }),
