@@ -7,6 +7,7 @@ import {
   ArrowLeft, Loader2, TrendingUp, Search, Zap
 } from "lucide-react";
 import { purchaseOrdersApi, grnApi, vendorInvoicesApi } from "@/lib/api";
+import { toast } from "react-hot-toast";
 
 interface PO { id: string; vendor: { id: string; name: string }; totalAmount: number; status: string; }
 interface GRN { id: string; poId: string; status: string; createdAt: string; items?: any[]; }
@@ -88,10 +89,23 @@ export default function VendorInvoicesPage() {
   const formatCurrency = (n: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2 }).format(n);
 
-  const statusConfig: Record<MatchStatus, { bg: string; text: string; icon: any; label: string }> = {
+  const handleApprove = async (invoiceId: string) => {
+    if (!confirm("Approve this invoice? This will recognize the liability in the vendor ledger and utilize any available advances.")) return;
+    try {
+      await vendorInvoicesApi.approve(invoiceId);
+      toast?.success ? toast.success("Invoice approved and ledger updated") : alert("Invoice approved and ledger updated");
+      fetchData();
+    } catch (e: any) {
+      alert(e.response?.data?.error || "Approval failed");
+    }
+  };
+
+  const statusConfig: Record<string, { bg: string; text: string; icon: any; label: string }> = {
     MATCHED:  { bg: "bg-green-50 border-green-100",  text: "text-green-700",  icon: CheckCircle2, label: "Matched"  },
     MISMATCH: { bg: "bg-red-50 border-red-100",      text: "text-red-700",    icon: XCircle,      label: "Mismatch" },
     PENDING:  { bg: "bg-amber-50 border-amber-100",  text: "text-amber-700",  icon: AlertTriangle, label: "Pending" },
+    APPROVED: { bg: "bg-blue-50 border-blue-100",    text: "text-blue-700",   icon: FileText,     label: "Approved" },
+    PAID:     { bg: "bg-emerald-50 border-emerald-100", text: "text-emerald-700", icon: CheckCircle2, label: "Paid" },
   };
 
   const filteredGRNs = grns.filter(g => g.poId === form.poId);
@@ -125,10 +139,11 @@ export default function VendorInvoicesPage() {
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-4 gap-4 mb-8">
           {[
             { label: "Total Invoices",  value: invoices.length,                                              color: "text-[#1A1A1A]", bg: "bg-white" },
             { label: "Matched",         value: invoices.filter(i => i.status === "MATCHED").length,          color: "text-green-700", bg: "bg-green-50" },
+            { label: "Approved",        value: invoices.filter(i => i.status === "APPROVED").length,         color: "text-blue-700",  bg: "bg-blue-50" },
             { label: "Mismatches",      value: invoices.filter(i => i.status === "MISMATCH").length,         color: "text-red-700",   bg: "bg-red-50" },
           ].map(s => (
             <div key={s.label} className={`${s.bg} rounded-2xl p-5 border border-[#F0EAF0]`}>
@@ -259,7 +274,7 @@ export default function VendorInvoicesPage() {
         ) : (
           <div className="space-y-4">
             {invoices.map(inv => {
-              const cfg = statusConfig[inv.status as MatchStatus] || statusConfig.PENDING;
+              const cfg = statusConfig[inv.status] || statusConfig.PENDING;
               const Icon = cfg.icon;
               return (
                 <div key={inv.id} className={`bg-white rounded-2xl border p-6 ${cfg.bg}`}>
@@ -290,6 +305,15 @@ export default function VendorInvoicesPage() {
                         >
                           {matchingId === inv.id ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
                           Run Match
+                        </button>
+                      )}
+                      {inv.status === "MATCHED" && (
+                        <button
+                          onClick={() => handleApprove(inv.id)}
+                          className="px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-green-700 transition-all shadow-lg shadow-green-100"
+                        >
+                          <CheckCircle2 size={14} />
+                          Approve Liability
                         </button>
                       )}
                     </div>

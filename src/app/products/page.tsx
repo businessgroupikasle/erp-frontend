@@ -41,175 +41,143 @@ export default function ProductsPage() {
   const categories = Array.from(new Set(products.map((p) => p.category).filter(Boolean)));
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white flex items-center gap-3 tracking-tight">
-            <div className="p-2.5 rounded-2xl bg-orange-500/10 text-orange-500">
-              <Package size={28} />
-            </div>
-            Products
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400 mt-2 font-medium">
-            Strategic management of finished goods and consumer offerings
+    <div className="max-w-6xl mx-auto space-y-12 py-4 animate-in fade-in duration-700">
+      {/* Refined Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-gray-100 pb-10">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-8 bg-orange-500 rounded-full" />
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Catalogs</h1>
+          </div>
+          <p className="text-sm font-medium text-slate-400 max-w-md leading-relaxed">
+            Manage your digital product universe. From raw ingredients to final consumer goods.
           </p>
         </div>
-        <div className="flex gap-3">
+        
+        <div className="flex items-center gap-4">
           <button
             onClick={fetchProducts}
-            className="p-3.5 rounded-2xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 transition-all text-gray-400 hover:text-orange-500 shadow-sm"
+            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-all active:scale-90"
           >
-            <RefreshCw size={20} />
+            <RefreshCw size={18} className={clsx(loading && "animate-spin")} />
           </button>
           <Link
             href="/products/add"
-            className="flex items-center gap-3 bg-orange-500 hover:bg-orange-400 text-white px-6 py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl shadow-orange-500/20 active:scale-95"
+            className="flex items-center gap-3 bg-slate-900 text-white pl-6 pr-8 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.15em] transition-all hover:bg-black hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-slate-900/10"
           >
-            <Plus size={18} /> Add Product
+            <Plus size={16} strokeWidth={3} /> Register Item
           </Link>
         </div>
       </div>
 
-      {/* Stats Dashboard */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      {/* Elegant Metrics Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-12 px-2">
         {[
-          { label: "Total Inventory", value: products.length, icon: Package, color: "text-blue-500" },
-          { label: "Active Listings", value: activeCount, icon: CheckCircle2, color: "text-emerald-500" },
-          { label: "Market Segments", value: categories.length, icon: Search, color: "text-purple-500" },
+          { label: "Total Items", value: products.length, color: "text-slate-900" },
+          { label: "Available", value: activeCount, color: "text-emerald-500" },
+          { label: "Categories", value: categories.length, color: "text-blue-500" },
+          { label: "Low Stock", value: 0, color: "text-red-400" },
         ].map((s) => (
-          <div key={s.label} className="bg-white dark:bg-card rounded-[2rem] border border-gray-100 dark:border-white/5 p-6 shadow-sm group hover:border-orange-500/20 transition-all">
-            <div className="flex items-center justify-between mb-4">
-              <div className={clsx("p-2 rounded-xl bg-gray-50 dark:bg-white/5", s.color)}>
-                <s.icon size={20} />
-              </div>
-              <span className="text-[10px] font-black text-gray-300 dark:text-slate-600 uppercase tracking-widest">Live Metrics</span>
-            </div>
-            <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">{s.label}</p>
-            <p className="text-3xl font-black text-gray-900 dark:text-white mt-1 group-hover:scale-110 transition-transform origin-left">{s.value}</p>
+          <div key={s.label} className="space-y-1">
+            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{s.label}</p>
+            <p className={clsx("text-2xl font-black transition-all tabular-nums", s.color)}>{s.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Search & Filter Bar */}
-      <div className="relative group">
-        <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-          <Search size={18} className="text-gray-400 group-focus-within:text-orange-500 transition-colors" />
-        </div>
+      {/* Minimalist Search */}
+      <div className="relative group max-w-2xl">
+        <Search size={16} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-500 transition-colors" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Filter by name, category, or SKU..."
-          className="w-full pl-14 pr-6 py-4.5 text-base font-bold bg-white dark:bg-card border border-gray-100 dark:border-white/5 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-orange-500/10 shadow-sm transition-all dark:text-white"
+          placeholder="Quick search by name, category, or SKU..."
+          className="w-full pl-14 pr-6 py-5 bg-slate-50/50 border-none rounded-2xl font-bold text-slate-900 placeholder:text-slate-300 focus:bg-white focus:ring-4 focus:ring-slate-100 outline-none transition-all"
         />
       </div>
 
-      {/* Products Display */}
+      {/* Elegant Grid */}
       {loading ? (
-        <div className="py-32 flex flex-col items-center justify-center gap-4">
-          <div className="w-12 h-12 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
-          <p className="text-sm font-black text-gray-400 uppercase tracking-widest">Synchronizing Database...</p>
+        <div className="py-40 flex flex-col items-center justify-center gap-6">
+          <div className="flex gap-1.5">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="w-2 h-2 rounded-full bg-slate-200 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+            ))}
+          </div>
+          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Refreshing Inventory</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="py-32 text-center bg-white dark:bg-card rounded-[3rem] border border-dashed border-gray-200 dark:border-white/5 space-y-4">
-          <div className="w-20 h-20 bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto">
-            <Package size={40} strokeWidth={1} className="text-gray-300" />
+        <div className="py-40 text-center space-y-6">
+          <div className="p-8 bg-slate-50 w-fit mx-auto rounded-[2.5rem]">
+            <Package size={48} className="text-slate-200" strokeWidth={1} />
           </div>
-          <div>
-            <p className="text-lg font-black text-gray-900 dark:text-white">No products found</p>
-            <p className="text-sm text-gray-400 font-medium mt-1">Adjust your search or create a new product entry.</p>
-          </div>
-          <Link
-            href="/products/add"
-            className="inline-flex items-center gap-2 text-orange-500 font-black text-xs uppercase tracking-widest hover:gap-3 transition-all"
-          >
-            Create First Product <Plus size={16} />
-          </Link>
+          <p className="text-slate-400 font-medium">No matches found for your current filter.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
           {filtered.map((product) => (
-            <div key={product.id} className="bg-white dark:bg-card rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 hover:shadow-2xl hover:-translate-y-1 transition-all group relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="flex gap-2">
-                  <Link
-                    href={`/products/edit?id=${product.id}`}
-                    className="p-2.5 rounded-xl bg-white dark:bg-slate-800 shadow-lg text-gray-400 hover:text-orange-500 transition-all border border-gray-100 dark:border-white/5"
-                  >
-                    <Edit2 size={16} />
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(product.id)}
-                    className="p-2.5 rounded-xl bg-white dark:bg-slate-800 shadow-lg text-gray-400 hover:text-red-500 transition-all border border-gray-100 dark:border-white/5"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
+            <div 
+              key={product.id} 
+              className="group bg-white border border-slate-100 rounded-[1.5rem] p-5 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-2 hover:border-orange-200 transition-all duration-500 flex flex-col relative"
+            >
+              {/* Corner Actions */}
+              <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all translate-y-1 group-hover:translate-y-0">
+                <Link
+                  href={`/products/edit?id=${product.id}`}
+                  className="p-1.5 rounded-lg bg-white shadow-sm border border-slate-100 text-slate-400 hover:text-slate-900 hover:shadow-md transition-all"
+                >
+                  <Edit2 size={13} />
+                </Link>
+                <button
+                  onClick={() => handleDelete(product.id)}
+                  className="p-1.5 rounded-lg bg-white shadow-sm border border-slate-100 text-slate-400 hover:text-red-500 hover:shadow-md transition-all"
+                >
+                  <Trash2 size={13} />
+                </button>
               </div>
 
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-2xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
-                  {product.emoji ?? "📦"}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-wider">
-                    {product.category ?? "Uncategorized"}
-                  </span>
-                  {product.recipe ? (
-                    <Link
-                      href={`/recipes?search=${product.name}`}
-                      className="px-3 py-1 rounded-full bg-orange-500/10 text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-wider flex items-center gap-1 hover:bg-orange-500/20 transition-all"
-                    >
-                      <CheckCircle2 size={10} /> Recipe Ready
-                    </Link>
-                  ) : (
-                    <Link
-                      href={`/recipes`}
-                      className="px-3 py-1 rounded-full bg-red-500/10 text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-wider flex items-center gap-1 hover:bg-red-500/20 transition-all"
-                    >
-                      Missing Recipe
-                    </Link>
-                  )}
-                </div>
-                <h3 className="font-black text-gray-900 dark:text-white text-lg mt-1 line-clamp-1">{product.name}</h3>
+              {/* Status & Category */}
+              <div className="flex items-center gap-2 mb-3">
+                <span className={clsx(
+                  "w-1.5 h-1.5 rounded-full",
+                  product.isActive ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" : "bg-slate-200"
+                )} />
+                <span className="text-[8px] font-black text-slate-300 uppercase tracking-[0.1em]">
+                  {product.category || "General"}
+                </span>
               </div>
 
-              {product.description && (
-                <p className="text-sm text-gray-400 mb-6 line-clamp-2 font-medium leading-relaxed">
-                  {product.description}
-                </p>
-              )}
+              <h3 className="font-black text-slate-900 text-base leading-tight mb-1 group-hover:text-orange-600 transition-colors line-clamp-1">
+                {product.name}
+              </h3>
+              
+              <p className="text-[11px] font-medium text-slate-400 line-clamp-2 mb-4 min-h-[1.5rem]">
+                {product.description || "No description provided."}
+              </p>
 
-              <div className="flex items-end justify-between mt-auto pt-6 border-t border-gray-50 dark:border-white/5">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-black text-gray-300 dark:text-slate-600 uppercase tracking-widest">Base Value</span>
-                  <div className="flex items-center gap-1.5 text-orange-600 dark:text-orange-400">
-                    <IndianRupee size={20} className="font-black" />
-                    <span className="text-2xl font-black">{product.basePrice?.toLocaleString("en-IN")}</span>
+              {/* Bottom Info */}
+              <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between">
+                <div>
+                  <div className="flex items-baseline gap-0.5 text-slate-900">
+                    <span className="text-[9px] font-bold tracking-tight">₹</span>
+                    <span className="text-lg font-black tabular-nums">{product.basePrice || 0}</span>
                   </div>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className="flex items-center gap-2">
-                    {product.isActive ? (
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Active
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-50 dark:bg-white/5 text-gray-400 text-[10px] font-black uppercase">
-                        Inactive
-                      </div>
+                  <div className="flex gap-1.5 mt-1">
+                    {product.isVeg && (
+                      <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest px-1 py-0.5 bg-emerald-50 rounded">Veg</span>
+                    )}
+                    {!product.recipe && (
+                      <span className="text-[7px] font-black text-red-400 uppercase tracking-widest px-1 py-0.5 bg-red-50 rounded">No Recipe</span>
                     )}
                   </div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
-                    {product.isVeg ? "🟢 Pure Veg" : "🔴 Non-Veg"}
-                  </span>
                 </div>
-              </div>
-
-              <div className="mt-4 flex gap-4 text-[10px] font-bold text-gray-300 uppercase tracking-widest">
-                {product.sku && <span>SKU: {product.sku}</span>}
-                <span>Tax: {product.taxPercent ?? 0}%</span>
+                
+                <div className="text-right">
+                  <p className="text-[7px] font-black text-slate-200 uppercase tracking-widest mb-0.5">SKU</p>
+                  <p className="text-[8px] font-mono font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded-md">
+                    {product.sku?.split('-')[0] || "---"}
+                  </p>
+                </div>
               </div>
             </div>
           ))}

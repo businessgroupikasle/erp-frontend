@@ -11,6 +11,8 @@ interface LedgerEntry {
   amount: number;
   referenceType: string;
   referenceId: string;
+  invoiceId?: string;
+  invoice?: { invoiceNumber: string };
   note: string;
   createdAt: string;
   runningBalance: number;
@@ -254,7 +256,12 @@ export default function VendorLedgerModal({ vendor, onClose }: { vendor: any; on
                         <span className="text-[10px] font-black text-[#7C3AED] uppercase tracking-widest flex items-center gap-1">
                           <Info className="w-3 h-3" />
                           {entry.referenceType}
-                          {entry.referenceId && (
+                          {entry.invoiceId && (
+                             <span className="bg-purple-100 text-[#7C3AED] px-1.5 py-0.5 rounded ml-1">
+                                INV: {entry.invoice?.invoiceNumber || entry.invoiceId.substring(0, 6).toUpperCase()}
+                             </span>
+                          )}
+                          {!entry.invoiceId && entry.referenceId && (
                             <span className="text-[#CCC]">#{entry.referenceId.substring(0, 6).toUpperCase()}</span>
                           )}
                         </span>

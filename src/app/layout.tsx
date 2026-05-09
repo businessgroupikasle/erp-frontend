@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Nunito } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import AppShell from "@/components/layout/AppShell";
+import { Toaster } from "react-hot-toast";
 
-const inter = Inter({ subsets: ["latin"] });
+const nunito = Nunito({ 
+  subsets: ["latin"],
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  variable: '--font-nunito'
+});
 
 export const metadata: Metadata = {
   title: "Ikasle ERP | Business Management",
@@ -20,8 +25,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html lang="en" suppressHydrationWarning className={nunito.variable}>
+      <body className={`${nunito.className} antialiased`}>
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>
@@ -30,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </AppShell>
             </ToastProvider>
           </AuthProvider>
+          <Toaster position="top-right" />
         </ThemeProvider>
       </body>
     </html>

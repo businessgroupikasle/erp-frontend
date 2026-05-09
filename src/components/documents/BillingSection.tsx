@@ -1,4 +1,4 @@
-import { ChevronDown, Edit3, Plus, Search, User, Phone, Wallet } from "lucide-react";
+import { ChevronDown, Edit3, Plus, Search, User, Phone, Wallet, Package } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { usePurchaseOrder, Vendor } from "@/context/PurchaseOrderContext";
 import { useState, useEffect } from "react";
@@ -45,7 +45,11 @@ export default function BillingSection({
             phone: v.phone || v.mobile || v.contact,
             advanceBalance: v.advanceBalance || (v.balance > 0 ? v.balance : 0),
             balanceDue: v.balanceDue || (v.balance < 0 ? Math.abs(v.balance) : 0),
-            suppliedMaterials: v.suppliedMaterials || [], // { materialId, price }[]
+            suppliedMaterials: v.suppliedMaterials?.map((sm: any) => ({
+              materialId: sm.materialId,
+              price: sm.price,
+              name: sm.material?.name || "Material"
+            })) || [], 
           }));
           setVendors(mappedVendors);
         } catch (error) {
@@ -125,9 +129,9 @@ export default function BillingSection({
                </div>
                <div className="flex-1">
                   <h4 className="text-lg font-black text-[#1A1A1A] dark:text-white leading-tight">{selectedVendor.name}</h4>
-                  <div className="flex items-center gap-2 text-[#999] text-xs font-medium mt-1">
-                     <Phone size={12} />
-                     <span>{selectedVendor.phone || "No phone provided"}</span>
+                  <div className="flex items-center gap-3 text-[#999] text-xs font-medium mt-1">
+                     <span className="flex items-center gap-1"><Phone size={12} /> {selectedVendor.phone || "No phone"}</span>
+                     <span className="flex items-center gap-1 text-purple-500 font-bold"><Package size={12} /> {selectedVendor.suppliedMaterials?.length || 0} Materials</span>
                   </div>
                </div>
             </div>
@@ -199,7 +203,12 @@ export default function BillingSection({
                           >
                              <div className="flex flex-col text-left">
                                 <span className="text-sm font-bold text-[#1A1A1A] dark:text-white">{v.name}</span>
-                                <span className="text-[10px] text-[#999]">{v.phone}</span>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                   <span className="text-[10px] text-[#999]">{v.phone || "No phone"}</span>
+                                   <span className="text-[9px] font-bold text-purple-400 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100 uppercase tracking-tighter">
+                                      {v.suppliedMaterials?.length || 0} Materials
+                                   </span>
+                                </div>
                              </div>
                              {v.advanceBalance > 0 && (
                                <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">₹{v.advanceBalance} Adv</span>

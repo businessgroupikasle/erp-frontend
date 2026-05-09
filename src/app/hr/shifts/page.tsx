@@ -143,7 +143,7 @@ export default function ShiftsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
-                <input required type="date" value={assignForm.date} onChange={(e) => setAssignForm({ ...assignForm, date: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <input required type="date" min={new Date().toISOString().split("T")[0]} value={assignForm.date} onChange={(e) => setAssignForm({ ...assignForm, date: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
               </div>
               <div className="flex gap-3">
                 <button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700">Assign</button>

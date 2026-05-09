@@ -31,7 +31,7 @@ interface RequestProduct {
 
 export default function FranchiseRequestsPage() {
   const { user } = useAuth();
-  const isAdmin = ["SUPER_ADMIN", "ADMIN", "MANAGER"].includes((user?.role as any)?.name ?? user?.role ?? "");
+  const isAdmin = ["SUPER_ADMIN"].includes((user?.role as any)?.name ?? user?.role ?? "");
 
   const [requests, setRequests]     = useState<any[]>([]);
   const [products, setProducts]     = useState<any[]>([]);

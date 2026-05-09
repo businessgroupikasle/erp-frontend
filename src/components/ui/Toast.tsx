@@ -38,22 +38,26 @@ export const Toast: React.FC<ToastProps> = ({ message, type = 'info', onClose })
   return (
     <div
       className={clsx(
-        "pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl border backdrop-blur-md shadow-2xl transition-all duration-500 ease-out transform",
+        "pointer-events-auto flex items-center gap-4 px-6 py-4 rounded-3xl border backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] transition-all duration-500 ease-out transform max-w-[800px] min-w-[400px]",
         COLORS[type],
-        isVisible ? "translate-x-0 opacity-100" : "translate-x-12 opacity-0"
+        isVisible ? "translate-y-0 opacity-100 scale-100" : "translate-y-4 opacity-0 scale-95"
       )}
       role="alert"
     >
-      <div className="shrink-0">{ICONS[type]}</div>
-      <p className="text-xs font-black uppercase tracking-widest">{message}</p>
+      <div className="shrink-0 scale-125">{ICONS[type]}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-bold leading-relaxed break-words">
+          {message}
+        </p>
+      </div>
       <button
         onClick={() => {
           setIsVisible(false);
-          setTimeout(onClose, 500); // Allow exit animation
+          setTimeout(onClose, 500); 
         }}
-        className="ml-2 p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
+        className="shrink-0 p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-all active:scale-90"
       >
-        <X size={14} className="opacity-50" />
+        <X size={16} className="opacity-40" />
       </button>
     </div>
   );

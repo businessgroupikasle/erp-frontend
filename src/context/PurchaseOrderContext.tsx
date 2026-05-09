@@ -17,7 +17,7 @@ export interface Vendor {
   phone?: string;
   advanceBalance: number;
   balanceDue: number;
-  suppliedMaterials?: { materialId: string; price: number }[];
+  suppliedMaterials?: { materialId: string; name?: string; price: number }[];
 }
 
 interface PurchaseOrderContextType {
@@ -43,6 +43,8 @@ interface PurchaseOrderContextType {
   isSubmitting: boolean;
   setIsSubmitting: (submitting: boolean) => void;
   getVendorPrice: (materialId: string) => number | null;
+  autoFilledIds: Set<string>;
+  setAutoFilledIds: (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
 }
 
 const PurchaseOrderContext = createContext<PurchaseOrderContextType | undefined>(undefined);
@@ -52,6 +54,31 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
   const [items, setItems] = useState<LineItem[]>([
     { id: "1", materialId: "", name: "", quantity: 0, price: 0, gstRate: 5 }
   ]);
+  const [autoFilledIds, setAutoFilledIds] = useState<Set<string>>(new Set());
+
+  // When vendor changes, automatically show materials under that vendor in the items table
+  useEffect(() => {
+    if (selectedVendor) {
+      if (selectedVendor.suppliedMaterials && selectedVendor.suppliedMaterials.length > 0) {
+        // Pre-fill with all materials linked to this vendor
+        const newItems = selectedVendor.suppliedMaterials.map((sm, index) => ({
+          id: (index + 1).toString(),
+          materialId: sm.materialId,
+          name: sm.name || "Unknown Material",
+          quantity: 0,
+          price: sm.price || 0,
+          gstRate: 5
+        }));
+        setItems(newItems);
+        // Mark all as auto-filled since we got rates from vendor link
+        setAutoFilledIds(new Set(newItems.map(i => i.id)));
+      } else {
+        // Fallback to one empty row if no materials linked
+        setItems([{ id: "1", materialId: "", name: "", quantity: 0, price: 0, gstRate: 5 }]);
+        setAutoFilledIds(new Set());
+      }
+    }
+  }, [selectedVendor]);
   const [useAdvance, setUseAdvance] = useState(false);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -135,6 +162,8 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
       isSubmitting,
       setIsSubmitting,
       getVendorPrice,
+      autoFilledIds,
+      setAutoFilledIds,
     }}>
       {children}
     </PurchaseOrderContext.Provider>

@@ -74,8 +74,10 @@ export default function Sidebar() {
     );
   };
 
-  const userRole = user?.role?.toUpperCase() || "STAFF";
-  const sections = userRole === "FRANCHISE_ADMIN" ? franchiseMenuSections : SUPER_ADMIN_SIDEBAR;
+  const userRole = user?.role?.toUpperCase() || "";
+  const isFranchiseUser = userRole === "FRANCHISE_ADMIN";
+
+  const sections = isFranchiseUser ? franchiseMenuSections : SUPER_ADMIN_SIDEBAR;
 
   if (pathname === "/login") return null;
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  ChefHat, Plus, X, Search, Package, ArrowRight,
+  ChefHat, Plus, X, Search, Package, ArrowRight, ArrowLeft,
   IndianRupee, Scale, RefreshCw, Trash2, ChevronDown, Edit2, Download, Play,
 } from "lucide-react";
 import { clsx } from "clsx";
@@ -34,6 +34,7 @@ export default function RecipesPage() {
   const [productId, setProductId] = useState("");
   const [recipeName, setRecipeName] = useState("");
   const [yieldQty, setYieldQty] = useState(1);
+  const [batchSize, setBatchSize] = useState(1);
   const [instructions, setInstructions] = useState("");
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([
     { inventoryItemId: "", itemName: "", unit: "kg", quantityRequired: 0 },
@@ -151,6 +152,7 @@ export default function RecipesPage() {
         productId,
         name: recipeName,
         yieldQty,
+        batchSize,
         instructions,
         items: ingredients.map(({ inventoryItemId, quantityRequired, unit }) => ({
           inventoryItemId, quantityRequired, unit,
@@ -173,9 +175,11 @@ export default function RecipesPage() {
 
   const resetForm = () => {
     setEditing(null);
-    setProductId(""); setRecipeName(""); setYieldQty(1); setInstructions("");
+    setProductId(""); setRecipeName(""); setYieldQty(1); setBatchSize(1); setInstructions("");
     setIngredients([{ inventoryItemId: "", itemName: "", unit: "kg", quantityRequired: 0 }]);
   };
+
+  const [quickCategory, setQuickCategory] = useState("BATTER");
 
   const handleQuickProduct = async () => {
     if (!quickName || quickPrice <= 0) return;
@@ -184,7 +188,7 @@ export default function RecipesPage() {
       const res = await productsFullApi.create({
         name: quickName,
         basePrice: quickPrice,
-        category: "BATTER",
+        category: quickCategory === "OTHER" ? "OTHER" : quickCategory,
         taxPercent: 5,
         isActive: true
       });
@@ -228,6 +232,7 @@ export default function RecipesPage() {
     setProductId(recipe.productId ?? "");
     setRecipeName(recipe.name ?? "");
     setYieldQty(recipe.yieldQty ?? 1);
+    setBatchSize(recipe.batchSize ?? 1);
     setInstructions(recipe.instructions ?? "");
     setIngredients(
       (recipe.recipeItems ?? []).map((item: any) => ({
@@ -250,7 +255,7 @@ export default function RecipesPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-            <ChefHat size={22} className="text-orange-500" /> Recipe Management
+            <ChefHat size={22} className="text-[#F97316]" /> Recipe Management
           </h1>
           <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
             Define how raw materials combine to produce finished goods
@@ -265,7 +270,7 @@ export default function RecipesPage() {
           </button>
           <button
             onClick={() => { resetForm(); setShowForm(true); }}
-            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all"
+            className="flex items-center gap-2 bg-[#F97316] hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all"
           >
             <Plus size={16} /> New Recipe
           </button>
@@ -306,7 +311,7 @@ export default function RecipesPage() {
           </div>
           <button
             onClick={() => { resetForm(); setShowForm(true); }}
-            className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-orange-500/20"
+            className="inline-flex items-center gap-2 bg-[#F97316] hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-orange-500/20"
           >
             <Plus size={16} /> Create Your First Recipe
           </button>
@@ -327,6 +332,14 @@ export default function RecipesPage() {
                   <div>
                     <h3 className="font-black text-gray-900 dark:text-white text-sm">{recipe.name}</h3>
                     <p className="text-[11px] text-gray-400 mt-0.5">Product: {recipe.product?.name ?? "—"}</p>
+                    <div className="mt-1 flex items-center gap-2">
+                       <span className="text-[10px] font-black bg-orange-100 dark:bg-orange-900/40 text-[#F97316] px-1.5 py-0.5 rounded uppercase">
+                         Batch: {recipe.batchSize || recipe.yieldQty} {recipe.recipeItems[0]?.unit || 'kg'}
+                       </span>
+                       <span className="text-[10px] font-black bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 px-1.5 py-0.5 rounded uppercase">
+                         Cost: ₹{(recipe.totalCost || 0).toLocaleString()}
+                       </span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -351,7 +364,7 @@ export default function RecipesPage() {
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); openEdit(recipe); }}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-orange-500 transition-all"
+                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-[#F97316] transition-all"
                   >
                     <Edit2 size={14} />
                   </button>
@@ -366,9 +379,17 @@ export default function RecipesPage() {
 
               {/* Price tag */}
               {recipe.product?.basePrice != null && (
-                <div className="mt-3 flex items-center gap-1 text-[11px] text-gray-500 dark:text-slate-400">
-                  <IndianRupee size={11} />
-                  <span>Selling price: <strong className="text-gray-900 dark:text-white">₹{recipe.product.basePrice}</strong> / unit</span>
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                   <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Unit Cost (Production)</p>
+                      <p className="text-sm font-black text-slate-900 dark:text-white">₹{(recipe.costPerUnit || 0).toFixed(2)}</p>
+                   </div>
+                   <div className="p-3 bg-[#F97316]/5 rounded-xl border border-[#F97316]/10">
+                      <p className="text-[9px] font-black text-[#F97316] uppercase tracking-widest mb-1">Selling Price</p>
+                      <p className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1">
+                        <IndianRupee size={12} /> {recipe.product.basePrice}
+                      </p>
+                   </div>
                 </div>
               )}
 
@@ -398,7 +419,7 @@ export default function RecipesPage() {
                   )}
                   <Link 
                     href={`/production?recipeId=${recipe.id}`}
-                    className="mt-3 flex items-center gap-1 text-[11px] text-orange-500 font-bold hover:underline"
+                    className="mt-3 flex items-center gap-1 text-[11px] text-[#F97316] font-bold hover:underline"
                   >
                     <ArrowRight size={11} /> Go to Production to execute this recipe
                   </Link>
@@ -424,13 +445,13 @@ export default function RecipesPage() {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-bold text-gray-600 dark:text-slate-400">Product (Output) *</label>
-                  <button onClick={() => setShowQuickProduct(true)} className="text-[10px] font-black text-orange-500 uppercase tracking-tight hover:underline">
+                  <button onClick={() => setShowQuickProduct(true)} className="text-[10px] font-black text-[#F97316] uppercase tracking-tight hover:underline">
                     + Add New Product
                   </button>
                 </div>
                 <div className="relative">
                   <select value={productId} onChange={(e) => handleProductChange(e.target.value)}
-                    className="w-full appearance-none bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20">
+                    className="w-full appearance-none bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-[#F97316]/20">
                     <option value="">Select product this recipe produces...</option>
                     {products.map((p: any) => <option key={p.id} value={p.id}>{p.name} — ₹{p.basePrice}/unit</option>)}
                   </select>
@@ -439,16 +460,22 @@ export default function RecipesPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="col-span-1">
                   <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1.5">Recipe Name *</label>
                   <input value={recipeName} onChange={(e) => setRecipeName(e.target.value)} placeholder="e.g. Idly Batter Recipe"
-                    className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20" />
+                    className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1.5">Yield Quantity (output units)</label>
-                  <input type="number" min={0.01} step={0.01} value={yieldQty} onChange={(e) => setYieldQty(Number(e.target.value))}
-                    className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20" />
+                <div className="col-span-1">
+                  <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1.5">Standard Batch Size (e.g. 50kg)</label>
+                  <input type="number" min={0.01} step={0.01} value={batchSize} onChange={(e) => setBatchSize(Number(e.target.value))}
+                    className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1.5">Yield Quantity (output units per batch)</label>
+                <input type="number" min={0.01} step={0.01} value={yieldQty} onChange={(e) => setYieldQty(Number(e.target.value))}
+                  className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
               </div>
 
               {/* Ingredients */}
@@ -456,11 +483,11 @@ export default function RecipesPage() {
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-bold text-gray-600 dark:text-slate-400">Ingredients *</label>
                   <div className="flex items-center gap-3">
-                    <button onClick={() => setShowQuickMaterial(true)} className="text-[10px] font-black text-orange-500 uppercase tracking-tight hover:underline">
+                    <button onClick={() => setShowQuickMaterial(true)} className="text-[10px] font-black text-[#F97316] uppercase tracking-tight hover:underline">
                       + New Material
                     </button>
                     <div className="w-px h-3 bg-gray-200 dark:bg-white/10" />
-                    <button onClick={addIngredient} className="flex items-center gap-1 text-[11px] font-bold text-orange-500 hover:text-orange-400">
+                    <button onClick={addIngredient} className="flex items-center gap-1 text-[11px] font-bold text-[#F97316] hover:text-orange-400">
                       <Plus size={12} /> Add Row
                     </button>
                   </div>
@@ -470,7 +497,7 @@ export default function RecipesPage() {
                     <div key={i} className="grid grid-cols-12 gap-2 items-center">
                       <div className="col-span-6">
                         <select value={ing.inventoryItemId} onChange={(e) => updateIngredient(i, "inventoryItemId", e.target.value)}
-                          className="w-full appearance-none bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-orange-500/20">
+                          className="w-full appearance-none bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-[#F97316]/20">
                           <option value="">Select material...</option>
                           {materials
                             .filter(m => !ingredients.some((ing, idx) => idx !== i && ing.inventoryItemId === m.id))
@@ -480,7 +507,7 @@ export default function RecipesPage() {
                       <div className="col-span-3">
                         <input type="number" min={0.001} step={0.001} placeholder="Qty" value={ing.quantityRequired}
                           onChange={(e) => updateIngredient(i, "quantityRequired", Number(e.target.value))}
-                          className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-orange-500/20" />
+                          className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
                       </div>
                       <div className="col-span-2">
                         <span className="text-[11px] text-gray-500 font-bold">{ing.unit || "—"}</span>
@@ -500,7 +527,7 @@ export default function RecipesPage() {
                 <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1.5">Instructions (optional)</label>
                 <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={3}
                   placeholder="Describe how to prepare this recipe..."
-                  className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 resize-none" />
+                  className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20 resize-none" />
               </div>
 
               {/* Summary */}
@@ -508,7 +535,7 @@ export default function RecipesPage() {
                 <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800/30 rounded-2xl p-4">
                   <p className="text-xs font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest mb-2">Recipe Summary</p>
                   <p className="text-sm text-gray-700 dark:text-slate-300">
-                    <strong>{ingredients.filter(i => i.inventoryItemId).length}</strong> ingredient(s) → produces <strong>{yieldQty}</strong> unit(s) of <strong>{products.find(p => p.id === productId)?.name}</strong>
+                    <strong>{ingredients.filter(i => i.inventoryItemId).length}</strong> ingredient(s) → produces <strong>{yieldQty}</strong> unit(s) of <strong>{products.find(p => p.id === productId)?.name}</strong> per batch
                   </p>
                 </div>
               )}
@@ -516,7 +543,7 @@ export default function RecipesPage() {
             <div className="p-6 pt-0 flex gap-3 justify-end">
               <button onClick={() => setShowForm(false)} className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Cancel</button>
               <button onClick={handleCreate} disabled={saving || !productId || !recipeName}
-                className="px-6 py-2.5 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-all">
+                className="px-6 py-2.5 bg-[#F97316] hover:bg-orange-600 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-all">
                 {saving ? "Saving..." : editing ? "Update Recipe" : "Save Recipe"}
               </button>
             </div>
@@ -531,17 +558,53 @@ export default function RecipesPage() {
             <div>
               <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Product Name</label>
               <input value={quickName} onChange={(e) => setQuickName(e.target.value)} placeholder="e.g. Idly Batter"
-                className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20" />
+                className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
             </div>
             <div>
               <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Base Price (₹)</label>
               <input type="number" value={quickPrice} onChange={(e) => setQuickPrice(Number(e.target.value))}
-                className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20" />
+                className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Category</label>
+              <div className="flex flex-wrap gap-2">
+                <button 
+                  onClick={() => setQuickCategory("BATTER")}
+                  className={clsx("px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all", 
+                    quickCategory === "BATTER" ? "bg-[#F97316] text-white shadow-lg shadow-orange-500/20" : "bg-gray-50 dark:bg-white/5 text-gray-400 hover:bg-gray-100")}
+                >
+                  Batter
+                </button>
+                {quickCategory !== "BATTER" && quickCategory !== "OTHER" ? (
+                  <div className="flex items-center gap-2 bg-[#F97316] text-white px-4 py-2 rounded-xl shadow-lg animate-in zoom-in-95">
+                    <span className="font-black text-[10px] uppercase tracking-widest">{quickCategory}</span>
+                    <button onClick={() => setQuickCategory("BATTER")} className="opacity-60 hover:opacity-100 transition-opacity">
+                      <ArrowLeft size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => setQuickCategory("OTHER")}
+                    className={clsx("px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border border-dashed", 
+                      quickCategory === "OTHER" ? "border-orange-500 text-orange-500 bg-orange-50" : "border-gray-200 dark:border-white/10 text-gray-400 hover:border-gray-300")}
+                  >
+                    + Add New
+                  </button>
+                )}
+              </div>
+              {quickCategory === "OTHER" && (
+                <input 
+                  autoFocus
+                  onChange={(e) => setQuickCategory(e.target.value.toUpperCase())}
+                  placeholder="e.g. PICKLE"
+                  className="mt-2 w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border-2 border-orange-500/20 rounded-xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 animate-in slide-in-from-top-2"
+                />
+              )}
             </div>
             <div className="flex gap-2 pt-2">
               <button onClick={() => setShowQuickProduct(false)} className="flex-1 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all">Cancel</button>
               <button onClick={handleQuickProduct} disabled={addingQuick || !quickName || quickPrice <= 0}
-                className="flex-[2] py-2 bg-orange-500 hover:bg-orange-400 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50">
+                className="flex-[2] py-2 bg-[#F97316] hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50">
                 {addingQuick ? "Adding..." : "Add Product"}
               </button>
             </div>
@@ -557,19 +620,19 @@ export default function RecipesPage() {
             <div>
               <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Material Name</label>
               <input value={quickName} onChange={(e) => setQuickName(e.target.value)} placeholder="e.g. Rice Flour"
-                className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20" />
+                className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
             </div>
             <div>
               <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Unit</label>
               <select value={quickUnit} onChange={(e) => setQuickUnit(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20">
+                className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20">
                 {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
             <div className="flex gap-2 pt-2">
               <button onClick={() => setShowQuickMaterial(false)} className="flex-1 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all">Cancel</button>
               <button onClick={handleQuickMaterial} disabled={addingQuick || !quickName}
-                className="flex-[2] py-2 bg-orange-500 hover:bg-orange-400 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50">
+                className="flex-[2] py-2 bg-[#F97316] hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50">
                 {addingQuick ? "Adding..." : "Add Material"}
               </button>
             </div>

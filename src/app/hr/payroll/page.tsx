@@ -146,7 +146,26 @@ export default function PayrollPage() {
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ps.status === "PAID" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{ps.status}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <Link href={`/hr/payroll/payslips/${ps.id}`} className="text-blue-600 hover:underline text-xs">View</Link>
+                  <div className="flex gap-2">
+                    <Link href={`/hr/payroll/payslips/view?id=${ps.id}`} className="text-blue-600 hover:underline text-xs">View</Link>
+                    {ps.status !== "PAID" && (
+                      <button 
+                        onClick={async () => {
+                          if (confirm(`Pay ₹${ps.netSalary.toLocaleString()} to ${ps.employee?.user?.fullName}?`)) {
+                            try {
+                              await api.patch(`/api/payroll/payslips/${ps.id}/mark-paid`);
+                              loadData();
+                            } catch (err) {
+                              alert("Payment failed");
+                            }
+                          }
+                        }}
+                        className="text-green-600 hover:underline text-xs font-bold"
+                      >
+                        Pay Now
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

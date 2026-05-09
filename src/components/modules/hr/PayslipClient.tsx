@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, Printer, Check } from "lucide-react";
 import api from "@/lib/api";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 export default function PayslipClient() {
-  const { id } = useParams();
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
   const router = useRouter();
   const [payslip, setPayslip] = useState<any>(null);
   const [loading, setLoading] = useState(true);
