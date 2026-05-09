@@ -45,7 +45,7 @@ export default function FranchiseStockPage() {
     setLoading(true);
     try {
       const [bRes, pRes] = await Promise.all([
-        productBatchesApi.getAll(pid || undefined),
+        productBatchesApi.getAll({ productId: pid || undefined }),
         productsFullApi.getAll(),
       ]);
       setBatches(bRes.data ?? []);
@@ -77,84 +77,90 @@ export default function FranchiseStockPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-6">
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6">
+    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 py-8 px-4">
+      
+      {/* ── Header ── */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
         <div>
-          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Franchise</p>
-          <h1 className="text-2xl font-black text-white mt-0.5">Available Products</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Finished goods batches from Home House</p>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 bg-[#FF6B00]/10 rounded-xl">
+              <Package size={24} className="text-[#FF6B00]" />
+            </div>
+            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+              Branch Stock Registry
+            </h1>
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
+            Monitor available product batches and manage inventory health.
+          </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => fetchData(productFilter || undefined)}
-            className="p-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 transition-colors"
+        <div className="flex gap-3">
+          <button 
+            onClick={() => fetchData(productFilter || undefined)} 
+            className="p-3 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
           >
-            <RefreshCw className={clsx("w-4 h-4 text-zinc-400", loading && "animate-spin")} />
+            <RefreshCw size={18} className={clsx("text-slate-400", loading && "animate-spin")} />
           </button>
-          <Link
-            href="/franchise-orders"
-            className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-400 text-white text-sm font-bold rounded-xl transition-colors"
+          <Link 
+            href="/franchise-orders" 
+            className="flex items-center gap-2 bg-[#FF6B00] hover:bg-[#e66000] text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-orange-500/20 transition-all active:scale-95"
           >
-            <ShoppingCart className="w-4 h-4" /> Order More
+            <ShoppingCart size={18} /> New Stock Order
           </Link>
         </div>
       </div>
 
-      {/* Stats Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      {/* ── Stats Strip ── */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Batches",   value: stats.total,    color: "text-white" },
-          { label: "Expired",         value: stats.expired,  color: "text-red-400" },
-          { label: "Expiring Soon",   value: stats.expiring, color: "text-amber-400" },
-          { label: "Safe / No Expiry",value: stats.safe,     color: "text-emerald-400" },
-        ].map((s) => (
-          <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold mb-1">{s.label}</p>
-            <p className={clsx("text-2xl font-black", s.color)}>{s.value}</p>
+          { label: "Total Batches", val: stats.total, color: "bg-blue-500" },
+          { label: "Expired", val: stats.expired, color: "bg-red-500" },
+          { label: "Expiring Soon", val: stats.expiring, color: "bg-amber-500" },
+          { label: "Safe Stock", val: stats.safe, color: "bg-emerald-500" },
+        ].map((s, i) => (
+          <div key={i} className="bg-white dark:bg-card rounded-2xl border border-slate-100 dark:border-white/5 p-6 shadow-sm">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{s.label}</p>
+            <div className="flex items-end justify-between">
+              <p className="text-3xl font-black text-slate-900 dark:text-white leading-none">{s.val}</p>
+              <div className={`w-1.5 h-8 rounded-full ${s.color} opacity-20`} />
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        {/* Search */}
-        <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
-          <Filter className="w-4 h-4 text-zinc-500 shrink-0" />
+      {/* ── Filters ── */}
+      <div className="bg-white dark:bg-card border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-sm flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-transparent min-w-[240px]">
+          <Filter size={16} className="text-slate-400" />
           <input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search product..."
-            className="bg-transparent text-sm text-zinc-300 outline-none w-36 placeholder-zinc-600"
+            placeholder="Search batch or product..."
+            className="bg-transparent text-sm font-bold text-slate-700 dark:text-zinc-300 outline-none w-full"
           />
         </div>
 
-        {/* Product dropdown */}
-        <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
-          <select
-            value={productFilter}
-            onChange={(e) => handleProductFilter(e.target.value)}
-            className="bg-transparent text-sm text-zinc-300 outline-none"
-          >
-            <option value="">All Products</option>
-            {products.map((p: any) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        </div>
+        <select
+          value={productFilter}
+          onChange={(e) => handleProductFilter(e.target.value)}
+          className="px-4 py-2.5 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-transparent text-sm font-bold text-slate-600 dark:text-zinc-400 outline-none"
+        >
+          <option value="">All Products</option>
+          {products.map((p: any) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
 
-        {/* Expiry filter tabs */}
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex gap-1 bg-slate-50 dark:bg-white/5 p-1 rounded-xl border border-slate-100 dark:border-transparent">
           {FILTER_TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setExpiryFilter(t.key)}
               className={clsx(
-                "px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors",
+                "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
                 expiryFilter === t.key
-                  ? "bg-orange-500/20 border-orange-500/40 text-orange-300"
-                  : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-700"
+                  ? "bg-white dark:bg-card text-[#FF6B00] shadow-sm"
+                  : "text-slate-400 hover:text-slate-600"
               )}
             >
               {t.label}
@@ -163,122 +169,81 @@ export default function FranchiseStockPage() {
         </div>
       </div>
 
-      {/* Content */}
+      {/* ── Content ── */}
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-zinc-600">
-          <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Loading batches...
-        </div>
+        <div className="py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs animate-pulse">Syncing Batch Records...</div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
-          <Package className="w-12 h-12 mb-3 opacity-30" />
-          <p className="text-sm font-medium">No batches match your filters</p>
-          <button
-            onClick={() => { setExpiryFilter("ALL"); setSearchTerm(""); setProductFilter(""); fetchData(); }}
-            className="mt-3 text-xs text-orange-400 hover:text-orange-300 font-bold"
-          >
-            Clear filters
-          </button>
+        <div className="py-20 text-center bg-white dark:bg-card rounded-[2.5rem] border-2 border-dashed border-slate-100 dark:border-white/5">
+          <Package size={48} strokeWidth={1} className="mx-auto text-slate-200 mb-4" />
+          <p className="text-slate-500 font-bold">No product batches match your current filters.</p>
+          <button onClick={() => { setExpiryFilter("ALL"); setSearchTerm(""); setProductFilter(""); fetchData(); }} className="mt-4 text-[#FF6B00] font-black text-xs uppercase underline tracking-widest">Reset All Filters</button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((batch: any) => {
-            const status  = (batch.expiryStatus ?? "NO_EXPIRY") as ExpiryStatus;
-            const style   = EXPIRY_CARD[status];
-            const isLow   = batch.quantity < 10;
+            const status = (batch.expiryStatus ?? "NO_EXPIRY") as ExpiryStatus;
+            const isLow = batch.quantity < 10;
             const effectiveExpiry = batch.expiryDate || batch.production?.expiryDate;
             const daysLeft = effectiveExpiry
               ? Math.ceil((new Date(effectiveExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
               : null;
 
             return (
-              <div
-                key={batch.id}
-                className={clsx(
-                  "bg-zinc-900 border rounded-2xl p-5 flex flex-col gap-4 hover:border-zinc-700 transition-colors",
-                  status === "EXPIRED" ? "border-red-500/20" :
-                  status === "EXPIRING_SOON" ? "border-amber-500/20" : "border-zinc-800"
-                )}
-              >
-                {/* Top */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0">
-                      <Package className="w-5 h-5 text-zinc-500" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-white truncate">
-                        {batch.product?.name ?? "Unknown Product"}
-                      </p>
-                      <p className="text-[10px] font-mono text-zinc-600 mt-0.5">{batch.batchCode}</p>
-                    </div>
+              <div key={batch.id} className="group bg-white dark:bg-card border border-slate-100 dark:border-white/5 rounded-[2.5rem] p-8 shadow-sm hover:shadow-md transition-all">
+                <div className="flex items-start justify-between mb-8">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/10 flex items-center justify-center text-slate-400 group-hover:text-[#FF6B00] transition-colors shadow-sm">
+                    <Package size={28} />
                   </div>
-                  <span className={clsx("inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg border shrink-0", style.badge)}>
-                    {EXPIRY_ICONS[status]}
-                    {style.label}
-                  </span>
+                  <div className={clsx(
+                    "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm",
+                    status === "EXPIRED" ? "bg-red-50 text-red-500 border-red-100" : 
+                    status === "EXPIRING_SOON" ? "bg-amber-50 text-amber-500 border-amber-100" :
+                    "bg-emerald-50 text-emerald-500 border-emerald-100"
+                  )}>
+                    {status === "NO_EXPIRY" ? "Valid" : status}
+                  </div>
                 </div>
 
-                {/* Qty + Expiry */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-zinc-800/60 rounded-xl p-3">
-                    <p className="text-[10px] text-zinc-600 uppercase tracking-wider font-bold mb-1">Quantity</p>
-                    <p className={clsx("text-xl font-black", isLow ? "text-amber-400" : "text-white")}>
+                <div className="mb-8">
+                  <p className="text-xl font-black text-slate-900 dark:text-white leading-tight mb-1">{batch.product?.name}</p>
+                  <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">{batch.batchCode}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                  <div className="bg-slate-50 dark:bg-white/[0.02] rounded-2xl p-4 border border-slate-100 dark:border-transparent">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Available</p>
+                    <p className={clsx("text-2xl font-black tracking-tight", isLow ? "text-amber-500" : "text-slate-900 dark:text-white")}>
                       {batch.quantity}
-                      <span className="text-xs font-medium text-zinc-500 ml-1">{batch.product?.unit ?? "units"}</span>
+                      <span className="text-[10px] font-bold text-slate-400 ml-1.5 uppercase">{batch.product?.unit}</span>
                     </p>
-                    {isLow && <p className="text-[10px] text-amber-500 mt-0.5">⚠️ Low stock</p>}
                   </div>
-                  <div className="bg-zinc-800/60 rounded-xl p-3">
-                    <p className="text-[10px] text-zinc-600 uppercase tracking-wider font-bold mb-1">Expiry</p>
+                  <div className="bg-slate-50 dark:bg-white/[0.02] rounded-2xl p-4 border border-slate-100 dark:border-transparent">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Expires In</p>
                     {effectiveExpiry ? (
-                      <>
-                        <p className="text-sm font-bold text-zinc-300">
-                          {new Date(effectiveExpiry).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                      <div>
+                        <p className={clsx("text-xl font-black tracking-tight", daysLeft !== null && daysLeft <= 3 ? "text-red-500" : "text-slate-900 dark:text-white")}>
+                          {daysLeft === null ? "—" : daysLeft <= 0 ? "EXPIRED" : `${daysLeft}d`}
                         </p>
-                        <p className={clsx("text-[10px] mt-0.5 font-medium",
-                          daysLeft !== null && daysLeft < 0 ? "text-red-400" :
-                          daysLeft !== null && daysLeft <= 3 ? "text-amber-400" : "text-zinc-500"
-                        )}>
-                          {daysLeft === null ? "—" :
-                           daysLeft < 0 ? `${Math.abs(daysLeft)}d ago` :
-                           daysLeft === 0 ? "Today" :
-                           `${daysLeft}d left`}
-                        </p>
-                      </>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">{new Date(effectiveExpiry).toLocaleDateString("en-IN", { month: "short", year: "2-digit" })}</p>
+                      </div>
                     ) : (
-                      <p className="text-sm font-bold text-zinc-600">—</p>
+                      <p className="text-xl font-black text-slate-300">—</p>
                     )}
                   </div>
                 </div>
 
-                {/* Expiry bar */}
-                {(batch.expiryDate || batch.production?.expiryDate) && daysLeft !== null && daysLeft >= 0 && (
-                  <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
-                    <div
-                      className={clsx("h-full rounded-full transition-all", style.bar)}
-                      style={{ width: `${Math.min(100, Math.max(4, (daysLeft / 30) * 100))}%` }}
-                    />
-                  </div>
-                )}
-
-                {/* Produced date */}
-                <p className="text-[10px] text-zinc-700">
-                  Produced: {new Date(batch.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                </p>
-
-                {/* Actions */}
-                <div className="flex gap-2 pt-1 border-t border-zinc-800">
+                <div className="flex gap-2 pt-6 border-t border-slate-100 dark:border-white/5">
                   <Link
                     href="/franchise-orders"
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 text-xs font-bold rounded-xl transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-50 dark:bg-white/5 hover:bg-[#FF6B00] hover:text-white text-[#FF6B00] text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm group-hover:shadow-md"
                   >
-                    <ShoppingCart className="w-3.5 h-3.5" /> Order More
+                    <ShoppingCart size={14} /> Restock Item
                   </Link>
                   <Link
-                    href="/production/batches"
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-xs font-bold rounded-xl transition-colors"
+                    href={`/production/batches?id=${batch.id}`}
+                    className="flex items-center justify-center px-4 py-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 rounded-xl transition-all"
                   >
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight size={14} />
                   </Link>
                 </div>
               </div>

@@ -43,7 +43,7 @@ export default function ProductBatchesPage() {
     setLoading(true);
     try {
       const [bRes, pRes] = await Promise.all([
-        productBatchesApi.getAll(productId || undefined),
+        productBatchesApi.getAll({ productId: productId || undefined }),
         productsFullApi.getAll(),
       ]);
       setBatches(bRes.data ?? []);

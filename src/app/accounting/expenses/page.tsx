@@ -47,6 +47,7 @@ interface Expense {
   accountId?: string;
   account?: { name: string };
   isCancelled: boolean;
+  paymentMode?: string;
 }
 
 interface PaymentRecord {

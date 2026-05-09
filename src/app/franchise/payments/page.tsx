@@ -63,136 +63,103 @@ export default function FranchisePaymentsPage() {
     .sort((a: any, b: any) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime())[0];
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-6">
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6">
+    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 py-8 px-4">
+      
+      {/* ── Header ── */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
         <div>
-          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Franchise</p>
-          <h1 className="text-2xl font-black text-white mt-0.5">Payments & Ledger</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Track balances, pay outstanding orders</p>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 bg-[#FF6B00]/10 rounded-xl">
+              <CreditCard size={24} className="text-[#FF6B00]" />
+            </div>
+            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+              Payments & Ledger
+            </h1>
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
+            Track branch balances, view payment history, and manage outstanding dues.
+          </p>
         </div>
-        <button
-          onClick={fetchOrders}
-          className="p-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 transition-colors"
+        <button 
+          onClick={fetchOrders} 
+          className="p-3 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
         >
-          <RefreshCw className={clsx("w-4 h-4 text-zinc-400", loading && "animate-spin")} />
+          <RefreshCw size={18} className={clsx("text-slate-400", loading && "animate-spin")} />
         </button>
       </div>
 
-      {/* Balance Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {/* Outstanding */}
-        <div className={clsx(
-          "rounded-2xl border p-6",
-          (totalUnpaid + totalPartial) > 0
-            ? "bg-red-500/5 border-red-500/20"
-            : "bg-zinc-900 border-zinc-800"
-        )}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-red-400" />
-            </div>
-            <TrendingDown className="w-4 h-4 text-red-400/60" />
-          </div>
-          <p className="text-[10px] text-zinc-500 uppercase tracking-[0.15em] font-bold">Outstanding Balance</p>
-          <p className={clsx("text-3xl font-black mt-1", (totalUnpaid + totalPartial) > 0 ? "text-red-400" : "text-zinc-600")}>
-            {fmt(totalUnpaid + totalPartial)}
-          </p>
-          <p className="text-xs text-zinc-600 mt-1">
-            {deliveredOrders.filter((o: any) => o.paymentStatus !== "PAID").length} unpaid delivered orders
-          </p>
-          {(totalUnpaid + totalPartial) > 0 && (
-            <Link
-              href="/franchise-orders"
-              className="mt-4 flex items-center gap-1.5 text-xs font-bold text-red-400 hover:text-red-300 transition-colors"
-            >
-              View Pending Orders <ArrowRight className="w-3 h-3" />
-            </Link>
-          )}
-        </div>
-
-        {/* Paid */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-            </div>
-            <TrendingUp className="w-4 h-4 text-emerald-400/60" />
-          </div>
-          <p className="text-[10px] text-zinc-500 uppercase tracking-[0.15em] font-bold">Total Paid</p>
-          <p className="text-3xl font-black mt-1 text-emerald-400">{fmt(totalPaid)}</p>
-          <p className="text-xs text-zinc-600 mt-1">
-            {deliveredOrders.filter((o: any) => o.paymentStatus === "PAID").length} paid orders
-          </p>
-          {lastPaymentOrder && (
-            <p className="mt-2 text-[10px] text-zinc-600">
-              Last: {new Date(lastPaymentOrder.updatedAt ?? lastPaymentOrder.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-              {" · "}{fmt(lastPaymentOrder.totalAmount ?? 0)}{" · "}{lastPaymentOrder.paymentType ?? "—"}
-            </p>
-          )}
-        </div>
-
-        {/* Total Orders Value */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-              <ShoppingCart className="w-5 h-5 text-blue-400" />
-            </div>
-            <Clock className="w-4 h-4 text-blue-400/60" />
-          </div>
-          <p className="text-[10px] text-zinc-500 uppercase tracking-[0.15em] font-bold">Total Orders Value</p>
-          <p className="text-3xl font-black mt-1 text-blue-400">{fmt(totalValue)}</p>
-          <p className="text-xs text-zinc-600 mt-1">{deliveredOrders.length} delivered orders</p>
-          {totalValue > 0 && (
-            <div className="mt-3">
-              <div className="flex items-center justify-between text-[10px] text-zinc-600 mb-1">
-                <span>Paid</span>
-                <span>{totalValue > 0 ? Math.round((totalPaid / totalValue) * 100) : 0}%</span>
+      {/* ── Balance Summary Strip ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          { 
+            label: "Outstanding Balance", 
+            val: fmt(totalUnpaid + totalPartial), 
+            sub: `${deliveredOrders.filter((o: any) => o.paymentStatus !== "PAID").length} pending orders`, 
+            color: "bg-red-500",
+            accent: (totalUnpaid + totalPartial) > 0 ? "text-red-500" : "text-slate-300"
+          },
+          { 
+            label: "Total Paid", 
+            val: fmt(totalPaid), 
+            sub: "Delivered & Settled", 
+            color: "bg-emerald-500",
+            accent: "text-emerald-500"
+          },
+          { 
+            label: "Total Order Value", 
+            val: fmt(totalValue), 
+            sub: `${deliveredOrders.length} delivered orders`, 
+            color: "bg-blue-500",
+            accent: "text-blue-500"
+          },
+        ].map((s, i) => (
+          <div key={i} className="bg-white dark:bg-card rounded-2xl border border-slate-100 dark:border-white/5 p-6 shadow-sm">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{s.label}</p>
+            <div className="flex items-end justify-between">
+              <div>
+                <p className={clsx("text-3xl font-black tracking-tight leading-none", s.accent)}>{s.val}</p>
+                <p className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">{s.sub}</p>
               </div>
-              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500 rounded-full transition-all"
-                  style={{ width: `${totalValue > 0 ? (totalPaid / totalValue) * 100 : 0}%` }}
-                />
-              </div>
+              <div className={`w-1.5 h-8 rounded-full ${s.color} opacity-20`} />
             </div>
-          )}
-        </div>
+          </div>
+        ))}
       </div>
 
-      {/* Pay Now CTA — only if outstanding */}
+      {/* ── Pay Now Alert ── */}
       {(totalUnpaid + totalPartial) > 0 && (
-        <div className="bg-gradient-to-r from-orange-500/10 to-orange-600/5 border border-orange-500/20 rounded-2xl p-5 mb-6 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-bold text-orange-300">You have outstanding payments</p>
-            <p className="text-xs text-orange-400/60 mt-0.5">
-              {fmt(totalUnpaid + totalPartial)} pending across {deliveredOrders.filter((o: any) => o.paymentStatus !== "PAID").length} orders
-            </p>
+        <div className="bg-orange-50 border border-orange-100 rounded-3xl p-5 flex items-center justify-between gap-4 animate-in slide-in-from-top-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#FF6B00]/10 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-6 h-6 text-[#FF6B00]" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-slate-900">Outstanding Dues Detected</p>
+              <p className="text-xs text-[#FF6B00] font-medium mt-0.5">
+                Please settle the pending amount to ensure uninterrupted supply.
+              </p>
+            </div>
           </div>
-          <Link
-            href="/franchise-orders"
-            className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-400 text-white text-sm font-bold rounded-xl transition-colors shrink-0"
-          >
-            <CreditCard className="w-4 h-4" /> Pay Now
+          <Link href="/franchise-orders" className="px-6 py-2.5 bg-[#FF6B00] text-white text-xs font-black rounded-xl hover:bg-[#e66000] shadow-lg shadow-orange-500/20 transition-all uppercase tracking-widest">
+            Settle Ledger
           </Link>
         </div>
       )}
 
-      {/* Ledger Table */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-black text-zinc-400 uppercase tracking-[0.15em]">Order Payment History</h2>
-          <div className="flex gap-1.5">
+      {/* ── Ledger ── */}
+      <div className="bg-white dark:bg-card border border-slate-100 dark:border-white/5 rounded-[2.5rem] p-8 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+          <h2 className="text-xl font-black text-slate-900 dark:text-white">Order History & Payments</h2>
+          <div className="flex gap-1 bg-slate-50 dark:bg-white/5 p-1 rounded-xl border border-slate-100 dark:border-transparent overflow-x-auto">
             {(["ALL", "UNPAID", "PAID", "PARTIAL"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
                 className={clsx(
-                  "px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors",
+                  "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
                   filter === f
-                    ? "bg-orange-500/20 border-orange-500/40 text-orange-300"
-                    : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300"
+                    ? "bg-white dark:bg-card text-[#FF6B00] shadow-sm"
+                    : "text-slate-400 hover:text-slate-600"
                 )}
               >
                 {f}
@@ -202,66 +169,50 @@ export default function FranchisePaymentsPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-zinc-600">
-            <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Loading...
-          </div>
+          <div className="py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs animate-pulse">Retrieving Financial Records...</div>
         ) : displayOrders.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-zinc-600">
-            <CreditCard className="w-10 h-10 mb-3 opacity-30" />
-            <p className="text-sm">No orders found</p>
+          <div className="py-20 text-center bg-slate-50 dark:bg-white/[0.02] rounded-[2rem] border-2 border-dashed border-slate-200">
+            <CreditCard size={48} strokeWidth={1} className="mx-auto text-slate-200 mb-4" />
+            <p className="text-slate-500 font-bold">No payment records found for the selected filter.</p>
           </div>
         ) : (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-zinc-800 text-zinc-500 text-[10px] uppercase tracking-[0.12em]">
-                  <th className="px-4 py-3 text-left font-black">Order</th>
-                  <th className="px-4 py-3 text-left font-black hidden md:table-cell">Items</th>
-                  <th className="px-4 py-3 text-left font-black hidden sm:table-cell">Date</th>
-                  <th className="px-4 py-3 text-right font-black">Amount</th>
-                  <th className="px-4 py-3 text-center font-black">Order Status</th>
-                  <th className="px-4 py-3 text-center font-black">Payment</th>
+                <tr className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] border-b border-slate-100 dark:border-white/5">
+                  <th className="px-6 py-4 text-left">Order Reference</th>
+                  <th className="px-6 py-4 text-left hidden md:table-cell">Details</th>
+                  <th className="px-6 py-4 text-left hidden sm:table-cell">Settled Date</th>
+                  <th className="px-6 py-4 text-right">Amount</th>
+                  <th className="px-6 py-4 text-center">Payment Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800/70">
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {displayOrders.map((order: any) => {
-                  const itemNames = (order.items ?? [])
-                    .slice(0, 2)
-                    .map((i: any) => i.product?.name ?? "Product")
-                    .join(", ");
                   const payStatus = order.paymentStatus ?? "UNPAID";
-                  const ordStatus = order.status;
-
                   return (
-                    <tr key={order.id} className="hover:bg-zinc-800/40 transition-colors">
-                      <td className="px-4 py-3">
-                        <p className="font-mono text-zinc-400 text-xs">#{order.id.slice(-6).toUpperCase()}</p>
-                        <p className="text-[10px] text-zinc-600 mt-0.5">{order.paymentType ?? "—"}</p>
+                    <tr key={order.id} className="group hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-5">
+                        <p className="font-black text-slate-900 dark:text-white uppercase tracking-tighter">#{order.id.slice(-6)}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{order.paymentType || 'Standard'}</p>
                       </td>
-                      <td className="px-4 py-3 text-zinc-400 hidden md:table-cell max-w-[160px]">
-                        <p className="truncate text-xs">{itemNames || "—"}</p>
-                        {order.items?.length > 2 && (
-                          <p className="text-[10px] text-zinc-600">+{order.items.length - 2} more</p>
-                        )}
+                      <td className="px-6 py-5 hidden md:table-cell">
+                        <p className="text-xs font-bold text-slate-600 dark:text-zinc-400 truncate max-w-[180px]">
+                          {order.items?.length || 0} Products Delivered
+                        </p>
                       </td>
-                      <td className="px-4 py-3 text-zinc-500 text-xs hidden sm:table-cell">
-                        {new Date(order.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                      <td className="px-6 py-5 hidden sm:table-cell text-xs text-slate-400 font-medium">
+                        {new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-sm font-black text-white">{fmt(order.totalAmount ?? 0)}</span>
+                      <td className="px-6 py-5 text-right">
+                        <span className="font-black text-slate-900 dark:text-white">{fmt(order.totalAmount ?? 0)}</span>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-6 py-5 text-center">
                         <span className={clsx(
-                          "inline-flex text-[10px] font-bold px-2 py-1 rounded-lg border",
-                          ORDER_STATUS_STYLE[ordStatus] ?? ORDER_STATUS_STYLE.PENDING
-                        )}>
-                          {ordStatus}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={clsx(
-                          "inline-flex text-[10px] font-bold px-2 py-1 rounded-lg border",
-                          PAYMENT_STATUS_STYLE[payStatus] ?? PAYMENT_STATUS_STYLE.UNPAID
+                          "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+                          payStatus === "PAID" ? "bg-emerald-50 text-emerald-500 border-emerald-100" :
+                          payStatus === "PARTIAL" ? "bg-amber-50 text-amber-500 border-amber-100" :
+                          "bg-red-50 text-red-500 border-red-100"
                         )}>
                           {payStatus}
                         </span>
@@ -271,15 +222,6 @@ export default function FranchisePaymentsPage() {
                 })}
               </tbody>
             </table>
-            {/* Footer total */}
-            <div className="border-t border-zinc-800 px-4 py-3 flex items-center justify-between bg-zinc-900/50">
-              <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">
-                {displayOrders.length} order{displayOrders.length !== 1 ? "s" : ""}
-              </span>
-              <span className="text-sm font-black text-white">
-                {fmt(displayOrders.reduce((s: number, o: any) => s + (o.totalAmount ?? 0), 0))}
-              </span>
-            </div>
           </div>
         )}
       </div>

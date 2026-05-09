@@ -6,10 +6,13 @@ import {
   ShoppingCart, Package, AlertTriangle, TrendingUp,
   RefreshCw, ArrowRight, Clock, CheckCircle2, Truck,
   PackageCheck, CreditCard, ChevronRight, BarChart3,
+  User,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { franchiseOrdersApi, productBatchesApi, posApi, inventoryApi } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useSearchParams } from "next/navigation";
+import { franchiseApi } from "@/lib/api";
 
 type FranchiseOrderStatus = "PENDING" | "APPROVED" | "IN_PRODUCTION" | "DISPATCHED" | "DELIVERED";
 const STATUS_STEPS: FranchiseOrderStatus[] = ["PENDING", "APPROVED", "IN_PRODUCTION", "DISPATCHED", "DELIVERED"];
@@ -34,9 +37,12 @@ function fmt(n: number) {
 function isToday(d: string) {
   return new Date(d).toDateString() === new Date().toDateString();
 }
-
 export default function FranchiseDashboardPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const monitorId = searchParams.get("id");
+  const [monitoredFranchise, setMonitoredFranchise] = useState<any>(null);
+
   const [franchiseOrders, setFranchiseOrders] = useState<any[]>([]);
   const [batches, setBatches]                 = useState<any[]>([]);
   const [salesOrders, setSalesOrders]         = useState<any[]>([]);
@@ -45,17 +51,22 @@ export default function FranchiseDashboardPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [foRes, bRes, soRes] = await Promise.allSettled([
-        franchiseOrdersApi.getAll(),
-        productBatchesApi.getAll(),
-        posApi.getOrders({ take: 100 }),
+      const fId = monitorId || undefined;
+      
+      const [foRes, bRes, soRes, fRes] = await Promise.allSettled([
+        franchiseOrdersApi.getAll({ franchiseId: fId }),
+        productBatchesApi.getAll({ franchiseId: fId }),
+        posApi.getOrders({ franchiseId: fId, take: 100 }),
+        monitorId ? franchiseApi.getById(monitorId) : Promise.reject("No monitor ID"),
       ]);
+
       if (foRes.status === "fulfilled") setFranchiseOrders(foRes.value.data ?? []);
       if (bRes.status  === "fulfilled") setBatches(bRes.value.data ?? []);
       if (soRes.status === "fulfilled") setSalesOrders(soRes.value.data ?? []);
+      if (fRes.status  === "fulfilled") setMonitoredFranchise(fRes.value.data);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, []);
+  }, [monitorId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -75,407 +86,213 @@ export default function FranchiseDashboardPage() {
   const totalOrderValue = franchiseOrders.reduce((s: number, o: any) => s + (o.totalAmount ?? 0), 0);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-6 space-y-6">
-
+    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 py-8 px-4">
+      
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
         <div>
-          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Franchise Dashboard</p>
-          <h1 className="text-2xl font-black text-white mt-0.5">
-            Welcome, {user?.fullName?.split(" ")[0] ?? "Franchise"} 👋
-          </h1>
-          <p className="text-sm text-zinc-500 mt-0.5">
-            {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 bg-[#FF6B00]/10 rounded-xl">
+              <BarChart3 size={24} className="text-[#FF6B00]" />
+            </div>
+            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+              Branch Dashboard
+            </h1>
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
+            {monitorId && monitoredFranchise ? `Monitoring: ${monitoredFranchise.name}` : `Welcome back, ${user?.fullName ?? "Partner"}`}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={fetchAll}
-            className="p-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 transition-colors"
-            title="Refresh"
+        <div className="flex gap-3">
+          <button 
+            onClick={fetchAll} 
+            className="p-3 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
           >
-            <RefreshCw className={clsx("w-4 h-4 text-zinc-400", loading && "animate-spin")} />
+            <RefreshCw size={18} className={clsx("text-slate-400", loading && "animate-spin")} />
           </button>
-          <Link
-            href="/franchise-orders"
-            className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-400 text-white text-sm font-bold rounded-xl transition-colors"
+          <Link 
+            href="/franchise-orders" 
+            className="flex items-center gap-2 bg-[#FF6B00] hover:bg-[#e66000] text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-orange-500/20 transition-all active:scale-95"
           >
-            <ShoppingCart className="w-4 h-4" />
-            New Order
+            <ShoppingCart size={18} /> New Stock Order
           </Link>
         </div>
       </div>
 
       {/* ── Expiry Alert Banner ── */}
       {expiryAlerts.length > 0 && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-5 h-5 text-red-400" />
+        <div className="bg-red-50 border border-red-100 rounded-3xl p-5 flex items-center justify-between gap-4 animate-in slide-in-from-top-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-6 h-6 text-red-500" />
             </div>
             <div>
-              <p className="text-sm font-bold text-red-300">
-                {expiryAlerts.filter((b) => b.expiryStatus === "EXPIRED").length > 0 && (
-                  <span>{expiryAlerts.filter((b) => b.expiryStatus === "EXPIRED").length} batch(es) EXPIRED · </span>
-                )}
-                {expiryAlerts.filter((b) => b.expiryStatus === "EXPIRING_SOON").length > 0 && (
-                  <span>{expiryAlerts.filter((b) => b.expiryStatus === "EXPIRING_SOON").length} batch(es) expiring soon</span>
-                )}
-              </p>
-              <p className="text-xs text-red-400/70 mt-0.5">
-                {expiryAlerts.slice(0, 3).map((b: any) => b.product?.name).filter(Boolean).join(", ")}
-                {expiryAlerts.length > 3 && ` +${expiryAlerts.length - 3} more`}
+              <p className="text-sm font-black text-red-900">Inventory Expiry Warning</p>
+              <p className="text-xs text-red-600 font-medium mt-0.5">
+                {expiryAlerts.length} batches require immediate attention or disposal.
               </p>
             </div>
           </div>
-          <Link
-            href="/production/batches"
-            className="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1 shrink-0"
-          >
-            View All <ArrowRight className="w-3 h-3" />
+          <Link href="/production/batches" className="px-4 py-2 bg-white border border-red-100 text-red-500 text-xs font-black rounded-xl hover:bg-red-50 transition-all uppercase tracking-widest">
+            Manage Stock
           </Link>
         </div>
       )}
 
-      {/* ── Stats Grid ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* ── Stats Grid (Matches Franchise Page) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          {
-            label: "Today Sales",
-            value: fmt(todaySales),
-            sub: `${todayOrderCount} transactions`,
-            icon: TrendingUp,
-            color: "text-emerald-400",
-            bg: "bg-emerald-500/10",
-            border: "border-emerald-500/20",
-          },
-          {
-            label: "Orders Today",
-            value: String(todayOrderCount),
-            sub: "via POS",
-            icon: ShoppingCart,
-            color: "text-blue-400",
-            bg: "bg-blue-500/10",
-            border: "border-blue-500/20",
-          },
-          {
-            label: "Low Stock",
-            value: String(lowStockBatches.length),
-            sub: lowStockBatches.length > 0 ? "needs reorder" : "all good",
-            icon: AlertTriangle,
-            color: lowStockBatches.length > 0 ? "text-amber-400" : "text-zinc-600",
-            bg: lowStockBatches.length > 0 ? "bg-amber-500/10" : "bg-zinc-800/60",
-            border: lowStockBatches.length > 0 ? "border-amber-500/20" : "border-zinc-700/50",
-          },
-          {
-            label: "Pending Orders",
-            value: String(pendingCount),
-            sub: "to home house",
-            icon: Clock,
-            color: pendingCount > 0 ? "text-orange-400" : "text-zinc-600",
-            bg: pendingCount > 0 ? "bg-orange-500/10" : "bg-zinc-800/60",
-            border: pendingCount > 0 ? "border-orange-500/20" : "border-zinc-700/50",
-          },
-        ].map((s) => (
-          <div key={s.label} className={clsx("bg-zinc-900 rounded-2xl border p-5", s.border)}>
-            <div className={clsx("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
-              <s.icon className={clsx("w-4 h-4", s.color)} />
+          { label: "Today Revenue", val: fmt(todaySales), sub: `${todayOrderCount} sales`, color: "bg-emerald-500" },
+          { label: "Pending Supply", val: pendingCount, sub: "Inbound orders", color: "bg-[#FF6B00]" },
+          { label: "Low Stock Items", val: lowStockBatches.length, sub: "Below 10 units", color: "bg-amber-500" },
+          { label: "Unpaid Deliveries", val: fmt(pendingPayment), sub: "Payable amount", color: "bg-red-500" },
+        ].map((stat, i) => (
+          <div key={i} className="bg-white dark:bg-card rounded-2xl border border-slate-100 dark:border-white/5 p-6 shadow-sm hover:shadow-md transition-all">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-3xl font-black text-slate-900 dark:text-white leading-none">{stat.val}</p>
+                <p className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">{stat.sub}</p>
+              </div>
+              <div className={`w-1.5 h-8 rounded-full ${stat.color} opacity-20`} />
             </div>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-[0.15em] font-bold">{s.label}</p>
-            <p className={clsx("text-2xl font-black mt-1", s.color)}>{s.value}</p>
-            <p className="text-[11px] text-zinc-600 mt-0.5">{s.sub}</p>
           </div>
         ))}
       </div>
 
-      {/* ── Main 2-col layout ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* LEFT 2/3: Stock + Active Orders */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* Stock Panel */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xs font-black text-zinc-400 uppercase tracking-[0.15em]">📦 Stock to Sell</h2>
-              <Link href="/franchise/stock" className="text-xs font-bold text-orange-400 hover:text-orange-300 flex items-center gap-1">
-                View All <ArrowRight className="w-3 h-3" />
+      {/* ── Main Layout ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Left: Inventory and Tracking */}
+        <div className="lg:col-span-2 space-y-8">
+          
+          <div className="bg-white dark:bg-card rounded-[2.5rem] border border-slate-100 dark:border-white/5 p-8 shadow-sm">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">Active Inventory</h3>
+                <p className="text-xs text-slate-500 font-medium mt-1">Batches currently available for sale.</p>
+              </div>
+              <Link href="/franchise/stock" className="text-xs font-black text-[#FF6B00] uppercase tracking-widest hover:underline">
+                View Full Stock
               </Link>
             </div>
 
             {loading ? (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center text-zinc-600 text-sm">
-                Loading stock...
-              </div>
+              <div className="py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs animate-pulse">Syncing Data...</div>
             ) : stockItems.length === 0 ? (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center">
-                <Package className="w-10 h-10 mx-auto text-zinc-700 mb-3" />
-                <p className="text-sm text-zinc-500 mb-4">No product batches available</p>
-                <Link
-                  href="/franchise-orders"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-white text-xs font-bold rounded-xl transition-colors"
-                >
-                  <ShoppingCart className="w-3.5 h-3.5" /> Order from Home
-                </Link>
+              <div className="py-20 text-center bg-slate-50 dark:bg-white/[0.02] rounded-[2rem] border-2 border-dashed border-slate-200">
+                <Package size={48} strokeWidth={1} className="mx-auto text-slate-200 mb-4" />
+                <p className="text-slate-500 font-bold">No stock detected in branch.</p>
+                <Link href="/franchise-orders" className="mt-4 inline-block text-[#FF6B00] font-black text-xs uppercase underline">Place first order</Link>
               </div>
             ) : (
-              <div className="space-y-2">
-                {stockItems.map((batch: any) => {
-                  const status = batch.expiryStatus ?? "NO_EXPIRY";
-                  const isLow  = batch.quantity < 10;
-                  return (
-                    <div
-                      key={batch.id}
-                      className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-4 flex items-center justify-between gap-4 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0">
-                          <Package className="w-5 h-5 text-zinc-500" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-white truncate">
-                            {batch.product?.name ?? "Unknown Product"}
-                          </p>
-                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <span className={clsx("text-xs font-bold", isLow ? "text-amber-400" : "text-zinc-400")}>
-                              {batch.quantity} {batch.product?.unit ?? "units"}
-                              {isLow && <span className="ml-1">⚠️</span>}
-                            </span>
-                            {(batch.expiryDate || batch.production?.expiryDate) && (
-                              <>
-                                <span className="text-zinc-700">·</span>
-                                <span className="text-xs text-zinc-500">
-                                  Exp: {new Date(batch.expiryDate || batch.production?.expiryDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
+              <div className="grid gap-3">
+                {stockItems.map((batch: any) => (
+                  <div key={batch.id} className="group flex items-center justify-between p-5 bg-slate-50 dark:bg-white/[0.03] hover:bg-white border border-transparent hover:border-[#FF6B00]/20 rounded-[1.5rem] transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/10 flex items-center justify-center text-slate-400 group-hover:text-[#FF6B00] transition-colors shadow-sm">
+                        <Package size={20} />
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={clsx(
-                          "text-[10px] font-bold px-2 py-1 rounded-lg border hidden sm:inline-flex",
-                          EXPIRY_BADGE[status] ?? EXPIRY_BADGE.NO_EXPIRY
-                        )}>
-                          {status === "NO_EXPIRY" ? "Safe" : status === "EXPIRING_SOON" ? "Exp. Soon" : status}
-                        </span>
-                        <Link
-                          href="/franchise-orders"
-                          className="px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
-                        >
-                          Order More
-                        </Link>
+                      <div>
+                        <p className="font-black text-slate-900 dark:text-white text-sm">{batch.product?.name}</p>
+                        <p className={clsx("text-xs font-bold", batch.quantity < 10 ? "text-amber-500" : "text-slate-400")}>
+                          {batch.quantity} {batch.product?.unit} available
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
+                    <div className={clsx(
+                      "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm",
+                      batch.expiryStatus === "EXPIRED" ? "bg-red-50 text-red-500 border-red-100" : 
+                      batch.expiryStatus === "EXPIRING_SOON" ? "bg-amber-50 text-amber-500 border-amber-100" :
+                      "bg-emerald-50 text-emerald-500 border-emerald-100"
+                    )}>
+                      {batch.expiryStatus === "NO_EXPIRY" ? "Valid" : batch.expiryStatus}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
 
-          {/* Active Order Tracking */}
+          {/* Shipment Pipeline */}
           {activeOrders.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xs font-black text-zinc-400 uppercase tracking-[0.15em]">🚚 Active Orders</h2>
-                <Link href="/franchise-orders" className="text-xs font-bold text-orange-400 hover:text-orange-300 flex items-center gap-1">
-                  All Orders <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] ml-2">Shipment Pipeline</h3>
               <div className="space-y-3">
-                {activeOrders.slice(0, 4).map((order: any) => {
-                  const stepIdx = STATUS_STEPS.indexOf(order.status as FranchiseOrderStatus);
-                  const isDelayed =
-                    order.expectedDispatchDate &&
-                    new Date(order.expectedDispatchDate) < new Date() &&
-                    !["DISPATCHED", "DELIVERED"].includes(order.status);
-
-                  const itemNames = (order.items ?? [])
-                    .slice(0, 2)
-                    .map((i: any) => i.product?.name ?? i.productName ?? "Product")
-                    .join(", ");
-
-                  return (
-                    <div key={order.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-                      {/* Row 1: ID + items + amount */}
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-mono text-zinc-500">
-                              #{order.id.slice(-6).toUpperCase()}
-                            </span>
-                            {isDelayed && (
-                              <span className="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md">
-                                ⚠️ DELAYED
-                              </span>
-                            )}
-                            {order.paymentType === "COD" && (
-                              <span className="text-[10px] font-bold text-zinc-500 bg-zinc-800 border border-zinc-700 px-1.5 py-0.5 rounded-md">
-                                COD
-                              </span>
-                            )}
-                          </div>
-                          {itemNames && (
-                            <p className="text-xs text-zinc-400 mt-1 truncate max-w-[280px]">{itemNames}</p>
-                          )}
-                        </div>
-                        <span className="text-sm font-black text-white shrink-0">{fmt(order.totalAmount ?? 0)}</span>
+                {activeOrders.slice(0, 3).map((order: any) => (
+                  <div key={order.id} className="bg-white dark:bg-card border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 flex items-center gap-6 shadow-sm">
+                    <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center text-[#FF6B00] shrink-0 border border-orange-100">
+                      <Truck size={24} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Order #{order.id.slice(-6)}</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">• {fmt(order.totalAmount)}</span>
                       </div>
-
-                      {/* Status Pipeline */}
-                      <div className="flex items-center">
-                        {STATUS_STEPS.map((step, i) => {
-                          const isPast    = i < stepIdx;
-                          const isCurrent = i === stepIdx;
-                          return (
-                            <div key={step} className="flex items-center flex-1">
-                              {i > 0 && (
-                                <div className={clsx("h-1 flex-1 rounded-full transition-all", isPast || isCurrent ? "bg-orange-500" : "bg-zinc-700")} />
-                              )}
-                              <div className={clsx(
-                                "w-2.5 h-2.5 rounded-full shrink-0 transition-all",
-                                isCurrent
-                                  ? "bg-orange-500 ring-2 ring-orange-500/30 ring-offset-1 ring-offset-zinc-900"
-                                  : isPast ? "bg-orange-500" : "bg-zinc-700"
-                              )} />
-                              {i < STATUS_STEPS.length - 1 && (
-                                <div className={clsx("h-1 flex-1 rounded-full", isPast ? "bg-orange-500" : "bg-zinc-700")} />
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Row 3: Current status + expected date */}
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-[11px] font-bold text-orange-400">
-                          {STATUS_LABELS[order.status as FranchiseOrderStatus]}
-                        </span>
-                        {order.expectedDispatchDate ? (
-                          <span className="text-[10px] text-zinc-600">
-                            Expected: {new Date(order.expectedDispatchDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-zinc-700">No dispatch date set</span>
-                        )}
+                      <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-[#FF6B00] shadow-[0_0_10px_rgba(255,107,0,0.3)] transition-all duration-1000"
+                          style={{ width: `${((STATUS_STEPS.indexOf(order.status) + 1) / STATUS_STEPS.length) * 100}%` }}
+                        />
                       </div>
                     </div>
-                  );
-                })}
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] font-black text-[#FF6B00] uppercase tracking-widest">{STATUS_LABELS[order.status as FranchiseOrderStatus]}</p>
+                      <p className="text-[9px] text-slate-400 font-bold mt-1 uppercase">ETA: {order.expectedDispatchDate ? new Date(order.expectedDispatchDate).toLocaleDateString() : "TBD"}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </div>
 
-        {/* RIGHT 1/3: Payment + Actions + Sales */}
-        <div className="space-y-4">
-
-          {/* Payment Summary */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <CreditCard className="w-4 h-4 text-zinc-500" />
-              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.15em]">💰 Payments</h3>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-500">Pending Payment</span>
-                <span className={clsx("text-sm font-black", pendingPayment > 0 ? "text-red-400" : "text-zinc-500")}>
-                  {fmt(pendingPayment)}
-                </span>
+        {/* Right: Quick Stats and Actions */}
+        <div className="space-y-8">
+          
+          {/* Revenue Focus Card */}
+          <div className="bg-gradient-to-br from-[#FF6B00] to-[#FF8C33] rounded-[2.5rem] p-8 shadow-xl shadow-orange-500/20 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-2xl rounded-full -mr-16 -mt-16" />
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-6">
+                <TrendingUp size={18} />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Live Revenue</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-500">Total Orders Value</span>
-                <span className="text-sm font-bold text-zinc-300">{fmt(totalOrderValue)}</span>
-              </div>
-              {pendingPayment > 0 && (
-                <div className="pt-1 border-t border-zinc-800">
-                  <p className="text-[10px] text-zinc-600 mb-2">Last delivered order unpaid</p>
-                </div>
-              )}
-            </div>
-            {pendingPayment > 0 && (
-              <Link
-                href="/franchise/payments"
-                className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 bg-orange-500 hover:bg-orange-400 text-white text-xs font-bold rounded-xl transition-colors"
-              >
-                <CreditCard className="w-3.5 h-3.5" /> Pay Now
+              <p className="text-4xl font-black tracking-tighter mb-1">{fmt(todaySales)}</p>
+              <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Generated Today</p>
+              
+              <Link href="/reports" className="mt-8 flex items-center justify-center gap-2 w-full py-4 bg-white text-[#FF6B00] rounded-2xl text-xs font-black uppercase tracking-widest transition-all hover:bg-orange-50 active:scale-95 shadow-lg">
+                View Reports <ArrowRight size={14} />
               </Link>
-            )}
-            <Link
-              href="/franchise/payments"
-              className="mt-2 w-full flex items-center justify-center gap-1 py-2 text-xs font-medium text-zinc-600 hover:text-zinc-300 transition-colors"
-            >
-              View Full Ledger <ArrowRight className="w-3 h-3" />
-            </Link>
+            </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-            <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.15em] mb-3">Quick Actions</h3>
+          {/* Quick Actions Menu */}
+          <div className="bg-white dark:bg-card border border-slate-100 dark:border-white/5 rounded-[2.5rem] p-8 shadow-sm">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-6">Operations</h3>
             <div className="space-y-1.5">
               {[
-                { label: "Place New Order",  href: "/franchise-orders",    icon: ShoppingCart, accent: "text-orange-400" },
-                { label: "Track Deliveries", href: "/franchise-orders",    icon: Truck,        accent: "text-blue-400" },
-                { label: "View Stock",       href: "/franchise/stock",     icon: Package,      accent: "text-emerald-400" },
-                { label: "Expiry Alerts",    href: "/production/batches",  icon: AlertTriangle, accent: expiryAlerts.length > 0 ? "text-red-400" : "text-zinc-600" },
-                { label: "Sales Reports",    href: "/reports",             icon: BarChart3,    accent: "text-violet-400" },
-              ].map((a) => (
-                <Link
-                  key={a.label}
-                  href={a.href}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 transition-colors group"
+                { label: "Sales Terminal", href: "/pos", icon: ShoppingCart, color: "text-blue-500", bg: "bg-blue-50" },
+                { label: "Restock Stock", href: "/franchise-orders", icon: Package, color: "text-[#FF6B00]", bg: "bg-orange-50" },
+                { label: "Branch Ledger", href: "/franchise/payments", icon: CreditCard, color: "text-emerald-500", bg: "bg-emerald-50" },
+                { label: "Manage Staff", href: "/franchise", icon: User, color: "text-purple-500", bg: "bg-purple-50" },
+              ].map((link) => (
+                <Link 
+                  key={link.label}
+                  href={link.href}
+                  className="group flex items-center justify-between p-4 bg-slate-50 dark:bg-white/[0.03] hover:bg-white border border-transparent hover:border-slate-100 rounded-2xl transition-all"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <a.icon className={clsx("w-4 h-4", a.accent)} />
-                    <span className="text-sm text-zinc-400 group-hover:text-white transition-colors">{a.label}</span>
+                  <div className="flex items-center gap-4">
+                    <div className={clsx("p-2 rounded-xl border border-transparent group-hover:border-slate-100 transition-all", link.color, link.bg, "dark:bg-slate-900")}>
+                      <link.icon size={18} />
+                    </div>
+                    <span className="text-sm font-black text-slate-600 dark:text-zinc-400 group-hover:text-slate-900 transition-colors">{link.label}</span>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-zinc-700 group-hover:text-zinc-500 transition-colors" />
+                  <ChevronRight size={16} className="text-slate-300 group-hover:text-[#FF6B00] transition-colors" />
                 </Link>
               ))}
             </div>
           </div>
-
-          {/* Sales Mini */}
-          <div className="bg-gradient-to-br from-orange-500/10 via-orange-600/5 to-transparent border border-orange-500/20 rounded-2xl p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <BarChart3 className="w-4 h-4 text-orange-400" />
-              <h3 className="text-xs font-black text-orange-400/80 uppercase tracking-[0.15em]">📊 Today Sales</h3>
-            </div>
-            <p className="text-3xl font-black text-white mt-2">{fmt(todaySales)}</p>
-            <p className="text-xs text-zinc-500 mt-1">{todayOrderCount} order{todayOrderCount !== 1 ? "s" : ""} · via POS</p>
-            <Link
-              href="/reports"
-              className="mt-4 flex items-center gap-1 text-xs font-bold text-orange-400 hover:text-orange-300 transition-colors"
-            >
-              Full Reports <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-
-          {/* Batch Expiry Summary */}
-          {expiryAlerts.length > 0 && (
-            <div className="bg-zinc-900 border border-red-500/20 rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <PackageCheck className="w-4 h-4 text-red-400" />
-                <h3 className="text-xs font-black text-red-400/80 uppercase tracking-[0.15em]">⏰ Expiry Alerts</h3>
-              </div>
-              <div className="space-y-2">
-                {expiryAlerts.slice(0, 4).map((b: any) => (
-                  <div key={b.id} className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-zinc-300 truncate">{b.product?.name ?? "Product"}</span>
-                    <span className={clsx(
-                      "text-[10px] font-bold px-2 py-0.5 rounded border shrink-0",
-                      b.expiryStatus === "EXPIRED" ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                    )}>
-                      {b.expiryStatus === "EXPIRED" ? "EXPIRED" : "Exp. Soon"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <Link href="/production/batches" className="mt-3 flex items-center gap-1 text-xs font-bold text-red-400 hover:text-red-300">
-                View All <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-          )}
         </div>
       </div>
     </div>
