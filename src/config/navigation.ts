@@ -44,10 +44,10 @@ export interface MenuSection {
   items: MenuItem[];
 }
 
-const ALL_ROLES = ["SUPER_ADMIN", "FRANCHISE_ADMIN", "ADMIN", "MANAGER", "STAFF", "FRANCHISEE"];
-const ADMIN_ROLES = ["SUPER_ADMIN", "ADMIN", "MANAGER"];
+const ALL_ROLES = ["SUPER_ADMIN", "FRANCHISE_ADMIN"];
+const ADMIN_ROLES = ["SUPER_ADMIN", "FRANCHISE_ADMIN"];
 const SUPER_ONLY = ["SUPER_ADMIN"];
-const FRANCHISE_ROLES = ["SUPER_ADMIN", "FRANCHISE_ADMIN", "ADMIN", "MANAGER"];
+const FRANCHISE_ROLES = ["SUPER_ADMIN", "FRANCHISE_ADMIN"];
 
 export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
   // 1. Overview
@@ -287,7 +287,7 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         href: "/hr/payroll",
         roles: ADMIN_ROLES,
       },
-       {
+      {
         icon: Landmark,
         label: "Apply Leaves",
         href: "/hr/leaves",
@@ -321,8 +321,8 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
 export const menuItems = SUPER_ADMIN_SIDEBAR.flatMap((s) => s.items);
 
 // ─── FRANCHISE_ADMIN dedicated sidebar ────────────────────────────────────────
-const FRANCHISE_ADMIN_ONLY = ["SUPER_ADMIN", "ADMIN", "FRANCHISE_ADMIN", "MANAGER", "FRANCHISEE"];
-const FRANCHISE_ALL = ["SUPER_ADMIN", "ADMIN", "FRANCHISE_ADMIN", "MANAGER", "FRANCHISEE", "STAFF"];
+const FRANCHISE_ADMIN_ONLY = ["SUPER_ADMIN", "FRANCHISE_ADMIN"];
+const FRANCHISE_ALL = ["SUPER_ADMIN", "FRANCHISE_ADMIN"];
 
 export const franchiseMenuSections: MenuSection[] = [
   {

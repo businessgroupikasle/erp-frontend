@@ -74,12 +74,8 @@ export default function Sidebar() {
     );
   };
 
-  const userRole = user?.role?.toUpperCase() || "STAFF";
-  const isFranchiseUser = userRole === "ADMIN" ||
-                          userRole === "FRANCHISE_ADMIN" || 
-                          userRole === "FRANCHISEE" || 
-                          userRole === "MANAGER" ||
-                          (userRole === "STAFF" && user?.franchiseId && user.franchiseId !== "hq-001");
+  const userRole = user?.role?.toUpperCase() || "";
+  const isFranchiseUser = userRole === "FRANCHISE_ADMIN";
 
   const sections = isFranchiseUser ? franchiseMenuSections : SUPER_ADMIN_SIDEBAR;
 

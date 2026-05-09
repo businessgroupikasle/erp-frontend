@@ -140,6 +140,7 @@ export const franchiseApi = {
   create: (data: any) => api.post('/api/franchise', data),
   update: (id: string, data: any) => api.patch(`/api/franchise/${id}`, data),
   delete: (id: string) => api.delete(`/api/franchise/${id}`),
+  verifyPassword: (id: string, password: string) => api.post(`/api/franchise/${id}/verify-password`, { password }),
   
   // User Management within Franchise
   getUsers: (id: string) => api.get(`/api/franchise/${id}/users`),
@@ -310,8 +311,8 @@ export const franchiseOrdersApi = {
 
 // --- Product Batches (Phase 6) ---
 export const productBatchesApi = {
-  getAll: (productId?: string) =>
-    api.get('/api/production/batches', { params: productId ? { productId } : {} }),
+  getAll: (params: { productId?: string; franchiseId?: string } = {}) =>
+    api.get('/api/production/batches', { params }),
 };
 
 // --- Vendor Ledger ---
