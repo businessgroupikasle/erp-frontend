@@ -52,7 +52,7 @@ export default function FranchisePage() {
   const [newPassword, setNewPassword] = useState("");
   
   const [showAddUser, setShowAddUser] = useState(false);
-  const [userForm, setUserForm] = useState({ fullName: "", email: "", password: "", roleId: "FRANCHISEE" });
+  const [userForm, setUserForm] = useState({ fullName: "", email: "", password: "", roleId: "FRANCHISE_ADMIN" });
   const [roles, setRoles] = useState<any[]>([]);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showUserPassword, setShowUserPassword] = useState(false);
@@ -178,7 +178,7 @@ export default function FranchisePage() {
 
       setShowAddUser(false);
       setEditingUser(null);
-      setUserForm({ fullName: "", email: "", password: "", roleId: "FRANCHISEE" });
+      setUserForm({ fullName: "", email: "", password: "", roleId: "FRANCHISE_ADMIN" });
       fetchUsers(editing.id);
       setNotification({
         type: 'success',
@@ -781,7 +781,7 @@ export default function FranchisePage() {
                             onChange={(e) => setUserForm(u => ({ ...u, roleId: e.target.value }))}
                             className="w-full px-4 py-3 bg-white dark:bg-[#1A1C24] border border-slate-200 dark:border-white/5 rounded-xl focus:outline-none font-bold text-sm appearance-none cursor-pointer"
                           >
-                            {roles.filter(r => ["FRANCHISEE", "MANAGER", "STAFF"].includes(r.name)).map(r => (
+                            {roles.filter(r => ["SUPER_ADMIN", "FRANCHISE_ADMIN"].includes(r.name)).map(r => (
                               <option key={r.id} value={r.id || r.name}>{r.name}</option>
                             ))}
                           </select>
@@ -821,7 +821,7 @@ export default function FranchisePage() {
                                       fullName: u.fullName || "",
                                       email: u.email || "",
                                       password: "",
-                                      roleId: u.roleId || (u.role?.id || "FRANCHISEE")
+                                      roleId: u.roleId || (u.role?.id || "FRANCHISE_ADMIN")
                                     });
                                     setShowAddUser(true);
                                   }}

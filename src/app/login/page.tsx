@@ -32,8 +32,6 @@ export default function LoginPage() {
 
       if (role === 'FRANCHISE_ADMIN') {
         router.push("/franchise/dashboard");
-      } else if (role === 'STAFF') {
-        router.push("/pos");
       } else {
         router.push("/");
       }

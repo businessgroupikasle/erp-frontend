@@ -418,7 +418,7 @@ export default function RefrensHeader() {
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-[11px] font-black uppercase text-gray-700 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 transition-colors tracking-widest"
                   >
                     <LogOut size={15} className="text-gray-400 shrink-0" />
-                    Terminate Session
+                    Log Out
                   </button>
                 </div>
               </div>

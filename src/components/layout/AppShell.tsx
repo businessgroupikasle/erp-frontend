@@ -30,19 +30,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       ).toUpperCase();
 
       if (isPublicPath) {
-        if (role === "FRANCHISE_ADMIN" || role === "FRANCHISEE") {
+        if (role === "FRANCHISE_ADMIN") {
           router.replace("/franchise/dashboard");
-        } else if (role === "STAFF") {
-          router.replace("/pos");
         } else {
           router.replace("/");
         }
       } else if (pathname === "/") {
-        // Handle direct access to root path
-        if (role === "FRANCHISE_ADMIN" || role === "FRANCHISEE" || role === "MANAGER") {
+        if (role === "FRANCHISE_ADMIN") {
           router.replace("/franchise/dashboard");
-        } else if (role === "STAFF") {
-          router.replace("/pos");
         }
       }
     }
