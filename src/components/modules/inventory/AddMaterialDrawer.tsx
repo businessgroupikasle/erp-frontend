@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { 
-  X, Save, Sparkles, ChevronDown, 
+import {
+  X, Save, Sparkles, ChevronDown,
   AlertCircle, CheckCircle2, Package, Info, Barcode
 } from "lucide-react";
 import { rawMaterialsApi, franchiseApi, vendorsApi } from "@/lib/api";
 import { ITEM_CATEGORIES, UNITS } from "@/lib/constants";
 import { useAuth } from "@/context/AuthContext";
 import { clsx } from "clsx";
-import { 
+import {
   generateEnterpriseSKU, getGSTByHSN
 } from "@/lib/utils/erp";
 
@@ -28,7 +28,7 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
-  
+
   const [form, setForm] = useState({
     name: "",
     sku: "",
@@ -67,7 +67,7 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
           const fetchedFranchises = fRes.data || [];
           setFranchises(fetchedFranchises);
           setVendors(vRes.data || []);
-          
+
           if (fetchedFranchises.length > 0 && !form.franchiseId) {
             setForm(prev => ({ ...prev, franchiseId: fetchedFranchises[0].id }));
           }
@@ -126,11 +126,11 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
 
   return createPortal(
     <div className="fixed inset-0 z-[20000] flex justify-end overflow-hidden">
-      <div 
+      <div
         className="absolute inset-0 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-500"
         onClick={onClose}
       />
-      
+
       <div className="relative w-full max-w-2xl bg-white dark:bg-[#0f1117] h-full shadow-[-20px_0_50px_rgba(0,0,0,0.1)] animate-in slide-in-from-right duration-500 flex flex-col">
         {/* Header */}
         <div className="bg-white/80 dark:bg-[#0f1117]/80 backdrop-blur-xl border-b border-slate-100 dark:border-white/5 p-8 flex items-center justify-between shrink-0">
@@ -161,12 +161,12 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
           <div className="space-y-6">
             <div className="space-y-3">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Material Name *</label>
-              <input 
-                type="text" 
-                placeholder="e.g. Organic Basmati Rice" 
+              <input
+                type="text"
+                placeholder="e.g. Organic Basmati Rice"
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="w-full px-8 py-5 text-base font-black bg-slate-50 dark:bg-white/5 border-2 border-transparent focus:border-orange-500/20 rounded-[1.5rem] outline-none dark:text-white transition-all shadow-sm" 
+                className="w-full px-8 py-5 text-base font-black bg-slate-50 dark:bg-white/5 border-2 border-transparent focus:border-orange-500/20 rounded-[1.5rem] outline-none dark:text-white transition-all shadow-sm"
               />
             </div>
 
@@ -174,8 +174,8 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Category</label>
                 <div className="relative">
-                  <select 
-                    value={form.category} 
+                  <select
+                    value={form.category}
                     onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                     className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-2 border-transparent focus:border-orange-500/20 rounded-[1.2rem] px-6 py-4 text-xs font-black dark:text-white transition-all shadow-sm"
                   >
@@ -187,8 +187,8 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Sourcing Unit</label>
                 <div className="relative">
-                  <select 
-                    value={form.unit} 
+                  <select
+                    value={form.unit}
                     onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
                     className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-2 border-transparent focus:border-orange-500/20 rounded-[1.2rem] px-6 py-4 text-xs font-black dark:text-white transition-all shadow-sm"
                   >
@@ -199,24 +199,24 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-6">//
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 flex items-center gap-2">
                   <Barcode size={12} className="text-indigo-500" /> HSN Code
                 </label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="4 or 8 digits"
                   value={form.hsnCode}
                   onChange={(e) => setForm((f) => ({ ...f, hsnCode: e.target.value }))}
-                  className="w-full px-6 py-4 text-xs font-black bg-slate-50 dark:bg-white/5 border-2 border-transparent focus:border-indigo-500/20 rounded-[1.2rem] outline-none dark:text-white transition-all" 
+                  className="w-full px-6 py-4 text-xs font-black bg-slate-50 dark:bg-white/5 border-2 border-transparent focus:border-indigo-500/20 rounded-[1.2rem] outline-none dark:text-white transition-all"
                 />
               </div>
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Tax Rate (GST)</label>
                 <div className="relative">
-                  <select 
-                    value={form.gstRate} 
+                  <select
+                    value={form.gstRate}
                     onChange={(e) => setForm((f) => ({ ...f, gstRate: Number(e.target.value) }))}
                     className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-2 border-transparent focus:border-indigo-500/20 rounded-[1.2rem] px-6 py-4 text-xs font-black dark:text-white transition-all"
                   >
@@ -232,14 +232,14 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
 
         {/* Footer */}
         <div className="sticky bottom-0 bg-white/80 dark:bg-[#0f1117]/80 backdrop-blur-2xl border-t border-slate-100 dark:border-white/5 p-10 flex gap-6 shrink-0">
-          <button 
+          <button
             type="button"
             onClick={onClose}
             className="flex-1 py-5 border-2 border-slate-100 dark:border-white/5 text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 rounded-[2rem] transition-all"
           >
             Discard
           </button>
-          <button 
+          <button
             type="button"
             onClick={handleSave}
             disabled={saving}
