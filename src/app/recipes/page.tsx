@@ -2,247 +2,41 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  ChefHat, Plus, X, Search, Package, ArrowRight, ArrowLeft,
-  IndianRupee, Scale, RefreshCw, Trash2, ChevronDown, Edit2, Download, Play,
+  ChefHat, Plus, Search, Package, ArrowRight,
+  RefreshCw, Trash2, Edit2, Download, Play, ChevronRight, Scale
 } from "lucide-react";
 import { clsx } from "clsx";
 import { recipesApi, productsFullApi, rawMaterialsApi } from "@/lib/api";
 import Link from "next/link";
-
-interface RecipeIngredient {
-  inventoryItemId: string;
-  itemName: string;
-  unit: string;
-  quantityRequired: number;
-}
-
+import { useRouter } from "next/navigation";
 import { useToast } from "@/context/ToastContext";
-import { UNITS } from "@/lib/constants";
 
 export default function RecipesPage() {
+  const router = useRouter();
   const { showToast } = useToast();
   const [recipes, setRecipes] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
-  const [selected, setSelected] = useState<any>(null);
-
-  // Form state
-  const [productId, setProductId] = useState("");
-  const [recipeName, setRecipeName] = useState("");
-  const [yieldQty, setYieldQty] = useState(1);
-  const [batchSize, setBatchSize] = useState(1);
-  const [instructions, setInstructions] = useState("");
-  const [ingredients, setIngredients] = useState<RecipeIngredient[]>([
-    { inventoryItemId: "", itemName: "", unit: "kg", quantityRequired: 0 },
-  ]);
-  const [saving, setSaving] = useState(false);
-
-  // Quick Add state
-  const [showQuickProduct, setShowQuickProduct] = useState(false);
-  const [showQuickMaterial, setShowQuickMaterial] = useState(false);
-  const [quickName, setQuickName] = useState("");
-  const [quickPrice, setQuickPrice] = useState(0);
-  const [quickUnit, setQuickUnit] = useState<string>(UNITS[0]);
-  const [addingQuick, setAddingQuick] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [rRes, pRes, mRes] = await Promise.all([
-        recipesApi.getAll(),
-        productsFullApi.getAll(),
-        rawMaterialsApi.getAll(),
-      ]);
-      setRecipes(rRes.data ?? []);
-      setProducts(pRes.data ?? []);
-      setMaterials(mRes.data ?? []);
+      const res = await recipesApi.getAll();
+      setRecipes(res.data ?? []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const downloadAllRecipesCSV = () => {
-    if (recipes.length === 0) return;
-    const headers = ["Recipe Name", "Output Product", "Yield", "Ingredients Count", "Instructions"];
-    const rows = recipes.map(r => [
-      r.name,
-      r.product?.name ?? "N/A",
-      `${r.yieldQty} units`,
-      r.recipeItems?.length ?? 0,
-      r.instructions?.replace(/,/g, ";") ?? ""
-    ]);
-    
-    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `all_recipes_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast("Recipes list downloaded", "success");
-  };
-
-  const downloadSingleRecipe = (recipe: any) => {
-    const headers = ["Ingredient", "Quantity", "Unit"];
-    const rows = (recipe.recipeItems ?? []).map((item: any) => [
-      item.inventoryItem?.name ?? item.inventoryItemId,
-      item.quantityRequired,
-      item.unit ?? "kg"
-    ]);
-
-    const csvContent = [
-      [`Recipe: ${recipe.name}`],
-      [`Product: ${recipe.product?.name ?? "N/A"}`],
-      [`Yield: ${recipe.yieldQty} units`],
-      [],
-      headers,
-      ...rows,
-      [],
-      [`Instructions: ${recipe.instructions ?? "None"}`]
-    ].map(e => e.join(",")).join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `recipe_${recipe.name.toLowerCase().replace(/\s+/g, '_')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast("Recipe downloaded", "success");
-  };
-
-  const addIngredient = () =>
-    setIngredients((prev) => [...prev, { inventoryItemId: "", itemName: "", unit: "kg", quantityRequired: 0 }]);
-
-  const removeIngredient = (i: number) =>
-    setIngredients((prev) => prev.filter((_, idx) => idx !== i));
-
-  const updateIngredient = (i: number, field: keyof RecipeIngredient, value: any) =>
-    setIngredients((prev) => prev.map((ing, idx) => {
-      if (idx !== i) return ing;
-      if (field === "inventoryItemId") {
-        // Restriction: Prevent duplicates
-        if (prev.some((item, index) => index !== i && item.inventoryItemId === value)) {
-          showToast("This material is already in the recipe. Please adjust its quantity instead.", "warning");
-          return ing;
-        }
-        const mat = materials.find((m: any) => m.id === value);
-        return { ...ing, inventoryItemId: value, itemName: mat?.name ?? "", unit: mat?.unit ?? "kg" };
-      }
-      return { ...ing, [field]: value };
-    }));
-
-  const handleProductChange = (pid: string) => {
-    setProductId(pid);
-    const prod = products.find((p: any) => p.id === pid);
-    if (prod) setRecipeName(`${prod.name} Recipe`);
-  };
-
-  const handleCreate = async () => {
-    if (!productId || !recipeName || ingredients.some((i) => !i.inventoryItemId || i.quantityRequired <= 0)) return;
-    setSaving(true);
-    try {
-      await recipesApi.upsert({
-        productId,
-        name: recipeName,
-        yieldQty,
-        batchSize,
-        instructions,
-        items: ingredients.map(({ inventoryItemId, quantityRequired, unit }) => ({
-          inventoryItemId, quantityRequired, unit,
-        })),
-      });
-      setShowForm(false);
-      resetForm();
-      fetchAll();
-    } catch (e) { console.error(e); }
-    finally { setSaving(false); }
-  };
-
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!confirm("Delete this recipe?")) return;
     try {
       await recipesApi.delete(id);
       fetchAll();
+      showToast("Recipe deleted", "success");
     } catch (e) { console.error(e); }
-  };
-
-  const resetForm = () => {
-    setEditing(null);
-    setProductId(""); setRecipeName(""); setYieldQty(1); setBatchSize(1); setInstructions("");
-    setIngredients([{ inventoryItemId: "", itemName: "", unit: "kg", quantityRequired: 0 }]);
-  };
-
-  const [quickCategory, setQuickCategory] = useState("BATTER");
-
-  const handleQuickProduct = async () => {
-    if (!quickName || quickPrice <= 0) return;
-    setAddingQuick(true);
-    try {
-      const res = await productsFullApi.create({
-        name: quickName,
-        basePrice: quickPrice,
-        category: quickCategory === "OTHER" ? "OTHER" : quickCategory,
-        taxPercent: 5,
-        isActive: true
-      });
-      const newProd = res.data;
-      await fetchAll();
-      setProductId(newProd.id);
-      setRecipeName(`${newProd.name} Recipe`);
-      setShowQuickProduct(false);
-      setQuickName(""); setQuickPrice(0);
-    } catch (e) { console.error(e); }
-    finally { setAddingQuick(false); }
-  };
-
-  const handleQuickMaterial = async () => {
-    if (!quickName) return;
-
-    // Restriction: Pre-check if exists
-    const exists = materials.find(m => m.name.toLowerCase() === quickName.toLowerCase());
-    if (exists) {
-      showToast(`A material named "${quickName}" already exists. Please select it from the dropdown.`, "info");
-      return;
-    }
-
-    setAddingQuick(true);
-    try {
-      await rawMaterialsApi.create({
-        name: quickName,
-        unit: quickUnit,
-        category: "RAW_MATERIAL"
-      });
-      await fetchAll();
-      setShowQuickMaterial(false);
-      setQuickName(""); setQuickUnit("kg");
-      showToast("Material created successfully", "success");
-    } catch (e) { console.error(e); }
-    finally { setAddingQuick(false); }
-  };
-
-  const openEdit = (recipe: any) => {
-    setEditing(recipe);
-    setProductId(recipe.productId ?? "");
-    setRecipeName(recipe.name ?? "");
-    setYieldQty(recipe.yieldQty ?? 1);
-    setBatchSize(recipe.batchSize ?? 1);
-    setInstructions(recipe.instructions ?? "");
-    setIngredients(
-      (recipe.recipeItems ?? []).map((item: any) => ({
-        inventoryItemId: item.inventoryItemId,
-        itemName: item.inventoryItem?.name ?? "",
-        unit: item.unit ?? item.inventoryItem?.unit ?? "kg",
-        quantityRequired: item.quantityRequired,
-      }))
-    );
-    setShowForm(true);
   };
 
   const filtered = recipes.filter((r) =>
@@ -255,390 +49,149 @@ export default function RecipesPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-            <ChefHat size={22} className="text-[#F97316]" /> Recipe Management
+             Recipe Management
           </h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
-            Define how raw materials combine to produce finished goods
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 font-medium">
+            Manage your formulas, ingredient ratios, and production standards
           </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={downloadAllRecipesCSV} className="flex items-center gap-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-slate-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all">
-            <Download size={16} /> Export CSV
+          <button onClick={fetchAll} className="p-2.5 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
+            <RefreshCw size={18} className="text-gray-400" />
           </button>
-          <button onClick={fetchAll} className="p-2 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
-            <RefreshCw size={16} className="text-gray-400" />
-          </button>
-          <button
-            onClick={() => { resetForm(); setShowForm(true); }}
-            className="flex items-center gap-2 bg-[#F97316] hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all"
+          <Link
+            href="/recipes/new"
+            className="flex items-center gap-2 bg-[#F97316] hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-black transition-all shadow-lg shadow-orange-500/20"
           >
-            <Plus size={16} /> New Recipe
-          </button>
-
+            <Plus size={18} strokeWidth={3} /> New Recipe
+          </Link>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Stats Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Recipes", value: recipes.length, color: "text-indigo-500", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
-          { label: "Products Covered", value: new Set(recipes.map((r) => r.productId)).size, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
-          { label: "Ingredients Used", value: recipes.reduce((s, r) => s + (r.recipeItems?.length ?? 0), 0), color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-500/10" },
+          { label: "Total Formulas", value: recipes.length, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-500/10" },
+          { label: "Products Covered", value: new Set(recipes.map((r) => r.productId)).size, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-500/10" },
+          { label: "Avg Ingredients", value: recipes.length ? (recipes.reduce((s, r) => s + (r.recipeItems?.length ?? 0), 0) / recipes.length).toFixed(1) : 0, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
+          { label: "Active Production", value: "8", color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-500/10" },
         ].map((stat) => (
-          <div key={stat.label} className="bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 p-4">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{stat.label}</p>
-            <p className={clsx("text-3xl font-black mt-1", stat.color)}>{stat.value}</p>
+          <div key={stat.label} className="bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 p-5 shadow-sm">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{stat.label}</p>
+            <p className={clsx("text-2xl font-black", stat.color)}>{stat.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search recipes..."
-          className="w-full pl-9 pr-4 py-2.5 text-sm bg-white dark:bg-card border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20" />
-      </div>
-
-      {/* Recipe Cards */}
-      {loading ? (
-        <div className="py-20 text-center text-gray-400 text-sm">Loading recipes...</div>
-      ) : filtered.length === 0 ? (
-        <div className="py-20 text-center text-gray-300 dark:text-slate-600 space-y-4">
-          <ChefHat size={48} strokeWidth={1} className="mx-auto" />
-          <div>
-            <p className="text-sm font-semibold">No recipes yet.</p>
-            <p className="text-xs text-gray-500 mt-1">Start by defining how your materials combine.</p>
+      {/* Main Content */}
+      <div className="bg-white dark:bg-card rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-50 dark:border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+              placeholder="Search by recipe name or product..."
+              className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50/50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all" 
+            />
           </div>
-          <button
-            onClick={() => { resetForm(); setShowForm(true); }}
-            className="inline-flex items-center gap-2 bg-[#F97316] hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-orange-500/20"
-          >
-            <Plus size={16} /> Create Your First Recipe
-          </button>
+          <div className="flex items-center gap-2">
+             <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-all">
+                <Download size={14} /> Export CSV
+             </button>
+          </div>
         </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {filtered.map((recipe) => (
-            <div
-              key={recipe.id}
-              className="bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 p-5 hover:shadow-md transition-all cursor-pointer"
-              onClick={() => setSelected(selected?.id === recipe.id ? null : recipe)}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-2xl shrink-0">
-                    🍽️
-                  </div>
-                  <div>
-                    <h3 className="font-black text-gray-900 dark:text-white text-sm">{recipe.name}</h3>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Product: {recipe.product?.name ?? "—"}</p>
-                    <div className="mt-1 flex items-center gap-2">
-                       <span className="text-[10px] font-black bg-orange-100 dark:bg-orange-900/40 text-[#F97316] px-1.5 py-0.5 rounded uppercase">
-                         Batch: {recipe.batchSize || recipe.yieldQty} {recipe.recipeItems[0]?.unit || 'kg'}
-                       </span>
-                       <span className="text-[10px] font-black bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 px-1.5 py-0.5 rounded uppercase">
-                         Cost: ₹{(recipe.totalCost || 0).toLocaleString()}
-                       </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="text-right">
-                    <p className="text-[10px] text-gray-400 uppercase font-bold">Yield</p>
-                    <p className="text-sm font-black text-gray-900 dark:text-white">{recipe.yieldQty} units</p>
-                  </div>
-                  <Link
-                    href={`/production?recipeId=${recipe.id}`}
-                    className="p-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/10 text-gray-400 hover:text-indigo-500 transition-all"
-                    title="Produce Now"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Play size={14} fill="currentColor" />
-                  </Link>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); downloadSingleRecipe(recipe); }}
-                    className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/10 text-gray-400 hover:text-blue-500 transition-all"
-                    title="Download Recipe"
-                  >
-                    <Download size={14} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); openEdit(recipe); }}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-[#F97316] transition-all"
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(recipe.id); }}
-                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 text-gray-400 hover:text-red-500 transition-all"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
 
-              {/* Price tag */}
-              {recipe.product?.basePrice != null && (
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                   <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Unit Cost (Production)</p>
-                      <p className="text-sm font-black text-slate-900 dark:text-white">₹{(recipe.costPerUnit || 0).toFixed(2)}</p>
-                   </div>
-                   <div className="p-3 bg-[#F97316]/5 rounded-xl border border-[#F97316]/10">
-                      <p className="text-[9px] font-black text-[#F97316] uppercase tracking-widest mb-1">Selling Price</p>
-                      <p className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1">
-                        <IndianRupee size={12} /> {recipe.product.basePrice}
-                      </p>
-                   </div>
-                </div>
-              )}
-
-              {/* Ingredients */}
-              {selected?.id === recipe.id && (
-                <div className="mt-4 border-t border-gray-100 dark:border-white/5 pt-4">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1">
-                    <Scale size={10} /> Ingredients ({recipe.recipeItems?.length ?? 0})
-                  </p>
-                  <div className="space-y-2">
-                    {(recipe.recipeItems ?? []).map((item: any, i: number) => (
-                      <div key={i} className="flex items-center justify-between text-[12px] bg-gray-50 dark:bg-white/5 rounded-lg px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <Package size={11} className="text-gray-400" />
-                          <span className="font-medium text-gray-700 dark:text-slate-300">
-                            {item.inventoryItem?.name ?? item.inventoryItemId}
-                          </span>
+        {loading ? (
+          <div className="py-20 text-center">
+             <RefreshCw size={32} className="mx-auto text-orange-500 animate-spin opacity-20" />
+             <p className="mt-4 text-sm font-bold text-gray-400">Syncing Recipes...</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="py-20 text-center">
+             <ChefHat size={48} strokeWidth={1} className="mx-auto text-gray-200" />
+             <p className="mt-4 text-sm font-bold text-gray-400">No recipes found matching your search.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-gray-50/50 dark:bg-white/5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  <th className="px-6 py-4">Recipe Detail</th>
+                  <th className="px-6 py-4">Standard Output</th>
+                  <th className="px-6 py-4">Materials</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+                {filtered.map((recipe) => (
+                  <tr 
+                    key={recipe.id} 
+                    onClick={() => router.push(`/recipes/${recipe.id}`)}
+                    className="group hover:bg-orange-50/30 dark:hover:bg-orange-500/5 cursor-pointer transition-all"
+                  >
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 text-orange-600 flex items-center justify-center font-black text-xs shrink-0">
+                          {recipe.name.substring(0, 2).toUpperCase()}
                         </div>
-                        <span className="font-bold text-gray-900 dark:text-white">
-                          {item.quantityRequired} {item.unit}
-                        </span>
+                        <div>
+                          <p className="text-sm font-black text-gray-900 dark:text-white group-hover:text-orange-600 transition-colors">{recipe.name}</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase mt-0.5 tracking-tight">Product: {recipe.product?.name}</p>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                  {recipe.instructions && (
-                    <p className="mt-3 text-[11px] text-gray-500 dark:text-slate-400 italic">{recipe.instructions}</p>
-                  )}
-                  <Link 
-                    href={`/production?recipeId=${recipe.id}`}
-                    className="mt-3 flex items-center gap-1 text-[11px] text-[#F97316] font-bold hover:underline"
-                  >
-                    <ArrowRight size={11} /> Go to Production to execute this recipe
-                  </Link>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Create Recipe Modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-[#12141c] rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
-              <h2 className="text-lg font-black text-gray-900 dark:text-white">{editing ? "Edit Recipe" : "New Recipe"}</h2>
-              <button onClick={() => setShowForm(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">
-                <X size={18} className="text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6 space-y-5">
-              {/* Product */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-gray-600 dark:text-slate-400">Product (Output) *</label>
-                  <button onClick={() => setShowQuickProduct(true)} className="text-[10px] font-black text-[#F97316] uppercase tracking-tight hover:underline">
-                    + Add New Product
-                  </button>
-                </div>
-                <div className="relative">
-                  <select value={productId} onChange={(e) => handleProductChange(e.target.value)}
-                    className="w-full appearance-none bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-[#F97316]/20">
-                    <option value="">Select product this recipe produces...</option>
-                    {products.map((p: any) => <option key={p.id} value={p.id}>{p.name} — ₹{p.basePrice}/unit</option>)}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-1">
-                  <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1.5">Recipe Name *</label>
-                  <input value={recipeName} onChange={(e) => setRecipeName(e.target.value)} placeholder="e.g. Idly Batter Recipe"
-                    className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
-                </div>
-                <div className="col-span-1">
-                  <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1.5">Standard Batch Size (e.g. 50kg)</label>
-                  <input type="number" min={0.01} step={0.01} value={batchSize} onChange={(e) => setBatchSize(Number(e.target.value))}
-                    className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1.5">Yield Quantity (output units per batch)</label>
-                <input type="number" min={0.01} step={0.01} value={yieldQty} onChange={(e) => setYieldQty(Number(e.target.value))}
-                  className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
-              </div>
-
-              {/* Ingredients */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-gray-600 dark:text-slate-400">Ingredients *</label>
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => setShowQuickMaterial(true)} className="text-[10px] font-black text-[#F97316] uppercase tracking-tight hover:underline">
-                      + New Material
-                    </button>
-                    <div className="w-px h-3 bg-gray-200 dark:bg-white/10" />
-                    <button onClick={addIngredient} className="flex items-center gap-1 text-[11px] font-bold text-[#F97316] hover:text-orange-400">
-                      <Plus size={12} /> Add Row
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {ingredients.map((ing, i) => (
-                    <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                      <div className="col-span-6">
-                        <select value={ing.inventoryItemId} onChange={(e) => updateIngredient(i, "inventoryItemId", e.target.value)}
-                          className="w-full appearance-none bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-[#F97316]/20">
-                          <option value="">Select material...</option>
-                          {materials
-                            .filter(m => !ingredients.some((ing, idx) => idx !== i && ing.inventoryItemId === m.id))
-                            .map((m: any) => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}
-                        </select>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black text-gray-700 dark:text-slate-200">{recipe.yieldQty} Units</span>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase">per {recipe.batchSize} {recipe.recipeItems?.[0]?.unit || 'KG'} Batch</span>
                       </div>
-                      <div className="col-span-3">
-                        <input type="number" min={0.001} step={0.001} placeholder="Qty" value={ing.quantityRequired}
-                          onChange={(e) => updateIngredient(i, "quantityRequired", Number(e.target.value))}
-                          className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-[11px] text-gray-500 font-bold">{ing.unit || "—"}</span>
-                      </div>
-                      <div className="col-span-1 flex justify-end">
-                        {ingredients.length > 1 && (
-                          <button onClick={() => removeIngredient(i)} className="text-red-400 hover:text-red-500"><X size={14} /></button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Instructions */}
-              <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1.5">Instructions (optional)</label>
-                <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={3}
-                  placeholder="Describe how to prepare this recipe..."
-                  className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20 resize-none" />
-              </div>
-
-              {/* Summary */}
-              {productId && (
-                <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800/30 rounded-2xl p-4">
-                  <p className="text-xs font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest mb-2">Recipe Summary</p>
-                  <p className="text-sm text-gray-700 dark:text-slate-300">
-                    <strong>{ingredients.filter(i => i.inventoryItemId).length}</strong> ingredient(s) → produces <strong>{yieldQty}</strong> unit(s) of <strong>{products.find(p => p.id === productId)?.name}</strong> per batch
-                  </p>
-                </div>
-              )}
-            </div>
-            <div className="p-6 pt-0 flex gap-3 justify-end">
-              <button onClick={() => setShowForm(false)} className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Cancel</button>
-              <button onClick={handleCreate} disabled={saving || !productId || !recipeName}
-                className="px-6 py-2.5 bg-[#F97316] hover:bg-orange-600 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-all">
-                {saving ? "Saving..." : editing ? "Update Recipe" : "Save Recipe"}
-              </button>
-            </div>
+                    </td>
+                    <td className="px-6 py-5">
+                       <div className="flex items-center gap-1">
+                          <span className="text-sm font-black text-gray-700 dark:text-slate-200">{recipe.recipeItems?.length || 0}</span>
+                          <span className="text-[10px] text-gray-400 font-bold uppercase">Ingredients</span>
+                       </div>
+                    </td>
+                    <td className="px-6 py-5">
+                       <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase rounded-lg border border-emerald-100 dark:border-emerald-500/20">
+                          Production Ready
+                       </span>
+                    </td>
+                    <td className="px-6 py-5">
+                       <div className="flex items-center justify-end gap-2">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); router.push(`/production?recipeId=${recipe.id}`); }}
+                            className="p-2 text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-xl transition-all"
+                            title="Start Production"
+                          >
+                            <Play size={16} fill="currentColor" />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); router.push(`/recipes/${recipe.id}/edit`); }}
+                            className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-xl transition-all"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button 
+                            onClick={(e) => handleDelete(recipe.id, e)}
+                            className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                          <div className="w-8 flex justify-center text-gray-300 group-hover:text-orange-400 transition-all">
+                             <ChevronRight size={20} />
+                          </div>
+                       </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-      )}
-      {/* Quick Add Product Modal */}
-      {showQuickProduct && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="bg-white dark:bg-[#1a1c26] rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-            <h3 className="text-lg font-black text-gray-900 dark:text-white">Quick Add Product</h3>
-            <div>
-              <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Product Name</label>
-              <input value={quickName} onChange={(e) => setQuickName(e.target.value)} placeholder="e.g. Idly Batter"
-                className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
-            </div>
-            <div>
-              <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Base Price (₹)</label>
-              <input type="number" value={quickPrice} onChange={(e) => setQuickPrice(Number(e.target.value))}
-                className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Category</label>
-              <div className="flex flex-wrap gap-2">
-                <button 
-                  onClick={() => setQuickCategory("BATTER")}
-                  className={clsx("px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all", 
-                    quickCategory === "BATTER" ? "bg-[#F97316] text-white shadow-lg shadow-orange-500/20" : "bg-gray-50 dark:bg-white/5 text-gray-400 hover:bg-gray-100")}
-                >
-                  Batter
-                </button>
-                {quickCategory !== "BATTER" && quickCategory !== "OTHER" ? (
-                  <div className="flex items-center gap-2 bg-[#F97316] text-white px-4 py-2 rounded-xl shadow-lg animate-in zoom-in-95">
-                    <span className="font-black text-[10px] uppercase tracking-widest">{quickCategory}</span>
-                    <button onClick={() => setQuickCategory("BATTER")} className="opacity-60 hover:opacity-100 transition-opacity">
-                      <ArrowLeft size={12} />
-                    </button>
-                  </div>
-                ) : (
-                  <button 
-                    onClick={() => setQuickCategory("OTHER")}
-                    className={clsx("px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border border-dashed", 
-                      quickCategory === "OTHER" ? "border-orange-500 text-orange-500 bg-orange-50" : "border-gray-200 dark:border-white/10 text-gray-400 hover:border-gray-300")}
-                  >
-                    + Add New
-                  </button>
-                )}
-              </div>
-              {quickCategory === "OTHER" && (
-                <input 
-                  autoFocus
-                  onChange={(e) => setQuickCategory(e.target.value.toUpperCase())}
-                  placeholder="e.g. PICKLE"
-                  className="mt-2 w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border-2 border-orange-500/20 rounded-xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 animate-in slide-in-from-top-2"
-                />
-              )}
-            </div>
-            <div className="flex gap-2 pt-2">
-              <button onClick={() => setShowQuickProduct(false)} className="flex-1 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all">Cancel</button>
-              <button onClick={handleQuickProduct} disabled={addingQuick || !quickName || quickPrice <= 0}
-                className="flex-[2] py-2 bg-[#F97316] hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50">
-                {addingQuick ? "Adding..." : "Add Product"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Add Material Modal */}
-      {showQuickMaterial && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="bg-white dark:bg-[#1a1c26] rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-            <h3 className="text-lg font-black text-gray-900 dark:text-white">Quick Add Material</h3>
-            <div>
-              <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Material Name</label>
-              <input value={quickName} onChange={(e) => setQuickName(e.target.value)} placeholder="e.g. Rice Flour"
-                className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20" />
-            </div>
-            <div>
-              <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Unit</label>
-              <select value={quickUnit} onChange={(e) => setQuickUnit(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F97316]/20">
-                {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-              </select>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <button onClick={() => setShowQuickMaterial(false)} className="flex-1 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all">Cancel</button>
-              <button onClick={handleQuickMaterial} disabled={addingQuick || !quickName}
-                className="flex-[2] py-2 bg-[#F97316] hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50">
-                {addingQuick ? "Adding..." : "Add Material"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

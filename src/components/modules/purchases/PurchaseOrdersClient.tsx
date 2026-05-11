@@ -7,6 +7,7 @@ import {
   ChevronDown, Store, Clock, CheckCircle2, XCircle, AlertCircle,
   Trash2, Wallet, RefreshCw, ChevronLeft, ChevronRight, Download, X, Settings
 } from "lucide-react";
+import Link from "next/link";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday, startOfDay, isBefore } from "date-fns";
 import { vendorsApi, purchaseOrdersApi, rawMaterialsApi, settingsApi, accountsApi } from "../../../lib/api";
 import { clsx } from "clsx";
@@ -660,13 +661,22 @@ export default function PurchaseOrdersClient() {
 
               <div className="space-y-4 relative z-10">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Order Items</p>
+                  <div className="flex items-center gap-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Order Items</p>
+                    <button 
+                      type="button"
+                      onClick={() => setShowAddMaterialDrawer(true)}
+                      className="text-[10px] font-black text-orange-500 hover:text-orange-600 uppercase tracking-widest flex items-center gap-1 transition-all"
+                    >
+                      <Plus size={10} /> Add New Material
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={addItem}
                     className="text-[10px] font-black text-white bg-orange-500 px-4 py-2 rounded-xl uppercase tracking-widest flex items-center gap-2 hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20"
                   >
-                    <Plus size={14} /> Add Material
+                    <Plus size={14} /> Add Row
                   </button>
                 </div>
 

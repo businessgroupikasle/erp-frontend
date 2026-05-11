@@ -10,6 +10,8 @@ import { vendorsApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { clsx } from "clsx";
 import { toast } from "react-hot-toast";
+import Link from "next/link";
+
 
 interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -66,6 +68,7 @@ export default function RecordPaymentModal({
       await vendorsApi.recordPayment(payingPO.vendorId, {
         amount: paymentAmount,
         accountId: selectedAccountId,
+        type: "INVOICE_LINKED",
         note: paymentNote || `Payment for PO #${payingPO.id.substring(0, 8)}`,
         paymentMode,
         referenceId: payingPO.id
@@ -171,7 +174,17 @@ export default function RecordPaymentModal({
 
           {/* Account Selector */}
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Withdraw From Account</label>
+            <div className="flex items-center justify-between ml-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Withdraw From Account</label>
+              <Link 
+                href="/banking/accounts" 
+                target="_blank"
+                className="text-[10px] font-black text-indigo-500 hover:text-indigo-600 uppercase tracking-widest flex items-center gap-1 transition-all"
+              >
+                Add Money <ArrowRight size={10} />
+              </Link>
+            </div>
+
             <div className="grid grid-cols-1 gap-3">
               {accounts.map(acc => {
                 const isActive = selectedAccountId === acc.id;
