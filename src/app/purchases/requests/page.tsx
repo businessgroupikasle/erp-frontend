@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, FileText, CheckCircle2, XCircle } from "lucide-react";
 import api from "@/lib/api";
+import { toast } from "react-hot-toast";
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-700",
@@ -57,7 +58,7 @@ export default function PurchaseRequestsPage() {
       setShowForm(false);
       setForm({ department: "KITCHEN", notes: "", items: [{ inventoryItemId: "", quantity: "1", unit: "pcs", notes: "" }] });
       loadData();
-    } catch (e: any) { alert(e.response?.data?.error || "Error creating PR") }
+    } catch (e: any) { toast.error(e.response?.data?.error || "Error creating PR") }
   }
 
   async function updateStatus(id: string, status: string) {

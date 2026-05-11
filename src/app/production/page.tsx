@@ -10,6 +10,7 @@ import {
 import { clsx } from "clsx";
 import { productionApi, recipesApi, franchiseApi, inventoryApi, customersApi } from "@/lib/api";
 import { useSearchParams } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 const STATUS_CONFIG: Record<string, { color: string, bg: string, border: string, dot: string, icon: any }> = {
   COMPLETED:   { color: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "border-emerald-200 dark:border-emerald-500/20", dot: "bg-emerald-500", icon: CheckCircle2 },
@@ -114,7 +115,7 @@ function ProductionContent() {
       await productionApi.stopBatch(id);
       fetchAll();
     } catch (e: any) {
-      alert(e?.response?.data?.error ?? "Failed to stop production");
+      toast.error(e?.response?.data?.error ?? "Failed to stop production");
     } finally { setSaving(false); }
   };
 
@@ -125,7 +126,7 @@ function ProductionContent() {
       await productionApi.approveBatch(id);
       fetchAll();
     } catch (e: any) {
-      alert(e?.response?.data?.error ?? "Failed to approve production");
+      toast.error(e?.response?.data?.error ?? "Failed to approve production");
     } finally { setSaving(false); }
   };
 

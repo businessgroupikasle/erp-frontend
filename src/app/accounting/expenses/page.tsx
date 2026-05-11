@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { accountingApi, accountsApi } from "@/lib/api";
+import { toast } from "react-hot-toast";
 
 type ExpenseCategory = "RENT" | "SALARY" | "TRANSPORT" | "UTILITIES" | "OTHER";
 
@@ -186,7 +187,7 @@ export default function ExpensesPage() {
       setPayAmount("");
       await fetchData();
     } catch (err: any) {
-      alert(err?.response?.data?.error || "Payment failed");
+      toast.error(err?.response?.data?.error || "Payment failed");
     } finally {
       setIsPaying(false);
     }
@@ -211,7 +212,7 @@ export default function ExpensesPage() {
       await accountingApi.deleteExpense(id);
       await fetchData();
     } catch (err: any) {
-      alert(err?.response?.data?.error || "Failed to cancel");
+      toast.error(err?.response?.data?.error || "Failed to cancel");
     }
   };
 

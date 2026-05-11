@@ -75,7 +75,7 @@ export const usersApi = {
 
 // --- Billing & POS ---
 export const posApi = {
-  checkout: (data: any) => api.post('/api/orders', data),
+  checkout: (data: any) => api.post('/api/orders/checkout', data),
   getOrders: (params: any = {}) => api.get('/api/orders', { params }),
   getOrderById: (id: string) => api.get(`/api/orders/${id}`),
   getInvoice: (orderId: string) => api.get(`/api/invoices/${orderId}`),

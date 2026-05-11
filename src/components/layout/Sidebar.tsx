@@ -174,7 +174,7 @@ export default function Sidebar() {
                         section.title.toUpperCase() === "PRODUCTION" ? "text-rose-500/80 dark:text-rose-400" :
                         section.title.toUpperCase() === "PROCUREMENT" ? "text-amber-500/80 dark:text-amber-400" :
                         section.title.toUpperCase() === "FRANCHISE" ? "text-purple-500/80 dark:text-purple-400" :
-                        section.title.toUpperCase() === "ACCOUNTS" ? "text-teal-500/80 dark:text-teal-400" :
+                        section.title.toUpperCase() === "ACCOUNTING" ? "text-teal-500/80 dark:text-teal-400" :
                         section.title.toUpperCase() === "REPORTS" ? "text-indigo-500/80 dark:text-indigo-400" :
                         section.title.toUpperCase() === "HR & PAYROLL" ? "text-cyan-500/80 dark:text-cyan-400" :
                         "text-slate-400 dark:text-slate-600 group-hover/section:text-slate-500"

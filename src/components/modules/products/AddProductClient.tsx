@@ -64,9 +64,9 @@ export default function AddProductClient() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-6 animate-in fade-in duration-700">
+    <div className="max-w-4xl mx-auto py-4 px-6 animate-in fade-in duration-700">
       {/* Elegant Header */}
-      <div className="flex items-center justify-between mb-12 border-b border-slate-100 pb-8">
+      <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
         <div className="flex items-center gap-4">
           <Link 
             href="/products" 
@@ -91,7 +91,7 @@ export default function AddProductClient() {
       )}
 
       {/* Modern Integrated Form */}
-      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/30 p-8 space-y-12">
+      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/30 p-6 space-y-8">
         
         {/* Section: Core Identity */}
         <div className="space-y-6">

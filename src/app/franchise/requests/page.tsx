@@ -12,6 +12,7 @@ import {
   franchiseApi,
 } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "react-hot-toast";
 
 type ReqStatus = "PENDING" | "APPROVED" | "REJECTED" | "FULFILLED";
 
@@ -116,7 +117,7 @@ export default function FranchiseRequestsPage() {
       await franchiseProductRequestsApi.delete(id);
       fetchAll();
     } catch (e: any) {
-      alert(e?.response?.data?.error ?? "Failed to delete request");
+      toast.error(e?.response?.data?.error ?? "Failed to delete request");
     }
   };
 

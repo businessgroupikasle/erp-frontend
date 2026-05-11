@@ -9,6 +9,7 @@ import {
 import { clsx } from "clsx";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "react-hot-toast";
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING:      "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-700/20",
@@ -105,7 +106,7 @@ export default function FranchiseOrdersPage() {
       await api.patch(`/api/franchise-orders/${orderId}/status`, { status: nextStatus });
       fetchAll();
     } catch (e: any) {
-      alert(e?.response?.data?.error ?? "Failed to update status.");
+      toast.error(e?.response?.data?.error ?? "Failed to update status.");
     }
   };
 
@@ -114,7 +115,7 @@ export default function FranchiseOrdersPage() {
       await api.post(`/api/franchise-orders/${orderId}/payment`, { amount: 0 });
       fetchAll();
     } catch (e: any) {
-      alert(e?.response?.data?.error ?? "Failed to record payment.");
+      toast.error(e?.response?.data?.error ?? "Failed to record payment.");
     }
   };
 
@@ -122,15 +123,12 @@ export default function FranchiseOrdersPage() {
     try {
       const res = await api.get(`/api/franchise-orders/${orderId}/invoice`);
       const inv = res.data;
-      alert(
-        `Invoice: ${inv.invoiceNumber}\n` +
-        `Franchise: ${inv.franchise}\n` +
-        `Subtotal: ₹${inv.subtotal}\n` +
-        `CGST: ₹${inv.cgst}  SGST: ₹${inv.sgst}\n` +
-        `Grand Total: ₹${inv.grandTotal}`
+      toast.success(
+        `Invoice: ${inv.invoiceNumber} | Total: ₹${inv.grandTotal}`,
+        { duration: 5000 }
       );
     } catch (e: any) {
-      alert(e?.response?.data?.error ?? "Invoice not available yet (must be paid).");
+      toast.error(e?.response?.data?.error ?? "Invoice not available yet (must be paid).");
     }
   };
 

@@ -12,6 +12,7 @@ import {
 import { clsx } from "clsx";
 import { franchiseApi, userGovernanceApi, default as api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "react-hot-toast";
 
 const STATUS_STYLES: Record<string, string> = {
   ACTIVE:   "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
@@ -164,11 +165,11 @@ export default function FranchisePage() {
         if (res.data.isValid) {
           window.location.href = `/franchise/dashboard?id=${f.id}`;
         } else {
-          alert('Incorrect Dashboard Password');
+          toast.error('Incorrect Dashboard Password');
         }
       } catch (e) {
         console.error(e);
-        alert('Verification failed. Please try again.');
+        toast.error('Verification failed. Please try again.');
       }
     } else {
       window.location.href = `/franchise/dashboard`;

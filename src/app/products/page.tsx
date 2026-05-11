@@ -47,13 +47,13 @@ export default function ProductsPage() {
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="w-2 h-8 bg-orange-500 rounded-full" />
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Catalogs</h1>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Products</h1>
           </div>
           <p className="text-sm font-medium text-slate-400 max-w-md leading-relaxed">
             Manage your digital product universe. From raw ingredients to final consumer goods.
           </p>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <button
             onClick={fetchProducts}
@@ -116,8 +116,8 @@ export default function ProductsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
           {filtered.map((product) => (
-            <div 
-              key={product.id} 
+            <div
+              key={product.id}
               className="group bg-white border border-slate-100 rounded-[1.5rem] p-5 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-2 hover:border-orange-200 transition-all duration-500 flex flex-col relative"
             >
               {/* Corner Actions */}
@@ -150,7 +150,7 @@ export default function ProductsPage() {
               <h3 className="font-black text-slate-900 text-base leading-tight mb-1 group-hover:text-orange-600 transition-colors line-clamp-1">
                 {product.name}
               </h3>
-              
+
               <p className="text-[11px] font-medium text-slate-400 line-clamp-2 mb-4 min-h-[1.5rem]">
                 {product.description || "No description provided."}
               </p>
@@ -171,7 +171,7 @@ export default function ProductsPage() {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="text-right">
                   <p className="text-[7px] font-black text-slate-200 uppercase tracking-widest mb-0.5">SKU</p>
                   <p className="text-[8px] font-mono font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded-md">
