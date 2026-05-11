@@ -52,7 +52,7 @@ export default function VendorInvoicesPage() {
 
   const handleCreate = async () => {
     if (!form.invoiceNumber || !form.poId || !form.amount) {
-      alert("Fill all required fields");
+      toast.error("Fill all required fields");
       return;
     }
     setSubmitting(true);
@@ -68,7 +68,7 @@ export default function VendorInvoicesPage() {
       setForm({ vendorId: "", poId: "", grnId: "", invoiceNumber: "", amount: "" });
       fetchData();
     } catch {
-      alert("Failed to create invoice");
+      toast.error("Failed to create invoice");
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +80,7 @@ export default function VendorInvoicesPage() {
       await vendorInvoicesApi.match(invoiceId);
       fetchData();
     } catch {
-      alert("Matching failed");
+      toast.error("Matching failed");
     } finally {
       setMatchingId(null);
     }
@@ -93,10 +93,10 @@ export default function VendorInvoicesPage() {
     if (!confirm("Approve this invoice? This will recognize the liability in the vendor ledger and utilize any available advances.")) return;
     try {
       await vendorInvoicesApi.approve(invoiceId);
-      toast?.success ? toast.success("Invoice approved and ledger updated") : alert("Invoice approved and ledger updated");
+      toast.success("Invoice approved and ledger updated");
       fetchData();
     } catch (e: any) {
-      alert(e.response?.data?.error || "Approval failed");
+      toast.error(e.response?.data?.error || "Approval failed");
     }
   };
 

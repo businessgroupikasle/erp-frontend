@@ -7,12 +7,15 @@ import {
   ChevronDown, Store, Clock, CheckCircle2, XCircle, AlertCircle,
   Trash2, Wallet, RefreshCw, ChevronLeft, ChevronRight, Download, X, Settings
 } from "lucide-react";
+import Link from "next/link";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday, startOfDay, isBefore } from "date-fns";
 import { vendorsApi, purchaseOrdersApi, rawMaterialsApi, settingsApi, accountsApi } from "../../../lib/api";
 import { clsx } from "clsx";
 import GSTInvoice from "../../documents/GSTInvoice";
 import api from "../../../lib/api";
 import AddMaterialDrawer from "../inventory/AddMaterialDrawer";
+import RecordPaymentModal from "./RecordPaymentModal";
+import { toast } from "react-hot-toast";
 
 interface POItem {
   inventoryItemId: string;
@@ -106,6 +109,9 @@ export default function PurchaseOrdersClient() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [showAddMaterialDrawer, setShowAddMaterialDrawer] = useState(false);
+  const [showAdvancedLogistics, setShowAdvancedLogistics] = useState(false);
+  const [materialSearchQueries, setMaterialSearchQueries] = useState<string[]>([""]);
+  const [activeMaterialDropdown, setActiveMaterialDropdown] = useState<number | null>(null);
 
   useEffect(() => {
     if (showForm || showPaymentModal || viewingDetailsPO) {
@@ -170,11 +176,15 @@ export default function PurchaseOrdersClient() {
     }
   }, [vendorId, selectedVendor]);
 
-  const addItem = () =>
+  const addItem = () => {
     setItems((prev) => [...prev, { inventoryItemId: "", itemName: "", unit: "kg", quantity: 0, price: 0, hsnCode: "", gstRate: 5 }]);
+    setMaterialSearchQueries(prev => [...prev, ""]);
+  };
 
-  const removeItem = (i: number) =>
+  const removeItem = (i: number) => {
     setItems((prev) => prev.filter((_, idx) => idx !== i));
+    setMaterialSearchQueries(prev => prev.filter((_, idx) => idx !== i));
+  };
 
   const updateItem = (i: number, field: keyof POItem, value: any) =>
     setItems((prev) => prev.map((it, idx) => {
@@ -288,7 +298,7 @@ export default function PurchaseOrdersClient() {
     }
   };
 
-  const handleCreate = async (status: string = "PENDING_APPROVAL") => {
+  const handleCreate = async (status: string = "APPROVED") => {
     if (!vendorId || items.some((it) => !it.inventoryItemId || it.quantity <= 0 || it.price <= 0)) return;
     setSaving(true);
     try {
@@ -310,9 +320,10 @@ export default function PurchaseOrdersClient() {
       setVendorId(""); setExpectedDate(""); setNotes(""); setInternalNotes(""); setVendorNotes(""); setDeliveryInstructions(""); setFreightCost(0); setUnloadingCost(0);
       setManualGst(false); setCustomCgst(0); setCustomSgst(0); setCustomIgst(0);
       setItems([{ inventoryItemId: "", itemName: "", unit: "kg", quantity: 0, price: 0, hsnCode: "", gstRate: 5 }]);
+      setMaterialSearchQueries([""]);
       fetchAll();
     } catch (e: any) {
-      alert(e?.response?.data?.error || "Failed to create Purchase Order.");
+      toast.error(e?.response?.data?.error || "Failed to create Purchase Order.");
     } finally { setSaving(false); }
   };
 
@@ -321,7 +332,7 @@ export default function PurchaseOrdersClient() {
       await purchaseOrdersApi.applyAdvance(id);
       fetchAll();
     } catch (e: any) {
-      alert(e?.response?.data?.error || "Failed to apply advance.");
+      toast.error(e?.response?.data?.error || "Failed to apply advance.");
     }
   };
 
@@ -331,7 +342,7 @@ export default function PurchaseOrdersClient() {
       await purchaseOrdersApi.cancel(id);
       fetchAll();
     } catch (e: any) {
-      alert(e?.response?.data?.error ?? "Failed to cancel PO");
+      toast.error(e?.response?.data?.error ?? "Failed to cancel PO");
     }
   };
 
@@ -341,30 +352,8 @@ export default function PurchaseOrdersClient() {
       await api.patch(`/api/purchase-orders/${id}/approve`);
       fetchAll();
     } catch (e: any) {
-      alert(e?.response?.data?.error ?? "Failed to approve PO");
+      toast.error(e?.response?.data?.error ?? "Failed to approve PO");
     }
-  };
-
-  const handleRecordPayment = async () => {
-    if (!payingPO || paymentAmount <= 0 || !paymentMode) return;
-    setSaving(true);
-    try {
-      const res = await vendorsApi.recordPayment(payingPO.vendorId, {
-        amount: paymentAmount,
-        accountId: selectedAccountId,
-        note: paymentNote || `Payment for PO #${payingPO.id.substring(0, 8)}`,
-        paymentMode,
-        referenceId: payingPO.id
-      });
-      setLastPayment(res.data);
-      setShowPaymentModal(false);
-      setPayingPO(null);
-      setPaymentAmount(0);
-      setPaymentNote("");
-      fetchAll();
-    } catch (e: any) {
-      alert(e.response?.data?.error || "Failed to record payment.");
-    } finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
@@ -373,7 +362,7 @@ export default function PurchaseOrdersClient() {
       await purchaseOrdersApi.delete(id);
       fetchAll();
     } catch (e: any) {
-      alert(e?.response?.data?.error ?? "Failed to delete PO");
+      toast.error(e?.response?.data?.error ?? "Failed to delete PO");
     }
   };
 
@@ -409,7 +398,7 @@ export default function PurchaseOrdersClient() {
           { label: "Total Spend", value: formatCurrency(totalSpend), icon: ShoppingCart, color: "text-indigo-500", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
           { label: "Pending GRNs", value: String(orders.filter(o => o.status === 'APPROVED' || o.status === 'SENT').length), icon: Store, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-500/10" },
           { label: "Pending Invoices", value: String(orders.filter(o => o.invoiceStatus === 'PENDING').length), icon: AlertCircle, color: "text-red-500", bg: "bg-red-50 dark:bg-red-500/10" },
-          { label: "Pending Approval", value: String(orders.filter(o => o.status === 'PENDING_APPROVAL').length), icon: Clock, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-500/10" },
+
         ].map((card) => (
           <div key={card.label} className="bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-white/5 p-6 flex items-center gap-5">
             <div className={clsx("w-14 h-14 rounded-2xl flex items-center justify-center shrink-0", card.bg)}><card.icon size={24} className={card.color} /></div>
@@ -471,8 +460,27 @@ export default function PurchaseOrdersClient() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-xs font-black text-gray-900 dark:text-white">{formatCurrency(po.totalAmount)}</p>
-                      <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-tighter">Items: {po.poItems?.length || 0}</p>
+                      <div className="flex flex-col gap-1">
+                        <p className="text-xs font-black text-gray-900 dark:text-white">{formatCurrency(po.totalAmount)}</p>
+                        <div className="flex flex-col gap-1 w-24">
+                          <div className="flex justify-between items-center text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                            <span>Fulfillment</span>
+                            <span>{Math.round((po.receivedItemsCount || 0) / (po.totalItemsCount || 1) * 100)}%</span>
+                          </div>
+                          <div className="w-full h-1 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                            <div 
+                              className={clsx(
+                                "h-full transition-all duration-500",
+                                po.status === 'RECEIVED' ? "bg-emerald-500" : "bg-orange-500"
+                              )} 
+                              style={{ width: `${Math.min(100, (po.receivedItemsCount || 0) / (po.totalItemsCount || 1) * 100)}%` }}
+                            />
+                          </div>
+                          <p className="text-[7px] font-bold text-slate-400 uppercase">
+                            {po.receivedItemsCount || 0} / {po.totalItemsCount || 0} units
+                          </p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className={clsx("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider whitespace-nowrap", STATUS_STYLES[po.status] || STATUS_STYLES.DRAFT)}>
@@ -504,20 +512,11 @@ export default function PurchaseOrdersClient() {
                       <button type="button" onClick={() => setViewingDetailsPO(po)} className="text-indigo-600 hover:text-indigo-700 text-[10px] font-black uppercase tracking-widest">View Details</button>
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {po.status === 'DRAFT' && (
-                          <button type="button" onClick={() => handleApprove(po.id)} className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all">Submit</button>
-                        )}
-                        {po.status === 'PENDING_APPROVAL' && (
-                          <div className="flex gap-1">
-                            <button type="button" onClick={() => handleApprove(po.id)} className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all">Approve</button>
-                            <button type="button" onClick={() => handleCancel(po.id)} className="px-3 py-1.5 bg-red-50 dark:bg-red-500/10 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all">Reject</button>
-                          </div>
-                        )}
-                        {po.status === 'APPROVED' && (
-                          <button type="button" onClick={async () => { await purchaseOrdersApi.updateStatus(po.id, 'SENT'); fetchAll(); }} className="px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all">Send to Vendor</button>
-                        )}
-                        {(po.status === 'SENT' || po.status === 'PARTIALLY_RECEIVED') && (
+                      <div className="flex items-center justify-end gap-1 transition-opacity">
+                        {/* Workflow simplified: removed Submit/Approve/Reject actions */}
+
+
+                        {(po.status === 'APPROVED' || po.status === 'SENT' || po.status === 'PARTIALLY_RECEIVED') && (
                           <button type="button" onClick={() => window.location.href = `/purchases/grn?poId=${po.id}`} className="px-3 py-1.5 bg-orange-50 dark:bg-orange-500/10 text-orange-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-orange-100 transition-all">Receive Goods</button>
                         )}
 
@@ -550,357 +549,374 @@ export default function PurchaseOrdersClient() {
       </div>
 
       {showForm && mounted && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => setShowForm(false)} />
-          <div className="bg-white dark:bg-[#0f1117] rounded-[2.5rem] shadow-2xl w-full max-w-4xl p-8 space-y-8 relative my-8">
-
-            <div className="flex items-center justify-between">
+          <div className="bg-white dark:bg-[#0f1117] w-full max-w-5xl max-h-[95vh] rounded-[3rem] shadow-2xl relative overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+            {/* Modal Header (Sticky-like) */}
+            <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 dark:border-white/5">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
-                  <ShoppingCart size={22} />
+                <div className="w-12 h-12 rounded-2xl bg-orange-500 shadow-lg shadow-orange-500/20 flex items-center justify-center text-white">
+                  <ShoppingCart size={24} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">New Purchase Order</h2>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Purchase Management</p>
+                  <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">New Purchase Order</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Purchase Management</p>
                 </div>
               </div>
-              <button type="button" onClick={() => setShowForm(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-all text-slate-300 hover:text-slate-500">
-                <X size={24} />
+              <button onClick={() => setShowForm(false)} className="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 transition-colors">
+                <X size={20} />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-[200]">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Vendor *</label>
-                <div className="relative">
-                  <select
-                    value={vendorId}
-                    onChange={(e) => setVendorId(e.target.value)}
-                    className="w-full h-14 bg-slate-50 dark:bg-white/5 px-5 rounded-2xl font-bold text-sm outline-none focus:ring-4 ring-orange-500/10 appearance-none border border-slate-200 dark:border-white/10"
-                  >
-                    <option value="">Choose Supplier...</option>
-                    {vendors.map(v => <option key={v.id} value={v.id}>{v.name} (Bal: ₹{v.balance || 0})</option>)}
-                  </select>
-                  <ChevronDown size={16} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                </div>
-                {selectedVendor && (
-                  <div className="flex items-center gap-2 mt-2 ml-1">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Terms:</span>
-                    <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded uppercase">{selectedVendor.paymentTerms || 'Net 30'}</span>
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2 relative">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Expected Delivery Date</label>
-                <button
-                  onClick={() => setShowDatePicker(!showDatePicker)}
-                  className="w-full h-14 bg-slate-50 dark:bg-white/5 px-5 rounded-2xl font-bold text-sm flex items-center justify-between border border-slate-200 dark:border-white/10 hover:border-orange-500/50 transition-all"
-                >
-                  <span className={clsx(expectedDate ? "text-slate-900 dark:text-white" : "text-slate-400")}>
-                    {expectedDate ? format(new Date(expectedDate), "dd/MM/yyyy") : "Select Date"}
-                  </span>
-                  <CalendarIcon size={18} className="text-slate-400" />
-                </button>
-
-                {showDatePicker && (
-                  <div
-                    className="absolute top-full left-0 mt-3 z-[1000] isolate opacity-100 bg-white dark:bg-[#1a1c23] border border-slate-200 dark:border-white/10 rounded-[2.5rem] shadow-[0_25px_60px_rgba(0,0,0,0.4)] p-6 w-[320px] animate-in fade-in slide-in-from-top-2 duration-200"
-                    style={{ backgroundColor: 'white' }}
-                  >
-                    <div className="flex items-center justify-between mb-4 px-2">
-                      <p className="text-[13px] font-black uppercase tracking-widest text-slate-800 dark:text-white">{format(viewDate, "MMMM yyyy")}</p>
-                      <div className="flex gap-1">
-                        <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors"><ChevronLeft size={16} /></button>
-                        <button onClick={() => setViewDate(addMonths(viewDate, 1))} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors"><ChevronRight size={16} /></button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 text-center mb-3">
-                      {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(d => (
-                        <div key={d} className="text-[10px] font-black text-slate-400 uppercase py-1 tracking-tighter">{d}</div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-7 gap-1">
-                      {(() => {
-                        const start = startOfWeek(startOfMonth(viewDate));
-                        const end = endOfWeek(endOfMonth(viewDate));
-                        const days = [];
-                        let curr = start;
-                        while (curr <= end) {
-                          days.push(curr);
-                          curr = addDays(curr, 1);
-                        }
-                        return days.map(d => {
-                          const isPast = isBefore(d, startOfDay(new Date()));
-                          return (
-                            <button
-                              key={d.toISOString()}
-                              disabled={isPast}
-                              onClick={() => {
-                                if (isPast) return;
-                                setExpectedDate(format(d, "yyyy-MM-dd"));
-                                setShowDatePicker(false);
-                              }}
-                              className={clsx(
-                                "w-9 h-9 rounded-xl text-[10px] font-bold transition-all flex items-center justify-center",
-                                isPast ? "text-slate-200 dark:text-slate-800 cursor-not-allowed" :
-                                  (!isSameMonth(d, viewDate) ? "text-slate-300 dark:text-gray-700" : "text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-orange-500/10"),
-                                expectedDate && isSameDay(d, new Date(expectedDate)) ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-500" : ""
-                              )}
-                            >
-                              {format(d, "d")}
-                            </button>
-                          );
-                        });
-                      })()}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-4 relative z-10">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Order Items</p>
-                <button
-                  type="button"
-                  onClick={addItem}
-                  className="text-[10px] font-black text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-3 py-1.5 rounded-lg uppercase tracking-widest flex items-center gap-2 hover:bg-orange-100 transition-all"
-                >
-                  <Plus size={12} /> Add Material
-                </button>
-              </div>
-
-              <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
-                {items.map((it, idx) => (
-                  <div key={idx} className="bg-slate-50/50 dark:bg-white/5 p-4 rounded-3xl border border-slate-100 dark:border-white/5 grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                    <div className="md:col-span-4 space-y-1.5">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Material</label>
-                      <select
-                        value={it.inventoryItemId}
-                        onChange={(e) => updateItem(idx, "inventoryItemId", e.target.value)}
-                        className="w-full h-11 bg-white dark:bg-card px-4 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-white/10"
-                      >
-                        <option value="">Select Item...</option>
-                        {materials.map(m => (
-                          <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
-                        ))}
-                      </select>
-                      <div className="flex items-center justify-between mt-1 px-1">
-                        {it.inventoryItemId ? (
-                          <div className="flex gap-2">
-                            {(() => {
-                              const mat = materials.find(m => m.id === it.inventoryItemId);
-                              const vendorMat = selectedVendor?.suppliedMaterials?.find((sm: any) => sm.materialId === it.inventoryItemId);
-                              return (
-                                <>
-                                  <span className={clsx("text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded", (mat?.currentStock || 0) < (mat?.minimumStock || 0) ? "bg-red-50 text-red-500" : "bg-emerald-50 text-emerald-600")}>
-                                    Stock: {mat?.currentStock || 0} {it.unit}
-                                  </span>
-                                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter bg-slate-50 dark:bg-white/5 px-1.5 py-0.5 rounded">
-                                    Min: {mat?.minimumStock || 0}
-                                  </span>
-                                  {vendorMat?.price && (
-                                    <span className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter bg-indigo-50 dark:bg-indigo-500/10 px-1.5 py-0.5 rounded">
-                                      Last: ₹{vendorMat.price}
-                                    </span>
-                                  )}
-                                </>
-                              );
-                            })()}
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setShowAddMaterialDrawer(true)}
-                            className="text-[8px] font-black text-indigo-500 uppercase tracking-widest hover:underline flex items-center gap-1"
-                          >
-                            <Plus size={8} /> Request New Material
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="md:col-span-2 space-y-1.5">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Qty ({it.unit})</label>
-                      <input
-                        type="number"
-                        value={it.quantity}
-                        onChange={(e) => updateItem(idx, "quantity", Number(e.target.value))}
-                        className="w-full h-11 bg-white dark:bg-card px-4 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-white/10"
-                      />
-                    </div>
-                    <div className="md:col-span-2 space-y-1.5">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Price (₹)</label>
-                      <input
-                        type="number"
-                        value={it.price}
-                        onChange={(e) => updateItem(idx, "price", Number(e.target.value))}
-                        className="w-full h-11 bg-white dark:bg-card px-4 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-white/10"
-                      />
-                    </div>
-                    <div className="md:col-span-3 space-y-1.5">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Line Total</p>
-                      <div className="h-11 flex items-center px-4 bg-white/50 dark:bg-black/20 rounded-xl font-black text-xs">
-                        ₹{(it.quantity * it.price).toLocaleString()} <span className="text-[8px] text-slate-400 ml-2">({it.gstRate}% GST)</span>
-                      </div>
-                    </div>
-                    <div className="md:col-span-1 flex justify-center">
-                      <button
-                        type="button"
-                        onClick={() => removeItem(idx)}
-                        className="p-3 text-slate-300 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-slate-100 dark:border-white/5 relative z-10">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Freight Cost (₹)</label>
-                    <input
-                      type="number"
-                      value={freightCost}
-                      onChange={(e) => setFreightCost(Number(e.target.value))}
-                      className="w-full h-11 bg-white dark:bg-card px-4 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-white/10"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unloading Cost (₹)</label>
-                    <input
-                      type="number"
-                      value={unloadingCost}
-                      onChange={(e) => setUnloadingCost(Number(e.target.value))}
-                      className="w-full h-11 bg-white dark:bg-card px-4 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-white/10"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Internal Notes</label>
-                    <textarea value={internalNotes} onChange={e => setInternalNotes(e.target.value)} placeholder="Staff eyes only..." className="w-full h-24 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl text-xs font-bold border border-slate-100 dark:border-white/5 resize-none" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Vendor Notes</label>
-                    <textarea value={vendorNotes} onChange={e => setVendorNotes(e.target.value)} placeholder="Print on PO..." className="w-full h-24 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl text-xs font-bold border border-slate-100 dark:border-white/5 resize-none" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Delivery Info</label>
-                    <textarea value={deliveryInstructions} onChange={e => setDeliveryInstructions(e.target.value)} placeholder="Warehouse instructions..." className="w-full h-24 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl text-xs font-bold border border-slate-100 dark:border-white/5 resize-none" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 dark:bg-white/5 rounded-[2rem] p-6 space-y-4">
-                <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                  <span>Subtotal</span>
-                  <span>₹{subtotal.toLocaleString()}</span>
-                </div>
-                <div className="space-y-3 border-b border-slate-200 dark:border-white/10 pb-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tax (GST)</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!manualGst) {
-                          const currentRate = subtotal > 0 ? (totalGst / subtotal) * 100 : 5;
-                          setCustomGstRate(round(currentRate));
-                        }
-                        setManualGst(!manualGst);
-                      }}
-                      className="text-[9px] font-black text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-2 py-1 rounded"
+            {/* Modal Body (Scrollable) */}
+            <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8 custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-[200]">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Vendor *</label>
+                  <div className="relative">
+                    <select
+                      value={vendorId}
+                      onChange={(e) => setVendorId(e.target.value)}
+                      className="w-full h-14 bg-slate-50 dark:bg-white/5 px-5 rounded-2xl font-bold text-sm outline-none focus:ring-4 ring-orange-500/10 appearance-none border border-slate-200 dark:border-white/10"
                     >
-                      {manualGst ? "RESET TO AUTO" : "EDIT TAXES"}
-                    </button>
+                      <option value="">Choose Supplier...</option>
+                      {vendors.map(v => <option key={v.id} value={v.id}>{v.name} (Bal: ₹{v.balance || 0})</option>)}
+                    </select>
+                    <ChevronDown size={16} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
-
-                  {manualGst ? (
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between items-center">
-                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Manual GST Rate (%)</label>
-                          <span className="text-[10px] font-black text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-2 py-0.5 rounded-full">₹{totalGst.toLocaleString()}</span>
-                        </div>
-                        <input
-                          type="number"
-                          value={customGstRate}
-                          onChange={(e) => setCustomGstRate(Number(e.target.value))}
-                          placeholder="e.g. 18"
-                          className="w-full h-11 bg-white dark:bg-black/20 rounded-xl px-4 text-sm font-black outline-none border-2 border-orange-200 dark:border-orange-500/20 focus:border-orange-500 transition-all"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 opacity-60">
-                        {isSameState ? (
-                          <>
-                            <div className="bg-slate-50 dark:bg-white/5 p-2 rounded-xl text-center">
-                              <p className="text-[8px] font-black text-slate-400 uppercase">CGST (Calc)</p>
-                              <p className="text-[11px] font-black">₹{customCgst.toLocaleString()}</p>
-                            </div>
-                            <div className="bg-slate-50 dark:bg-white/5 p-2 rounded-xl text-center">
-                              <p className="text-[8px] font-black text-slate-400 uppercase">SGST (Calc)</p>
-                              <p className="text-[11px] font-black">₹{customSgst.toLocaleString()}</p>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="col-span-2 bg-slate-50 dark:bg-white/5 p-2 rounded-xl text-center">
-                            <p className="text-[8px] font-black text-slate-400 uppercase">IGST (Calc)</p>
-                            <p className="text-[11px] font-black">₹{customIgst.toLocaleString()}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                      <span>{isSameState ? "CGST + SGST" : "IGST"}</span>
-                      <span>₹{totalGst.toLocaleString()}</span>
+                  {selectedVendor && (
+                    <div className="flex items-center gap-2 mt-2 ml-1">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Terms:</span>
+                      <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded uppercase">{selectedVendor.paymentTerms || 'Net 30'}</span>
                     </div>
                   )}
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-white/10 mt-2">
-                  <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Grand Total</span>
-                  <span className="text-2xl font-black text-orange-600">₹{(grandTotal + freightCost + unloadingCost).toLocaleString()}</span>
+                <div className="space-y-2 relative">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Expected Delivery Date</label>
+                  <button
+                    onClick={() => setShowDatePicker(!showDatePicker)}
+                    className="w-full h-14 bg-slate-50 dark:bg-white/5 px-5 rounded-2xl font-bold text-sm flex items-center justify-between border border-slate-200 dark:border-white/10 hover:border-orange-500/50 transition-all"
+                  >
+                    <span className={clsx(expectedDate ? "text-slate-900 dark:text-white" : "text-slate-400")}>
+                      {expectedDate ? format(new Date(expectedDate), "dd/MM/yyyy") : "Select Date"}
+                    </span>
+                    <CalendarIcon size={18} className="text-slate-400" />
+                  </button>
+
+                  {showDatePicker && (
+                    <div
+                      className="absolute top-full left-0 mt-3 z-[1000] isolate opacity-100 bg-white dark:bg-[#1a1c23] border border-slate-200 dark:border-white/10 rounded-[2.5rem] shadow-[0_25px_60px_rgba(0,0,0,0.4)] p-6 w-[320px] animate-in fade-in slide-in-from-top-2 duration-200"
+                      style={{ backgroundColor: 'white' }}
+                    >
+                      <div className="flex items-center justify-between mb-4 px-2">
+                        <p className="text-[13px] font-black uppercase tracking-widest text-slate-800 dark:text-white">{format(viewDate, "MMMM yyyy")}</p>
+                        <div className="flex gap-1">
+                          <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors"><ChevronLeft size={16} /></button>
+                          <button onClick={() => setViewDate(addMonths(viewDate, 1))} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors"><ChevronRight size={16} /></button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1 text-center mb-3">
+                        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(d => (
+                          <div key={d} className="text-[10px] font-black text-slate-400 uppercase py-1 tracking-tighter">{d}</div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-7 gap-1">
+                        {(() => {
+                          const start = startOfWeek(startOfMonth(viewDate));
+                          const end = endOfWeek(endOfMonth(viewDate));
+                          const days = [];
+                          let curr = start;
+                          while (curr <= end) {
+                            days.push(curr);
+                            curr = addDays(curr, 1);
+                          }
+                          return days.map(d => {
+                            const isPast = isBefore(d, startOfDay(new Date()));
+                            return (
+                              <button
+                                key={d.toISOString()}
+                                disabled={isPast}
+                                onClick={() => {
+                                  if (isPast) return;
+                                  setExpectedDate(format(d, "yyyy-MM-dd"));
+                                  setShowDatePicker(false);
+                                }}
+                                className={clsx(
+                                  "w-9 h-9 rounded-xl text-[10px] font-bold transition-all flex items-center justify-center",
+                                  isPast ? "text-slate-200 dark:text-slate-800 cursor-not-allowed" :
+                                    (!isSameMonth(d, viewDate) ? "text-slate-300 dark:text-gray-700" : "text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-orange-500/10"),
+                                  expectedDate && isSameDay(d, new Date(expectedDate)) ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-500" : ""
+                                )}
+                              >
+                                {format(d, "d")}
+                              </button>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4 relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Order Items</p>
+                    <button 
+                      type="button"
+                      onClick={() => setShowAddMaterialDrawer(true)}
+                      className="text-[10px] font-black text-orange-500 hover:text-orange-600 uppercase tracking-widest flex items-center gap-1 transition-all"
+                    >
+                      <Plus size={10} /> Add New Material
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addItem}
+                    className="text-[10px] font-black text-white bg-orange-500 px-4 py-2 rounded-xl uppercase tracking-widest flex items-center gap-2 hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20"
+                  >
+                    <Plus size={14} /> Add Row
+                  </button>
                 </div>
 
-                {autoApplied > 0 && (
-                  <div className="bg-emerald-500/10 p-3 rounded-xl flex justify-between items-center">
-                    <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2"><Wallet size={12} /> Advance Applied</span>
-                    <span className="text-xs font-black text-emerald-700">-₹{autoApplied.toLocaleString()}</span>
-                  </div>
-                )}
+                {/* Items Table Header */}
+                <div className="hidden md:grid grid-cols-12 gap-5 px-8 mb-2">
+                  <div className="col-span-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Material Description</div>
+                  <div className="col-span-2 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Quantity</div>
+                  <div className="col-span-2 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Unit Price (₹)</div>
+                  <div className="col-span-2 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-right pr-4">Subtotal (₹)</div>
+                  <div className="col-span-1"></div>
+                </div>
 
-                <div className="flex justify-between items-center pt-2 text-slate-500">
-                  <span className="text-[10px] font-black uppercase tracking-widest">Balance Due</span>
-                  <span className="text-lg font-black italic">₹{balanceDue.toLocaleString()}</span>
+                <div className="space-y-3 pb-40">
+                  {items.map((it, idx) => (
+                    <div key={idx} className="bg-white dark:bg-white/5 p-4 rounded-[2rem] border border-slate-100 dark:border-white/5 grid grid-cols-1 md:grid-cols-12 gap-5 items-center relative transition-all hover:shadow-xl hover:shadow-slate-200/20 dark:hover:shadow-none">
+                      <div className="md:col-span-5 relative">
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                            <Search size={14} className="text-slate-400 group-focus-within:text-orange-500 transition-colors" />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Search materials..."
+                            value={materialSearchQueries[idx] ?? it.itemName ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const newQueries = [...materialSearchQueries];
+                              newQueries[idx] = val;
+                              setMaterialSearchQueries(newQueries);
+                              setActiveMaterialDropdown(idx);
+                              if (!val) updateItem(idx, "inventoryItemId", "");
+                            }}
+                            onFocus={() => {
+                              setActiveMaterialDropdown(idx);
+                              if (it.itemName && !materialSearchQueries[idx]) {
+                                const newQueries = [...materialSearchQueries];
+                                newQueries[idx] = it.itemName;
+                                setMaterialSearchQueries(newQueries);
+                              }
+                            }}
+                            className="w-full h-12 bg-slate-50 dark:bg-black/20 pl-11 pr-4 rounded-2xl font-bold text-xs outline-none border-2 border-transparent focus:border-orange-500/50 focus:bg-white dark:focus:bg-black/40 transition-all shadow-inner"
+                          />
+                          
+                          {activeMaterialDropdown === idx && (materialSearchQueries[idx] || "").length > 0 && (
+                            <div className="absolute top-full left-0 right-0 z-[500] mt-2 bg-white dark:bg-[#1a1c23] border border-slate-200 dark:border-white/10 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                              <div className="p-2 border-b border-slate-50 dark:border-white/5 bg-slate-50/50 dark:bg-white/5">
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-2">Suggestions</p>
+                              </div>
+                              {materials.filter(m => m.name.toLowerCase().includes(materialSearchQueries[idx].toLowerCase())).length === 0 ? (
+                                <div className="p-8 text-center">
+                                  <AlertCircle className="w-8 h-8 text-slate-200 dark:text-slate-800 mx-auto mb-2" />
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No materials found</p>
+                                </div>
+                              ) : (
+                                materials.filter(m => m.name.toLowerCase().includes(materialSearchQueries[idx].toLowerCase())).map(m => (
+                                  <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => {
+                                      updateItem(idx, "inventoryItemId", m.id);
+                                      const newQueries = [...materialSearchQueries];
+                                      newQueries[idx] = m.name;
+                                      setMaterialSearchQueries(newQueries);
+                                      setActiveMaterialDropdown(null);
+                                    }}
+                                    className="w-full text-left px-4 py-3 hover:bg-orange-50 dark:hover:bg-orange-500/10 border-b border-slate-50 dark:border-white/5 last:border-none transition-colors group/item"
+                                  >
+                                    <div className="flex justify-between items-center mb-0.5">
+                                      <span className="text-xs font-black text-slate-900 dark:text-white uppercase group-hover/item:text-orange-600">{m.name}</span>
+                                      <span className="text-[10px] font-bold text-slate-400">{m.unit}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <span className={clsx("text-[9px] font-bold px-1.5 py-0.5 rounded-md", (m.currentStock || 0) <= (m.minimumStock || 0) ? "bg-red-50 text-red-500" : "bg-emerald-50 text-emerald-600")}>
+                                        Stock: {m.currentStock || 0}
+                                      </span>
+                                      <span className="text-[9px] font-bold text-slate-400 uppercase">Min: {m.minimumStock || 0}</span>
+                                    </div>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <input
+                          type="number"
+                          value={it.quantity || ""}
+                          onChange={(e) => updateItem(idx, "quantity", Number(e.target.value))}
+                          className="w-full h-12 bg-slate-50 dark:bg-black/20 px-4 rounded-2xl font-black text-sm outline-none border-2 border-transparent focus:border-orange-500/50 transition-all text-center"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <input
+                          type="number"
+                          value={it.price || ""}
+                          onChange={(e) => updateItem(idx, "price", Number(e.target.value))}
+                          className="w-full h-12 bg-slate-50 dark:bg-black/20 px-4 rounded-2xl font-black text-sm outline-none border-2 border-transparent focus:border-orange-500/50 transition-all text-center"
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <div className="h-12 flex items-center justify-end px-4 bg-orange-500/5 rounded-2xl font-black text-sm text-orange-600 tracking-tight">
+                          ₹{(it.quantity * it.price).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="md:col-span-1 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={() => removeItem(idx)}
+                          className="h-10 w-10 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-slate-100 dark:border-white/5 relative z-10">
+                <div className="space-y-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowAdvancedLogistics(!showAdvancedLogistics)}
+                    className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] bg-indigo-50 dark:bg-indigo-500/10 px-4 py-2.5 rounded-xl hover:bg-indigo-100 transition-all mb-2"
+                  >
+                    <Settings size={14} /> {showAdvancedLogistics ? "Hide Logistics & Notes" : "Add Freight, Unloading & Notes"}
+                  </button>
+
+                  {showAdvancedLogistics && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Freight Cost (₹)</label>
+                          <input
+                            type="number"
+                            value={freightCost || ""}
+                            onChange={(e) => setFreightCost(Number(e.target.value))}
+                            className="w-full h-11 bg-white dark:bg-card px-4 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-white/10 focus:border-indigo-500 transition-all"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unloading Cost (₹)</label>
+                          <input
+                            type="number"
+                            value={unloadingCost || ""}
+                            onChange={(e) => setUnloadingCost(Number(e.target.value))}
+                            className="w-full h-11 bg-white dark:bg-card px-4 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-white/10 focus:border-indigo-500 transition-all"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Internal Notes</label>
+                          <textarea value={internalNotes} onChange={e => setInternalNotes(e.target.value)} placeholder="Staff eyes only..." className="w-full h-24 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl text-xs font-bold border border-slate-100 dark:border-white/5 resize-none outline-none focus:border-indigo-500 transition-all" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Vendor Notes</label>
+                          <textarea value={vendorNotes} onChange={e => setVendorNotes(e.target.value)} placeholder="Print on PO..." className="w-full h-24 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl text-xs font-bold border border-slate-100 dark:border-white/5 resize-none outline-none focus:border-indigo-500 transition-all" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Delivery Info</label>
+                          <textarea value={deliveryInstructions} onChange={e => setDeliveryInstructions(e.target.value)} placeholder="Warehouse instructions..." className="w-full h-24 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl text-xs font-bold border border-slate-100 dark:border-white/5 resize-none outline-none focus:border-indigo-500 transition-all" />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="bg-slate-50 dark:bg-white/5 rounded-[2rem] p-6 space-y-4">
+                  <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                    <span>Subtotal</span>
+                    <span>₹{subtotal.toLocaleString()}</span>
+                  </div>
+                  <div className="space-y-3 border-b border-slate-200 dark:border-white/10 pb-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tax (GST)</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!manualGst) {
+                            const currentRate = subtotal > 0 ? (totalGst / subtotal) * 100 : 5;
+                            setCustomGstRate(round(currentRate));
+                          }
+                          setManualGst(!manualGst);
+                        }}
+                        className="text-[9px] font-black text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-2 py-1 rounded"
+                      >
+                        {manualGst ? "RESET TO AUTO" : "EDIT TAXES"}
+                      </button>
+                    </div>
+
+                    {manualGst ? (
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-center">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Manual GST Rate (%)</label>
+                            <span className="text-[10px] font-black text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-2 py-0.5 rounded-full">₹{totalGst.toLocaleString()}</span>
+                          </div>
+                          <input
+                            type="number"
+                            value={customGstRate}
+                            onChange={(e) => setCustomGstRate(Number(e.target.value))}
+                            placeholder="e.g. 18"
+                            className="w-full h-11 bg-white dark:bg-black/20 rounded-xl px-4 text-sm font-black outline-none border-2 border-orange-200 dark:border-orange-500/20 focus:border-orange-500 transition-all"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                        <span>{isSameState ? "CGST + SGST" : "IGST"}</span>
+                        <span>₹{totalGst.toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-white/10 mt-2">
+                    <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Grand Total</span>
+                    <span className="text-2xl font-black text-orange-600">₹{(grandTotal + freightCost + unloadingCost).toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-4 pt-4 relative z-10">
+            {/* Modal Footer (Actions) */}
+            <div className="px-8 py-6 border-t border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex gap-4">
               <button
-                type="button"
                 onClick={() => setShowForm(false)}
-                className="flex-1 py-5 text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-all"
+                className="flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
               >
                 Abort
               </button>
               <button
-                type="button"
-                onClick={() => handleCreate("DRAFT")}
+                onClick={() => handleCreate("APPROVED")}
                 disabled={saving || !vendorId || items.some(it => !it.inventoryItemId || it.quantity <= 0)}
-                className="flex-1 py-5 bg-slate-100 dark:bg-white/5 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:bg-slate-200"
+                className="flex-[2] h-14 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 disabled:opacity-50 transition-all shadow-xl shadow-orange-500/20"
               >
-                Save Draft
-              </button>
-              <button
-                type="button"
-                onClick={() => handleCreate("PENDING_APPROVAL")}
-                disabled={saving || !vendorId || items.some(it => !it.inventoryItemId || it.quantity <= 0)}
-                className="flex-[2] py-5 bg-orange-500 text-white rounded-2xl text-[11px] font-black shadow-xl shadow-orange-500/20 uppercase tracking-[0.3em] transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale"
-              >
-                {saving ? "Processing..." : "Submit for Approval"}
+                {saving ? "Processing..." : "Save Purchase Order"}
               </button>
             </div>
           </div>
@@ -908,126 +924,14 @@ export default function PurchaseOrdersClient() {
         document.body
       )}
 
-      {showPaymentModal && payingPO && mounted && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-          <div className="absolute inset-0" onClick={() => { setShowPaymentModal(false); setPayingPO(null); }} />
-          <div className="bg-white dark:bg-[#0f1117] w-full max-w-md rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/5 overflow-hidden animate-in zoom-in-95 duration-300 relative">
-            {/* Header */}
-            <div className="p-8 pb-0">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
-                    <Wallet size={22} className="text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Record Payment</h2>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{payingPO.vendor?.name}</p>
-                  </div>
-                </div>
-                <button onClick={() => { setShowPaymentModal(false); setPayingPO(null); }} className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-400 hover:text-slate-600 transition-all">
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* PO Summary */}
-              <div className="grid grid-cols-3 gap-3 mb-6">
-                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-3 text-center">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total</p>
-                  <p className="text-sm font-black text-slate-900 dark:text-white mt-0.5">{formatCurrency(payingPO.totalAmount ?? 0)}</p>
-                </div>
-                <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl p-3 text-center">
-                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Paid</p>
-                  <p className="text-sm font-black text-emerald-700 dark:text-emerald-400 mt-0.5">{formatCurrency(payingPO.paid ?? 0)}</p>
-                </div>
-                <div className="bg-red-50 dark:bg-red-500/10 rounded-2xl p-3 text-center">
-                  <p className="text-[9px] font-black text-red-500 uppercase tracking-widest">Balance</p>
-                  <p className="text-sm font-black text-red-600 dark:text-red-400 mt-0.5">{formatCurrency(Math.max(0, (payingPO.totalAmount ?? 0) - (payingPO.paid ?? 0)))}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Amount Input */}
-            <div className="px-8 space-y-5">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Payment Amount</label>
-                <div className="relative">
-                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-300 dark:text-slate-600">₹</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                    className="w-full pl-10 pr-6 py-5 text-3xl font-black bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Payment Mode</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {["CASH", "UPI", "CARD"].map((mode) => (
-                    <button
-                      key={mode}
-                      onClick={() => setPaymentMode(mode as any)}
-                      className={clsx(
-                        "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border",
-                        paymentMode === mode
-                          ? "bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20"
-                          : "bg-slate-50 dark:bg-white/5 text-slate-400 border-transparent hover:border-slate-200"
-                      )}
-                    >
-                      {mode}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Withdraw From Account *</label>
-                <select
-                  value={selectedAccountId}
-                  onChange={(e) => setSelectedAccountId(e.target.value)}
-                  className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-sm outline-none focus:ring-4 ring-orange-500/10 appearance-none"
-                >
-                  {accounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>{acc.name} (₹{(acc.balance || 0).toLocaleString()})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Note <span className="text-slate-300 dark:text-slate-600 normal-case tracking-normal font-bold">(optional)</span></label>
-                <input
-                  type="text"
-                  value={paymentNote}
-                  onChange={(e) => setPaymentNote(e.target.value)}
-                  placeholder={`Payment for PO-${payingPO.id?.slice(0, 8).toUpperCase()}`}
-                  className="w-full px-5 py-3.5 text-sm font-bold bg-slate-50 dark:bg-white/5 border-none rounded-2xl outline-none focus:ring-4 ring-orange-500/10 dark:text-white transition-all placeholder:text-slate-300 dark:placeholder:text-white/10"
-                />
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="p-8 pt-6 flex gap-3">
-              <button
-                onClick={() => { setShowPaymentModal(false); setPayingPO(null); setPaymentAmount(0); setPaymentNote(""); }}
-                className="flex-1 py-4 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRecordPayment}
-                disabled={saving || paymentAmount <= 0 || !paymentMode}
-                className="flex-[2] py-4 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 disabled:grayscale text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-orange-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                {saving ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                {saving ? "Processing..." : "Confirm Payment"}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      <RecordPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => { setShowPaymentModal(false); setPayingPO(null); }}
+        onSuccess={fetchAll}
+        payingPO={payingPO}
+        accounts={accounts}
+        defaultAccountId={selectedAccountId}
+      />
 
       {viewingPO && <GSTInvoice order={viewingPO} vendor={viewingPO.vendor} companyDetails={currentCompany} onClose={() => setViewingPO(null)} />}
 
@@ -1126,7 +1030,7 @@ export default function PurchaseOrdersClient() {
                     <input
                       type="email"
                       value={editingProfile.email}
-                      placeholder="optional@company.com"
+                      placeholder="Enter company email..."
                       onChange={(e) => { setEditingProfile({ ...editingProfile, email: e.target.value }); setProfileErrors({ ...profileErrors, email: "" }); }}
                       className={clsx("w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border", profileErrors.email ? "border-red-400" : "border-slate-200 dark:border-white/10")}
                     />
@@ -1288,12 +1192,9 @@ export default function PurchaseOrdersClient() {
 
             {/* Actions */}
             <div className="p-8 border-t border-gray-100 dark:border-white/5 flex gap-4">
-              {viewingDetailsPO.status === 'PENDING_APPROVAL' && (
-                <button onClick={() => { handleApprove(viewingDetailsPO.id); setViewingDetailsPO(null); }} className="flex-1 py-4 bg-emerald-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-500/20">Approve PO</button>
-              )}
-              {viewingDetailsPO.status === 'APPROVED' && (
-                <button onClick={async () => { await purchaseOrdersApi.updateStatus(viewingDetailsPO.id, 'SENT'); fetchAll(); setViewingDetailsPO(null); }} className="flex-1 py-4 bg-blue-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20">Send to Vendor</button>
-              )}
+              {/* Workflow simplified: removed Approve button from details */}
+
+
               <button onClick={() => { setViewingPO(viewingDetailsPO); setViewingDetailsPO(null); }} className="flex-1 py-4 bg-slate-100 dark:bg-white/5 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest">Download PDF</button>
             </div>
           </div>

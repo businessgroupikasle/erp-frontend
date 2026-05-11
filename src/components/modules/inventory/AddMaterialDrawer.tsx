@@ -13,6 +13,7 @@ import { clsx } from "clsx";
 import {
   generateEnterpriseSKU, getGSTByHSN
 } from "@/lib/utils/erp";
+import { toast } from "react-hot-toast";
 
 interface AddMaterialDrawerProps {
   isOpen: boolean;
@@ -27,6 +28,8 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [existingMaterials, setExistingMaterials] = useState<any[]>([]);
+  const [matchingMaterials, setMatchingMaterials] = useState<any[]>([]);
   useEffect(() => { setMounted(true); }, []);
 
   const [form, setForm] = useState({
@@ -71,6 +74,10 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
           if (fetchedFranchises.length > 0 && !form.franchiseId) {
             setForm(prev => ({ ...prev, franchiseId: fetchedFranchises[0].id }));
           }
+
+          // Fetch all materials for duplicate detection
+          const mRes = await rawMaterialsApi.getAll().catch(() => ({ data: [] }));
+          setExistingMaterials(mRes.data || []);
         } catch (e) {
           console.error("Failed to fetch data", e);
         }
@@ -82,7 +89,19 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
   useEffect(() => {
     const sku = generateEnterpriseSKU(form.category, form.name);
     setForm((f) => ({ ...f, sku }));
-  }, [form.category, form.name]);
+
+    // Detect almost matches
+    if (form.name.length >= 2) {
+      const normalized = form.name.toLowerCase().trim();
+      const matches = existingMaterials.filter(m => 
+        m.name.toLowerCase().includes(normalized) || 
+        normalized.includes(m.name.toLowerCase())
+      );
+      setMatchingMaterials(matches);
+    } else {
+      setMatchingMaterials([]);
+    }
+  }, [form.category, form.name, existingMaterials]);
 
   useEffect(() => {
     if (form.hsnCode.length >= 4) {
@@ -112,11 +131,14 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
         createdBy: user?.id,
         requestedAt: new Date().toISOString(),
       });
+      toast.success("Material request submitted successfully!");
       onSuccess();
       onClose();
     } catch (e: any) {
       console.error(e);
-      setError(e.response?.data?.error || "Failed to submit material request.");
+      const msg = e.response?.data?.error || "Failed to submit material request.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -168,6 +190,24 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 className="w-full px-8 py-5 text-base font-black bg-slate-50 dark:bg-white/5 border-2 border-transparent focus:border-orange-500/20 rounded-[1.5rem] outline-none dark:text-white transition-all shadow-sm"
               />
+
+              {matchingMaterials.length > 0 && (
+                <div className="mx-2 p-4 bg-orange-50/50 dark:bg-orange-500/5 rounded-2xl border border-orange-100 dark:border-orange-500/10 space-y-2 animate-in slide-in-from-top-2 duration-300">
+                  <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                    <AlertCircle size={14} className="animate-pulse" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">Potential matches found</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {matchingMaterials.map(m => (
+                      <div key={m.id} className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-orange-200 dark:border-orange-500/20 rounded-lg shadow-sm">
+                        <p className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase truncate max-w-[150px]">{m.name}</p>
+                        <p className="text-[8px] font-bold text-slate-400 uppercase">{m.category} · {m.unit}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[8px] font-bold text-orange-400 italic">Please ensure you are not creating a duplicate item.</p>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-6">
@@ -199,7 +239,7 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">//
+            <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 flex items-center gap-2">
                   <Barcode size={12} className="text-indigo-500" /> HSN Code

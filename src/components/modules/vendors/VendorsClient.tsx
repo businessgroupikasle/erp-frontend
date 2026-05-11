@@ -166,7 +166,7 @@ export default function VendorsClient() {
     try {
       await vendorsApi.recordPayment(selectedVendorId, {
         amount: Number(paymentForm.amount),
-        type: paymentForm.type,
+        type: paymentForm.type === 'PAYMENT' ? 'INVOICE_LINKED' : paymentForm.type,
         note: paymentForm.note || `${paymentForm.type} Settlement`,
         accountId: paymentForm.accountId,
         vendorInvoiceId: paymentForm.vendorInvoiceId || undefined,

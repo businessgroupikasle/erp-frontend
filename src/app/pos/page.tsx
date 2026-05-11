@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { customersApi, productsApi, posApi } from "@/lib/api";
+import { toast } from "react-hot-toast";
 
 const CATEGORY_ICONS: Record<string, string> = {
   all: "🌐", components: "⚙️", equipment: "🏗️", "raw materials": "📦",
@@ -183,7 +184,7 @@ export default function POSPage() {
         customerPhone: customer?.phone,
         paymentMode: mode,
         orderType,
-        subtotal,
+        subTotal: subtotal,
         taxAmount: gst,
         discountAmount: discountAmt,
         totalAmount: total,
@@ -210,8 +211,8 @@ export default function POSPage() {
       });
       setShowReceipt(true);
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Checkout failed. Check backend connection.";
-      alert(msg);
+      const msg = err?.response?.data?.error || err?.response?.data?.message || "Checkout failed. Check backend connection.";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -233,7 +234,7 @@ export default function POSPage() {
       setShowAddCust(false);
       setNewCustForm({ name: "", phone: "", email: "" });
     } catch (e: any) {
-      alert(e?.response?.data?.message || "Failed to add customer.");
+      toast.error(e?.response?.data?.message || "Failed to add customer.");
     } finally {
       setAddingCust(false);
     }
@@ -318,7 +319,7 @@ export default function POSPage() {
                 <button key={cat} onClick={() => setActiveCategory(cat)}
                   className={clsx("flex items-center gap-2 px-4 py-2.5 rounded-xl whitespace-nowrap text-xs font-black uppercase tracking-wider transition-all shrink-0",
                     isActive ? clsx(getCategoryColor(cat), "text-white shadow-lg") : "bg-white dark:bg-[#1c1f2a] text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/10")}>
-                  <span className="text-sm">{getCategoryIcon(cat)}</span>{cat}
+                  {cat}
                 </button>
               );
             })}
@@ -353,9 +354,6 @@ export default function POSPage() {
                       <span className="text-[9px] font-black uppercase tracking-tight text-slate-400">
                         {isOutOfStock ? "Out of Stock" : item.stock !== null ? `${item.stock} left` : "In Stock"}
                       </span>
-                    </div>
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mb-3 group-hover:bg-orange-50 dark:group-hover:bg-orange-500/10 transition-colors">
-                      <ShoppingBag size={20} className="text-slate-400 group-hover:text-orange-500 transition-colors" />
                     </div>
                     <div className="space-y-1 pr-12">
                       <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-tight line-clamp-2 group-hover:text-orange-500 transition-colors">{item.name}</h4>

@@ -7,6 +7,7 @@ import {
   ChevronRight, Plus, Search, CreditCard, Building2
 } from "lucide-react";
 import { vendorsApi, vendorInvoicesApi, accountsApi } from "@/lib/api";
+import { toast } from "react-hot-toast";
 
 interface Vendor {
   id: string;
@@ -88,7 +89,7 @@ export default function VendorPaymentPage() {
 
   const handlePay = async () => {
     if (!selectedVendor || !form.amount || parseFloat(form.amount) <= 0 || !selectedAccount) {
-      alert("Please select a vendor, amount, and source account.");
+      toast.error("Please select a vendor, amount, and source account.");
       return;
     }
     setSubmitting(true);
@@ -102,7 +103,7 @@ export default function VendorPaymentPage() {
       });
       setSuccess(true);
     } catch (e: any) {
-      alert(e.response?.data?.error || "Payment failed. Please try again.");
+      toast.error(e.response?.data?.error || "Payment failed. Please try again.");
     } finally {
       setSubmitting(false);
     }

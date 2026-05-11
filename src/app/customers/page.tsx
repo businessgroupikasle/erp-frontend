@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { customersApi } from "@/lib/api";
+import { toast } from "react-hot-toast";
 
 interface Customer {
   id: string;
@@ -109,7 +110,7 @@ export default function CustomersPage() {
       await fetchCustomers();
     } catch (e: any) {
       const msg = e?.response?.data?.message || "Failed to add customer.";
-      alert(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -122,7 +123,7 @@ export default function CustomersPage() {
       setCustomers(prev => prev.filter(c => c.id !== id));
       if (selectedCustomer?.id === id) setSelectedCustomer(null);
     } catch (e: any) {
-      alert(e?.response?.data?.message || "Failed to delete customer.");
+      toast.error(e?.response?.data?.message || "Failed to delete customer.");
     }
   };
 

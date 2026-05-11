@@ -4,6 +4,7 @@ import { ChevronDown, FileText, Paperclip, MessageSquare, Phone, UserPlus, X, Se
 import { usePurchaseOrder } from "@/context/PurchaseOrderContext";
 import { useRouter } from "next/navigation";
 import { purchaseOrdersApi } from "@/lib/api";
+import { toast } from "react-hot-toast";
 
 interface DocumentOptionsProps {
   type: "invoice" | "quotation" | "purchase";
@@ -33,7 +34,7 @@ export default function DocumentOptions({ type }: DocumentOptionsProps) {
       router.push("/purchases/orders");
     } catch (error) {
       console.error("Failed to create PO", error);
-      alert("Failed to create Purchase Order. Please check your inputs.");
+      toast.error("Failed to create Purchase Order. Please check your inputs.");
     } finally {
       setIsSubmitting(false);
     }

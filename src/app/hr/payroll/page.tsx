@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Play, FileText, DollarSign, Settings } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
+import { toast } from "react-hot-toast";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -156,7 +157,7 @@ export default function PayrollPage() {
                               await api.patch(`/api/payroll/payslips/${ps.id}/mark-paid`);
                               loadData();
                             } catch (err) {
-                              alert("Payment failed");
+                              toast.error("Payment failed");
                             }
                           }
                         }}

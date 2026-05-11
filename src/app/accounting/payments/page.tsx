@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { accountingApi } from "@/lib/api";
+import { toast } from "react-hot-toast";
 
 type FlowType = "ALL" | "IN" | "OUT";
 type PaymentMethod = "CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE" | "CARD" | "NEFT";
@@ -242,7 +243,7 @@ export default function PaymentsPage() {
       await accountingApi.cancelPayment(id);
       await fetchFinancials();
     } catch (err: any) {
-      alert(err?.response?.data?.error || "Cancellation failed.");
+      toast.error(err?.response?.data?.error || "Cancellation failed.");
     }
   };
 

@@ -207,10 +207,16 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     ],
   },
 
-  // 7. Accounts — track money
+  // 7. Accounting — track money
   {
-    title: "Accounts",
+    title: "Accounting",
     items: [
+      {
+        icon: Landmark,
+        label: "Business Accounts",
+        href: "/banking/accounts",
+        roles: ADMIN_ROLES,
+      },
       {
         icon: CreditCard,
         label: "Payments",
