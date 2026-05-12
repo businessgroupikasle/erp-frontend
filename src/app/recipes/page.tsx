@@ -231,7 +231,7 @@ export default function RecipesPage() {
             <tbody>
               ${recipe.recipeItems?.map((item: any) => `
                 <tr>
-                  <td>${item.material?.name || item.inventoryItemId}</td>
+                  <td>${item.inventoryItem?.name || item.inventoryItemId}</td>
                   <td style="text-align: center;">${item.quantityRequired}</td>
                   <td style="text-align: right; color: #64748b;">${item.unit || 'KG'}</td>
                 </tr>
