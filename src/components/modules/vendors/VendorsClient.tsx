@@ -13,7 +13,7 @@ import {
   AlertTriangle, Star, Calendar, FileCheck
 } from "lucide-react";
 import { clsx } from "clsx";
-import { vendorsApi, accountsApi } from "@/lib/api";
+import api, { vendorsApi, accountsApi } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
 
@@ -504,8 +504,10 @@ export default function VendorsClient() {
                             <th className="py-3 pl-6">PO Number</th>
                             <th className="py-3">Date</th>
                             <th className="py-3">Status</th>
-                            <th className="py-3 text-right">Items</th>
-                            <th className="py-3 text-right pr-6">Total Amount</th>
+                            <th className="py-3 text-right">Total</th>
+                            <th className="py-3 text-right">Paid</th>
+                            <th className="py-3 text-right pr-6">Balance</th>
+                            <th className="py-3 text-right pr-6"></th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-white/5">
@@ -522,8 +524,29 @@ export default function VendorsClient() {
                                   {po.status}
                                 </span>
                               </td>
-                              <td className="py-4 text-right font-bold text-slate-500">{po.poItems?.length || 0} Lines</td>
-                              <td className="py-4 text-right pr-6 font-black text-slate-900 dark:text-white tracking-tighter">₹{Math.round(po.totalAmount).toLocaleString()}</td>
+                              <td className="py-4 text-right font-black text-slate-900 dark:text-white tracking-tighter">₹{Math.round(po.totalAmount).toLocaleString()}</td>
+                              <td className="py-4 text-right font-bold text-emerald-500">₹{Math.round(po.paid || 0).toLocaleString()}</td>
+                              <td className="py-4 text-right pr-6 font-black text-rose-500 tracking-tighter">
+                                 ₹{Math.round(po.totalAmount - (po.paid || 0)).toLocaleString()}
+                              </td>
+                              <td className="py-4 text-right pr-6">
+                                 {po.totalAmount > (po.paid || 0) && (selectedVendor.advance || 0) > 0 && (
+                                   <button 
+                                     onClick={async () => {
+                                       try {
+                                         await api.post(`/api/purchase-orders/${po.id}/apply-advance`);
+                                         showToast("Settled from advance", "success");
+                                         fetchVendorDetails(selectedVendorId!);
+                                       } catch (e) {
+                                         showToast("Settle failed", "error");
+                                       }
+                                     }}
+                                     className="px-3 py-1 bg-indigo-500 text-white rounded-lg text-[8px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all"
+                                   >
+                                     Settle
+                                   </button>
+                                 )}
+                              </td>
                             </tr>
                           ))}
                         </tbody>

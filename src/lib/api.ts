@@ -103,7 +103,7 @@ export const productionApi = {
   getHistory: (franchiseId?: string) => api.get('/api/production/history', { params: { franchiseId } }),
   startBatch: (data: any) => api.post('/api/production/batch', data),
   stopBatch: (id: string) => api.post(`/api/production/${id}/stop`),
-  approveBatch: (id: string) => api.post(`/api/production/${id}/approve`),
+  approveBatch: (id: string, data?: { actualYield?: number }) => api.post(`/api/production/${id}/approve`, data),
   updateStatus: (id: string, status: string) => api.patch(`/api/production/${id}/status`, { status }),
 };
 

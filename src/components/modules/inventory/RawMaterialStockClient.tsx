@@ -99,7 +99,10 @@ export default function RawMaterialStockClient() {
       it.name?.toLowerCase().includes(search.toLowerCase()) ||
       it.sku?.toLowerCase().includes(search.toLowerCase()) ||
       it.hsnCode?.toLowerCase().includes(search.toLowerCase());
-    const matchCat = category === "ALL" || it.category === category;
+    const matchCat = category === "ALL" || 
+      (category === "RAW" && it.category?.startsWith("RAW_")) ||
+      (category === "FINISHED" && it.category === "FINISHED_GOOD") ||
+      (category === "PACKAGING" && it.category?.startsWith("PACKAGING_"));
     const matchSource = sourceFilter === "ALL" ||
       (sourceFilter === "PURCHASED" && it.isPurchased) ||
       (sourceFilter === "MANUAL" && !it.isPurchased);
@@ -122,7 +125,7 @@ export default function RawMaterialStockClient() {
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 py-4 border-b border-slate-200 dark:border-slate-800">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
-             <div className="p-2 md:p-2.5 bg-orange-500 rounded-lg md:rounded-xl shadow-lg shadow-orange-500/20 shrink-0">
+             <div className="p-2 md:p-2.5 bg-[#F97316] rounded-lg md:rounded-xl shadow-lg shadow-orange-600/20 shrink-0">
                 <Layers size={20} className="text-white" />
              </div>
               <h1 className="text-lg md:text-xl lg:text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase transition-all">
@@ -139,61 +142,81 @@ export default function RawMaterialStockClient() {
            </button>
            <Link
              href="/inventory/stock/add"
-             className="flex items-center justify-center gap-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:shadow-xl hover:translate-y-[-1px] transition-all active:translate-y-0 shadow-slate-200 dark:shadow-none"
+             className="flex items-center justify-center gap-2.5 bg-[#F97316] text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:shadow-xl hover:translate-y-[-1px] transition-all active:translate-y-0 shadow-orange-600/10"
            >
              <Plus size={16} strokeWidth={3} /> Add Item
-          </Link>
+           </Link>
         </div>
       </header>
+
+      {/* Simplified Analytics Bar */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+         {[
+           { 
+             label: "Total Products", 
+             value: items.filter(i => i.category === 'FINISHED_GOOD').reduce((acc, i) => acc + (i.currentStock || 0), 0).toFixed(0), 
+             sub: `${items.filter(i => i.category === 'FINISHED_GOOD').length} Unique SKUs`,
+             icon: CheckCircle2, 
+             color: "text-emerald-500", 
+             bg: "bg-emerald-500/10" 
+           },
+           { 
+             label: "Raw Material Types", 
+             value: items.filter(i => i.category?.startsWith('RAW_')).length, 
+             sub: "Tracked Items",
+             icon: Layers, 
+             color: "text-blue-500", 
+             bg: "bg-blue-500/10" 
+           },
+           { 
+             label: "Inventory Value", 
+             value: `₹${(items.reduce((acc, i) => acc + ((i.currentStock || 0) * (i.avgPurchasePrice || 0)), 0) / 1000).toFixed(1)}K`, 
+             sub: "Live Valuation",
+             icon: TrendingUp, 
+             color: "text-orange-500", 
+             bg: "bg-orange-500/10" 
+           },
+         ].map((stat, i) => (
+           <div key={i} className="bg-white dark:bg-card/40 backdrop-blur-md p-6 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-xl shadow-black/[0.01] group">
+             <div className="flex items-center justify-between mb-4">
+                <div className={clsx("p-3 rounded-2xl transition-transform group-hover:scale-110 duration-500", stat.bg, stat.color)}>
+                   <stat.icon size={20} />
+                </div>
+                <span className="text-[10px] font-black text-slate-300 tracking-widest uppercase">Overview</span>
+             </div>
+             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
+             <div className="flex items-end gap-2">
+                <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{stat.value}</h3>
+                <p className="text-[10px] font-bold text-slate-400 mb-1.5 uppercase italic">{stat.sub}</p>
+             </div>
+           </div>
+         ))}
+      </div>
 
       <div className="flex flex-col gap-6">
          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-2xl w-full md:w-fit border border-slate-200 dark:border-white/5 overflow-x-auto hide-scrollbar">
-               {["ALL", ...ITEM_CATEGORIES].map((cat) => (
+               {[
+                  { id: "ALL", label: "All Items" },
+                  { id: "RAW", label: "Raw Materials" },
+                  { id: "FINISHED", label: "Finished Goods" },
+                  { id: "PACKAGING", label: "Packaging" }
+               ].map((cat) => (
                  <button
-                   key={cat}
-                   onClick={() => setCategory(cat)}
+                   key={cat.id}
+                   onClick={() => setCategory(cat.id)}
                    className={clsx(
                      "px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-                     category === cat
+                     category === cat.id
                        ? "bg-white dark:bg-card text-slate-900 dark:text-white shadow-md border border-slate-100 dark:border-white/10"
                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                    )}
                  >
-                   {cat === "ALL" ? "All Items" : cat.replace("_", " ")}
+                   {cat.label}
                  </button>
                ))}
             </div>
 
-            <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-2xl w-full md:w-fit border border-slate-200 dark:border-white/5 overflow-x-auto hide-scrollbar">
-               {[
-                  { id: "ALL", label: "All Sources" },
-                  { id: "PURCHASED", label: "Purchased" },
-                  { id: "MANUAL", label: "Direct" }
-               ].map((src) => (
-                  <button
-                     key={src.id}
-                     onClick={() => setSourceFilter(src.id)}
-                     className={clsx(
-                        "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-                        sourceFilter === src.id
-                           ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md"
-                           : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                     )}
-                  >
-                     {src.label}
-                  </button>
-               ))}
-            </div>
-
-            <button 
-              onClick={() => setShowInactive(!showInactive)}
-              className={clsx("flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all", 
-                showInactive ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-400 border-slate-100 hover:border-slate-200")}
-            >
-              <Lock size={12} className={showInactive ? "text-orange-500" : "text-slate-300"} />
-              {showInactive ? "Viewing All (Inc. Archived)" : "Active Only"}
-            </button>
          </div>
 
          <div className="relative group w-full">
@@ -236,7 +259,9 @@ export default function RawMaterialStockClient() {
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
-                  <span className="text-[10px] font-black text-slate-600 dark:text-slate-300">{(item.currentStock || 0).toFixed(0)} {item.unit}</span>
+                  <span className="text-[10px] font-black text-slate-600 dark:text-slate-300">
+                    {(item.currentStock || 0).toFixed(0)} {item.category === "FINISHED_GOOD" ? "PRODUCTS" : item.unit}
+                  </span>
                   <span className={clsx("px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-wider border", 
                     item.status === "LOW" ? "bg-red-50 dark:bg-red-500/10 text-red-600 border-red-100 dark:border-red-500/20" : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border-emerald-100 dark:border-emerald-500/20")}>
                     {item.status === "LOW" ? "LOW" : "SAFE"}
@@ -332,7 +357,7 @@ export default function RawMaterialStockClient() {
                          <div className="space-y-1.5 min-w-[140px]">
                             <div className="flex justify-between items-center px-1">
                                <span className={clsx("text-[14px] font-black", isLow ? "text-red-600" : "text-slate-900 dark:text-slate-200")}>
-                                  {(item.currentStock || 0).toFixed(1)} <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">{item.unit}</span>
+                                  {(item.currentStock || 0).toFixed(item.category === "FINISHED_GOOD" ? 0 : 1)} <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">{item.category === "FINISHED_GOOD" ? "PRODUCTS" : item.unit}</span>
                                </span>
                             </div>
                             <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
@@ -375,7 +400,7 @@ export default function RawMaterialStockClient() {
                                >
                                   <div className="flex items-center gap-1.5">
                                     <p className="text-sm font-black text-slate-900 dark:text-white tracking-tight border-b border-dotted border-slate-300 dark:border-slate-700">
-                                       {(item.minimumStock || 10).toFixed(1)} {item.unit}
+                                       {(item.minimumStock || 10).toFixed(item.category === "FINISHED_GOOD" ? 0 : 1)} {item.category === "FINISHED_GOOD" ? "PRODUCTS" : item.unit}
                                     </p>
                                     <ArrowUpRight size={12} className="text-orange-500 opacity-0 group-hover/edit:opacity-100 transition-opacity" />
                                   </div>
