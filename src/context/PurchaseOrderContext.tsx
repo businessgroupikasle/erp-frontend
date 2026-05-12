@@ -76,7 +76,7 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
         setAutoFilledIds(new Set(newItems.map(i => i.id)));
       } else {
         // Fallback to one empty row if no materials linked
-        setItems([{ id: "1", materialId: "", name: "", quantity: 0, price: 0, gstRate: 5 }]);
+        setItems([{ id: "1", materialId: "", name: "", quantity: 0, unit: "KG", price: 0, gstRate: 5 }]);
         setAutoFilledIds(new Set());
       }
     }

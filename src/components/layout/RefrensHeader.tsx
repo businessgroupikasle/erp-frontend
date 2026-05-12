@@ -176,8 +176,6 @@ export default function RefrensHeader() {
   const { toggleCollapsed, toggleMobileOpen } = useSidebar();
   const { theme, toggleTheme } = useTheme();
 
-  if (pathname === "/login") return null;
-
   const [showSearch,        setShowSearch]        = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile,       setShowProfile]       = useState(false);
@@ -232,6 +230,8 @@ export default function RefrensHeader() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  if (pathname === "/login") return null;
 
   return (
     <>

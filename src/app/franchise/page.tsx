@@ -573,7 +573,7 @@ export default function FranchisePage() {
             </div>
             <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Confirm Delete</h2>
             <p className="text-slate-500 dark:text-slate-400 font-medium mb-8">
-              Are you sure you want to delete <span className="text-[#FF6B00] font-bold">"{confirmDelete.name}"</span>?
+              Are you sure you want to delete <span className="text-[#FF6B00] font-bold">&quot;{confirmDelete.name}&quot;</span>?
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)} className="flex-1 px-6 py-4 rounded-2xl text-sm font-black text-slate-500 hover:bg-slate-100 transition-all">Cancel</button>
