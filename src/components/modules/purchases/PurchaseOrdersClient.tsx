@@ -505,7 +505,17 @@ export default function PurchaseOrdersClient() {
                         <p className={clsx("text-xs font-black", balance <= 0 ? "text-emerald-500" : "text-orange-500")}>
                           {balance <= 0 ? "FULLY PAID" : formatCurrency(balance)}
                         </p>
-                        <p className="text-[9px] text-gray-400 mt-1 uppercase">{balance <= 0 ? "Success" : "Pending"}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-[9px] text-gray-400 uppercase">{balance <= 0 ? "Success" : "Pending"}</p>
+                          {balance > 0 && vendors.find(v => v.id === po.vendorId)?.advance > 0 && (
+                            <button 
+                              onClick={() => handleApplyAdvance(po.id)}
+                              className="text-[9px] font-black text-indigo-600 hover:text-indigo-700 uppercase underline decoration-dotted"
+                            >
+                              Apply Advance
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -682,8 +692,9 @@ export default function PurchaseOrdersClient() {
 
                 {/* Items Table Header */}
                 <div className="hidden md:grid grid-cols-12 gap-5 px-8 mb-2">
-                  <div className="col-span-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Material Description</div>
+                  <div className="col-span-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Material Description</div>
                   <div className="col-span-2 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Quantity</div>
+                  <div className="col-span-1 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Unit</div>
                   <div className="col-span-2 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Unit Price (₹)</div>
                   <div className="col-span-2 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-right pr-4">Subtotal (₹)</div>
                   <div className="col-span-1"></div>
@@ -692,7 +703,7 @@ export default function PurchaseOrdersClient() {
                 <div className="space-y-3 pb-40">
                   {items.map((it, idx) => (
                     <div key={idx} className="bg-white dark:bg-white/5 p-4 rounded-[2rem] border border-slate-100 dark:border-white/5 grid grid-cols-1 md:grid-cols-12 gap-5 items-center relative transition-all hover:shadow-xl hover:shadow-slate-200/20 dark:hover:shadow-none">
-                      <div className="md:col-span-5 relative">
+                      <div className="md:col-span-4 relative">
                         <div className="relative group">
                           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                             <Search size={14} className="text-slate-400 group-focus-within:text-orange-500 transition-colors" />
@@ -720,8 +731,10 @@ export default function PurchaseOrdersClient() {
                             className="w-full h-12 bg-slate-50 dark:bg-black/20 pl-11 pr-4 rounded-2xl font-bold text-xs outline-none border-2 border-transparent focus:border-orange-500/50 focus:bg-white dark:focus:bg-black/40 transition-all shadow-inner"
                           />
                           
-                          {activeMaterialDropdown === idx && (materialSearchQueries[idx] || "").length > 0 && (
-                            <div className="absolute top-full left-0 right-0 z-[500] mt-2 bg-white dark:bg-[#1a1c23] border border-slate-200 dark:border-white/10 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                          {activeMaterialDropdown === idx && (
+                            <>
+                              <div className="fixed inset-0 z-[490]" onClick={() => setActiveMaterialDropdown(null)} />
+                              <div className="absolute top-full left-0 right-0 z-[500] mt-2 bg-white dark:bg-[#1a1c23] border border-slate-200 dark:border-white/10 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
                               <div className="p-2 border-b border-slate-50 dark:border-white/5 bg-slate-50/50 dark:bg-white/5">
                                 <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-2">Suggestions</p>
                               </div>
@@ -757,7 +770,8 @@ export default function PurchaseOrdersClient() {
                                   </button>
                                 ))
                               )}
-                            </div>
+                              </div>
+                            </>
                           )}
                         </div>
                       </div>
@@ -770,6 +784,20 @@ export default function PurchaseOrdersClient() {
                           className="w-full h-12 bg-slate-50 dark:bg-black/20 px-4 rounded-2xl font-black text-sm outline-none border-2 border-transparent focus:border-orange-500/50 transition-all text-center"
                           placeholder="0"
                         />
+                      </div>
+                      <div className="md:col-span-1">
+                        <select
+                          value={it.unit?.toLowerCase()}
+                          onChange={(e) => updateItem(idx, "unit", e.target.value)}
+                          className="w-full h-12 bg-slate-50 dark:bg-black/20 px-2 rounded-2xl font-black text-[10px] outline-none border-2 border-transparent focus:border-orange-500/50 transition-all text-center uppercase appearance-none"
+                        >
+                          <option value="kg">KG</option>
+                          <option value="g">G</option>
+                          <option value="l">L</option>
+                          <option value="ml">ML</option>
+                          <option value="unit">UNIT</option>
+                          <option value="pcs">PCS</option>
+                        </select>
                       </div>
                       <div className="md:col-span-2">
                         <input

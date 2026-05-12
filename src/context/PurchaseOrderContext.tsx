@@ -7,6 +7,7 @@ export interface LineItem {
   materialId: string;
   name: string;
   quantity: number;
+  unit: string;
   price: number;
   gstRate: number;
 }
@@ -52,7 +53,7 @@ const PurchaseOrderContext = createContext<PurchaseOrderContextType | undefined>
 export function PurchaseOrderProvider({ children }: { children: React.ReactNode }) {
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [items, setItems] = useState<LineItem[]>([
-    { id: "1", materialId: "", name: "", quantity: 0, price: 0, gstRate: 5 }
+    { id: "1", materialId: "", name: "", quantity: 0, unit: "KG", price: 0, gstRate: 5 }
   ]);
   const [autoFilledIds, setAutoFilledIds] = useState<Set<string>>(new Set());
 
@@ -66,6 +67,7 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
           materialId: sm.materialId,
           name: sm.name || "Unknown Material",
           quantity: 0,
+          unit: "KG",
           price: sm.price || 0,
           gstRate: 5
         }));
@@ -86,7 +88,7 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
   const addItem = () => {
     setItems(prev => [
       ...prev,
-      { id: Math.random().toString(36).substr(2, 9), materialId: "", name: "", quantity: 0, price: 0, gstRate: 5 }
+      { id: Math.random().toString(36).substr(2, 9), materialId: "", name: "", quantity: 0, unit: "KG", price: 0, gstRate: 5 }
     ]);
   };
 
@@ -95,7 +97,7 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
       setItems(prev => prev.filter(item => item.id !== id));
     } else {
       // Reset the single item instead of removing
-      setItems([{ id: "1", materialId: "", name: "", quantity: 0, price: 0, gstRate: 5 }]);
+      setItems([{ id: "1", materialId: "", name: "", quantity: 0, unit: "KG", price: 0, gstRate: 5 }]);
     }
   };
 

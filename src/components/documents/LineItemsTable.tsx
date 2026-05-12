@@ -79,7 +79,8 @@ export default function LineItemsTable() {
             <tr className="bg-[#F9F7F9] dark:bg-slate-900 text-[#666] text-[10px] font-bold uppercase tracking-widest border-b border-[#F0EAF0] dark:border-slate-800">
               <th className="px-6 py-4 w-12">#</th>
               <th className="px-6 py-4 min-w-[300px]">Material / Item Details</th>
-              <th className="px-6 py-4 w-32">Qty</th>
+              <th className="px-6 py-4 w-24">Qty</th>
+              <th className="px-6 py-4 w-24">Unit</th>
               <th className="px-6 py-4 w-40">Unit Price</th>
               <th className="px-6 py-4 w-24 text-center">GST %</th>
               <th className="px-6 py-4 w-40 text-right">Total Amount</th>
@@ -148,6 +149,7 @@ export default function LineItemsTable() {
                                         updateItem(item.id, {
                                           materialId: m.id,
                                           name: m.name,
+                                          unit: m.unit || "KG",
                                           price: displayPrice,
                                         });
                                         if (vendorPrice !== null) {
@@ -190,6 +192,20 @@ export default function LineItemsTable() {
                       onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
                       onKeyDown={(e) => handleKeyDown(e, item.id, index)}
                     />
+                  </td>
+                  <td className="px-6 py-5 align-top">
+                    <select
+                      className="w-full p-2 bg-[#F9F7F9] dark:bg-slate-950 rounded-lg outline-none text-[10px] font-black text-center border border-transparent focus:border-[#7C3AED] transition-all uppercase appearance-none"
+                      value={item.unit?.toUpperCase()}
+                      onChange={(e) => updateItem(item.id, { unit: e.target.value })}
+                    >
+                       <option value="KG">KG</option>
+                       <option value="G">G</option>
+                       <option value="L">L</option>
+                       <option value="ML">ML</option>
+                       <option value="UNIT">UNIT</option>
+                       <option value="PCS">PCS</option>
+                    </select>
                   </td>
                   <td className="px-6 py-5 align-top">
                     <div className="relative">

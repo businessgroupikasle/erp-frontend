@@ -73,9 +73,13 @@ export default function POSPage() {
   const searchRef = useRef<HTMLInputElement>(null);
   const cartEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const fetchProducts = useCallback(() => {
     setProductsLoading(true);
-    productsApi.getAll({ take: 200 })
+    const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+    const user = userStr ? JSON.parse(userStr) : null;
+    const franchiseId = user?.franchiseId;
+
+    productsApi.getAll({ take: 200, franchiseId })
       .then((res) => {
         const data = res.data?.data || res.data || [];
         const mapped = data.map((p: any) => ({
@@ -84,8 +88,8 @@ export default function POSPage() {
           price: p.basePrice || p.price || 0,
           emoji: p.emoji || "🍽️",
           category: p.category || p.categoryName || "Other",
-          stock: typeof p.currentStock === "number" ? p.currentStock : (p.stock ?? null),
-          // per-product GST — backend may call it taxPercent, gstRate, tax, or gst
+          stock: p.currentStock !== undefined ? p.currentStock : (p.stock ?? null),
+          inventoryFranchiseId: p.inventoryFranchiseId,
           taxPercent:
             typeof p.taxPercent === "number" ? p.taxPercent
             : typeof p.gstRate === "number" ? p.gstRate
@@ -99,8 +103,12 @@ export default function POSPage() {
       })
       .catch((err) => console.error("Products fetch failed", err))
       .finally(() => setProductsLoading(false));
-    searchRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    fetchProducts();
+    searchRef.current?.focus();
+  }, [fetchProducts]);
 
   useEffect(() => {
     if (customerSearch.length >= 2) {
@@ -150,18 +158,31 @@ export default function POSPage() {
   useEffect(() => { cartEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [cart]);
 
   const addToCart = (item: any) => {
-    if (item.stock !== null && item.stock <= 0) return;
+    const existing = cart.find(i => i.id === item.id);
+    const currentQty = existing?.quantity || 0;
+
+    if (item.stock !== null && currentQty >= item.stock) {
+      toast.error(`Only ${item.stock} units available in stock.`);
+      return;
+    }
+
     setCart((prev) => {
-      const existing = prev.find((i) => i.id === item.id);
       if (existing) return prev.map((i) => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
       return [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1, emoji: item.emoji, taxPercent: item.taxPercent || 0 }];
     });
   };
 
   const updateQty = (id: string, delta: number) => {
+    const product = products.find(p => p.id === id);
     setCart((prev) => prev.map((i) => {
       if (i.id !== id) return i;
       const q = i.quantity + delta;
+      
+      if (delta > 0 && product?.stock !== null && q > product.stock) {
+        toast.error(`Insufficient stock! Only ${product.stock} left.`);
+        return i;
+      }
+      
       return q <= 0 ? null as any : { ...i, quantity: q };
     }).filter(Boolean));
   };
@@ -176,10 +197,24 @@ export default function POSPage() {
 
   const handleCheckout = async (mode: "CASH" | "UPI" | "CARD") => {
     if (cart.length === 0) return;
+
+    // Final inventory validation
+    for (const item of cart) {
+      const product = products.find(p => p.id === item.id);
+      if (product && product.stock !== null && item.quantity > product.stock) {
+        toast.error(`Insufficient stock for ${item.name}. Available: ${product.stock}`);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
+      const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+      const user = userStr ? JSON.parse(userStr) : null;
+      
       const res = await posApi.checkout({
-        customerId: customer?.id,
+        franchiseId: user?.franchiseId || (cart.length > 0 ? (cart[0] as any).inventoryFranchiseId : null),
+        customerId: customer?.id || "WALK_IN",
         customerName: customer ? customer.name : "Walk-in Customer",
         customerPhone: customer?.phone,
         paymentMode: mode,
