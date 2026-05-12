@@ -231,9 +231,9 @@ export default function RecipesPage() {
             <tbody>
               ${recipe.recipeItems?.map((item: any) => `
                 <tr>
-                  <td>${item.inventoryItem?.name || item.inventoryItemId}</td>
-                  <td style="text-align: center;">${item.quantityRequired}</td>
-                  <td style="text-align: right; color: #64748b;">${item.unit || 'KG'}</td>
+                  <td style="font-weight: 700; color: #1e293b;">${item.inventoryItem?.name || 'Unknown Material'}</td>
+                  <td style="text-align: center; font-weight: 700;">${item.quantityRequired}</td>
+                  <td style="text-align: right; color: #64748b; font-weight: 600;">${item.unit || 'KG'}</td>
                 </tr>
               `).join('')}
             </tbody>

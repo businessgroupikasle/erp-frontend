@@ -162,7 +162,7 @@ function ProductionContent() {
   const completedCount = history.filter((h) => h.status === "COMPLETED").length;
   const totalProduced  = history.filter((h) => h.status === "COMPLETED").reduce((s, h) => s + (h.quantity ?? 0), 0);
 
-  const ingredientPreview = selectedRecipe?.recipeItems?.map((item: any) => {
+  const ingredientPreview: IngredientPreview[] = selectedRecipe?.recipeItems?.map((item: any) => {
     const franchiseItem = franchiseInventory.find(fi => {
       const matchSku = fi.sku && item.inventoryItem?.sku && fi.sku.trim().toLowerCase() === item.inventoryItem.sku.trim().toLowerCase();
       const matchName = fi.name && item.inventoryItem?.name && fi.name.trim().toLowerCase() === item.inventoryItem.name.trim().toLowerCase();
@@ -173,7 +173,7 @@ function ProductionContent() {
 
     return {
       id: item.inventoryItemId,
-      name: item.inventoryItem?.name ?? item.inventoryItemId,
+      name: item.inventoryItem?.name ?? "Unknown Ingredient",
       unit: item.unit,
       needed: ((item.quantityRequired ?? 0) * quantity).toFixed(3),
       available: availableStock,

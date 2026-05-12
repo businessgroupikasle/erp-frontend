@@ -200,8 +200,8 @@ export default function GSTInvoice({ order, vendor, companyDetails, onClose }: G
                   <td className="py-2.5 px-2 border-r border-gray-200 text-center text-gray-500">
                     {idx + 1}
                   </td>
-                  <td className="py-2.5 px-3 border-r border-gray-200 font-medium text-gray-900">
-                    {itemName}
+                  <td className="py-2.5 px-3 border-r border-gray-200">
+                    <div className="font-black text-gray-900 uppercase text-xs tracking-tight">{itemName}</div>
                   </td>
                   <td className="py-2.5 px-2 border-r border-gray-200 text-center text-gray-500 font-mono">
                     {item.hsnCode || '-'}

@@ -49,7 +49,7 @@ export default function BillingSection() {
       {/* Billed To */}
       <div className="space-y-4">
         <h3 className="text-sm font-bold text-[#1A1A1A] dark:text-white flex items-center gap-2">
-          Billed To <span className="text-[#999] font-medium text-xs">Client's Details</span>
+          Billed To <span className="text-[#999] font-medium text-xs">Client&apos;s Details</span>
         </h3>
         
         <div className="p-6 bg-[#F9F7F9] dark:bg-slate-900/50 border border-dashed border-[#F0EAF0] dark:border-slate-800 rounded-xl flex flex-col items-center justify-center min-h-[220px] text-center gap-6">
