@@ -22,6 +22,8 @@ import {
   PackageCheck,
   CreditCard,
   Undo2,
+  Clock,
+  User,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -64,7 +66,7 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     ],
   },
 
-  // 2. Procurement — buy raw materials first
+  // 2. Procurement
   {
     title: "Procurement",
     items: [
@@ -83,14 +85,13 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
           { label: "Purchase Order", href: "/purchases/orders" },
           { label: "Purchase Inward", href: "/purchases/inward" },
           { label: "Purchase Return", href: "/purchases/returns" },
-          { label: "DC Inward Entry", href: "/purchases/dc-inward" },
           { label: "GRN", href: "/purchases/grn" },
         ]
       },
     ],
   },
 
-  // 3. Inventory — stock raw materials & finished goods
+  // 3. Inventory
   {
     title: "Inventory",
     items: [
@@ -107,114 +108,70 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         roles: FRANCHISE_ROLES,
       },
       {
-        icon: TrendingUp,
-        label: "Inventory Value",
-        href: "/inventory/stock-value",
-        roles: ADMIN_ROLES,
-      },
-      {
         icon: PackageCheck,
         label: "Product Batches",
         href: "/production/batches",
         roles: FRANCHISE_ROLES,
       },
-      {
-        icon: ArrowRightLeft,
-        label: "Stock Movement",
-        href: "/inventory/movements",
-        roles: ADMIN_ROLES,
-        isComingSoon: true,
-      },
     ],
   },
 
-  // 4. Production — convert raw materials into finished goods
-  {
-    title: "Production",
-    items: [
-      {
-        icon: ChefHat,
-        label: "Recipes",
-        href: "/recipes",
-        roles: ADMIN_ROLES,
-      },
-      {
-        icon: Factory,
-        label: "Production Batches",
-        href: "/production",
-        roles: FRANCHISE_ROLES,
-      },
-    ],
-  },
-
-  // 5. Sales — sell to customers
+  // 4. Sales
   {
     title: "Sales",
     items: [
       {
-        icon: Users,
-        label: "Customers",
-        href: "/customers",
-        roles: ADMIN_ROLES,
-      },
-      {
-        icon: ShoppingCart,
-        label: "B2C Billing",
+        icon: FileText,
+        label: "Sales Invoice",
         href: "/pos",
         roles: ALL_ROLES,
         children: [
-          { label: "B2C Billing", href: "/pos" },
-          { label: "B2C Settlement", href: "/pos/settlement" },
+          { label: "New Invoice", href: "/pos" },
+          { label: "Settlement", href: "/pos/settlement" },
           { label: "Cheque Settle", href: "/pos/cheque-settle" },
+          { label: "Sales Return", href: "/sales/returns" },
         ]
       },
       {
-        icon: FileText,
-        label: "B2B Billing",
+        icon: ShoppingCart,
+        label: "B2B Orders",
         href: "/sales/orders",
         roles: ADMIN_ROLES,
-        children: [
-          { label: "B2B Billing", href: "/sales/orders" },
-          { label: "B2B Settlement", href: "/sales/settlement" },
-          { label: "Cheque Settle", href: "/sales/cheque-settle" },
-          { label: "Sales Return", href: "/sales/returns" },
-        ]
       },
     ],
   },
 
-  // 6. Franchise — distribute to franchise branches
+  // 5. Franchise Master
   {
-    title: "Franchise",
+    title: "Franchise Master",
     items: [
-      {
-        icon: LayoutDashboard,
-        label: "Franchise Dashboard",
-        href: "/franchise/dashboard",
-        roles: ADMIN_ROLES,
-      },
       {
         icon: Building2,
         label: "Manage Franchises",
         href: "/franchise",
-        roles: ADMIN_ROLES,
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Users,
+        label: "Business Partners",
+        href: "/franchise/dealers",
+        roles: SUPER_ONLY,
+        children: [
+          { label: "Dealers", href: "/franchise/dealers" },
+          { label: "Retailers", href: "/franchise/retailers" },
+          { label: "Customers", href: "/customers" },
+        ]
       },
       {
         icon: Send,
-        label: "Franchise Orders",
+        label: "Dispatch Orders",
         href: "/franchise/requests",
-        roles: FRANCHISE_ROLES,
-      },
-      {
-        icon: ArrowRightLeft,
-        label: "Dispatch & Delivery",
-        href: "/franchise/transfers",
-        roles: ADMIN_ROLES,
+        roles: SUPER_ONLY,
       },
     ],
   },
 
-  // 7. Accounting — track money
+  // 6. Accounting
   {
     title: "Accounting",
     items: [
@@ -235,11 +192,6 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         label: "Expense",
         href: "/accounting/expenses",
         roles: ADMIN_ROLES,
-        children: [
-          { label: "Expense Master", href: "/accounting/expenses/categories" },
-          { label: "Expense Entry", href: "/accounting/expenses/new" },
-          { label: "Expense Report", href: "/reports/expenses" },
-        ]
       },
       {
         icon: FileText,
@@ -247,108 +199,19 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         href: "/accounting/cheques",
         roles: ADMIN_ROLES,
       },
-      {
-        icon: FileText,
-        label: "Supplier Payments",
-        href: "/accounting/ledgers",
-        roles: ADMIN_ROLES,
-        children: [
-          { label: "Supplier Pay Track", href: "/accounting/ledgers" },
-          { label: "Cheque Settle", href: "/accounting/cheque-settle" },
-        ]
-      },
     ],
   },
 
-  // 8. Reports — analyse performance
+  // 7. System Settings
   {
-    title: "Reports",
-    items: [
-      {
-        icon: BarChart3,
-        label: "Master Reports",
-        href: "/reports",
-        roles: ADMIN_ROLES,
-        children: [
-          { label: "B2B Sales Report", href: "/reports/b2b-sales" },
-          { label: "B2B Detail Report", href: "/reports/b2b-detail" },
-          { label: "B2B Emp wise Sales Report", href: "/reports/b2b-emp-sales" },
-          { label: "B2B Emp wise Detail Report", href: "/reports/b2b-emp-detail" },
-          { label: "B2C Sales Report", href: "/reports/b2c-sales" },
-          { label: "B2C Detail Report", href: "/reports/b2c-detail" },
-          { label: "Purchase Report", href: "/reports/purchases" },
-          { label: "Product Wise Sales Report", href: "/reports/product-sales" },
-          { label: "Collection Report", href: "/reports/collection" },
-          { label: "Profit/Loss Report", href: "/accounting/profit-loss" },
-          { label: "Ageing Report", href: "/reports/ageing" },
-        ]
-      },
-      {
-        icon: AlertTriangle,
-        label: "Alerts",
-        href: "/alerts",
-        roles: ALL_ROLES,
-      },
-    ],
-  },
-
-  // 9. HR & Payroll
-  {
-    title: "HR & Payroll",
+    title: "System",
     items: [
       {
         icon: UserCheck,
-        label: "Employee Master",
-        href: "/hr/employees",
-        roles: ADMIN_ROLES,
-      },
-      {
-        icon: Landmark,
-        label: "Payroll & Payslips",
-        href: "/hr/payroll",
-        roles: ADMIN_ROLES,
-      },
-      {
-        icon: Landmark,
-        label: "Apply Leaves",
-        href: "/hr/leaves",
-        roles: ADMIN_ROLES,
-      },
-
-
-    ],
-  },
-
-  // 10. Setup Management
-  {
-    title: "Setup Management",
-    items: [
-      {
-        icon: Settings,
-        label: "Master Setup",
-        href: "/settings/master",
+        label: "User Creation",
+        href: "/admin/users",
         roles: SUPER_ONLY,
-        children: [
-          { label: "Company Profile", href: "/settings/user/profile" },
-          { label: "Supplier", href: "/vendors" },
-          { label: "Customer", href: "/customers" },
-          { label: "Product", href: "/products" },
-          { label: "Category", href: "/products/categories" },
-          { label: "Employee", href: "/hr/employees" },
-          { label: "User Creation", href: "/admin/users" },
-          { label: "Dealer/Distributor", href: "/dealers" },
-          { label: "Bank", href: "/banking/accounts" },
-          { label: "Role", href: "/admin/roles" },
-          { label: "Region", href: "/settings/regions" },
-        ]
       },
-    ],
-  },
-
-  // 11. System Settings
-  {
-    title: "System Settings",
-    items: [
       {
         icon: Settings,
         label: "General Settings",
@@ -368,124 +231,170 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
 export const menuItems = SUPER_ADMIN_SIDEBAR.flatMap((s) => s.items);
 
 // ─── FRANCHISE_ADMIN dedicated sidebar ────────────────────────────────────────
-const FRANCHISE_ADMIN_ONLY = ["SUPER_ADMIN", "FRANCHISE_ADMIN"];
-const FRANCHISE_ALL = ["SUPER_ADMIN", "FRANCHISE_ADMIN"];
-
 export const franchiseMenuSections: MenuSection[] = [
   {
-    title: "Home",
+    title: "DASHBOARD",
     items: [
       {
         icon: LayoutDashboard,
         label: "Dashboard",
         href: "/franchise/dashboard",
-        roles: FRANCHISE_ADMIN_ONLY,
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: BarChart3,
+        label: "Analytics",
+        href: "/reports",
+        roles: ADMIN_ROLES,
       },
     ],
   },
   {
-    title: "Orders",
+    title: "SALES",
     items: [
       {
-        icon: ShoppingCart,
-        label: "My Orders",
+        icon: Send,
+        label: "Sales Request",
         href: "/franchise-orders",
-        roles: FRANCHISE_ADMIN_ONLY,
-        children: [
-          { label: "Place Order", href: "/franchise-orders" },
-          { label: "Order History", href: "/franchise-orders" },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Stock",
-    items: [
-      {
-        icon: Package,
-        label: "Available Products",
-        href: "/franchise/stock",
-        roles: FRANCHISE_ADMIN_ONLY,
+        roles: ADMIN_ROLES,
       },
       {
-        icon: PackageCheck,
-        label: "Expiry Tracking",
-        href: "/production/batches",
-        roles: FRANCHISE_ADMIN_ONLY,
-      },
-    ],
-  },
-  {
-    title: "Payments",
-    items: [
-      {
-        icon: CreditCard,
-        label: "Payments & Ledger",
-        href: "/franchise/payments",
-        roles: FRANCHISE_ADMIN_ONLY,
-      },
-    ],
-  },
-  {
-    title: "Sales",
-    items: [
-      {
-        icon: ShoppingCart,
-        label: "B2C Billing",
+        icon: FileText,
+        label: "Sales Invoice",
         href: "/pos",
-        roles: FRANCHISE_ALL,
+        roles: ADMIN_ROLES,
         children: [
-          { label: "B2C Billing", href: "/pos" },
-          { label: "B2C Settlement", href: "/pos/settlement" },
+          { label: "New Invoice", href: "/pos" },
+          { label: "Settlement", href: "/pos/settlement" },
           { label: "Cheque Settle", href: "/pos/cheque-settle" },
         ]
-      },
-      {
-        icon: Users,
-        label: "Customers",
-        href: "/customers",
-        roles: FRANCHISE_ADMIN_ONLY,
       },
       {
         icon: Undo2,
         label: "Sales Returns",
         href: "/sales/returns",
-        roles: FRANCHISE_ADMIN_ONLY,
+        roles: ADMIN_ROLES,
       },
       {
-        icon: BarChart3,
-        label: "Master Reports",
-        href: "/reports",
-        roles: FRANCHISE_ADMIN_ONLY,
-        children: [
-          { label: "B2B Sales Report", href: "/reports/b2b-sales" },
-          { label: "B2B Detail Report", href: "/reports/b2b-detail" },
-          { label: "B2C Sales Report", href: "/reports/b2c-sales" },
-          { label: "B2C Detail Report", href: "/reports/b2c-detail" },
-          { label: "Collection Report", href: "/reports/collection" },
-        ]
+        icon: TrendingUp,
+        label: "Outstanding",
+        href: "/accounting/ledgers",
+        roles: ADMIN_ROLES,
       },
     ],
   },
   {
-    title: "HR & Staff",
+    title: "PURCHASE",
     items: [
       {
-        icon: UserCheck,
-        label: "Employee Master",
-        href: "/hr/employees",
-        roles: FRANCHISE_ADMIN_ONLY,
+        icon: ShoppingCart,
+        label: "Purchase Orders",
+        href: "/purchases/orders",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: PackageCheck,
+        label: "Stock Entry",
+        href: "/purchases/inward",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: Store,
+        label: "Vendors",
+        href: "/vendors",
+        roles: ADMIN_ROLES,
       },
     ],
   },
   {
-    title: "Settings",
+    title: "INVENTORY",
+    items: [
+      {
+        icon: Package,
+        label: "Inventory",
+        href: "/franchise/stock",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: AlertTriangle,
+        label: "Low Stock",
+        href: "/alerts",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: Clock,
+        label: "Expiry Tracking",
+        href: "/production/batches",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: ArrowRightLeft,
+        label: "Stock Transfer",
+        href: "/inventory/movements",
+        roles: ADMIN_ROLES,
+      },
+    ],
+  },
+  {
+    title: "PAYMENTS",
+    items: [
+      {
+        icon: FileText,
+        label: "Cheque Management",
+        href: "/accounting/cheques",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: CreditCard,
+        label: "Collections",
+        href: "/accounting/payments",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: Landmark,
+        label: "Ledger",
+        href: "/franchise/payments",
+        roles: ADMIN_ROLES,
+      },
+    ],
+  },
+  {
+    title: "BUSINESS PARTNERS",
+    items: [
+      {
+        icon: Users,
+        label: "Dealers",
+        href: "/franchise/dealers",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: Store,
+        label: "Retailers",
+        href: "/franchise/retailers",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: User,
+        label: "Customers",
+        href: "/customers",
+        roles: ADMIN_ROLES,
+      },
+    ],
+  },
+  {
+    title: "SETTINGS",
     items: [
       {
         icon: Settings,
-        label: "Settings",
+        label: "Profile",
+        href: "/profile",
+        roles: ADMIN_ROLES,
+      },
+      {
+        icon: Settings,
+        label: "Franchise Settings",
         href: "/settings/user/profile",
-        roles: FRANCHISE_ADMIN_ONLY,
+        roles: ADMIN_ROLES,
       },
     ],
   },

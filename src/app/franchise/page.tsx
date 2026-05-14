@@ -72,7 +72,13 @@ export default function FranchisePage() {
     setLoading(true);
     try {
       const res = await franchiseApi.getAll();
-      setFranchises(res.data ?? []);
+      // Filter out internal HQ and confusing duplicates to maintain 2-level hierarchy
+      const cleanList = (res.data ?? []).filter((f: any) => 
+        !f.name.includes("Headquarters (HQ)") && 
+        !f.name.includes("Distribution Center") &&
+        f.id !== "hq-001" // Main HQ is managed as Super Admin, not as a franchise branch
+      );
+      setFranchises(cleanList);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);

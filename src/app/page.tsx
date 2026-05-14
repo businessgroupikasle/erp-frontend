@@ -148,7 +148,7 @@ export default function Dashboard() {
       {/* ── 📊 SUMMARY METRICS ──────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <MetricCard 
-          title="B2B SALES" 
+          title="DEALER SALES" 
           monthValue={b2bSales.month} 
           todayValue={b2bSales.today} 
           trend={b2bSales.trend}
@@ -171,7 +171,7 @@ export default function Dashboard() {
         />
 
         <MetricCard 
-          title="B2C SALES" 
+          title="SALES INVOICES" 
           monthValue={b2cSales.month} 
           todayValue={b2cSales.today} 
           trend={b2cSales.trend}
@@ -215,7 +215,7 @@ export default function Dashboard() {
       {/* ── 🚀 ADVANCED OPERATIONS ───────────────────────── */}
       <div className="space-y-6">
         <PremiumReportTable 
-          title="Recent B2C Sales Details" 
+          title="Recent Sales Invoices" 
           headers={["Bill.No", "Date", "Bill To", "Name", "T.Amt"]} 
           rows={recentB2CSalesRows} 
         />
@@ -236,7 +236,7 @@ export default function Dashboard() {
           rows={recentPurchasesRows} 
         />
         <PremiumReportTable 
-          title="Recent B2B Sales Details" 
+          title="Recent Dealer Sales" 
           headers={["Bill.No", "Date", "Bill to", "Name", "T.Amt"]} 
           rows={recentB2BSalesRows} 
         />

@@ -29,10 +29,10 @@ export default function SalesReturnsPage() {
   const [returns, setReturns] = useState<ReturnOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'ALL' | 'FRANCHISE' | 'BUSINESS'>('ALL');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'FRANCHISE' | 'PARTNER'>('ALL');
   
   // Modal State
-  const [returnSource, setReturnSource] = useState<'FRANCHISE' | 'BUSINESS'>('BUSINESS');
+  const [returnSource, setReturnSource] = useState<'FRANCHISE' | 'PARTNER'>('PARTNER');
   const [selectedEntity, setSelectedEntity] = useState<any>(null); // Franchise or Customer
   const [selectedOrder, setSelectedOrder] = useState<any>(null); // FranchiseOrder or SalesOrder
   const [entities, setEntities] = useState<any[]>([]);
@@ -50,7 +50,7 @@ export default function SalesReturnsPage() {
     try {
       const params: any = {};
       if (activeTab === 'FRANCHISE') params.source = 'FRANCHISE';
-      if (activeTab === 'BUSINESS') params.source = 'BUSINESS';
+      if (activeTab === 'PARTNER') params.source = 'BUSINESS';
       
       const res = await salesApi.getReturns(params);
       setReturns(res.data);
@@ -181,7 +181,7 @@ export default function SalesReturnsPage() {
             </div>
             Sales Return Management
           </h1>
-          <p className="text-slate-500 font-medium mt-1">Manage product returns from Franchisees and Business Owners</p>
+          <p className="text-slate-500 font-medium mt-1">Manage product returns from Franchisees and Dealers/Retailers</p>
         </div>
         <button 
           onClick={() => { setShowNewModal(true); fetchEntities(); }}
@@ -210,7 +210,7 @@ export default function SalesReturnsPage() {
       <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
-            {(['ALL', 'FRANCHISE', 'BUSINESS'] as const).map((t) => (
+            {(['ALL', 'FRANCHISE', 'PARTNER'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setActiveTab(t)}
@@ -219,7 +219,7 @@ export default function SalesReturnsPage() {
                   activeTab === t ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
                 )}
               >
-                {t} Returns
+                {t === 'PARTNER' ? 'Dealer' : t} Returns
               </button>
             ))}
           </div>
@@ -279,7 +279,7 @@ export default function SalesReturnsPage() {
                         </div>
                         <div>
                           <p className="font-bold text-slate-900 leading-none">{ret.franchise?.name || ret.customer?.name || "N/A"}</p>
-                          <p className="text-[10px] font-black text-slate-400 uppercase mt-1">{ret.franchise ? "Franchise" : "Business Owner"}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase mt-1">{ret.franchise ? "Franchise" : "Dealer/Retailer"}</p>
                         </div>
                       </div>
                     </td>
@@ -358,14 +358,14 @@ export default function SalesReturnsPage() {
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Return Source</label>
                 <div className="grid grid-cols-2 gap-4">
                   <button 
-                    onClick={() => { setReturnSource('BUSINESS'); resetModal(); fetchEntities(); }}
+                    onClick={() => { setReturnSource('PARTNER'); resetModal(); fetchEntities(); }}
                     className={clsx(
                       "p-6 rounded-[2rem] border-2 transition-all flex flex-col items-center gap-3",
-                      returnSource === 'BUSINESS' ? "border-orange-500 bg-orange-50/50" : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
+                      returnSource === 'PARTNER' ? "border-orange-500 bg-orange-50/50" : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
                     )}
                   >
-                    <User className={clsx(returnSource === 'BUSINESS' ? "text-orange-500" : "text-slate-400")} size={32} />
-                    <span className={clsx("font-black uppercase tracking-widest text-xs", returnSource === 'BUSINESS' ? "text-orange-600" : "text-slate-500")}>Business Owner</span>
+                    <User className={clsx(returnSource === 'PARTNER' ? "text-orange-500" : "text-slate-400")} size={32} />
+                    <span className={clsx("font-black uppercase tracking-widest text-xs", returnSource === 'PARTNER' ? "text-orange-600" : "text-slate-500")}>Dealer / Retailer</span>
                   </button>
                   <button 
                     onClick={() => { setReturnSource('FRANCHISE'); resetModal(); fetchEntities(); }}

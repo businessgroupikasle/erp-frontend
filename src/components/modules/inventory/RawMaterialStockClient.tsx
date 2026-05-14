@@ -4,12 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Layers, Plus, Search, AlertTriangle, CheckCircle2,
   RefreshCw, TrendingDown, TrendingUp, Trash2, X,
-  ArrowDownCircle, Truck, Edit2, Lock, ArrowLeft, ArrowUpRight
+  ArrowDownCircle, Truck, Edit2, Lock, ArrowLeft, ArrowUpRight,
+  Calculator, Package, BarChart3, Database
 } from "lucide-react";
 import { clsx } from "clsx";
-import { rawMaterialsApi, inventoryApi } from "@/lib/api";
-
-import { ITEM_CATEGORIES } from "@/lib/constants";
+import { rawMaterialsApi } from "@/lib/api";
 import Link from "next/link";
 
 export default function RawMaterialStockClient() {
@@ -54,397 +53,240 @@ export default function RawMaterialStockClient() {
 
   useEffect(() => { fetchItems(); }, [fetchItems, showInactive]);
 
-  const handleDeactivate = async (id: string, name: string) => {
-    if (!confirm(`Archive "${name}"? It will be hidden from main lists but history will be preserved.`)) return;
-    try {
-      await rawMaterialsApi.deactivate(id);
-      fetchItems();
-    } catch (e: any) {
-      setDeleteError(e?.response?.data?.error || "Failed to deactivate item.");
-    }
-  };
-
-  const handleActivate = async (id: string) => {
-    try {
-      await rawMaterialsApi.activate(id);
-      fetchItems();
-    } catch (e: any) {
-      setDeleteError(e?.response?.data?.error || "Failed to reactivate item.");
-    }
-  };
-
   const handleDelete = async (item: any) => {
-    const { id, name } = item;
-    setDeleteError(null);
-
+    if (!confirm(`Archive "${item.name}"?`)) return;
     try {
-      // First try to delete
-      await rawMaterialsApi.delete(id);
+      await rawMaterialsApi.delete(item.id);
       fetchItems();
     } catch (e: any) {
-       const serverError = e?.response?.data?.error;
-       if (serverError && serverError.includes("history")) {
-         // If history exists, offer deactivation
-         if (confirm(`${name} has stock history and cannot be deleted permanently.\n\nWould you like to MARK AS INACTIVE instead? (It will be hidden but safe for audits)`)) {
-           handleDeactivate(id, name);
-         }
-       } else {
-         setDeleteError(serverError ?? "Delete failed.");
-       }
+       setDeleteError(e?.response?.data?.error || "Delete failed.");
     }
   };
 
   const filtered = items.filter((it) => {
     const matchSearch = !search ||
       it.name?.toLowerCase().includes(search.toLowerCase()) ||
-      it.sku?.toLowerCase().includes(search.toLowerCase()) ||
-      it.hsnCode?.toLowerCase().includes(search.toLowerCase());
-    const matchCat = category === "ALL" || 
-      (category === "RAW" && it.category?.startsWith("RAW_")) ||
-      (category === "FINISHED" && it.category === "FINISHED_GOOD") ||
-      (category === "PACKAGING" && it.category?.startsWith("PACKAGING_"));
+      it.sku?.toLowerCase().includes(search.toLowerCase());
+    
+    const cat = category.toUpperCase();
+    const itemCat = it.category?.toUpperCase() || "";
+    
+    const matchCat = cat === "ALL" || 
+      (cat === "RAW" && (itemCat === "RAW_MATERIAL" || itemCat.startsWith("RAW_"))) ||
+      (cat === "FINISHED" && (itemCat === "FINISHED_GOOD" || itemCat === "FINISHED_PRODUCT")) ||
+      (cat === "PACKAGING" && itemCat.startsWith("PACKAGING"));
+    
     const matchSource = sourceFilter === "ALL" ||
       (sourceFilter === "PURCHASED" && it.isPurchased) ||
       (sourceFilter === "MANUAL" && !it.isPurchased);
+      
     return matchSearch && matchCat && matchSource;
   });
 
+  const getStockStatus = (stock: number, threshold: number) => {
+    const s = stock || 0;
+    const t = threshold || 0;
+    if (s <= 0) return { label: "CRITICAL", color: "bg-red-50 text-red-600 border-red-100 dark:bg-red-500/10 dark:border-red-500/20" };
+    if (s < t) return { label: "LOW STOCK", color: "bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-500/10 dark:border-orange-500/20" };
+    if (s === t) return { label: "REORDER", color: "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:border-amber-500/20" };
+    return { label: "SAFE", color: "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20" };
+  };
+
+  const totalValue = items.reduce((acc, i) => acc + ((i.currentStock || 0) * (i.costPrice || 0)), 0);
+
   return (
-    <div className="max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700">
+    <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500 p-4 md:p-8">
       {deleteError && (
-        <div className="flex items-center justify-between gap-4 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl text-red-600 dark:text-red-400 text-sm font-bold animate-in fade-in slide-in-from-top-2">
+        <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl text-red-600 text-xs font-bold">
           <div className="flex items-center gap-3">
-            <AlertTriangle size={16} className="shrink-0" />
+            <AlertTriangle size={14} />
             {deleteError}
           </div>
-          <button onClick={() => setDeleteError(null)} className="shrink-0 text-red-400 hover:text-red-600 transition-colors">
-            <X size={14} />
-          </button>
+          <button onClick={() => setDeleteError(null)}><X size={14} /></button>
         </div>
       )}
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 py-4 border-b border-slate-200 dark:border-slate-800">
+
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-             <div className="p-2 md:p-2.5 bg-[#F97316] rounded-lg md:rounded-xl shadow-lg shadow-orange-600/20 shrink-0">
-                <Layers size={20} className="text-white" />
+          <div className="flex items-center gap-3">
+             <div className="p-3 bg-slate-900 rounded-2xl shadow-xl shadow-slate-900/10 shrink-0">
+                <Database size={24} className="text-white" />
              </div>
-              <h1 className="text-lg md:text-xl lg:text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase transition-all">
-                 Inventory & <span className="text-slate-400 font-medium ml-1 tracking-tighter italic">Stock Intelligence</span>
-              </h1>
+              <div>
+                <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
+                   Item Master <span className="text-slate-400 font-medium ml-1 italic">& Inventory</span>
+                </h1>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <BarChart3 size={12} className="text-orange-500" /> Operational stock ledger & valuation engine
+                </p>
+              </div>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 font-medium ml-12 text-xs leading-relaxed">
-            Strategic inventory control and <span className="text-orange-500 font-bold underline decoration-orange-500/30">real-time movement</span> tracking.
-          </p>
         </div>
-        <div className="flex items-center gap-2 md:gap-3">
-           <button onClick={fetchItems} className="p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-slate-300 transition-all shadow-sm group shrink-0">
-             <RefreshCw size={16} className={clsx("text-slate-400 group-hover:rotate-180 transition-transform duration-500", loading && "animate-spin")} />
+        <div className="flex items-center gap-3">
+           <button onClick={fetchItems} className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl hover:border-slate-300 transition-all shadow-sm">
+             <RefreshCw size={16} className={clsx("text-slate-400", loading && "animate-spin")} />
            </button>
            <Link
              href="/inventory/stock/add"
-             className="flex items-center justify-center gap-2.5 bg-[#F97316] text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:shadow-xl hover:translate-y-[-1px] transition-all active:translate-y-0 shadow-orange-600/10"
+             className="flex items-center gap-3 bg-slate-900 text-white px-8 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-2xl shadow-slate-900/20"
            >
-             <Plus size={16} strokeWidth={3} /> Add Item
+             <Plus size={18} strokeWidth={3} /> Create New Item
            </Link>
         </div>
       </header>
 
-      {/* Simplified Analytics Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* High Density Analytics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
          {[
-           { 
-             label: "Total Products", 
-             value: items.filter(i => i.category === 'FINISHED_GOOD').reduce((acc, i) => acc + (i.currentStock || 0), 0).toFixed(0), 
-             sub: `${items.filter(i => i.category === 'FINISHED_GOOD').length} Unique SKUs`,
-             icon: CheckCircle2, 
-             color: "text-emerald-500", 
-             bg: "bg-emerald-500/10" 
-           },
-           { 
-             label: "Raw Material Types", 
-             value: items.filter(i => i.category?.startsWith('RAW_')).length, 
-             sub: "Tracked Items",
-             icon: Layers, 
-             color: "text-blue-500", 
-             bg: "bg-blue-500/10" 
-           },
-           { 
-             label: "Inventory Value", 
-             value: `₹${(items.reduce((acc, i) => acc + ((i.currentStock || 0) * (i.avgPurchasePrice || 0)), 0) / 1000).toFixed(1)}K`, 
-             sub: "Live Valuation",
-             icon: TrendingUp, 
-             color: "text-orange-500", 
-             bg: "bg-orange-500/10" 
-           },
+           { label: "Inventory Valuation", value: `₹${(totalValue/1000).toFixed(1)}K`, sub: "Live Asset Value", icon: Calculator, color: "text-orange-500", bg: "bg-orange-500/10" },
+           { label: "Finished Products", value: items.filter(i => i.category?.includes('FINISHED')).length, sub: "Market Ready SKUs", icon: Package, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+           { label: "Low Stock Alerts", value: items.filter(i => (i.currentStock || 0) < (i.minimumStock || 0)).length, sub: "Reorder Required", icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
+           { label: "Raw Materials", value: items.filter(i => i.category?.includes('RAW')).length, sub: "Production Inputs", icon: Layers, color: "text-blue-500", bg: "bg-blue-500/10" },
          ].map((stat, i) => (
-           <div key={i} className="bg-white dark:bg-card/40 backdrop-blur-md p-6 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-xl shadow-black/[0.01] group">
-             <div className="flex items-center justify-between mb-4">
-                <div className={clsx("p-3 rounded-2xl transition-transform group-hover:scale-110 duration-500", stat.bg, stat.color)}>
-                   <stat.icon size={20} />
-                </div>
-                <span className="text-[10px] font-black text-slate-300 tracking-widest uppercase">Overview</span>
-             </div>
-             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
-             <div className="flex items-end gap-2">
-                <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{stat.value}</h3>
-                <p className="text-[10px] font-bold text-slate-400 mb-1.5 uppercase italic">{stat.sub}</p>
-             </div>
+           <div key={i} className="bg-white dark:bg-card/40 p-5 rounded-[2rem] border border-slate-100 dark:border-white/5 shadow-sm flex items-center gap-4">
+              <div className={clsx("p-4 rounded-2xl", stat.bg, stat.color)}>
+                 <stat.icon size={20} />
+              </div>
+              <div>
+                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
+                 <div className="flex items-baseline gap-2">
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{stat.value}</h3>
+                    <span className="text-[8px] font-bold text-slate-400 uppercase italic">{stat.sub}</span>
+                 </div>
+              </div>
            </div>
          ))}
       </div>
 
-      <div className="flex flex-col gap-6">
-         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-2xl w-full md:w-fit border border-slate-200 dark:border-white/5 overflow-x-auto hide-scrollbar">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50 dark:bg-white/5 p-2 rounded-[2rem] border border-slate-100 dark:border-white/5">
+            <div className="flex gap-1 overflow-x-auto hide-scrollbar">
                {[
                   { id: "ALL", label: "All Items" },
                   { id: "RAW", label: "Raw Materials" },
-                  { id: "FINISHED", label: "Finished Goods" },
+                  { id: "FINISHED", label: "Finished Products" },
                   { id: "PACKAGING", label: "Packaging" }
                ].map((cat) => (
                  <button
                    key={cat.id}
                    onClick={() => setCategory(cat.id)}
                    className={clsx(
-                     "px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-                     category === cat.id
-                       ? "bg-white dark:bg-card text-slate-900 dark:text-white shadow-md border border-slate-100 dark:border-white/10"
-                       : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                     "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                     category === cat.id ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-100 dark:border-white/10" : "text-slate-400"
                    )}
                  >
                    {cat.label}
                  </button>
                ))}
             </div>
-
-         </div>
-
-         <div className="relative group w-full">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={18} />
-            <input
-              type="text"
-              placeholder="Search by SKU or Item Name..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-14 pr-6 py-4 bg-white dark:bg-card border-none rounded-3xl outline-none focus:ring-4 ring-orange-500/10 text-sm font-bold shadow-xl shadow-black/[0.02] transition-all"
-            />
-         </div>
+            <div className="relative group w-full md:w-80 px-2">
+               <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+               <input
+                 type="text"
+                 placeholder="Search SKU / Item Name..."
+                 value={search}
+                 onChange={(e) => setSearch(e.target.value)}
+                 className="w-full pl-12 pr-6 py-3 bg-white dark:bg-slate-900 border-none rounded-xl outline-none text-xs font-bold shadow-sm"
+               />
+            </div>
       </div>
 
-      <div className="space-y-4">
-        {/* Mobile View */}
-        <div className="grid grid-cols-1 gap-4 md:hidden">
-          {filtered.map((item) => (
-            <div key={item.id} className="bg-white dark:bg-card/40 backdrop-blur-md border border-slate-200 dark:border-white/5 rounded-3xl p-5 shadow-lg space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] border shrink-0",
-                    item.status === "LOW" ? "bg-red-50 text-red-500 border-red-100" : "bg-emerald-50 text-emerald-500 border-emerald-100"
-                  )}>
-                     {item.name.substring(0,2).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-sm leading-tight truncate">{item.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className={clsx("text-[8px] font-black px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 uppercase tracking-tighter", 
-                        item.status === "LOW" ? "text-red-500" : "text-slate-400")}>
-                        {item.sku}
-                      </span>
-                      {item.isPurchased ? (
-                        <span className="px-1.5 py-0.5 bg-purple-500/10 text-purple-500 border border-purple-500/20 rounded text-[7px] font-black uppercase tracking-widest">Vendor</span>
-                      ) : (
-                        <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded text-[7px] font-black uppercase tracking-widest">Direct</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  <span className="text-[10px] font-black text-slate-600 dark:text-slate-300">
-                    {(item.currentStock || 0).toFixed(0)} {item.category === "FINISHED_GOOD" ? "PRODUCTS" : item.unit}
-                  </span>
-                  <span className={clsx("px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-wider border", 
-                    item.status === "LOW" ? "bg-red-50 dark:bg-red-500/10 text-red-600 border-red-100 dark:border-red-500/20" : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border-emerald-100 dark:border-emerald-500/20")}>
-                    {item.status === "LOW" ? "LOW" : "SAFE"}
-                  </span>
-                </div>
-              </div>
-              
-              {item.isPurchased && (
-                <div className="px-3 py-2 bg-purple-50/50 dark:bg-purple-500/[0.02] rounded-xl border border-purple-100/50 dark:border-purple-500/10">
-                  <div className="flex items-center gap-2 text-[9px] font-black text-purple-600 uppercase tracking-tight">
-                    <Truck size={10} /> {item.vendor?.name || 'Linked Vendor'}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-white/5">
-                <div className="flex gap-2">
-                  <Link href={`/inventory/stock/edit?id=${item.id}`} className="p-2.5 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-xl"><Edit2 size={14} /></Link>
-                  {item.isActive ? (
-                    <button onClick={() => handleDelete(item)} className="p-2.5 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl"><Trash2 size={14} /></button>
-                  ) : (
-                    <button onClick={() => handleActivate(item.id)} className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-[8px] font-black uppercase tracking-widest uppercase">Activate</button>
-                  )}
-                </div>
-              </div>
+      {/* Dense Table Layout */}
+      <div className="bg-white dark:bg-card/40 border border-slate-200 dark:border-white/5 rounded-[2.5rem] shadow-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left table-fixed">
+            <thead className="bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5">
+              <tr className="text-slate-400">
+                <th className="w-[26%] px-8 py-4 text-[9px] font-black uppercase tracking-widest">Item Specification</th>
+                <th className="w-[10%] px-6 py-4 text-[9px] font-black uppercase tracking-widest text-center">Movement</th>
+                <th className="w-[14%] px-6 py-4 text-[9px] font-black uppercase tracking-widest">Stock Balance</th>
+                <th className="w-[10%] px-6 py-4 text-[9px] font-black uppercase tracking-widest">Avg. Cost</th>
+                <th className="w-[10%] px-6 py-4 text-[9px] font-black uppercase tracking-widest">Sale Price</th>
+                <th className="w-[10%] px-6 py-4 text-[9px] font-black uppercase tracking-widest text-right">Valuation</th>
+                <th className="w-[10%] px-6 py-4 text-[9px] font-black uppercase tracking-widest text-center">Status</th>
+                <th className="w-[10%] px-8 py-4"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+              {filtered.map((item) => {
+                const status = getStockStatus(item.currentStock, item.minimumStock);
+                const isFinished = item.category?.includes('FINISHED');
+                const stockVal = (item.currentStock || 0) * (item.costPrice || 0);
+                
+                return (
+                  <tr key={item.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all">
+                    <td className="px-8 py-3">
+                       <div className="flex items-center gap-3">
+                          <div className={clsx("w-8 h-8 rounded-lg flex items-center justify-center font-black text-[9px] border shrink-0",
+                            status.label === "CRITICAL" ? "bg-red-50 text-red-500 border-red-100" : "bg-slate-50 text-slate-500 border-slate-200"
+                          )}>
+                             {item.name.substring(0,2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                             <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-[12px] truncate leading-none mb-1">{item.name}</p>
+                             <div className="flex items-center gap-2">
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">{item.sku}</span>
+                                <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">• {item.category?.replace("_", " ")}</span>
+                             </div>
+                          </div>
+                       </div>
+                    </td>
+                    <td className="px-6 py-3">
+                       <div className="flex items-center justify-center gap-2">
+                          <span className="text-[10px] font-black text-emerald-500">↑{(item.inbound || 0).toFixed(0)}</span>
+                          <span className="text-[10px] font-black text-orange-500">↓{(item.outbound || 0).toFixed(0)}</span>
+                       </div>
+                    </td>
+                    <td className="px-6 py-3">
+                       <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-2">
+                             <span className={clsx("text-[13px] font-black tracking-tight", status.label !== "SAFE" ? "text-orange-600" : "text-slate-900 dark:text-slate-200")}>
+                                {(item.currentStock || 0).toFixed(isFinished ? 0 : 1)}
+                             </span>
+                             <span className="text-[9px] text-slate-400 font-bold uppercase">{item.unit}</span>
+                          </div>
+                          <div className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">
+                             Min: {item.minimumStock} {item.unit}
+                          </div>
+                       </div>
+                    </td>
+                    <td className="px-6 py-3">
+                       <span className="text-[12px] font-bold text-slate-500">₹{(item.costPrice || 0).toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-3">
+                       <span className="text-[12px] font-black text-blue-600 dark:text-blue-400">₹{(item.basePrice || 0).toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-3 text-right">
+                       <span className="text-[12px] font-black text-slate-900 dark:text-white">₹{stockVal.toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-3 text-center">
+                       <span className={clsx("inline-block px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wider border", status.color)}>
+                         {status.label}
+                       </span>
+                    </td>
+                    <td className="px-8 py-3 text-right">
+                       <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Link href={`/inventory/stock/edit?id=${item.id}`} className="p-2 bg-white dark:bg-slate-800 text-slate-400 rounded-lg hover:text-slate-900 border border-slate-100 dark:border-white/5"><Edit2 size={12} /></Link>
+                          <button onClick={() => handleDelete(item)} className="p-2 bg-red-50 dark:bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all"><Trash2 size={12} /></button>
+                       </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {filtered.length === 0 && (
+            <div className="py-20 text-center space-y-4">
+               <div className="inline-flex p-6 bg-slate-50 dark:bg-white/5 rounded-full mb-2"><Database size={40} className="text-slate-200" /></div>
+               <p className="text-sm font-black text-slate-400 uppercase tracking-widest">No matching items found in ledger</p>
             </div>
-          ))}
+          )}
         </div>
-
-        {/* Desktop Table View */}
-        <div className="hidden md:block bg-white dark:bg-card/40 backdrop-blur-md border border-slate-200 dark:border-white/5 rounded-[48px] shadow-2xl shadow-black/[0.03] overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-slate-100 dark:border-white/5 text-slate-400">
-                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest">Specifications</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-center">Movement (24h)</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">In Stock Balance</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Threshold</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-center">Status</th>
-                  <th className="px-10 py-6"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                {filtered.map((item) => {
-                  const isLow = item.status === "LOW";
-                  return (
-                    <tr key={item.id} className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
-                      <td className="px-10 py-6">
-                         <div className="flex items-start gap-4">
-                            <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xs border transition-all group-hover:shadow-lg shrink-0 mt-1",
-                              isLow ? "bg-red-50 text-red-500 border-red-100 shadow-red-500/10" : "bg-emerald-50 text-emerald-500 border-emerald-100 shadow-emerald-500/10"
-                            )}>
-                               {item.name.substring(0,2).toUpperCase()}
-                            </div>
-                            <div className="min-w-0 flex-1 space-y-1.5">
-                               <div className="flex items-center gap-3">
-                                  <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-[15px] leading-tight truncate">{item.name}</p>
-                                  {item.isPurchased ? (
-                                    <span className="px-2 py-0.5 bg-purple-500/10 text-purple-500 border border-purple-500/20 rounded-md text-[8px] font-black uppercase tracking-widest">Vendor Driven</span>
-                                  ) : (
-                                    <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-md text-[8px] font-black uppercase tracking-widest">Direct Stock</span>
-                                  )}
-                               </div>
-                               <div className="flex items-center gap-2.5">
-                                  <span className={clsx("text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 uppercase tracking-tighter",
-                                    isLow ? "text-red-500" : "text-slate-400")}>
-                                    {item.sku}
-                                  </span>
-                                  <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">/ {item.category?.replace("_", " ")}</span>
-                               </div>
-                               {item.isPurchased && (
-                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-purple-500 dark:text-purple-400 uppercase tracking-tight px-2 py-1 bg-purple-50/50 dark:bg-purple-500/[0.02] rounded-lg border border-purple-100/50 dark:border-purple-500/10 w-fit">
-                                     <Truck size={10} /> {item.vendor?.name || 'Linked Vendor'}
-                                  </div>
-                               )}
-                            </div>
-                         </div>
-                      </td>
-                      <td className="px-8 py-6">
-                         <div className="flex flex-col items-center gap-1.5">
-                            <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-500/5 rounded-lg border border-emerald-100/50 dark:border-emerald-500/10">
-                               <TrendingUp size={10} className="text-emerald-500" />
-                               <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400">+{(item.inbound || 0).toFixed(1)}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 px-2 py-1 bg-orange-50 dark:bg-orange-500/5 rounded-lg border border-orange-100/50 dark:border-orange-500/10">
-                               <TrendingDown size={10} className="text-orange-500" />
-                               <span className="text-[11px] font-black text-orange-600 dark:text-orange-400">-{(item.outbound || 0).toFixed(1)}</span>
-                            </div>
-                         </div>
-                      </td>
-                      <td className="px-8 py-6">
-                         <div className="space-y-1.5 min-w-[140px]">
-                            <div className="flex justify-between items-center px-1">
-                               <span className={clsx("text-[14px] font-black", isLow ? "text-red-600" : "text-slate-900 dark:text-slate-200")}>
-                                  {(item.currentStock || 0).toFixed(item.category === "FINISHED_GOOD" ? 0 : 1)} <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">{item.category === "FINISHED_GOOD" ? "PRODUCTS" : item.unit}</span>
-                               </span>
-                            </div>
-                            <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                               <div
-                                  className={clsx("h-full rounded-full transition-all duration-1000", isLow ? "bg-red-500" : "bg-emerald-500")}
-                                  style={{ width: `${Math.min(100, (item.currentStock / (item.minimumStock * 2)) * 100)}%` }}
-                                />
-                            </div>
-                         </div>
-                      </td>
-                      <td className="px-8 py-6">
-                         <div className="group/edit relative">
-                            {editingId === item.id ? (
-                               <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
-                                  <input 
-                                     autoFocus
-                                     className="w-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                                     value={editValue}
-                                     onChange={e => setEditValue(e.target.value)}
-                                     onKeyDown={e => e.key === 'Enter' && handleUpdateThreshold(item.id)}
-                                     disabled={updating}
-                                  />
-                                  <button 
-                                     onClick={() => handleUpdateThreshold(item.id)}
-                                     className="p-1.5 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 transition-colors shadow-sm"
-                                  >
-                                     <TrendingUp size={12} />
-                                  </button>
-                                  <button 
-                                     onClick={() => setEditingId(null)}
-                                     className="p-1.5 bg-slate-100 dark:bg-white/5 text-slate-400 rounded-md"
-                                  >
-                                     <X size={12} />
-                                  </button>
-                               </div>
-                            ) : (
-                               <div 
-                                  onClick={() => { setEditingId(item.id); setEditValue((item.minimumStock || 10).toString()); }}
-                                  className="cursor-pointer group-hover/edit:translate-x-1 transition-all"
-                               >
-                                  <div className="flex items-center gap-1.5">
-                                    <p className="text-sm font-black text-slate-900 dark:text-white tracking-tight border-b border-dotted border-slate-300 dark:border-slate-700">
-                                       {(item.minimumStock || 10).toFixed(item.category === "FINISHED_GOOD" ? 0 : 1)} {item.category === "FINISHED_GOOD" ? "PRODUCTS" : item.unit}
-                                    </p>
-                                    <ArrowUpRight size={12} className="text-orange-500 opacity-0 group-hover/edit:opacity-100 transition-opacity" />
-                                  </div>
-                                  <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase mt-0.5">Safe Threshold</p>
-                               </div>
-                            )}
-                         </div>
-                      </td>
-                      <td className="px-8 py-6 text-center">
-                         {item.incomingStock > 0 ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 text-[10px] font-black text-amber-600 uppercase tracking-wider border border-amber-100 dark:border-amber-500/20 animate-pulse">
-                               <Truck size={12} /> On Order
-                            </span>
-                         ) : isLow ? (
-                           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-500/10 text-[10px] font-black text-red-600 uppercase tracking-wider border border-red-100 dark:border-red-500/20">
-                             <AlertTriangle size={12} /> Low
-                           </span>
-                         ) : (
-                           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-[10px] font-black text-emerald-600 uppercase tracking-wider border border-emerald-100 dark:border-emerald-500/20">
-                             <CheckCircle2 size={12} /> Safe
-                           </span>
-                         )}
-                      </td>
-                      <td className="px-10 py-6 text-right">
-                         <div className="flex justify-end gap-2">
-                            <Link href={`/inventory/stock/edit?id=${item.id}`} className="p-2 bg-slate-50 dark:bg-white/5 text-slate-400 rounded-2xl hover:bg-slate-900 dark:hover:bg-white hover:text-white dark:hover:text-slate-900 transition-all border border-slate-100 dark:border-white/5"><Edit2 size={14} /></Link>
-                            {item.isActive ? (
-                               <button onClick={() => handleDelete(item)} className="p-2 bg-red-50 dark:bg-red-500/10 text-red-400 rounded-2xl hover:bg-red-500 hover:text-white transition-all border border-red-100 dark:border-red-500/20"><Trash2 size={14} /></button>
-                            ) : (
-                               <button onClick={() => handleActivate(item.id)} className="px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-2xl hover:bg-emerald-500 hover:text-white transition-all text-[9px] font-black uppercase tracking-widest">Restore</button>
-                            )}
-                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="w-full py-8 text-center border-t border-slate-100 dark:border-white/5 bg-slate-50/20 dark:bg-transparent flex flex-wrap items-center justify-center gap-8 px-6">
-             <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest"><span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" /> STOCK FROM MOVEMENTS</div>
-             <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest"><Lock size={10} className="text-orange-500 shrink-0" /> NO MANUAL EDITS</div>
-             <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest"><span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" /> GRN / PRODUCTION DRIVEN</div>
-          </div>
+        <div className="px-8 py-4 bg-slate-50/50 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-6">
+               <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Stock Integrity Active</div>
+               <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest"><Lock size={10} className="text-orange-500" /> Production Locked Ledger</div>
+            </div>
+            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest italic">Total Valuation: ₹{totalValue.toLocaleString()}</p>
         </div>
       </div>
     </div>

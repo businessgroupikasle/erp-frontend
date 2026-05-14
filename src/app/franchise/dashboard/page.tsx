@@ -6,10 +6,16 @@ import {
   ShoppingCart, Package, AlertTriangle, TrendingUp,
   RefreshCw, ArrowRight, Clock, CheckCircle2, Truck,
   PackageCheck, CreditCard, ChevronRight, BarChart3,
-  User,
+  User, Undo2, Users, Receipt, Landmark, Send
 } from "lucide-react";
 import { clsx } from "clsx";
-import { franchiseOrdersApi, productBatchesApi, posApi, inventoryApi } from "@/lib/api";
+import { 
+  franchiseOrdersApi, 
+  productBatchesApi, 
+  posApi, 
+  inventoryApi, 
+  dashboardApi 
+} from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useSearchParams } from "next/navigation";
 import { franchiseApi } from "@/lib/api";
@@ -24,28 +30,19 @@ const STATUS_LABELS: Record<FranchiseOrderStatus, string> = {
   DELIVERED: "Delivered",
 };
 
-const EXPIRY_BADGE: Record<string, string> = {
-  EXPIRED:       "bg-red-500/15 text-red-400 border-red-500/30",
-  EXPIRING_SOON: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  VALID:         "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  NO_EXPIRY:     "bg-zinc-700/60 text-zinc-400 border-zinc-600/40",
-};
-
 function fmt(n: number) {
   return "₹" + Math.round(n).toLocaleString("en-IN");
 }
-function isToday(d: string) {
-  return new Date(d).toDateString() === new Date().toDateString();
-}
+
 export default function FranchiseDashboardPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const monitorId = searchParams.get("id");
   const [monitoredFranchise, setMonitoredFranchise] = useState<any>(null);
 
+  const [summary, setSummary]           = useState<any>(null);
   const [franchiseOrders, setFranchiseOrders] = useState<any[]>([]);
   const [batches, setBatches]                 = useState<any[]>([]);
-  const [salesOrders, setSalesOrders]         = useState<any[]>([]);
   const [loading, setLoading]                 = useState(true);
 
   const fetchAll = useCallback(async () => {
@@ -53,16 +50,16 @@ export default function FranchiseDashboardPage() {
     try {
       const fId = monitorId || undefined;
       
-      const [foRes, bRes, soRes, fRes] = await Promise.allSettled([
+      const [summRes, foRes, bRes, fRes] = await Promise.allSettled([
+        dashboardApi.getSummary({ franchiseId: fId }),
         franchiseOrdersApi.getAll({ franchiseId: fId }),
         productBatchesApi.getAll({ franchiseId: fId }),
-        posApi.getOrders({ franchiseId: fId, take: 100 }),
         monitorId ? franchiseApi.getById(monitorId) : Promise.reject("No monitor ID"),
       ]);
 
+      if (summRes.status === "fulfilled") setSummary(summRes.value.data);
       if (foRes.status === "fulfilled") setFranchiseOrders(foRes.value.data ?? []);
       if (bRes.status  === "fulfilled") setBatches(bRes.value.data ?? []);
-      if (soRes.status === "fulfilled") setSalesOrders(soRes.value.data ?? []);
       if (fRes.status  === "fulfilled") setMonitoredFranchise(fRes.value.data);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -70,23 +67,14 @@ export default function FranchiseDashboardPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // ── Stats ────────────────────────────────────────────────────────────────────
-  const todaySales      = salesOrders.filter((o: any) => isToday(o.createdAt)).reduce((s: number, o: any) => s + (o.totalAmount ?? 0), 0);
-  const todayOrderCount = salesOrders.filter((o: any) => isToday(o.createdAt)).length;
-  const pendingCount    = franchiseOrders.filter((o: any) => ["PENDING", "APPROVED"].includes(o.status)).length;
-  const activeOrders    = franchiseOrders.filter((o: any) => ["PENDING", "APPROVED", "IN_PRODUCTION", "DISPATCHED"].includes(o.status));
-
+  // ── Derived Data ─────────────────────────────────────────────────────────────
   const expiryAlerts    = batches.filter((b: any) => b.expiryStatus === "EXPIRED" || b.expiryStatus === "EXPIRING_SOON");
-  const lowStockBatches = batches.filter((b: any) => b.quantity < 10);
-  const stockItems      = batches.slice(0, 6);
-
-  const pendingPayment  = franchiseOrders
-    .filter((o: any) => o.paymentStatus === "UNPAID" && o.status === "DELIVERED")
-    .reduce((s: number, o: any) => s + (o.totalAmount ?? 0), 0);
-  const totalOrderValue = franchiseOrders.reduce((s: number, o: any) => s + (o.totalAmount ?? 0), 0);
+  const lowStockCount   = summary?.lowStockCount ?? batches.filter((b: any) => b.quantity < 10).length;
+  const activeOrders    = franchiseOrders.filter((o: any) => ["PENDING", "APPROVED", "IN_PRODUCTION", "DISPATCHED"].includes(o.status));
+  const stockItems      = batches.slice(0, 8);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 py-8 px-4">
+    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 py-8 px-4 pb-20">
       
       {/* ── Header ── */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
@@ -96,7 +84,7 @@ export default function FranchiseDashboardPage() {
               <BarChart3 size={24} className="text-[#FF6B00]" />
             </div>
             <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-              Branch Dashboard
+              Franchise Distribution ERP
             </h1>
           </div>
           <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
@@ -111,10 +99,10 @@ export default function FranchiseDashboardPage() {
             <RefreshCw size={18} className={clsx("text-slate-400", loading && "animate-spin")} />
           </button>
           <Link 
-            href="/franchise-orders" 
+            href="/pos" 
             className="flex items-center gap-2 bg-[#FF6B00] hover:bg-[#e66000] text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-orange-500/20 transition-all active:scale-95"
           >
-            <ShoppingCart size={18} /> New Stock Order
+            <Receipt size={18} /> New Sales Invoice
           </Link>
         </div>
       </div>
@@ -139,23 +127,23 @@ export default function FranchiseDashboardPage() {
         </div>
       )}
 
-      {/* ── Stats Grid (Matches Franchise Page) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* ── Advanced Stats Grid ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {[
-          { label: "Today Revenue", val: fmt(todaySales), sub: `${todayOrderCount} sales`, color: "bg-emerald-500" },
-          { label: "Pending Supply", val: pendingCount, sub: "Inbound orders", color: "bg-[#FF6B00]" },
-          { label: "Low Stock Items", val: lowStockBatches.length, sub: "Below 10 units", color: "bg-amber-500" },
-          { label: "Unpaid Deliveries", val: fmt(pendingPayment), sub: "Payable amount", color: "bg-red-500" },
+          { label: "Today's Sales", val: fmt(summary?.revenueToday ?? 0), sub: "Gross Billing", color: "bg-emerald-500", icon: TrendingUp },
+          { label: "Outstanding", val: fmt(summary?.outstandingAmount ?? 0), sub: "Total Credit", color: "bg-red-500", icon: AlertTriangle },
+          { label: "Pending Cheques", val: summary?.pendingChequesCount ?? 0, sub: fmt(summary?.pendingChequesValue ?? 0), color: "bg-blue-500", icon: Landmark },
+          { label: "Sales Returns", val: fmt(summary?.salesReturnsToday ?? 0), sub: "Today's value", color: "bg-amber-500", icon: Undo2 },
+          { label: "Low Stock", val: lowStockCount, sub: "Items to refill", color: "bg-orange-500", icon: Package },
+          { label: "Dealers", val: summary?.dealerCount ?? 0, sub: "Active Network", color: "bg-purple-500", icon: Users },
         ].map((stat, i) => (
-          <div key={i} className="bg-white dark:bg-card rounded-2xl border border-slate-100 dark:border-white/5 p-6 shadow-sm hover:shadow-md transition-all">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-3xl font-black text-slate-900 dark:text-white leading-none">{stat.val}</p>
-                <p className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">{stat.sub}</p>
-              </div>
-              <div className={`w-1.5 h-8 rounded-full ${stat.color} opacity-20`} />
+          <div key={i} className="bg-white dark:bg-card rounded-2xl border border-slate-100 dark:border-white/5 p-5 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">{stat.label}</p>
+              <stat.icon size={14} className="text-slate-300" />
             </div>
+            <p className="text-2xl font-black text-slate-900 dark:text-white leading-none tracking-tight">{stat.val}</p>
+            <p className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">{stat.sub}</p>
           </div>
         ))}
       </div>
@@ -170,7 +158,7 @@ export default function FranchiseDashboardPage() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-xl font-black text-slate-900 dark:text-white">Active Inventory</h3>
-                <p className="text-xs text-slate-500 font-medium mt-1">Batches currently available for sale.</p>
+                <p className="text-xs text-slate-500 font-medium mt-1">Real-time stock availability and expiry tracking.</p>
               </div>
               <Link href="/franchise/stock" className="text-xs font-black text-[#FF6B00] uppercase tracking-widest hover:underline">
                 View Full Stock
@@ -186,30 +174,48 @@ export default function FranchiseDashboardPage() {
                 <Link href="/franchise-orders" className="mt-4 inline-block text-[#FF6B00] font-black text-xs uppercase underline">Place first order</Link>
               </div>
             ) : (
-              <div className="grid gap-3">
-                {stockItems.map((batch: any) => (
-                  <div key={batch.id} className="group flex items-center justify-between p-5 bg-slate-50 dark:bg-white/[0.03] hover:bg-white border border-transparent hover:border-[#FF6B00]/20 rounded-[1.5rem] transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/10 flex items-center justify-center text-slate-400 group-hover:text-[#FF6B00] transition-colors shadow-sm">
-                        <Package size={20} />
-                      </div>
-                      <div>
-                        <p className="font-black text-slate-900 dark:text-white text-sm">{batch.product?.name}</p>
-                        <p className={clsx("text-xs font-bold", batch.quantity < 10 ? "text-amber-500" : "text-slate-400")}>
-                          {batch.quantity} {batch.product?.unit} available
-                        </p>
-                      </div>
-                    </div>
-                    <div className={clsx(
-                      "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm",
-                      batch.expiryStatus === "EXPIRED" ? "bg-red-50 text-red-500 border-red-100" : 
-                      batch.expiryStatus === "EXPIRING_SOON" ? "bg-amber-50 text-amber-500 border-amber-100" :
-                      "bg-emerald-50 text-emerald-500 border-emerald-100"
-                    )}>
-                      {batch.expiryStatus === "NO_EXPIRY" ? "Valid" : batch.expiryStatus}
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-hidden rounded-2xl border border-slate-100 dark:border-white/5">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-white/5">
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Product</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Stock</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Expiry</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+                    {stockItems.map((batch: any) => (
+                      <tr key={batch.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="font-black text-slate-900 dark:text-white text-sm">{batch.product?.name}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Batch: {batch.batchNumber || "N/A"}</p>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={clsx("text-sm font-black", batch.quantity < 10 ? "text-amber-500" : "text-slate-900 dark:text-white")}>
+                            {batch.quantity}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-bold ml-1">{batch.product?.unit}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                            {batch.expiryDate ? new Date(batch.expiryDate).toLocaleDateString() : "No Expiry"}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className={clsx(
+                            "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                            batch.expiryStatus === "EXPIRED" ? "bg-red-50 text-red-500 border-red-100" : 
+                            batch.expiryStatus === "EXPIRING_SOON" ? "bg-amber-50 text-amber-500 border-amber-100" :
+                            "bg-emerald-50 text-emerald-500 border-emerald-100"
+                          )}>
+                            {batch.expiryStatus === "NO_EXPIRY" ? "Valid" : batch.expiryStatus}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
@@ -247,7 +253,7 @@ export default function FranchiseDashboardPage() {
           )}
         </div>
 
-        {/* Right: Quick Stats and Actions */}
+        {/* Right: Quick Actions */}
         <div className="space-y-8">
           
           {/* Revenue Focus Card */}
@@ -258,24 +264,25 @@ export default function FranchiseDashboardPage() {
                 <TrendingUp size={18} />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em]">Live Revenue</span>
               </div>
-              <p className="text-4xl font-black tracking-tighter mb-1">{fmt(todaySales)}</p>
-              <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Generated Today</p>
+              <p className="text-4xl font-black tracking-tighter mb-1">{fmt(summary?.revenueToday ?? 0)}</p>
+              <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Today's Billing</p>
               
               <Link href="/reports" className="mt-8 flex items-center justify-center gap-2 w-full py-4 bg-white text-[#FF6B00] rounded-2xl text-xs font-black uppercase tracking-widest transition-all hover:bg-orange-50 active:scale-95 shadow-lg">
-                View Reports <ArrowRight size={14} />
+                Full Analytics <ArrowRight size={14} />
               </Link>
             </div>
           </div>
 
-          {/* Quick Actions Menu */}
+          {/* Operations Menu */}
           <div className="bg-white dark:bg-card border border-slate-100 dark:border-white/5 rounded-[2.5rem] p-8 shadow-sm">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-6">Operations</h3>
             <div className="space-y-1.5">
               {[
-                { label: "Sales Terminal", href: "/pos", icon: ShoppingCart, color: "text-blue-500", bg: "bg-blue-50" },
-                { label: "Restock Stock", href: "/franchise-orders", icon: Package, color: "text-[#FF6B00]", bg: "bg-orange-50" },
-                { label: "Branch Ledger", href: "/franchise/payments", icon: CreditCard, color: "text-emerald-500", bg: "bg-emerald-50" },
-                { label: "Manage Staff", href: "/franchise", icon: User, color: "text-purple-500", bg: "bg-purple-50" },
+                { label: "Sales Invoice", href: "/pos", icon: Receipt, color: "text-blue-500", bg: "bg-blue-50" },
+                { label: "Purchase Entry", href: "/purchases/inward", icon: PackageCheck, color: "text-purple-500", bg: "bg-purple-50" },
+                { label: "Outstanding Ledger", href: "/accounting/ledgers", icon: Landmark, color: "text-red-500", bg: "bg-red-50" },
+                { label: "Manage Partners", href: "/franchise/dealers", icon: Users, color: "text-emerald-500", bg: "bg-emerald-50" },
+                { label: "Sales Requests", href: "/franchise-orders", icon: Send, color: "text-[#FF6B00]", bg: "bg-orange-50" },
               ].map((link) => (
                 <Link 
                   key={link.label}

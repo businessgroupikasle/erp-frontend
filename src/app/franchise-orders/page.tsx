@@ -39,6 +39,7 @@ export default function FranchiseOrdersPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [franchises, setFranchises] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [franchiseData, setFranchiseData] = useState<any>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -46,8 +47,9 @@ export default function FranchiseOrdersPage() {
 
   // Create form
   const [selectedFranchise, setSelectedFranchise] = useState(user?.franchiseId ?? "");
-  const [paymentType, setPaymentType] = useState("COD");
-  const [expectedDispatch, setExpectedDispatch] = useState("");
+  const [paymentType, setPaymentType] = useState("CREDIT");
+  const [preferredDelivery, setPreferredDelivery] = useState("");
+  const [priority, setPriority] = useState("NORMAL");
   const [notes, setNotes] = useState("");
   const [orderItems, setOrderItems] = useState<Array<{ productId: string; quantity: number }>>([
     { productId: "", quantity: 1 },
@@ -58,10 +60,15 @@ export default function FranchiseOrdersPage() {
     try {
       const [ordersRes, productsRes] = await Promise.all([
         api.get("/api/franchise-orders"),
-        api.get("/api/products"),
+        api.get("/api/products?stockSource=HQ"),
       ]);
       setOrders(ordersRes.data ?? []);
       setProducts((productsRes.data ?? []).filter((p: any) => p.isActive));
+
+      if (isFranchiseAdmin && user?.franchiseId) {
+        const frRes = await api.get(`/api/franchise/${user.franchiseId}`);
+        setFranchiseData(frRes.data);
+      }
 
       if (!isFranchiseAdmin) {
         const franchiseRes = await api.get("/api/franchise");
@@ -88,13 +95,14 @@ export default function FranchiseOrdersPage() {
       await api.post("/api/franchise-orders", {
         franchiseId: selectedFranchise,
         paymentType,
-        expectedDispatchDate: expectedDispatch || undefined,
+        expectedDispatchDate: preferredDelivery || undefined,
+        priority,
         notes: notes || undefined,
         items: validItems,
       });
       setShowCreate(false);
       setOrderItems([{ productId: "", quantity: 1 }]);
-      setNotes(""); setExpectedDispatch("");
+      setNotes(""); setPreferredDelivery(""); setPriority("NORMAL");
       fetchAll();
     } catch (e: any) {
       setError(e?.response?.data?.error ?? "Failed to create order.");
@@ -155,9 +163,28 @@ export default function FranchiseOrdersPage() {
             </h1>
           </div>
           <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium ml-14 uppercase tracking-widest text-[10px]">
-            {isFranchiseAdmin ? "Place and track your orders from HQ" : "Manage all franchise product orders"}
+            {isFranchiseAdmin ? "Restock your franchise inventory from HQ" : "Manage all franchise product orders"}
           </p>
         </div>
+
+        {isFranchiseAdmin && franchiseData && (
+          <div className="hidden md:flex items-center gap-6 px-8 py-4 bg-slate-50 dark:bg-white/5 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-inner">
+            <div className="text-center">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Outstanding</p>
+              <p className="text-sm font-black text-rose-500">₹{(franchiseData.outstandingAmount || 0).toLocaleString("en-IN")}</p>
+            </div>
+            <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
+            <div className="text-center">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Credit Limit</p>
+              <p className="text-sm font-black text-slate-600 dark:text-slate-300">₹{(franchiseData.creditLimit || 0).toLocaleString("en-IN")}</p>
+            </div>
+            <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
+            <div className="text-center">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Available</p>
+              <p className="text-sm font-black text-emerald-500">₹{((franchiseData.creditLimit || 0) - (franchiseData.outstandingAmount || 0)).toLocaleString("en-IN")}</p>
+            </div>
+          </div>
+        )}
         <div className="flex items-center gap-3">
           <button onClick={fetchAll} className="p-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl hover:border-slate-300 transition-all shadow-sm group">
             <RefreshCw size={18} className={clsx("text-slate-400 group-hover:rotate-180 transition-transform duration-500", loading && "animate-spin")} />
@@ -243,8 +270,13 @@ export default function FranchiseOrdersPage() {
                           ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400"
                           : "bg-slate-50 text-slate-500 border-slate-200 dark:bg-white/5 dark:text-slate-400"
                       )}>
-                        {order.paymentType} · {order.paymentStatus}
+                        {order.paymentType === "CREDIT" ? "Pay Later / Credit" : "Advance Paid"} · {order.paymentStatus}
                       </span>
+                      {order.priority === "URGENT" && (
+                        <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-rose-500 text-white shadow-lg shadow-rose-500/20 flex items-center gap-1">
+                          <AlertTriangle size={10} /> Urgent
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">
@@ -267,10 +299,32 @@ export default function FranchiseOrdersPage() {
 
                     {order.expectedDispatchDate && (
                       <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">
-                        Expected Dispatch: {new Date(order.expectedDispatchDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                        Required By: {new Date(order.expectedDispatchDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
                         {order.actualDispatchDate && ` · Dispatched: ${new Date(order.actualDispatchDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}`}
                       </p>
                     )}
+
+                    {/* Order Timeline */}
+                    <div className="mt-6 flex items-center gap-0 overflow-hidden max-w-md">
+                      {["PENDING", "APPROVED", "IN_PRODUCTION", "DISPATCHED", "DELIVERED"].map((step, idx, arr) => {
+                        const isPast = arr.indexOf(order.status) >= idx;
+                        const isCurrent = order.status === step;
+                        return (
+                          <div key={step} className="flex items-center group">
+                            <div className={clsx(
+                              "w-3 h-3 rounded-full border-2 transition-all",
+                              isPast ? "bg-orange-500 border-orange-500 scale-110" : "bg-slate-100 border-slate-200 dark:bg-slate-800 dark:border-slate-700"
+                            )} title={step.replace("_", " ")} />
+                            {idx < arr.length - 1 && (
+                              <div className={clsx(
+                                "w-10 h-0.5 transition-all",
+                                isPast && arr.indexOf(order.status) > idx ? "bg-orange-500" : "bg-slate-100 dark:bg-slate-800"
+                              )} />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="flex flex-col items-end gap-3 min-w-[200px]">
@@ -364,72 +418,88 @@ export default function FranchiseOrdersPage() {
                         <option value="">Select product...</option>
                         {products.map(p => (
                           <option key={p.id} value={p.id}>
-                            {p.name} {p.productType === "MADE_TO_ORDER" ? "(MTO)" : ""} — ₹{p.basePrice}
+                            {p.name} {p.productType === "MADE_TO_ORDER" ? "(MTO)" : ""} — {p.basePrice > 0 ? `₹${p.basePrice}` : "PRICE PENDING"} — (Avail: {p.currentStock ?? 0})
                           </option>
                         ))}
                       </select>
-                      <input
-                        type="number"
-                        min={1}
-                        value={item.quantity}
-                        onChange={e => {
-                          const updated = [...orderItems];
-                          updated[idx].quantity = Number(e.target.value);
-                          setOrderItems(updated);
-                        }}
-                        className="w-24 h-12 bg-slate-50 dark:bg-white/5 px-3 rounded-2xl font-bold text-sm outline-none dark:text-white text-center"
-                        placeholder="Qty"
-                      />
+                      <div className="relative group">
+                        <input
+                          type="number"
+                          min={1}
+                          value={item.quantity}
+                          onChange={e => {
+                            const updated = [...orderItems];
+                            updated[idx].quantity = Number(e.target.value);
+                            setOrderItems(updated);
+                          }}
+                          className="w-24 h-12 bg-slate-50 dark:bg-white/5 px-3 rounded-2xl font-bold text-sm outline-none dark:text-white text-center"
+                          placeholder="Qty"
+                        />
+                        {selectedProduct && (
+                          <div className={clsx(
+                            "absolute -bottom-5 left-0 right-0 text-[9px] font-black uppercase tracking-tighter text-center",
+                            (selectedProduct.currentStock ?? 0) <= 0 ? "text-red-500" : 
+                            (selectedProduct.currentStock ?? 0) < item.quantity ? "text-orange-500" : "text-emerald-500"
+                          )}>
+                            {(selectedProduct.currentStock ?? 0) <= 0 ? "OUT OF STOCK" : `${selectedProduct.currentStock ?? 0} Avail`}
+                          </div>
+                        )}
+                      </div>
                       {selectedProduct && (
                         <span className="text-xs font-black text-slate-500 dark:text-slate-400 w-20 text-right">
                           ₹{(selectedProduct.basePrice * item.quantity).toLocaleString("en-IN")}
                         </span>
                       )}
-                      {orderItems.length > 1 && (
-                        <button
-                          onClick={() => setOrderItems(orderItems.filter((_, i) => i !== idx))}
-                          className="p-2 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
-                        ><X size={16} /></button>
-                      )}
                     </div>
                   );
                 })}
-                <button
-                  onClick={() => setOrderItems([...orderItems, { productId: "", quantity: 1 }])}
-                  className="text-[11px] font-black text-orange-500 uppercase tracking-widest flex items-center gap-1.5 hover:opacity-70 transition-all"
-                >
-                  <Plus size={12} /> Add Another Product
-                </button>
               </div>
 
-              {/* Payment + Dispatch */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Payment + Delivery + Priority */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Payment Type</label>
                   <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-2xl">
-                    {["COD", "ONLINE"].map(pt => (
+                    {["CREDIT", "ADVANCE"].map(pt => (
                       <button
                         key={pt}
                         onClick={() => setPaymentType(pt)}
                         className={clsx(
-                          "flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all",
+                          "flex-1 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1 transition-all",
                           paymentType === pt ? "bg-white dark:bg-card text-slate-900 dark:text-white shadow-md" : "text-slate-400"
                         )}
                       >
-                        {pt === "COD" ? <Banknote size={12} /> : <CreditCard size={12} />} {pt}
+                        {pt === "CREDIT" ? "Pay Later" : "Advance"}
                       </button>
                     ))}
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Expected Dispatch</label>
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Required Before</label>
                   <input
                     type="date"
-                    value={expectedDispatch}
-                    onChange={e => setExpectedDispatch(e.target.value)}
+                    value={preferredDelivery}
+                    onChange={e => setPreferredDelivery(e.target.value)}
                     min={new Date().toISOString().split("T")[0]}
                     className="w-full h-12 bg-slate-50 dark:bg-white/5 px-4 rounded-2xl font-bold text-sm outline-none dark:text-white"
                   />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Priority</label>
+                  <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-2xl">
+                    {["NORMAL", "URGENT"].map(p => (
+                      <button
+                        key={p}
+                        onClick={() => setPriority(p)}
+                        className={clsx(
+                          "flex-1 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1 transition-all",
+                          priority === p ? (p === 'URGENT' ? "bg-rose-500 text-white" : "bg-white dark:bg-card text-slate-900 dark:text-white shadow-md") : "text-slate-400"
+                        )}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -441,16 +511,41 @@ export default function FranchiseOrdersPage() {
                 className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-2xl p-4 text-sm font-bold outline-none resize-none dark:text-white"
               />
 
-              {/* Total preview */}
-              <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl flex justify-between items-center">
-                <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Estimated Total</span>
-                <span className="text-xl font-black text-slate-900 dark:text-white">
-                  ₹{orderItems.reduce((sum, item) => {
-                    const p = products.find(p => p.id === item.productId);
-                    return sum + (p ? p.basePrice * item.quantity : 0);
-                  }, 0).toLocaleString("en-IN")}
-                  <span className="text-xs text-slate-400 font-bold ml-1">+ GST 5%</span>
-                </span>
+              {/* Total breakdown */}
+              <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-3xl space-y-3">
+                <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  <span>Product Total</span>
+                  <span className="text-slate-900 dark:text-white">
+                    ₹{orderItems.reduce((sum, item) => {
+                      const p = products.find(p => p.id === item.productId);
+                      return sum + (p ? p.basePrice * item.quantity : 0);
+                    }, 0).toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  <span>GST (5%)</span>
+                  <span className="text-slate-900 dark:text-white">
+                    ₹{Math.round(orderItems.reduce((sum, item) => {
+                      const p = products.find(p => p.id === item.productId);
+                      return sum + (p ? p.basePrice * item.quantity * 0.05 : 0);
+                    }, 0)).toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  <span>Delivery Charges</span>
+                  <span className="text-slate-900 dark:text-white">₹50</span>
+                </div>
+                <div className="pt-3 border-t border-slate-200 dark:border-white/10 flex justify-between items-center">
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Estimated Grand Total</span>
+                  <span className="text-3xl font-black text-slate-900 dark:text-white">
+                    ₹{(
+                      orderItems.reduce((sum, item) => {
+                        const p = products.find(p => p.id === item.productId);
+                        return sum + (p ? p.basePrice * item.quantity : 0);
+                      }, 0) * 1.05 + 50
+                    ).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
               </div>
 
               {error && (
