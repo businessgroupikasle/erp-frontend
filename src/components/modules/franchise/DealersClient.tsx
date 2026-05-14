@@ -15,7 +15,7 @@ import {
   MoreVertical
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import axios from "axios";
+import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
 interface Dealer {
@@ -51,7 +51,7 @@ export default function DealersClient() {
 
   const fetchDealers = async () => {
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/dealers?franchiseId=${(user as any).franchiseId}`);
+      const res = await api.get(`/api/dealers?franchiseId=${(user as any).franchiseId}`);
       setDealers(res.data);
     } catch (error) {
       toast.error("Failed to fetch dealers");
@@ -63,7 +63,7 @@ export default function DealersClient() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/dealers`, {
+      await api.post(`/api/dealers`, {
         ...formData,
         franchiseId: (user as any).franchiseId
       });

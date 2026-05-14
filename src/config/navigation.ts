@@ -164,8 +164,8 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       },
       {
         icon: Send,
-        label: "Dispatch Orders",
-        href: "/franchise/requests",
+        label: "Franchise Orders",
+        href: "/franchise-orders",
         roles: SUPER_ONLY,
       },
     ],

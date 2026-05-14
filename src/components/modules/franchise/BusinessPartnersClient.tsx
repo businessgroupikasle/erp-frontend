@@ -15,7 +15,7 @@ import {
   Briefcase
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import axios from "axios";
+import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
 interface Partner {
@@ -53,7 +53,7 @@ export default function BusinessPartnersClient({ defaultType }: { defaultType?: 
 
   const fetchPartners = async () => {
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/business-partners?franchiseId=${(user as any).franchiseId}${defaultType ? `&type=${defaultType}` : ""}`);
+      const res = await api.get(`/api/business-partners?franchiseId=${(user as any).franchiseId}${defaultType ? `&type=${defaultType}` : ""}`);
       setPartners(res.data);
     } catch (error) {
       toast.error("Failed to fetch business partners");
@@ -65,7 +65,7 @@ export default function BusinessPartnersClient({ defaultType }: { defaultType?: 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/business-partners`, {
+      await api.post(`/api/business-partners`, {
         ...formData,
         franchiseId: (user as any).franchiseId
       });

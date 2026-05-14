@@ -120,10 +120,14 @@ export default function FranchiseOrdersPage() {
 
   const handlePayment = async (orderId: string) => {
     try {
-      await api.post(`/api/franchise-orders/${orderId}/payment`, { amount: 0 });
+      await api.post(`/api/franchise-orders/${orderId}/payment`, { 
+        amount: 0,
+        accountId: undefined // Backend will now default to CASH
+      });
+      toast.success("Payment recorded!");
       fetchAll();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error ?? "Failed to record payment.");
+      setError(e?.response?.data?.error ?? "Failed to record payment.");
     }
   };
 
@@ -285,15 +289,26 @@ export default function FranchiseOrdersPage() {
 
                     <div className="flex flex-wrap gap-2 mt-4">
                       {order.items?.map((item: any) => (
-                        <span key={item.id} className={clsx(
-                          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black border",
-                          item.productType === "MADE_TO_ORDER"
-                            ? "bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400"
-                            : "bg-slate-50 text-slate-700 border-slate-100 dark:bg-white/5 dark:text-slate-300"
-                        )}>
-                          {item.product?.name} × {item.quantity}
-                          {item.productType === "MADE_TO_ORDER" && <span className="text-[8px] opacity-60">MTO</span>}
-                        </span>
+                        <div key={item.id} className="group relative">
+                          <span className={clsx(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all",
+                            item.productType === "MADE_TO_ORDER"
+                              ? "bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400"
+                              : "bg-slate-50 text-slate-700 border-slate-100 dark:bg-white/5 dark:text-slate-300"
+                          )}>
+                            {item.product?.name} × {item.quantity}
+                            {item.productType === "MADE_TO_ORDER" && <span className="text-[8px] opacity-60 ml-1">MTO</span>}
+                            
+                            <span className={clsx(
+                              "ml-2 px-1.5 py-0.5 rounded-md text-[7px] uppercase tracking-tighter border",
+                              order.status === "DELIVERED" 
+                                ? "bg-emerald-500 text-white border-emerald-400" 
+                                : "bg-amber-100 text-amber-700 border-amber-200"
+                            )}>
+                              {order.status === "DELIVERED" ? "✅ Delivered" : "📦 Reserved"}
+                            </span>
+                          </span>
+                        </div>
                       ))}
                     </div>
 
