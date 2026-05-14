@@ -369,3 +369,24 @@ export const reportsApi = {
   getProfit: (params?: any) => api.get('/api/reports/profit', { params }),
   getDetailedProfit: (params?: any) => api.get('/api/reports/profit', { params: { ...params, detailed: 'true' } }),
 };
+
+// --- Sales Module ---
+export const salesApi = {
+  getQuotations: (params?: any) => api.get('/api/sales/quotations', { params }),
+  createQuotation: (data: any) => api.post('/api/sales/quotations', data),
+  getQuotationById: (id: string) => api.get(`/api/sales/quotations/${id}`),
+  updateQuotation: (id: string, data: any) => api.patch(`/api/sales/quotations/${id}`, data),
+  convertQuotation: (id: string) => api.post(`/api/sales/quotations/${id}/convert`),
+
+  getSalesOrders: (params?: any) => api.get('/api/sales/orders', { params }),
+  getSalesOrderById: (id: string) => api.get(`/api/sales/orders/${id}`),
+  createSalesOrder: (data: any) => api.post('/api/sales/orders', data),
+  updateSalesOrder: (id: string, data: any) => api.patch(`/api/sales/orders/${id}`, data),
+
+  getReturns: (params?: any) => api.get('/api/sales/returns', { params }),
+  createReturn: (data: any) => api.post('/api/sales/returns', data),
+  updateReturnStatus: (id: string, status: string, approvedBy?: string) => 
+    api.patch(`/api/sales/returns/${id}`, { status, approvedBy }),
+  
+  getAnalytics: (params?: any) => api.get('/api/sales/analytics', { params }),
+};

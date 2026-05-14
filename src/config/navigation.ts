@@ -21,6 +21,7 @@ import {
   TrendingUp,
   PackageCheck,
   CreditCard,
+  Undo2,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -75,21 +76,16 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       },
       {
         icon: ShoppingCart,
-        label: "Purchase Orders",
+        label: "Purchase",
         href: "/purchases/orders",
         roles: ADMIN_ROLES,
-      },
-      {
-        icon: Truck,
-        label: "Goods Receipt (GRN)",
-        href: "/purchases/grn",
-        roles: ADMIN_ROLES,
-      },
-      {
-        icon: ArrowRightLeft,
-        label: "Purchase Returns",
-        href: "/purchases/returns",
-        roles: ADMIN_ROLES,
+        children: [
+          { label: "Purchase Order", href: "/purchases/orders" },
+          { label: "Purchase Inward", href: "/purchases/inward" },
+          { label: "Purchase Return", href: "/purchases/returns" },
+          { label: "DC Inward Entry", href: "/purchases/dc-inward" },
+          { label: "GRN", href: "/purchases/grn" },
+        ]
       },
     ],
   },
@@ -163,15 +159,26 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       },
       {
         icon: ShoppingCart,
-        label: "POS Billing",
+        label: "B2C Billing",
         href: "/pos",
         roles: ALL_ROLES,
+        children: [
+          { label: "B2C Billing", href: "/pos" },
+          { label: "B2C Settlement", href: "/pos/settlement" },
+          { label: "Cheque Settle", href: "/pos/cheque-settle" },
+        ]
       },
       {
         icon: FileText,
-        label: "Sales Orders",
+        label: "B2B Billing",
         href: "/sales/orders",
         roles: ADMIN_ROLES,
+        children: [
+          { label: "B2B Billing", href: "/sales/orders" },
+          { label: "B2B Settlement", href: "/sales/settlement" },
+          { label: "Cheque Settle", href: "/sales/cheque-settle" },
+          { label: "Sales Return", href: "/sales/returns" },
+        ]
       },
     ],
   },
@@ -225,15 +232,30 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       },
       {
         icon: TrendingUp,
-        label: "Expenses",
+        label: "Expense",
         href: "/accounting/expenses",
+        roles: ADMIN_ROLES,
+        children: [
+          { label: "Expense Master", href: "/accounting/expenses/categories" },
+          { label: "Expense Entry", href: "/accounting/expenses/new" },
+          { label: "Expense Report", href: "/reports/expenses" },
+        ]
+      },
+      {
+        icon: FileText,
+        label: "Cheque Registry",
+        href: "/accounting/cheques",
         roles: ADMIN_ROLES,
       },
       {
         icon: FileText,
-        label: "Vendor Ledger",
+        label: "Supplier Payments",
         href: "/accounting/ledgers",
         roles: ADMIN_ROLES,
+        children: [
+          { label: "Supplier Pay Track", href: "/accounting/ledgers" },
+          { label: "Cheque Settle", href: "/accounting/cheque-settle" },
+        ]
       },
     ],
   },
@@ -244,29 +266,22 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     items: [
       {
         icon: BarChart3,
-        label: "Sales Reports",
+        label: "Master Reports",
         href: "/reports",
         roles: ADMIN_ROLES,
-      },
-      {
-        icon: FileText,
-        label: "Purchase Reports",
-        href: "/reports/purchases",
-        roles: ADMIN_ROLES,
-        isComingSoon: true,
-      },
-      {
-        icon: FileText,
-        label: "Inventory Reports",
-        href: "/reports/inventory",
-        roles: ADMIN_ROLES,
-        isComingSoon: true,
-      },
-      {
-        icon: TrendingUp,
-        label: "Profit & Loss",
-        href: "/accounting/profit-loss",
-        roles: ADMIN_ROLES,
+        children: [
+          { label: "B2B Sales Report", href: "/reports/b2b-sales" },
+          { label: "B2B Detail Report", href: "/reports/b2b-detail" },
+          { label: "B2B Emp wise Sales Report", href: "/reports/b2b-emp-sales" },
+          { label: "B2B Emp wise Detail Report", href: "/reports/b2b-emp-detail" },
+          { label: "B2C Sales Report", href: "/reports/b2c-sales" },
+          { label: "B2C Detail Report", href: "/reports/b2c-detail" },
+          { label: "Purchase Report", href: "/reports/purchases" },
+          { label: "Product Wise Sales Report", href: "/reports/product-sales" },
+          { label: "Collection Report", href: "/reports/collection" },
+          { label: "Profit/Loss Report", href: "/accounting/profit-loss" },
+          { label: "Ageing Report", href: "/reports/ageing" },
+        ]
       },
       {
         icon: AlertTriangle,
@@ -304,13 +319,39 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     ],
   },
 
-  // 10. System Settings
+  // 10. Setup Management
+  {
+    title: "Setup Management",
+    items: [
+      {
+        icon: Settings,
+        label: "Master Setup",
+        href: "/settings/master",
+        roles: SUPER_ONLY,
+        children: [
+          { label: "Company Profile", href: "/settings/user/profile" },
+          { label: "Supplier", href: "/vendors" },
+          { label: "Customer", href: "/customers" },
+          { label: "Product", href: "/products" },
+          { label: "Category", href: "/products/categories" },
+          { label: "Employee", href: "/hr/employees" },
+          { label: "User Creation", href: "/admin/users" },
+          { label: "Dealer/Distributor", href: "/dealers" },
+          { label: "Bank", href: "/banking/accounts" },
+          { label: "Role", href: "/admin/roles" },
+          { label: "Region", href: "/settings/regions" },
+        ]
+      },
+    ],
+  },
+
+  // 11. System Settings
   {
     title: "System Settings",
     items: [
       {
         icon: Settings,
-        label: "Settings",
+        label: "General Settings",
         href: "/settings/user/profile",
         roles: SUPER_ONLY,
       },
@@ -390,9 +431,14 @@ export const franchiseMenuSections: MenuSection[] = [
     items: [
       {
         icon: ShoppingCart,
-        label: "POS Billing",
+        label: "B2C Billing",
         href: "/pos",
         roles: FRANCHISE_ALL,
+        children: [
+          { label: "B2C Billing", href: "/pos" },
+          { label: "B2C Settlement", href: "/pos/settlement" },
+          { label: "Cheque Settle", href: "/pos/cheque-settle" },
+        ]
       },
       {
         icon: Users,
@@ -401,10 +447,23 @@ export const franchiseMenuSections: MenuSection[] = [
         roles: FRANCHISE_ADMIN_ONLY,
       },
       {
+        icon: Undo2,
+        label: "Sales Returns",
+        href: "/sales/returns",
+        roles: FRANCHISE_ADMIN_ONLY,
+      },
+      {
         icon: BarChart3,
-        label: "Sales Reports",
+        label: "Master Reports",
         href: "/reports",
         roles: FRANCHISE_ADMIN_ONLY,
+        children: [
+          { label: "B2B Sales Report", href: "/reports/b2b-sales" },
+          { label: "B2B Detail Report", href: "/reports/b2b-detail" },
+          { label: "B2C Sales Report", href: "/reports/b2c-sales" },
+          { label: "B2C Detail Report", href: "/reports/b2c-detail" },
+          { label: "Collection Report", href: "/reports/collection" },
+        ]
       },
     ],
   },
