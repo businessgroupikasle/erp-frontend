@@ -66,6 +66,12 @@ export default function IncomingStockPage() {
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    const handler = () => fetchData();
+    window.addEventListener("erp:refresh-franchise-orders", handler);
+    return () => window.removeEventListener("erp:refresh-franchise-orders", handler);
+  }, [fetchData]);
+
   const handleReceiveStock = async (orderId: string) => {
     try {
       setReceivingOrderId(orderId);

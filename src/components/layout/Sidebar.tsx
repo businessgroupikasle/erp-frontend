@@ -85,9 +85,9 @@ export default function Sidebar() {
     <aside
       className={clsx(
         "fixed inset-y-0 left-0 lg:relative flex flex-col h-screen shrink-0 sidebar-transition z-[100] lg:z-50",
-        "bg-white dark:bg-[#0f1117]",
-        isCollapsed ? "lg:w-0 lg:opacity-0 lg:overflow-hidden lg:border-none" : "lg:w-[288px] border-r border-orange-100 dark:border-white/5",
-        isMobileOpen ? "translate-x-0 w-[288px] border-r border-orange-100" : "-translate-x-full lg:translate-x-0"
+        "bg-white/70 dark:bg-[#0f1117]/80 backdrop-blur-xl transition-all duration-500 ease-in-out",
+        isCollapsed ? "lg:w-[88px]" : "lg:w-[280px] border-r border-orange-100/50 dark:border-white/5",
+        isMobileOpen ? "translate-x-0 w-[280px] border-r border-orange-100/50" : "-translate-x-full lg:translate-x-0"
       )}
     >
       {/* Mobile Overlay */}
@@ -100,24 +100,27 @@ export default function Sidebar() {
       {/* ── Brand / User Header ─────────────────────── */}
       <div
         className={clsx(
-          "flex items-center border-b border-orange-100 dark:border-white/5 shrink-0",
-          isCollapsed ? "px-2 py-3 justify-center" : "px-4 py-3 gap-3"
+          "flex items-center border-b border-orange-100/50 dark:border-white/5 shrink-0 transition-all duration-300",
+          isCollapsed ? "px-2 py-4 justify-center" : "px-5 py-4 gap-3"
         )}
       >
-        <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-md">
+        <div className={clsx(
+          "relative rounded-xl overflow-hidden shrink-0 shadow-lg transition-all duration-500",
+          isCollapsed ? "w-10 h-10" : "w-9 h-9"
+        )}>
           <img
             src="/logo.png"
             alt="Logo"
-            className="w-8 h-8 object-contain"
+            className="w-full h-full object-contain"
           />
         </div>
         {(!isCollapsed || isMobileOpen) && (
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-semibold text-gray-900 dark:text-white truncate leading-tight">
+          <div className="flex-1 min-w-0 animate-in fade-in slide-in-from-left-2 duration-500">
+            <p className="text-[15px] font-black text-gray-900 dark:text-white truncate tracking-tight leading-tight">
               Kiddos Food
             </p>
-            <p className="text-[11px] text-orange-500 dark:text-orange-400 font-medium leading-tight">
-              Food Business Ecosystem
+            <p className="text-[9px] text-orange-500 font-black leading-tight mt-0.5 uppercase tracking-[0.2em]">
+              Control Center
             </p>
           </div>
         )}
@@ -147,7 +150,7 @@ export default function Sidebar() {
           ref={navRef}
           className={clsx(
             "flex-1 overflow-y-auto hide-scrollbar",
-            "px-3 py-4"
+            "px-4 py-4"
           )}
         >
           <div className="space-y-0.5">
@@ -163,31 +166,26 @@ export default function Sidebar() {
                   {!isCollapsed && (
                     <div 
                       onClick={() => toggleSection(section.title)}
-                      className="px-2 pb-2 mt-6 flex items-center justify-between cursor-pointer group/section"
+                      className="px-2 pb-2 mt-5 flex items-center justify-between cursor-pointer group/section"
                     >
                       <p className={clsx(
-                        "text-[10px] font-black uppercase tracking-[0.2em] transition-colors",
-                        section.title.toUpperCase() === "OVERVIEW" ? "text-orange-500/80 dark:text-orange-400" :
-                        section.title.toUpperCase() === "SALES" ? "text-emerald-500/80 dark:text-emerald-400" :
-                        section.title.toUpperCase() === "INVENTORY" ? "text-blue-500/80 dark:text-blue-400" :
-                        section.title.toUpperCase() === "PRODUCTION" ? "text-rose-500/80 dark:text-rose-400" :
-                        section.title.toUpperCase() === "PROCUREMENT" ? "text-amber-500/80 dark:text-amber-400" :
-                        section.title.toUpperCase() === "FRANCHISE" ? "text-purple-500/80 dark:text-purple-400" :
-                        section.title.toUpperCase() === "ACCOUNTING" ? "text-teal-500/80 dark:text-teal-400" :
-                        section.title.toUpperCase() === "REPORTS" ? "text-indigo-500/80 dark:text-indigo-400" :
-                        section.title.toUpperCase() === "HR & PAYROLL" ? "text-cyan-500/80 dark:text-cyan-400" :
-                        "text-slate-400 dark:text-slate-600 group-hover/section:text-slate-500"
+                        "text-[10px] font-black uppercase tracking-[0.3em] transition-colors",
+                        "text-slate-400/70 dark:text-slate-500/70 group-hover/section:text-orange-500"
                       )}>
                         {section.title}
                       </p>
                       <ChevronDown 
-                        size={11} 
+                        size={10} 
                         className={clsx(
                           "text-slate-300 dark:text-slate-700 transition-transform duration-300",
                           collapsedSections.includes(section.title) ? "-rotate-90" : "rotate-0"
                         )} 
                       />
                     </div>
+                  )}
+
+                  {isCollapsed && (
+                    <div className="h-px bg-slate-100 dark:bg-white/5 my-3 mx-4" />
                   )}
 
                   <div className={clsx(
@@ -197,6 +195,7 @@ export default function Sidebar() {
 
                   {/* Section Items */}
                   {filteredItems.map((item) => {
+                    const itemIcon = item.icon;
                     const isExpanded = expandedMenus.includes(item.label);
                     const hasChildren = !!item.children?.length;
                     const isActive =
@@ -204,6 +203,8 @@ export default function Sidebar() {
                       (hasChildren && item.children?.some((c) => pathname === c.href));
                     const isHovered = hoveredItem === item.label;
                     const isComingSoon = item.isComingSoon;
+
+                    const IconComponent = itemIcon;
 
                     return (
                       <div
@@ -216,22 +217,44 @@ export default function Sidebar() {
                         <div
                           onClick={() => (!hasChildren && !isComingSoon) ? undefined : (hasChildren ? toggleMenu(item.label) : undefined)}
                           className={clsx(
-                            "flex items-center gap-3 rounded-2xl select-none transition-all duration-200",
-                            "px-3 py-3",
+                            "flex items-center select-none transition-all duration-300 relative group/item",
+                            isCollapsed ? "justify-center px-0 py-2" : "px-4 py-2 gap-3",
+                            "my-0.5 rounded-xl",
                             isComingSoon ? "opacity-50 cursor-not-allowed grayscale" : "cursor-pointer",
                             isActive
-                              ? "bg-gradient-to-r from-orange-500/10 to-orange-500/5 text-orange-600 dark:text-orange-400 backdrop-blur-md border border-orange-500/10 shadow-[0_4px_12px_-2px_rgba(255,107,0,0.12)]"
-                              : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200"
+                              ? "bg-white dark:bg-white/5 text-orange-600 dark:text-orange-400 shadow-[0_4px_20px_-4px_rgba(255,107,0,0.15)] ring-1 ring-orange-500/10"
+                              : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.03] hover:text-slate-900 dark:hover:text-slate-200"
                           )}
                         >
+                          {/* Active Indicator Bar */}
+                          {isActive && (
+                            <div className={clsx(
+                              "absolute bg-orange-500 rounded-full transition-all duration-300",
+                              isCollapsed ? "left-1 top-1/2 -translate-y-1/2 w-1 h-8" : "left-0 top-1/2 -translate-y-1/2 w-1 h-6"
+                            )} />
+                          )}
+
+                          {/* Icon (Visible only when collapsed) */}
+                          {isCollapsed && IconComponent && (
+                            <div className={clsx(
+                              "flex items-center justify-center w-10 h-10 rounded-xl shrink-0 transition-all duration-300",
+                              isActive ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30" : "text-slate-400 group-hover/item:text-slate-600 dark:group-hover/item:text-slate-300"
+                            )}>
+                              <IconComponent size={20} strokeWidth={isActive ? 2.5 : 2} />
+                            </div>
+                          )}
+
+                          {/* Label (Visible only when expanded) */}
+                          {!isCollapsed && (
+                            <>
                           {hasChildren ? (
                             <span className="flex items-center gap-3 flex-1 min-w-0">
-                              <span className="text-[13px] font-bold flex-1 truncate tracking-tight">{item.label}</span>
+                              <span className="text-[13px] font-semibold flex-1 truncate tracking-tight">{item.label}</span>
                             </span>
                           ) : (
                             isComingSoon ? (
                               <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <span className="text-[13px] font-bold flex-1 truncate tracking-tight text-slate-400">{item.label}</span>
+                                <span className="text-[13px] font-semibold flex-1 truncate tracking-tight text-slate-400">{item.label}</span>
                               </div>
                             ) : (
                               <Link
@@ -239,7 +262,7 @@ export default function Sidebar() {
                                 className="flex items-center gap-3 flex-1 min-w-0"
                                 onClick={(e) => { e.stopPropagation(); closeMobile(); }}
                               >
-                                <span className="text-[13px] font-bold flex-1 truncate tracking-tight">{item.label}</span>
+                                <span className="text-[13px] font-semibold flex-1 truncate tracking-tight">{item.label}</span>
                               </Link>
                             )
                           )}
@@ -263,6 +286,8 @@ export default function Sidebar() {
                               )}
                             />
                           )}
+                            </>
+                          )}
                         </div>
 
                         {/* Tooltip (collapsed) */}
@@ -280,22 +305,25 @@ export default function Sidebar() {
 
                         {/* Submenu */}
                         {!isCollapsed && hasChildren && isExpanded && (
-                          <div className="pl-[30px] mt-0.5 space-y-0.5 pb-1">
+                          <div className="pl-11 mt-1 space-y-1 pb-2 relative">
+                            {/* Connector Line */}
+                            <div className="absolute left-[23px] top-0 bottom-4 w-px bg-slate-100 dark:bg-white/5" />
+                            
                             {item.children?.map((child) => (
                               <Link
                                 key={child.href}
                                 href={child.href}
                                 onClick={closeMobile}
                                 className={clsx(
-                                  "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[12px] font-medium transition-all",
+                                  "flex items-center justify-between px-3 py-2 rounded-lg text-[12px] font-medium transition-all relative",
                                   pathname === child.href
-                                    ? "text-orange-600 dark:text-orange-300 bg-orange-50/80 dark:bg-orange-900/10"
-                                    : "text-gray-500 dark:text-slate-500 hover:text-gray-800 dark:hover:text-slate-300 hover:bg-orange-50/50 dark:hover:bg-white/5"
+                                    ? "text-orange-600 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-500/5"
+                                    : "text-slate-500 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 hover:bg-slate-50/50 dark:hover:bg-white/[0.02]"
                                 )}
                               >
                                 <span className="truncate">{child.label}</span>
                                 {child.isNew && (
-                                  <span className="text-[9px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-wider shrink-0 ml-2">
+                                  <span className="text-[8px] font-black bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ml-2">
                                     New
                                   </span>
                                 )}

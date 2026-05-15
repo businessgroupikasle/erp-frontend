@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { NotificationProvider } from "@/context/NotificationContext";
 import AppShell from "@/components/layout/AppShell";
 import { Toaster } from "react-hot-toast";
 
@@ -30,9 +31,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>
-              <AppShell>
-                {children}
-              </AppShell>
+              <NotificationProvider>
+                <AppShell>
+                  {children}
+                </AppShell>
+              </NotificationProvider>
             </ToastProvider>
           </AuthProvider>
           <Toaster position="top-right" />

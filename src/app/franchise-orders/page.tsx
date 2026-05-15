@@ -79,6 +79,13 @@ export default function FranchiseOrdersPage() {
   }, [isFranchiseAdmin]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+  
+  useEffect(() => {
+    const handler = () => fetchAll();
+    window.addEventListener("erp:refresh-franchise-orders", handler);
+    return () => window.removeEventListener("erp:refresh-franchise-orders", handler);
+  }, [fetchAll]);
+
   useEffect(() => {
     if (user?.franchiseId) setSelectedFranchise(user.franchiseId);
   }, [user]);

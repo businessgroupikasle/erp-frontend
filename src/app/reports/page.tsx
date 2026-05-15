@@ -149,7 +149,9 @@ function ReportCategory({ title, items, searchTerm, dateRange }: {
                <span className="text-[13px] font-medium text-[#444] dark:text-slate-300 truncate group-hover:text-[#7C3AED] cursor-pointer">
                   {item.label}
                </span>
-               {item.isNew }
+               {item.isNew && (
+                 <span className="px-1.5 py-0.5 bg-orange-500 text-white text-[8px] font-black uppercase rounded shadow-sm shadow-orange-500/20">NEW</span>
+               )}
             </div>
             <div className="flex items-center gap-3">
                {item.actions.includes("Open") && (

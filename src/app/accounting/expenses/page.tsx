@@ -26,6 +26,7 @@ import {
   Building as BuildingIcon,
   User as UserIcon,
   Clock as ClockIcon,
+  ChevronDown,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { accountingApi, accountsApi } from "@/lib/api";
