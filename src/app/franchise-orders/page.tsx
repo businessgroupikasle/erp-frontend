@@ -305,7 +305,7 @@ export default function FranchiseOrdersPage() {
                                 ? "bg-emerald-500 text-white border-emerald-400" 
                                 : "bg-amber-100 text-amber-700 border-amber-200"
                             )}>
-                              {order.status === "DELIVERED" ? "✅ Delivered" : "📦 Reserved"}
+                              {order.status === "DELIVERED" ? "Delivered" : "Reserved"}
                             </span>
                           </span>
                         </div>

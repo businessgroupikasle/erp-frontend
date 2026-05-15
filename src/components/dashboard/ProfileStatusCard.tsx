@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+
 
 export default function ProfileStatusCard() {
   return (
@@ -31,11 +31,10 @@ export default function ProfileStatusCard() {
       </div>
 
       <div className="w-full md:w-80 aspect-[4/3] relative rounded-2xl overflow-hidden border border-[#F0EAF0] dark:border-slate-800 shadow-2xl shadow-purple-200/20">
-        <Image 
+        <img 
           src="/Complete Your Profile.webp" 
           alt="Profile Preview" 
-          fill 
-          className="object-cover"
+          className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent" />
       </div>

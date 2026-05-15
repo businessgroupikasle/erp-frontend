@@ -1,7 +1,7 @@
 "use client";
 
 import { LucideIcon, PlayCircle } from "lucide-react";
-import Image from "next/image";
+
 import Link from "next/link";
 import { clsx } from "clsx";
 
@@ -34,11 +34,10 @@ export default function ActionCard({
       </div>
 
       <div className="relative aspect-[16/10] bg-[#F9F7F9] dark:bg-slate-900 rounded-xl overflow-hidden border border-[#F0EAF0] dark:border-slate-800 mb-6 group-hover:scale-[1.02] transition-transform">
-        <Image 
+        <img 
           src={image} 
           alt={title} 
-          fill 
-          className="object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+          className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent" />
       </div>

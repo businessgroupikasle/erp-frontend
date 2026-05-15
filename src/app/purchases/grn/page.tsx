@@ -2,11 +2,24 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/context/ToastContext";
+import toast from "react-hot-toast";
 import {
-  Package, ChevronDown, CheckCircle2, XCircle, AlertTriangle,
-  Truck, ClipboardCheck, ArrowLeft, Loader2, Search, Calendar,
-  ExternalLink, ArrowRight, History, Plus
+  Package as PackageIcon, 
+  ChevronDown as ChevronDownIcon, 
+  CheckCircle2 as CheckCircle2Icon, 
+  XCircle as XCircleIcon, 
+  AlertTriangle as AlertTriangleIcon,
+  Truck as TruckIcon, 
+  ClipboardCheck as ClipboardCheckIcon, 
+  ArrowLeft as ArrowLeftIcon, 
+  Loader2 as Loader2Icon, 
+  Search as SearchIcon, 
+  Calendar as CalendarIcon,
+  ExternalLink as ExternalLinkIcon, 
+  ArrowRight as ArrowRightIcon, 
+  History as HistoryIcon, 
+  Plus as PlusIcon,
+  Loader2
 } from "lucide-react";
 import { purchaseOrdersApi, grnApi, purchaseReturnsApi, vendorsApi } from "@/lib/api";
 import { clsx } from "clsx";
@@ -44,7 +57,6 @@ interface GRNItem {
 
 export default function GRNPage() {
   const router = useRouter();
-  const { showToast } = useToast();
   const [view, setView] = useState<"NEW" | "HISTORY">("NEW");
   const [step, setStep] = useState<1 | 2>(1);
   const [pos, setPOs] = useState<PO[]>([]);
@@ -160,7 +172,7 @@ export default function GRNPage() {
         }
       }
 
-      showToast("GRN Approved successfully! Stock updated and rejections processed.", "success");
+      toast.success("GRN Approved successfully! Stock updated and rejections processed.");
       
       setTimeout(() => {
         setView("HISTORY");
@@ -170,7 +182,7 @@ export default function GRNPage() {
       }, 2000);
     } catch (e: any) {
       console.error(e);
-      showToast(e.response?.data?.error || "Failed to create or approve GRN. Please verify quantities.", "error");
+      toast.error(e.response?.data?.error || "Failed to create or approve GRN. Please verify quantities.");
     } finally {
       setSubmitting(false);
     }
@@ -188,7 +200,7 @@ export default function GRNPage() {
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
              <div className="w-14 h-14 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
-                <Package size={28} />
+                <PackageIcon size={28} />
              </div>
              <div>
                 <h1 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Goods Receipt (GRN)</h1>
@@ -238,7 +250,7 @@ export default function GRNPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-white/5">
                   {loading ? (
-                    <tr><td colSpan={6} className="px-8 py-16 text-center"><Loader2 className="mx-auto text-orange-500 animate-spin" /></td></tr>
+                    <tr><td colSpan={6} className="px-8 py-16 text-center"><Loader2Icon className="mx-auto text-orange-500 animate-spin" /></td></tr>
                   ) : history.length === 0 ? (
                     <tr><td colSpan={6} className="px-8 py-16 text-center text-gray-400 font-bold uppercase text-xs tracking-widest">No receipt history found</td></tr>
                   ) : history.map((grn) => (
@@ -275,7 +287,7 @@ export default function GRNPage() {
           /* --- STEP 1: SELECT PO --- */
           <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
             <div className="relative max-w-lg">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
                 placeholder="Search Vendor or PO #"
@@ -290,7 +302,7 @@ export default function GRNPage() {
             ) : filteredPOs.length === 0 ? (
               <div className="py-32 bg-white dark:bg-[#12141c] rounded-[2.5rem] border border-dashed border-gray-200 dark:border-white/5 text-center text-gray-400 shadow-inner">
                 <div className="w-16 h-16 bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                   <Package className="text-gray-300" size={32} />
+                   <PackageIcon className="text-gray-300" size={32} />
                 </div>
                 <p className="text-xs font-black uppercase tracking-widest">No pending purchase orders available</p>
               </div>
@@ -318,7 +330,7 @@ export default function GRNPage() {
                         <span className="text-xl font-black text-gray-900 dark:text-white leading-tight">₹{po.totalAmount.toLocaleString()}</span>
                       </div>
                       <div className="w-10 h-10 bg-orange-50 dark:bg-orange-500/10 rounded-xl flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
-                        <ArrowRight size={20} />
+                        <ArrowRightIcon size={20} />
                       </div>
                     </div>
                   </button>
@@ -412,15 +424,15 @@ export default function GRNPage() {
                         <td className="px-8 py-6 text-right">
                           {item.rejectedQty > 0 ? (
                             <div className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center text-red-500 mx-auto">
-                               <XCircle size={16} />
+                               <XCircleIcon size={16} />
                             </div>
                           ) : item.acceptedQty < item.quantity ? (
                             <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 mx-auto">
-                               <AlertTriangle size={16} />
+                               <AlertTriangleIcon size={16} />
                             </div>
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500 mx-auto">
-                               <CheckCircle2 size={16} />
+                               <CheckCircle2Icon size={16} />
                             </div>
                           )}
                         </td>
@@ -455,7 +467,7 @@ export default function GRNPage() {
                 disabled={submitting}
                 className="w-full md:w-auto px-12 py-5 bg-orange-600 text-white rounded-[2rem] font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-orange-500/20 hover:bg-orange-700 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
               >
-                {submitting ? <Loader2 size={18} className="animate-spin" /> : <ClipboardCheck size={20} />}
+                {submitting ? <Loader2Icon size={18} className="animate-spin" /> : <ClipboardCheckIcon size={20} />}
                 Confirm & Sync Financials
               </button>
             </div>

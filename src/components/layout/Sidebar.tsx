@@ -17,7 +17,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen
 } from "lucide-react";
-import Image from "next/image";
+
 import { useState, useRef, useEffect, useCallback } from "react";
 import { clsx } from "clsx";
 import { useTheme } from "@/context/ThemeContext";
@@ -105,11 +105,10 @@ export default function Sidebar() {
         )}
       >
         <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-md">
-          <Image
+          <img
             src="/logo.png"
             alt="Logo"
-            fill
-            className="object-contain"
+            className="w-8 h-8 object-contain"
           />
         </div>
         {(!isCollapsed || isMobileOpen) && (

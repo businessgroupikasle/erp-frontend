@@ -5,7 +5,7 @@ import {
   Plus, 
   AlertTriangle, 
   Package, 
-  History,
+  History as HistoryIcon,
   AlertCircle,
   Scale,
   TrendingDown,
@@ -18,6 +18,9 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
 
 export default function InventoryPage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,6 +41,8 @@ export default function InventoryPage() {
   useEffect(() => {
     fetchInventory();
   }, [user]);
+
+  if (!mounted) return <div className="min-h-screen bg-[#FDFCFD] dark:bg-[#020617]" />;
 
   const fetchInventory = async () => {
     try {
@@ -164,7 +169,7 @@ export default function InventoryPage() {
         </div>
         <div className="flex items-center gap-4">
           <button className="hidden md:flex items-center gap-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-500 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95 shadow-sm">
-            <History size={16} />
+            <HistoryIcon size={16} />
             History
           </button>
           <button 

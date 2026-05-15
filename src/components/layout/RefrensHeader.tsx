@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Menu,
+  Menu as MenuIcon,
   Bell,
   ChevronDown,
   Settings,
@@ -245,7 +245,7 @@ export default function RefrensHeader() {
           className="lg:hidden p-2 -ml-2 rounded-xl text-gray-500 hover:bg-orange-50 hover:text-orange-600 transition-colors"
           aria-label="Toggle Menu"
         >
-          <Menu size={20} />
+          <MenuIcon size={20} />
         </button>
 
         <button
@@ -253,7 +253,7 @@ export default function RefrensHeader() {
           className="hidden lg:flex p-2 -ml-2 rounded-xl text-gray-500 hover:bg-orange-50 hover:text-orange-600 transition-colors"
           title="Toggle Sidebar"
         >
-          <Menu size={20} />
+          <MenuIcon size={20} />
         </button>
 
         {/* Dynamic Page Title */}

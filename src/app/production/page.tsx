@@ -2,10 +2,22 @@
 
 import { useState, useEffect, useCallback, Suspense } from "react";
 import {
-  Factory, X, ChevronDown, CheckCircle2,
-  Clock, Package, RefreshCw, Play,
-  AlertTriangle, ChefHat, History, Minus, Plus,
-  ArrowRight, Square, CheckSquare
+  Factory as FactoryIcon, 
+  X as XIcon, 
+  ChevronDown as ChevronDownIcon, 
+  CheckCircle2 as CheckCircle2Icon,
+  Clock as ClockIcon, 
+  Package as PackageIcon, 
+  RefreshCw as RefreshCwIcon, 
+  Play as PlayIcon,
+  AlertTriangle as AlertTriangleIcon, 
+  ChefHat as ChefHatIcon, 
+  History as HistoryIcon, 
+  Minus as MinusIcon, 
+  Plus as PlusIcon,
+  ArrowRight as ArrowRightIcon, 
+  Square as SquareIcon, 
+  CheckSquare as CheckSquareIcon
 } from "lucide-react";
 import { clsx } from "clsx";
 import { productionApi, recipesApi, franchiseApi, inventoryApi, customersApi } from "@/lib/api";
@@ -13,11 +25,11 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
 
 const STATUS_CONFIG: Record<string, { color: string, bg: string, border: string, dot: string, icon: any }> = {
-  COMPLETED:   { color: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "border-emerald-200 dark:border-emerald-500/20", dot: "bg-emerald-500", icon: CheckCircle2 },
-  IN_PROGRESS: { color: "text-blue-700 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10", border: "border-blue-200 dark:border-blue-500/20", dot: "bg-blue-500", icon: Clock },
-  STOPPED:     { color: "text-amber-700 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", border: "border-amber-200 dark:border-amber-500/20", dot: "bg-amber-500", icon: Square },
-  PENDING:     { color: "text-slate-600 dark:text-slate-400", bg: "bg-slate-50 dark:bg-white/5", border: "border-slate-200 dark:border-white/10", dot: "bg-slate-400", icon: Clock },
-  CANCELLED:   { color: "text-rose-700 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10", border: "border-rose-200 dark:border-rose-500/20", dot: "bg-rose-500", icon: X },
+  COMPLETED:   { color: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "border-emerald-200 dark:border-emerald-500/20", dot: "bg-emerald-500", icon: CheckCircle2Icon },
+  IN_PROGRESS: { color: "text-blue-700 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10", border: "border-blue-200 dark:border-blue-500/20", dot: "bg-blue-500", icon: ClockIcon },
+  STOPPED:     { color: "text-amber-700 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", border: "border-amber-200 dark:border-amber-500/20", dot: "bg-amber-500", icon: SquareIcon },
+  PENDING:     { color: "text-slate-600 dark:text-slate-400", bg: "bg-slate-50 dark:bg-white/5", border: "border-slate-200 dark:border-white/10", dot: "bg-slate-400", icon: ClockIcon },
+  CANCELLED:   { color: "text-rose-700 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10", border: "border-rose-200 dark:border-rose-500/20", dot: "bg-rose-500", icon: XIcon },
 };
 
 interface IngredientPreview { id: string; name: string; unit: string; needed: string; available: number | string; sufficient: boolean; }
@@ -187,8 +199,8 @@ function ProductionContent() {
         <div>
           <div className="flex items-center gap-2.5">
              <div className="p-2 md:p-2.5 bg-[#F97316] rounded-lg md:rounded-xl shadow-lg shadow-orange-600/20 shrink-0">
-                <Factory size={18} className="text-white md:hidden" />
-                <Factory size={20} className="text-white hidden md:block" />
+                <FactoryIcon size={18} className="text-white md:hidden" />
+                <FactoryIcon size={20} className="text-white hidden md:block" />
              </div>
              <h1 className="text-xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase transition-all">
                Production <span className="text-slate-400 font-medium ml-1 tracking-tighter italic hidden sm:inline">Control</span>
@@ -200,13 +212,13 @@ function ProductionContent() {
         </div>
         <div className="flex items-center gap-2">
            <button onClick={fetchAll} className="p-2.5 md:p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg md:rounded-xl hover:border-slate-300 transition-all shadow-sm group shrink-0">
-             <RefreshCw size={14} className={clsx("text-slate-400 group-hover:rotate-180 transition-transform duration-500 md:w-4 md:h-4", loading && "animate-spin")} />
+             <RefreshCwIcon size={14} className={clsx("text-slate-400 group-hover:rotate-180 transition-transform duration-500 md:w-4 md:h-4", loading && "animate-spin")} />
            </button>
            <button
              onClick={() => setShowForm(true)}
              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#F97316] text-white px-5 md:px-6 py-3 md:py-3.5 rounded-xl md:rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-widest hover:shadow-xl hover:translate-y-[-1px] transition-all active:translate-y-0 shadow-lg shadow-orange-600/10"
            >
-             <Play size={14} fill="currentColor" className="md:w-4 md:h-4" /> 
+             <PlayIcon size={14} fill="currentColor" className="md:w-4 md:h-4" /> 
              <span className="hidden sm:inline">Initialize Workflow</span>
              <span className="sm:hidden">New Batch</span>
            </button>
@@ -217,7 +229,7 @@ function ProductionContent() {
         <div className="md:col-span-2 space-y-4 md:space-y-6">
           <div className="flex items-center justify-between px-1">
              <h2 className="text-sm md:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-[0.15em] flex items-center gap-2">
-                <History size={16} className="text-[#F97316]" /> History Ledger
+                <HistoryIcon size={16} className="text-[#F97316]" /> History Ledger
              </h2>
           </div>
 
@@ -229,7 +241,7 @@ function ProductionContent() {
           ) : history.length === 0 ? (
            <div className="flex flex-col items-center justify-center py-24 bg-white dark:bg-slate-900 rounded-[40px] border-2 border-dashed border-slate-100 dark:border-slate-800/50">
               <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-3xl flex items-center justify-center text-slate-300 dark:text-slate-700 mb-6 group-hover:scale-110 transition-transform">
-                <Factory size={28} className="md:w-8 md:h-8" />
+                <FactoryIcon size={28} className="md:w-8 md:h-8" />
               </div>
               <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">System Ready</p>
               <p className="text-[10px] text-slate-500 mt-1">Initialize your first batch to begin tracking yield.</p>
@@ -252,7 +264,7 @@ function ProductionContent() {
                          batch.status === 'COMPLETED' ? "bg-emerald-500 shadow-emerald-500/20" : 
                          batch.status === 'IN_PROGRESS' ? "bg-blue-500 shadow-blue-500/20" : "bg-[#F97316] shadow-orange-500/20"
                        )}>
-                          <ChefHat size={20} className="md:w-7 md:h-7" />
+                          <ChefHatIcon size={20} className="md:w-7 md:h-7" />
                        </div>
                        <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2 md:gap-3">
@@ -291,10 +303,10 @@ function ProductionContent() {
 
                           <div className="flex flex-wrap items-center gap-3 mt-3">
                              <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 bg-slate-50 dark:bg-white/5 px-2.5 py-1 rounded-lg">
-                                <Package size={10} className="text-[#F97316]" /> {batch.quantity} Batch(es)
+                                <PackageIcon size={10} className="text-[#F97316]" /> {batch.quantity} Batch(es)
                              </span>
                              <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 bg-slate-50 dark:bg-white/5 px-2.5 py-1 rounded-lg">
-                                <Clock size={10} className="text-blue-500" /> {batch.startTime ? new Date(batch.startTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : "N/A"}
+                                <ClockIcon size={10} className="text-blue-500" /> {batch.startTime ? new Date(batch.startTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : "N/A"}
                              </span>
                           </div>
                        </div>
@@ -307,7 +319,7 @@ function ProductionContent() {
                           disabled={saving}
                           className="w-full lg:w-auto px-6 py-3 md:py-3.5 bg-amber-500 text-white rounded-lg md:rounded-xl shadow-lg shadow-amber-500/20 text-[8px] md:text-[9px] font-black uppercase tracking-widest hover:bg-amber-400 transition-all flex items-center justify-center gap-2"
                         >
-                          <Square size={12} fill="currentColor" /> Stop Production
+                          <SquareIcon size={12} fill="currentColor" /> Stop Production
                         </button>
                       )}
                       {batch.status === 'STOPPED' && (
@@ -316,11 +328,11 @@ function ProductionContent() {
                           disabled={saving}
                           className="w-full lg:w-auto px-6 py-3 md:py-3.5 bg-emerald-600 text-white rounded-lg md:rounded-xl shadow-lg shadow-emerald-600/20 text-[8px] md:text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500 transition-all flex items-center justify-center gap-2"
                         >
-                          <CheckSquare size={12} /> Approve & Store
+                          <CheckSquareIcon size={12} /> Approve & Store
                         </button>
                       )}
                       <button className="w-full lg:w-auto px-4 py-3 md:py-3.5 bg-slate-50 dark:bg-white/5 rounded-lg md:rounded-xl border border-slate-100 dark:border-white/10 text-[8px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-all flex items-center justify-center gap-2">
-                         View Ledger Entry <ArrowRight size={12} />
+                         View Ledger Entry <ArrowRightIcon size={12} />
                       </button>
                     </div>
                  </div>
@@ -343,7 +355,7 @@ function ProductionContent() {
         <div className="space-y-4 md:space-y-6">
            <div className="bg-white dark:bg-card/40 backdrop-blur-xl rounded-[32px] p-6 md:p-8 border border-slate-100 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                 <CheckCircle2 size={16} className="text-emerald-500" /> Operational Health
+                 <CheckCircle2Icon size={16} className="text-emerald-500" /> Operational Health
               </h3>
               <div className="space-y-6">
                  <div>
@@ -372,7 +384,7 @@ function ProductionContent() {
            <div className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-lg border border-slate-100 p-6 md:p-8 overflow-hidden max-h-[92vh] overflow-y-auto custom-scrollbar">
               <div className="flex items-center gap-4 mb-6">
                  <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 shrink-0">
-                    <Play size={20} fill="currentColor" />
+                    <PlayIcon size={20} fill="currentColor" />
                  </div>
                  <div>
                     <h2 className="text-xl font-black tracking-tight uppercase">New Production</h2>
@@ -468,7 +480,7 @@ function ProductionContent() {
                      <div className="mt-2">
                         <div className="flex items-center justify-between mb-3 px-1">
                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Resource Availability Check</p>
-                           {stockLoading && <RefreshCw size={10} className="animate-spin text-orange-500" />}
+                           {stockLoading && <RefreshCwIcon size={10} className="animate-spin text-orange-500" />}
                         </div>
                         <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
                            {ingredientPreview.map((ing) => (
@@ -492,7 +504,7 @@ function ProductionContent() {
 
                   {error && (
                     <div className="flex items-center gap-3 p-4 bg-rose-50 rounded-2xl border border-rose-100 animate-in slide-in-from-top-2">
-                       <AlertTriangle size={18} className="text-rose-500 shrink-0" />
+                       <AlertTriangleIcon size={18} className="text-rose-500 shrink-0" />
                        <p className="text-[10px] font-bold text-rose-600 leading-tight">{error}</p>
                     </div>
                   )}
@@ -510,7 +522,7 @@ function ProductionContent() {
                        className="flex-[2] py-4 bg-orange-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:bg-orange-400 transition-all flex items-center justify-center gap-2"
                      >
                        {saving ? "Initializing..." : "Start Production"}
-                       {!saving && <ArrowRight size={14} />}
+                       {!saving && <ArrowRightIcon size={14} />}
                      </button>
                   </div>
               </div>
@@ -526,7 +538,7 @@ function ProductionContent() {
               
               <div className="flex items-center gap-4 mb-8">
                  <div className="w-14 h-14 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-xl shadow-emerald-500/20 shrink-0">
-                    <CheckCircle2 size={24} />
+                    <CheckCircle2Icon size={24} />
                  </div>
                  <div>
                     <h2 className="text-2xl font-black tracking-tight uppercase text-slate-900">Confirm Yield</h2>
@@ -561,8 +573,8 @@ function ProductionContent() {
                          placeholder="0"
                        />
                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                          <button onClick={() => setActualYield(prev => Math.max(0, prev - 1))} className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors"><Minus size={16} className="text-slate-400" /></button>
-                          <button onClick={() => setActualYield(prev => prev + 1)} className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors"><Plus size={16} className="text-slate-400" /></button>
+                          <button onClick={() => setActualYield(prev => Math.max(0, prev - 1))} className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors"><MinusIcon size={16} className="text-slate-400" /></button>
+                          <button onClick={() => setActualYield(prev => prev + 1)} className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors"><PlusIcon size={16} className="text-slate-400" /></button>
                        </div>
                     </div>
                  </div>

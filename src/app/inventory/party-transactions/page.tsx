@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   ChevronRight, 
   ChevronDown,
@@ -13,7 +13,12 @@ import Link from "next/link";
 import { clsx } from "clsx";
 
 export default function PartyTransactionReport() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const [activeTab, setActiveTab] = useState("Reports & More");
+
+  if (!mounted) return <div className="min-h-screen bg-[#FDFCFD] dark:bg-[#020617]" />;
 
   return (
     <div className="min-h-screen bg-[#FDFCFD] dark:bg-[#020617] -m-8 font-sans">
@@ -30,7 +35,7 @@ export default function PartyTransactionReport() {
           
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-black text-[#1A1A1A] dark:text-white flex items-center gap-2">
-              Inventory <span className="text-xl">✨</span>
+              Inventory 
             </h1>
           </div>
         </div>

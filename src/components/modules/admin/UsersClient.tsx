@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import { userGovernanceApi, franchiseApi } from "@/lib/api";
 
 interface User {
   id: string;
@@ -54,8 +55,7 @@ export default function UsersClient() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users`);
-      // Filter to only show Franchise Admins (Super Admin sees all, but this UI is for Franchise Admins)
+      const res = await userGovernanceApi.getAll();
       setUsers(res.data);
     } catch (error) {
       toast.error("Failed to fetch users");
@@ -66,7 +66,7 @@ export default function UsersClient() {
 
   const fetchFranchises = async () => {
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/franchises`);
+      const res = await franchiseApi.getAll();
       setFranchises(res.data);
     } catch (error) {
       console.error("Failed to fetch franchises");
@@ -76,7 +76,7 @@ export default function UsersClient() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/users`, formData);
+      await userGovernanceApi.create(formData);
       toast.success("Franchise Admin created successfully");
       setShowAddModal(false);
       setFormData({ fullName: "", email: "", phone: "", password: "", franchiseId: "", roleName: "FRANCHISE_ADMIN" });
@@ -269,19 +269,34 @@ export default function UsersClient() {
                   />
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-black uppercase text-slate-500 ml-1">Assign Franchise</label>
-                <select
-                  required
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
-                  value={formData.franchiseId}
-                  onChange={e => setFormData({...formData, franchiseId: e.target.value})}
-                >
-                  <option value="">Select a Franchise</option>
-                  {franchises.map(f => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-black uppercase text-slate-500 ml-1">Account Role</label>
+                  <select
+                    required
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold text-sm"
+                    value={formData.roleName}
+                    onChange={e => setFormData({...formData, roleName: e.target.value, franchiseId: e.target.value === 'SUPER_ADMIN' ? "" : formData.franchiseId})}
+                  >
+                    <option value="FRANCHISE_ADMIN">Franchise Admin</option>
+                    <option value="SUPER_ADMIN">HQ Super Admin</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-black uppercase text-slate-500 ml-1">Assign Franchise</label>
+                  <select
+                    required={formData.roleName === 'FRANCHISE_ADMIN'}
+                    disabled={formData.roleName === 'SUPER_ADMIN'}
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-orange-500 outline-none disabled:opacity-30 font-bold text-sm"
+                    value={formData.franchiseId}
+                    onChange={e => setFormData({...formData, franchiseId: e.target.value})}
+                  >
+                    <option value="">{formData.roleName === 'SUPER_ADMIN' ? "N/A (Global)" : "Select a Franchise"}</option>
+                    {franchises.map(f => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="space-y-1">
                 <label className="text-[11px] font-black uppercase text-slate-500 ml-1">Initial Password</label>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, User, Loader2, Eye, EyeOff } from "lucide-react";
-import Image from "next/image";
+
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -48,12 +48,10 @@ export default function LoginPage() {
         <div className="text-center space-y-6">
           <div className="flex justify-center flex-col items-center">
             <div className="relative w-48 h-20 mb-4 transform hover:scale-105 transition-transform duration-300">
-              <Image
+              <img
                 src="/logo.png"
                 alt="Kiddos Foods Logo"
-                fill
-                className="object-contain"
-                priority
+                className="w-48 h-20 object-contain"
               />
             </div>
           </div>

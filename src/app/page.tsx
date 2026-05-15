@@ -6,267 +6,239 @@ import {
   ShoppingCart, Package, Users, TrendingUp, TrendingDown,
   AlertTriangle, Clock, IndianRupee, RotateCcw, Target, Calendar,
   CreditCard, Receipt, Activity, ChevronRight, Search, 
-  BarChart3, Wallet, Zap, LayoutDashboard, Factory, Settings2, Settings, UserCheck
+  BarChart3, Wallet, Zap, LayoutDashboard, Factory, Settings2, Settings, UserCheck, Plus, Send, Building2,
+  Bell, ShieldAlert, History, Repeat, Store, Truck, CheckCircle2, XCircle, Landmark, PackageCheck
 } from "lucide-react";
 import { clsx } from "clsx";
 import { dashboardApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import {
-  MetricCard, MonthlyCard, GrowthIndicator, SectionHeader,
-  SalesTargetTable, YearlySalesChart, TopSellingTable,
-  StockUrgentTable, SupplierPaymentTable, DashboardTable, PremiumReportTable
+  KPICard, RevenueIntelligence, PremiumFilter, ReportTableWidget
 } from "@/components/dashboard/DashboardComponents";
-
-function Skeleton({ className }: { className?: string }) {
-  return <div className={clsx("animate-pulse bg-gray-100 dark:bg-white/5 rounded-lg", className)} />;
-}
 
 export default function Dashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] = useState("month");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
 
   const fetchDashboard = useCallback(() => {
     setLoading(true);
-    setError(null);
+    
+    let endDateStr = new Date().toISOString();
+    let startDateStr = new Date().toISOString();
 
-    const periodEnd = new Date();
-    const periodStart = new Date();
-    periodStart.setHours(0,0,0,0);
+    if (period === "custom" && customStartDate && customEndDate) {
+      startDateStr = new Date(customStartDate).toISOString();
+      const endD = new Date(customEndDate);
+      endD.setHours(23, 59, 59, 999);
+      endDateStr = endD.toISOString();
+    } else {
+      let startDate = new Date();
+      if (period === "today") startDate.setHours(0,0,0,0);
+      else if (period === "week") startDate.setDate(startDate.getDate() - 7);
+      else if (period === "month") startDate.setMonth(startDate.getMonth() - 1);
+      else startDate.setFullYear(2020);
+      startDateStr = startDate.toISOString();
+    }
 
-    dashboardApi.getSummary({ 
-      startDate: periodStart.toISOString(), 
-      endDate: periodEnd.toISOString(),
-    })
-      .then((res) => {
-        setData(res.data);
-      })
+    dashboardApi.getSummary({ startDate: startDateStr, endDate: endDateStr })
+      .then((res) => setData(res.data))
       .catch((err) => setError(err.response?.data?.error || "Failed to load dashboard"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [period, customStartDate, customEndDate]);
 
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
 
-  if (error && !data) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] bg-white dark:bg-[#0f1117] rounded-3xl border border-red-100 dark:border-white/5 shadow-sm p-8 text-center animate-in fade-in zoom-in-95 duration-500">
-        <div className="w-20 h-20 bg-red-50 dark:bg-red-900/10 rounded-full flex items-center justify-center mb-6 shadow-sm ring-8 ring-red-50 dark:ring-red-900/5">
-          <AlertTriangle size={36} className="text-red-500" />
-        </div>
-        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">System Offline</h2>
-        <p className="text-gray-500 dark:text-slate-400 mb-8 max-w-sm">Synchronizing with enterprise cloud...</p>
-        <button onClick={fetchDashboard} className="flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg">
-          <RotateCcw size={18} /> Retry Connection
-        </button>
+  if (loading && !data) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#090a0f]">
+      <div className="flex flex-col items-center gap-6 animate-pulse">
+        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin shadow-xl shadow-blue-600/20" />
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Establishing Mission Control Link...</p>
       </div>
-    );
-  }
+    </div>
+  );
 
-  // --- Live Data Integration ---
   const stats = data?.stats;
-  
-  const b2bSales = { 
-    month: formatCurrency(stats?.b2bRevenueMonth || 0), 
-    today: formatCurrency(stats?.b2bRevenueToday || 0), 
-    trend: parseFloat(stats?.b2bRevenueChangePct || "0"),
-    trendType: parseFloat(stats?.b2bRevenueChangePct || "0") >= 0 ? "up" : "down"
-  };
-  const b2cSales = { 
-    month: formatCurrency(stats?.b2cRevenueMonth || 0), 
-    today: formatCurrency(stats?.b2cRevenueToday || 0), 
-    trend: parseFloat(stats?.b2cRevenueChangePct || "0"),
-    trendType: parseFloat(stats?.b2cRevenueChangePct || "0") >= 0 ? "up" : "down"
-  };
-  const purchase = { 
-    month: formatCurrency(stats?.purchaseRevenueMonth || 0),
-    today: formatCurrency(stats?.purchaseRevenueToday || 0), 
-    trend: 0 
-  };
-  const dealers = { 
-    outstanding: formatCurrency(stats?.dealersOutstanding || 0), 
-    deposit: formatCurrency(stats?.dealersDeposit || 0) 
-  };
-  const treasury = {
-    cash: formatCurrency(stats?.treasury?.cash || 0),
-    bank: formatCurrency(stats?.treasury?.bank || 0)
-  };
-  const expenses = {
-    month: formatCurrency(stats?.expensesToday || 0), // Use expensesToday as month for now or total
-    today: formatCurrency(stats?.expensesToday || 0)
-  };
 
-  const monthlyCards = (data?.monthlySales || []).slice(-3).map((m: any) => ({
-    month: m.month.toUpperCase(),
-    amount: formatCurrency(m.amount),
-    color: m.amount > 0 ? 'bg-green-800' : 'bg-red-700'
+  // --- LAYER 1: CEO SUMMARY (LIVE DATA) ---
+  const executiveKPIs = [
+    { title: "Today Revenue", value: formatCurrency(stats?.revenueToday || 0), trend: stats?.revenueChangePct || "0", icon: Zap, colorClass: "emerald", insight: `${stats?.orderCountToday || 0} Orders Today` },
+    { title: "Total Purchase", value: formatCurrency(stats?.totalPurchase || 0), icon: ShoppingCart, colorClass: "amber", subtext: `Expense for this ${period}`, insight: `${stats?.poCountPeriod || 0} Purchase Orders` },
+    { title: "Vendor Payables", value: formatCurrency(stats?.vendorPayables || 0), icon: CreditCard, colorClass: "rose", subtext: "Dues to Suppliers", insight: `From ${stats?.vendorCountActive || 0} Vendors` },
+    { title: "Inventory Value", value: formatCurrency(stats?.inventoryValue || 0), icon: Package, colorClass: "blue", subtext: "Warehouse Asset Net Worth", insight: `${stats?.inventoryItemCount || 0} Active SKUs` },
+    { title: "Active Franchise Orders", value: stats?.activeFranchiseOrders || 0, icon: Send, colorClass: "indigo", subtext: "Fulfillment Queue", insight: `${stats?.lowStockCount || 0} Critical Stock Alerts` },
+    { title: "Total Sales", value: formatCurrency(stats?.totalSales || 0), icon: BarChart3, colorClass: "orange", subtext: `Volume for this ${period}`, insight: `${stats?.totalInvoiceCount || 0} Invoices Generated` },
+  ];
+
+  // --- LAYER 2: REVENUE SOURCES ---
+  const revenueBreakdown = (data?.revenueBreakdown || []).map((b: any, i: number) => ({
+    label: b.label,
+    value: b.value,
+    percent: stats?.revenueToday ? (b.value / stats.revenueToday) * 100 : 0,
+    color: i === 0 ? "bg-blue-500" : i === 1 ? "bg-emerald-500" : i === 2 ? "bg-amber-500" : "bg-rose-500"
   }));
 
-  const salesTargets = data?.salesTargets || [];
-
-  const yearlySales = (data?.monthlySales || []).map((s: any) => ({
-    date: s.month,
-    amount: s.amount
-  }));
-
-  const recentPurchasesRows = (data?.recentPurchases || []).map((p: any, i: number) => [
-    i + 1, p.id || 'N/A', p.date, p.vendor, 1, p.amount
-  ]);
-
-  const recentB2BSalesRows = (data?.recentOrders || []).filter((o: any) => o.table === 'B2B').map((o: any) => [
-    o.id, o.time.split(' ')[0], "—", o.franchiseName || "Standard", o.amount
-  ]);
-
-  const recentB2CSalesRows = (data?.recentOrders || []).filter((o: any) => o.table !== 'B2B').map((o: any) => [
-    o.id, o.time, "Walk-in", "Customer", o.amount
-  ]);
-
-  const topSelling = (data?.topSellers || []).map((ts: any) => ({
-    name: ts.name,
-    qty: ts.count
-  }));
-
-  const stockUrgent = (data?.lowStock || []).map((ls: any) => ({
-    code: ls.code || 'PR-001',
-    name: ls.name,
-    stock: ls.currentStock,
-    reorder: ls.minimumStock
-  }));
-
-  const supplierTracking = (data?.supplierTracking || []).map((st: any) => ({
-    no: st.id,
-    date: st.date,
-    name: st.vendor,
-    status: st.status,
-    amount: st.amount
+  // --- ANALYTICS & OPERATIONS ---
+  const chartData = (data?.historicalSales || []).map((s: any) => ({
+    date: s.date,
+    sales: s.sales,
+    orders: s.orders,
+    purchase: s.purchase,
+    profit: s.profit
   }));
 
   return (
-    <div className="min-h-full bg-[#F8FAFC] dark:bg-[#090a0f] p-4 md:p-10 space-y-10 animate-in fade-in duration-700">
+    <div className="min-h-full bg-[#F8FAFC] dark:bg-[#090a0f] p-4 md:p-8 space-y-8 animate-in fade-in duration-1000">
       
-      {/* ── 📊 SUMMARY METRICS ──────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <MetricCard 
-          title="DEALER SALES" 
-          monthValue={b2bSales.month} 
-          todayValue={b2bSales.today} 
-          trend={b2bSales.trend}
-          trendType={b2bSales.trendType}
-          icon={Calendar} 
-        />
-        <MetricCard 
-          title="PURCHASE" 
-          monthValue={purchase.month} 
-          todayValue={purchase.today} 
-          icon={ShoppingCart} 
-        />
-        <MetricCard 
-          title="DEALERS" 
-          monthValue={dealers.outstanding} 
-          todayValue={dealers.deposit} 
-          label1="Outstanding" 
-          label2="Deposit" 
-          icon={Users} 
-        />
-
-        <MetricCard 
-          title="SALES INVOICES" 
-          monthValue={b2cSales.month} 
-          todayValue={b2cSales.today} 
-          trend={b2cSales.trend}
-          trendType={b2cSales.trendType}
-          icon={Zap} 
-        />
-        <MetricCard 
-          title="EXPENSES" 
-          monthValue={expenses.month} 
-          todayValue={expenses.today} 
-          icon={Receipt} 
-        />
-        <MetricCard 
-          title="TREASURY" 
-          monthValue={treasury.bank} 
-          todayValue={treasury.cash} 
-          label1="Bank Balance" 
-          label2="Cash in Hand" 
-          icon={Wallet} 
-        />
+      {/* ── HEADER ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+           <div className="flex items-center gap-4 mb-1">
+             <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">HQ Control Center</h1>
+           </div>
+           <div className="flex items-center gap-6">
+              <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.3em] hidden xl:block">ADMINISTRATIVE INTERFACE • {new Date().getFullYear()}</p>
+              
+              <div className="flex items-center gap-2">
+                {period === 'custom' && (
+                  <div className="flex items-center gap-2 mr-2 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <input 
+                      type="date" 
+                      value={customStartDate} 
+                      onChange={e => setCustomStartDate(e.target.value)}
+                      className="px-4 py-1.5 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-full text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    />
+                    <span className="text-slate-400 font-bold">-</span>
+                    <input 
+                      type="date" 
+                      value={customEndDate} 
+                      onChange={e => setCustomEndDate(e.target.value)}
+                      className="px-4 py-1.5 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-full text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    />
+                  </div>
+                )}
+                <PremiumFilter 
+                  options={[
+                    { label: 'Today', value: 'today' },
+                    { label: 'Week', value: 'week' },
+                    { label: 'Month', value: 'month' },
+                    { label: 'All', value: 'all' },
+                    { label: 'Custom', value: 'custom' },
+                  ]}
+                  active={period}
+                  onChange={setPeriod}
+                />
+              </div>
+           </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link href="/purchases/new" className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3">
+            <Plus size={16} strokeWidth={3} /> Create PO
+          </Link>
+          <Link href="/franchise-orders" className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 hover:scale-105 transition-all active:scale-95 flex items-center gap-3 shadow-xl shadow-blue-500/20">
+            <Send size={16} strokeWidth={3} /> Dispatch
+          </Link>
+        </div>
       </div>
 
-      {/* ── 🥉 MONTHLY TRENDS & GROWTH ───────────────────── */}
-      <section className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {monthlyCards.map((card, i) => (
-          <MonthlyCard key={i} month={card.month} amount={card.amount} colorClass={card.color} />
+      {/* ── LAYER 1: CEO SUMMARY ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+        {executiveKPIs.map((kpi, i) => (
+          <KPICard key={i} {...kpi} />
         ))}
-        <GrowthIndicator value={parseFloat(stats?.b2cRevenueChangePct || "0")} />
-      </section>
+      </div>
 
-      {/* ── 🏅 SALES INTELLIGENCE ────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+      {/* ── LAYER 2: REVENUE INTELLIGENCE ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-12">
-          <SectionHeader title="Performance Intelligence" subtitle="Target Tracking & Yearly Trajectory" icon={Activity} />
+          <RevenueIntelligence 
+            data={chartData} 
+            title="Revenue Analytics" 
+            trend={stats?.revenueChangePct || "0"} 
+            period={period} 
+            setPeriod={setPeriod} 
+          />
         </div>
         <div className="lg:col-span-12">
-          <YearlySalesChart data={yearlySales} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <ReportTableWidget 
+              title="Recent Purchase Report View" 
+              icon={PackageCheck} 
+              color="indigo"
+              headers={['PO Number', 'Vendor', 'Amount']}
+              data={(data?.recentPurchases || []).map((p: any) => ({
+                col1: p.poNumber,
+                col2: p.vendor?.name || p.items?.[0]?.inventoryItem?.name || 'Vendor',
+                col3: formatCurrency(p.totalAmount)
+              }))}
+            />
+            
+            <ReportTableWidget 
+              title="Recent B2B Sales Details" 
+              icon={Building2} 
+              color="blue"
+              headers={['Invoice #', 'Client', 'Amount']}
+              data={(data?.recentB2BSales || []).map((s: any) => ({
+                col1: s.invoiceNum,
+                col2: s.customerName || 'B2B Client',
+                col3: formatCurrency(s.totalAmount)
+              }))}
+            />
+
+            <ReportTableWidget 
+              title="Recent B2C Sales Details" 
+              icon={Store} 
+              color="emerald"
+              headers={['Invoice #', 'Amount']}
+              data={(data?.recentB2CBills || []).map((s: any) => ({
+                col1: `#${s.invoiceNum}`,
+                col2: formatCurrency(s.totalAmount)
+              }))}
+            />
+
+            <ReportTableWidget 
+              title="Top Selling Products of the Week" 
+              icon={TrendingUp} 
+              color="amber"
+              headers={['Product', 'Units Sold', 'Trend']}
+              data={(data?.topSellers || []).map((p: any) => ({
+                col1: p.name,
+                col2: `${p.value} ${p.unit}`,
+                col3: `${p.growth}%`
+              }))}
+            />
+
+            <ReportTableWidget 
+              title="Stock Urgent Report" 
+              icon={AlertTriangle} 
+              color="rose"
+              headers={['Product', 'Current Stock', 'Action']}
+              data={(data?.lowStock || []).map((p: any) => ({
+                col1: p.name,
+                col2: `${p.currentStock} ${p.unit}`,
+                col3: p.action
+              }))}
+            />
+
+            <ReportTableWidget 
+              title="Supplier payment Tracking View" 
+              icon={CreditCard} 
+              color="purple"
+              headers={['Vendor', 'PO Number', 'Amount Due']}
+              data={(data?.supplierPaymentsDue || []).map((p: any) => ({
+                col1: p.vendor?.name || 'Vendor',
+                col2: p.poNumber,
+                col3: formatCurrency(p.totalAmount)
+              }))}
+            />
+          </div>
         </div>
       </div>
-
-      {/* ── 🚀 ADVANCED OPERATIONS ───────────────────────── */}
-      <div className="space-y-6">
-        <PremiumReportTable 
-          title="Recent Sales Invoices" 
-          headers={["Bill.No", "Date", "Bill To", "Name", "T.Amt"]} 
-          rows={recentB2CSalesRows} 
-        />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TopSellingTable data={topSelling} />
-          <StockUrgentTable data={stockUrgent} />
-        </div>
-
-        <SupplierPaymentTable data={supplierTracking} />
-      </div>
-
-      {/* ── 📜 TRANSACTIONAL FEED ────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-6 border-t border-slate-200 dark:border-white/5">
-        <PremiumReportTable 
-          title="Recent Purchase Report View" 
-          headers={["S.no", "P.Code", "Date", "S.Name", "Qty", "Amount"]} 
-          rows={recentPurchasesRows} 
-        />
-        <PremiumReportTable 
-          title="Recent Dealer Sales" 
-          headers={["Bill.No", "Date", "Bill to", "Name", "T.Amt"]} 
-          rows={recentB2BSalesRows} 
-        />
-      </div>
-
-      {/* ── 🚀 QUICK ACCESS DOCK ─────────────────────────── */}
-      <section className="pt-10 border-t border-slate-200 dark:border-white/5">
-        <SectionHeader title="Enterprise Navigator" subtitle="Direct Access to Core Modules" icon={LayoutDashboard} />
-        <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-4">
-          {[
-            { label: 'Leads', icon: Users, href: '/crm', color: 'bg-indigo-500' },
-            { label: 'Products', icon: Package, href: '/products', color: 'bg-orange-500' },
-            { label: 'Sales', icon: IndianRupee, href: '/sales', color: 'bg-emerald-500' },
-            { label: 'Purchase', icon: ShoppingCart, href: '/purchases', color: 'bg-rose-500' },
-            { label: 'GRN', icon: Receipt, href: '/purchases/grn', color: 'bg-blue-500' },
-            { label: 'Production', icon: Factory, href: '/production', color: 'bg-slate-900' },
-            { label: 'Customers', icon: UserCheck, href: '/customers', color: 'bg-amber-500' },
-            { label: 'Users', icon: Settings2, href: '/admin', color: 'bg-slate-400' },
-            { label: 'Settings', icon: Settings, href: '/settings', color: 'bg-slate-600' },
-          ].map((action: any) => (
-            <Link key={action.label} href={action.href} className="bg-white dark:bg-[#12141c] p-4 rounded-2xl border border-slate-200/60 dark:border-white/5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col items-center text-center gap-2">
-               <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform shadow-current/20", action.color)}>
-                  <action.icon size={18} />
-               </div>
-               <span className="text-[9px] font-black text-slate-900 dark:text-white uppercase tracking-widest">{action.label}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
-

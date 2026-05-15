@@ -1,0 +1,54 @@
+import api from './base';
+
+// --- Billing & POS ---
+export const posApi = {
+  checkout: (data: any) => api.post('/api/orders/checkout', data),
+  getOrders: (params: any = {}) => api.get('/api/orders', { params }),
+  getOrderById: (id: string) => api.get(`/api/orders/${id}`),
+  getInvoice: (orderId: string) => api.get(`/api/invoices/${orderId}`),
+  updateStatus: (id: string, status: string) => api.patch(`/api/orders/${id}/status`, { status }),
+  addPayment: (id: string, data: any) => api.post(`/api/orders/${id}/payment`, data),
+};
+
+// --- Sales Module (Quotations, Orders, Returns) ---
+export const salesApi = {
+  getQuotations: (params?: any) => api.get('/api/sales/quotations', { params }),
+  createQuotation: (data: any) => api.post('/api/sales/quotations', data),
+  getQuotationById: (id: string) => api.get(`/api/sales/quotations/${id}`),
+  updateQuotation: (id: string, data: any) => api.patch(`/api/sales/quotations/${id}`, data),
+  convertQuotation: (id: string) => api.post(`/api/sales/quotations/${id}/convert`),
+
+  getSalesOrders: (params?: any) => api.get('/api/sales/orders', { params }),
+  getSalesOrderById: (id: string) => api.get(`/api/sales/orders/${id}`),
+  createSalesOrder: (data: any) => api.post('/api/sales/orders', data),
+  updateSalesOrder: (id: string, data: any) => api.patch(`/api/sales/orders/${id}`, data),
+
+  getReturns: (params?: any) => api.get('/api/sales/returns', { params }),
+  createReturn: (data: any) => api.post('/api/sales/returns', data),
+  updateReturnStatus: (id: string, status: string, approvedBy?: string) => 
+    api.patch(`/api/sales/returns/${id}`, { status, approvedBy }),
+  
+  getAnalytics: (params?: any) => api.get('/api/sales/analytics', { params }),
+};
+
+// --- Customer Management ---
+export const customersApi = {
+  getAll: (params: any = {}) => api.get('/api/customers', { params }),
+  getById: (id: string) => api.get(`/api/customers/${id}`),
+  search: (query: string) => api.get(`/api/customers`, { params: { search: query } }),
+  create: (data: any) => api.post('/api/customers', data),
+  update: (id: string, data: any) => api.patch(`/api/customers/${id}`, data),
+  delete: (id: string) => api.delete(`/api/customers/${id}`),
+};
+
+// --- Logistics & Transfers (Internal) ---
+export const logisticsApi = {
+  getRequests: (params: any = {}) => api.get('/api/logistics/requests', { params }),
+  createRequest: (data: any) => api.post('/api/logistics/requests', data),
+  approveRequest: (id: string, approvedItems: any[]) => 
+    api.patch(`/api/logistics/requests/${id}/approve`, { approvedItems }),
+  
+  getTransfers: (params: any = {}) => api.get('/api/logistics/transfers', { params }),
+  initiateTransfer: (data: any) => api.post('/api/logistics/transfers', data),
+  completeTransfer: (id: string) => api.patch(`/api/logistics/transfers/${id}/complete`),
+};
