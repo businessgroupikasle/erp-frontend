@@ -32,3 +32,10 @@ export const reportsApi = {
   getProfit: (params?: any) => api.get('/api/reports/profit', { params }),
   getDetailedProfit: (params?: any) => api.get('/api/reports/profit', { params: { ...params, detailed: 'true' } }),
 };
+
+export const chequesApi = {
+  getAll: (params?: any) => api.get('/api/cheques', { params }),
+  getStats: (params?: any) => api.get('/api/cheques/stats', { params }),
+  create: (data: any) => api.post('/api/cheques', data),
+  updateStatus: (id: string, status: string) => api.patch(`/api/cheques/${id}/status`, { status }),
+};

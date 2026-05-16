@@ -133,9 +133,13 @@ export default function POSPage() {
     if (accounts.length > 0) {
       const typeMap: Record<string, string> = { CASH: "CASH", UPI: "UPI", CARD: "BANK" };
       const targetType = typeMap[selectedPaymentMode];
-      const match = accounts.find(a => a.type === targetType);
-      if (match) setSelectedAccountId(match.id);
-      else if (!selectedAccountId && accounts.length > 0) setSelectedAccountId(accounts[0].id);
+      
+      // Only auto-change if current account is incompatible
+      const currentAcc = accounts.find(a => a.id === selectedAccountId);
+      if (!currentAcc || (currentAcc.type !== targetType && !(selectedPaymentMode === "UPI" && currentAcc.type === "BANK"))) {
+        const match = accounts.find(a => a.type === targetType);
+        if (match) setSelectedAccountId(match.id);
+      }
     }
   }, [selectedPaymentMode, accounts]);
 
@@ -365,26 +369,29 @@ export default function POSPage() {
     
     w.document.write(`<!DOCTYPE html><html><head><title>Receipt</title><style>
       *{box-sizing:border-box;margin:0;padding:0}
-      body{font-family:'Courier New',monospace;max-width:320px;margin:0 auto;padding:12px;font-size:12px;color:#000}
+      body{font-family:'Courier New',monospace;max-width:300px;margin:0 auto;padding:15px;font-size:12px;color:#000;background:#fff}
       .header{text-align:center;margin-bottom:15px}
-      .header h1{font-size:20px;font-weight:900;text-transform:uppercase;margin-bottom:2px}
-      .header p{font-size:10px;line-height:1.2}
-      .line{border-top:1px dashed #000;margin:8px 0}
-      .meta{font-size:10px;margin-bottom:10px}
+      .header h1{font-size:22px;font-weight:900;text-transform:uppercase;margin-bottom:4px}
+      .header .sub{font-size:11px;font-weight:bold;margin-bottom:8px;border-bottom:1px solid #000;padding-bottom:4px;display:inline-block}
+      .header p{font-size:10px;line-height:1.4}
+      .line{border-top:1px dashed #000;margin:10px 0}
+      .meta{font-size:10px;margin-bottom:12px}
       table{width:100%;border-collapse:collapse;margin:10px 0}
-      th{border-bottom:1px solid #000;padding:5px 0;font-size:10px;text-transform:uppercase}
-      td{padding:5px 0;font-size:11px;text-align:center}
-      .totals{margin-top:10px;border-top:1px solid #000;padding-top:5px}
-      .row{display:flex;justify-content:space-between;margin:2px 0}
-      .row.bold{font-weight:bold;font-size:14px}
-      .tax-breakdown{margin-top:15px;font-size:9px;width:100%}
-      .tax-breakdown th, .tax-breakdown td{font-size:9px;padding:2px 0;border:none}
-      .footer{text-align:center;margin-top:20px;font-size:11px}
+      th{border-bottom:1px solid #000;padding:6px 0;font-size:10px;text-transform:uppercase}
+      td{padding:6px 0;font-size:11px;vertical-align:top}
+      .totals{margin-top:8px;border-top:1px solid #000;padding-top:8px}
+      .row{display:flex;justify-content:space-between;margin:3px 0}
+      .row.bold{font-weight:bold;font-size:15px;margin-top:5px;border-top:1px double #000;padding-top:5px}
+      .tax-breakdown{margin-top:15px;font-size:9px;width:100%;border:1px solid #000}
+      .tax-breakdown th, .tax-breakdown td{font-size:9px;padding:3px;border:1px solid #000;text-align:center}
+      .last-cash{margin-top:15px;text-align:center;border:1px solid #000;padding:8px}
+      .last-cash h2{font-size:14px;font-weight:900}
+      .footer{text-align:center;margin-top:25px;font-size:11px;font-weight:bold}
       @media print{body{padding:0}}
     </style></head><body>
       <div class="header">
         <h1>KIDDOS FOOD</h1>
-        <p>${franchiseName}</p>
+        <div class="sub">${franchiseName}</div>
         <p>${franchiseAddress}</p>
         <p>Phone: ${franchisePhone}</p>
         <p>GSTIN: ${franchiseGst}</p>
@@ -392,12 +399,13 @@ export default function POSPage() {
 
       <div class="meta">
         <div class="row"><span>Bill No: #${receiptData.orderId?.slice(-8).toUpperCase()}</span><span>Date: ${dateStr}</span></div>
-        <div class="row"><span>Time: ${timeStr}</span><span>Type: ${receiptData.orderType.toUpperCase()}</span></div>
+        <div class="row"><span>Time: ${timeStr}</span><span>Mode: ${receiptData.paymentMode}</span></div>
+        <div class="row"><span>Customer: ${receiptData.customer?.name || "Walk-in"}</span><span>Type: ${receiptData.orderType.toUpperCase()}</span></div>
       </div>
 
       <div class="line"></div>
       <table>
-        <thead><tr><th style="text-align:left">Item</th><th>Rate</th><th>Qty</th><th style="text-align:right">Amt</th></tr></thead>
+        <thead><tr><th style="text-align:left">Item</th><th style="text-align:right">Rate</th><th style="text-align:center">Qty</th><th style="text-align:right">Amt</th></tr></thead>
         <tbody>${itemsHtml}</tbody>
       </table>
       <div class="line"></div>
@@ -405,12 +413,13 @@ export default function POSPage() {
       <div class="totals">
         <div class="row"><span>Subtotal</span><span>₹${receiptData.subtotal.toLocaleString()}</span></div>
         <div class="row"><span>GST (${receiptData.items.reduce((acc, i) => acc + (i.taxPercent || 0), 0) / receiptData.items.length || 0}%)</span><span>₹${receiptData.gst.toLocaleString()}</span></div>
+        {receiptData.discount > 0 && <div class="row text-rose-600"><span>Discount</span><span>-₹${receiptData.discount.toLocaleString()}</span></div>}
         <div class="row"><span>Round Off</span><span>₹0.00</span></div>
         <div class="row bold"><span>TOTAL</span><span>₹${receiptData.total.toLocaleString()}</span></div>
       </div>
 
       <table class="tax-breakdown">
-        <thead><tr><th>Tax Value</th><th>CGST%</th><th>CGST</th><th>SGST%</th><th>SGST</th></tr></thead>
+        <thead><tr><th>Taxable</th><th>CGST%</th><th>CGST</th><th>SGST%</th><th>SGST</th></tr></thead>
         <tbody>
           <tr>
             <td>₹${receiptData.subtotal.toLocaleString()}</td>
@@ -422,15 +431,14 @@ export default function POSPage() {
         </tbody>
       </table>
 
-      <div class="line"></div>
-      <div class="row" style="margin-top:10px font-weight:bold">
-        <span>Last Cash:</span>
-        <span>Rs. ${receiptData.total.toLocaleString()}</span>
+      <div class="last-cash">
+        <p>LAST CASH / TOTAL RECEIVED</p>
+        <h2>Rs. ${receiptData.total.toLocaleString()}</h2>
       </div>
 
       <div class="footer">
-        <p>— THANK YOU —</p>
-        <p>Visit Again!</p>
+        <p>*** THANK YOU · VISIT AGAIN ***</p>
+        <p style="font-size:8px; margin-top:5px; font-weight:normal">System Generated Invoice</p>
       </div>
     </body></html>`);
     w.document.close();
@@ -706,10 +714,10 @@ export default function POSPage() {
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Source Account</p>
               <button 
                 onClick={() => setShowAddAccount(true)}
-                className="p-1.5 bg-slate-100 dark:bg-white/5 text-slate-400 hover:text-orange-500 rounded-lg transition-all"
+                className="p-1.5 bg-orange-50 dark:bg-orange-500/10 text-orange-500 hover:bg-orange-100 rounded-lg transition-all"
                 title="Quick Add Account"
               >
-                <Plus size={12} />
+                <Plus size={12} strokeWidth={3} />
               </button>
             </div>
             <select
@@ -721,7 +729,12 @@ export default function POSPage() {
                 if (acc) {
                   if (acc.type === "CASH") setSelectedPaymentMode("CASH");
                   else if (acc.type === "UPI") setSelectedPaymentMode("UPI");
-                  else if (acc.type === "BANK") setSelectedPaymentMode("CARD");
+                  else if (acc.type === "BANK") {
+                    // If already on UPI or CARD, stay there. Otherwise default to CARD.
+                    if (selectedPaymentMode !== "UPI" && selectedPaymentMode !== "CARD") {
+                      setSelectedPaymentMode("CARD");
+                    }
+                  }
                 }
               }}
               className={clsx(
@@ -744,12 +757,12 @@ export default function POSPage() {
           {/* Payment Mode */}
           <div className="grid grid-cols-3 gap-2">
             {( [
-              { mode: "CASH" as const, type: "CASH", icon: Banknote, activeColor: "bg-emerald-500 text-white border-emerald-500", hoverColor: "hover:border-emerald-400" },
-              { mode: "UPI" as const, type: "UPI", icon: QrCode, activeColor: "bg-blue-500 text-white border-blue-500", hoverColor: "hover:border-blue-400" },
-              { mode: "CARD" as const, type: "BANK", icon: CreditCard, activeColor: "bg-violet-500 text-white border-violet-500", hoverColor: "hover:border-violet-400" },
-            ]).map(({ mode, type, icon: Icon, activeColor, hoverColor }) => {
+              { mode: "CASH" as const, types: ["CASH"], icon: Banknote, activeColor: "bg-emerald-500 text-white border-emerald-500", hoverColor: "hover:border-emerald-400" },
+              { mode: "UPI" as const, types: ["UPI", "BANK"], icon: QrCode, activeColor: "bg-blue-500 text-white border-blue-500", hoverColor: "hover:border-blue-400" },
+              { mode: "CARD" as const, types: ["BANK"], icon: CreditCard, activeColor: "bg-violet-500 text-white border-violet-500", hoverColor: "hover:border-violet-400" },
+            ]).map(({ mode, types, icon: Icon, activeColor, hoverColor }) => {
               const selectedAcc = accounts.find(a => a.id === selectedAccountId);
-              const isDisabled = selectedAcc && selectedAcc.type !== type;
+              const isDisabled = selectedAcc && !types.includes(selectedAcc.type);
               
               return (
                 <button 
@@ -812,14 +825,23 @@ export default function POSPage() {
             <div className="space-y-4">
               {[
                 { label: "Full Name *", field: "name", placeholder: "e.g. Rahul Sharma", type: "text" },
-                { label: "Phone *", field: "phone", placeholder: "10-digit mobile", type: "tel" },
+                { label: "Phone *", field: "phone", placeholder: "10-digit mobile", type: "tel", maxLength: 10 },
                 { label: "Email", field: "email", placeholder: "optional", type: "email" },
-              ].map(({ label, field, placeholder, type }) => (
+              ].map(({ label, field, placeholder, type, maxLength }) => (
                 <div key={field}>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 block">{label}</label>
-                  <input type={type} placeholder={placeholder}
+                  <input 
+                    type={type} 
+                    placeholder={placeholder}
+                    maxLength={maxLength}
                     value={(newCustForm as any)[field]}
-                    onChange={(e) => setNewCustForm({ ...newCustForm, [field]: e.target.value })}
+                    onChange={(e) => {
+                      let val = e.target.value;
+                      if (field === "phone") {
+                        val = val.replace(/\D/g, ""); // Only numbers
+                      }
+                      setNewCustForm({ ...newCustForm, [field]: val });
+                    }}
                     className="w-full px-5 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-semibold text-sm outline-none focus:border-orange-400 transition-all" />
                 </div>
               ))}
@@ -827,7 +849,7 @@ export default function POSPage() {
             <div className="flex gap-3">
               <button onClick={() => setShowAddCust(false)} className="flex-1 py-3.5 border border-gray-200 dark:border-white/10 rounded-2xl text-sm font-bold text-gray-500">Cancel</button>
               <button onClick={handleAddCustomer}
-                disabled={addingCust || !newCustForm.name.trim() || !newCustForm.phone.trim()}
+                disabled={addingCust || !newCustForm.name.trim() || newCustForm.phone.length !== 10}
                 className="flex-[2] py-3.5 bg-orange-500 hover:bg-orange-400 disabled:bg-slate-300 text-white rounded-2xl text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition-all active:scale-95">
                 {addingCust ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
                 {addingCust ? "Saving..." : "Add & Select"}

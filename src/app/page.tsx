@@ -44,7 +44,7 @@ export default function Dashboard() {
       startDateStr = startDate.toISOString();
     }
 
-    dashboardApi.getSummary({ startDate: startDateStr, endDate: endDateStr })
+    dashboardApi.getSummary({ startDate: startDateStr, endDate: endDateStr, period })
       .then((res) => setData(res.data))
       .catch((err) => setError(err.response?.data?.error || "Failed to load dashboard"))
       .finally(() => setLoading(false));
@@ -53,6 +53,24 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
+
+  if (error) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#090a0f] p-4">
+      <div className="bg-white dark:bg-[#12141c] p-10 rounded-[3rem] border border-rose-500/20 shadow-2xl shadow-rose-500/10 flex flex-col items-center text-center max-w-md animate-in zoom-in-95 duration-500">
+        <div className="w-20 h-20 rounded-3xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-500 mb-6">
+          <AlertTriangle size={40} />
+        </div>
+        <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-widest mb-3">Telemetry Failure</h2>
+        <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">{error}</p>
+        <button 
+          onClick={() => { setError(null); fetchDashboard(); }}
+          className="px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:scale-105 transition-all shadow-xl active:scale-95"
+        >
+          Re-establish Connection
+        </button>
+      </div>
+    </div>
+  );
 
   if (loading && !data) return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#090a0f]">
