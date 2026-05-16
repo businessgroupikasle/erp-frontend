@@ -149,7 +149,18 @@ export default function AddItemPage() {
                   <div className="space-y-3">
                     <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">Item Category</label>
                     <div className="relative">
-                       <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-8 py-5 text-sm font-black focus:ring-4 ring-slate-900/5 dark:text-white">
+                       <select 
+                         value={form.category} 
+                         onChange={e => {
+                           const cat = e.target.value;
+                           setForm({
+                             ...form, 
+                             category: cat,
+                             unit: cat === 'FINISHED_GOOD' ? 'pkt' : 'kg'
+                           });
+                         }} 
+                         className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-8 py-5 text-sm font-black focus:ring-4 ring-slate-900/5 dark:text-white"
+                       >
                           {ITEM_CATEGORIES.map(c => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
                        </select>
                        <ChevronDown size={20} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />

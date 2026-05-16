@@ -10,6 +10,7 @@ import {
 import { clsx } from "clsx";
 import { rawMaterialsApi } from "@/lib/api";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 
 export default function RawMaterialStockClient() {
   const [items, setItems]   = useState<any[]>([]);
@@ -24,17 +25,19 @@ export default function RawMaterialStockClient() {
   const [editValue, setEditValue] = useState<string>("");
   const [updating, setUpdating] = useState(false);
 
+  const { user } = useAuth();
+
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await rawMaterialsApi.getAll(showInactive);
+      const res = await rawMaterialsApi.getAll(showInactive, user?.franchiseId);
       setItems(res.data ?? []);
     } catch (e) {
       console.error("Failed to fetch inventory:", e);
     } finally {
       setLoading(false);
     }
-  }, [showInactive]);
+  }, [showInactive, user?.franchiseId]);
 
   const handleUpdateThreshold = async (itemId: string) => {
     setUpdating(true);
@@ -126,6 +129,25 @@ export default function RawMaterialStockClient() {
            <button onClick={fetchItems} className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl hover:border-slate-300 transition-all shadow-sm">
              <RefreshCw size={16} className={clsx("text-slate-400", loading && "animate-spin")} />
            </button>
+           {user?.role?.name === 'SUPER_ADMIN' && (
+             <button 
+               onClick={async () => {
+                 if(!confirm("Standardize all Finished Goods to 'PC' unit?")) return;
+                 try {
+                   await fetch('/api/inventory/fix-units', { 
+                     method: 'POST', 
+                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } 
+                   });
+                   alert("Units standardized successfully.");
+                   fetchItems();
+                 } catch (e) { alert("Sync failed."); }
+               }}
+               className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl hover:border-blue-300 transition-all shadow-sm text-blue-500"
+               title="Sync Finished Goods Units"
+             >
+               <RefreshCw size={16} />
+             </button>
+           )}
            <Link
              href="/inventory/stock/add"
              className="flex items-center gap-3 bg-slate-900 text-white px-8 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-2xl shadow-slate-900/20"

@@ -5,9 +5,10 @@ import {
   Plus, Minus, Trash2, Search, CreditCard, Banknote, QrCode,
   Utensils, User, X, Percent, ShoppingBag, Zap, ArrowRight,
   UserPlus, Keyboard, Printer, Save, Loader2, Tag, CheckCircle2,
+  Link,
 } from "lucide-react";
 import { clsx } from "clsx";
-import { customersApi, productsApi, posApi } from "@/lib/api";
+import { customersApi, productsApi, posApi, accountsApi } from "@/lib/api";
 import { toast } from "react-hot-toast";
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -60,11 +61,18 @@ export default function POSPage() {
   const [selectedPaymentMode, setSelectedPaymentMode] = useState<"CASH" | "UPI" | "CARD">("CASH");
   const [loading, setLoading] = useState(false);
   const [productsLoading, setProductsLoading] = useState(true);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
 
   // Add-customer modal
   const [showAddCust, setShowAddCust] = useState(false);
   const [newCustForm, setNewCustForm] = useState({ name: "", phone: "", email: "" });
   const [addingCust, setAddingCust] = useState(false);
+
+  // Add-account modal
+  const [showAddAccount, setShowAddAccount] = useState(false);
+  const [newAccForm, setNewAccForm] = useState({ name: "", type: "CASH", balance: 0 });
+  const [addingAcc, setAddingAcc] = useState(false);
 
   // Receipt modal
   const [showReceipt, setShowReceipt] = useState(false);
@@ -92,10 +100,10 @@ export default function POSPage() {
           inventoryFranchiseId: p.inventoryFranchiseId,
           taxPercent:
             typeof p.taxPercent === "number" ? p.taxPercent
-            : typeof p.gstRate === "number" ? p.gstRate
-            : typeof p.tax === "number" ? p.tax
-            : typeof p.gst === "number" ? p.gst
-            : 0,
+              : typeof p.gstRate === "number" ? p.gstRate
+                : typeof p.tax === "number" ? p.tax
+                  : typeof p.gst === "number" ? p.gst
+                    : 0,
         }));
         setProducts(mapped);
         const cats = Array.from(new Set(mapped.map((p: any) => p.category).filter(Boolean))) as string[];
@@ -105,10 +113,31 @@ export default function POSPage() {
       .finally(() => setProductsLoading(false));
   }, []);
 
+  const fetchAccounts = useCallback(() => {
+    accountsApi.getAll()
+      .then((res) => {
+        const data = res.data?.data || res.data || [];
+        setAccounts(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => console.error("Accounts fetch failed", err));
+  }, []);
+
   useEffect(() => {
     fetchProducts();
+    fetchAccounts();
     searchRef.current?.focus();
-  }, [fetchProducts]);
+  }, [fetchProducts, fetchAccounts]);
+
+  // Auto-select account based on payment mode
+  useEffect(() => {
+    if (accounts.length > 0) {
+      const typeMap: Record<string, string> = { CASH: "CASH", UPI: "UPI", CARD: "BANK" };
+      const targetType = typeMap[selectedPaymentMode];
+      const match = accounts.find(a => a.type === targetType);
+      if (match) setSelectedAccountId(match.id);
+      else if (!selectedAccountId && accounts.length > 0) setSelectedAccountId(accounts[0].id);
+    }
+  }, [selectedPaymentMode, accounts]);
 
   useEffect(() => {
     if (customerSearch.length >= 2) {
@@ -177,12 +206,12 @@ export default function POSPage() {
     setCart((prev) => prev.map((i) => {
       if (i.id !== id) return i;
       const q = i.quantity + delta;
-      
+
       if (delta > 0 && product?.stock !== null && q > product.stock) {
         toast.error(`Insufficient stock! Only ${product.stock} left.`);
         return i;
       }
-      
+
       return q <= 0 ? null as any : { ...i, quantity: q };
     }).filter(Boolean));
   };
@@ -194,6 +223,31 @@ export default function POSPage() {
   const discountAmt = Math.max(0, parseFloat(discount) || 0);
   const total = Math.max(0, subtotal + gst - discountAmt);
   const changeAmount = paidAmount ? parseFloat(paidAmount) - total : 0;
+
+  const handleAddAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddingAcc(true);
+    try {
+      const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+      const user = userStr ? JSON.parse(userStr) : null;
+      await accountsApi.create({
+        ...newAccForm,
+        franchiseId: user?.franchiseId || "root",
+        isActive: true
+      });
+      toast.success("Account created!");
+      setShowAddAccount(false);
+      setNewAccForm({ name: "", type: "CASH", balance: 0 });
+      // Refresh accounts
+      const res = await accountsApi.getAll();
+      setAccounts(res.data);
+      if (res.data.length > 0) setSelectedAccountId(res.data[0].id);
+    } catch (e) {
+      toast.error("Failed to create account");
+    } finally {
+      setAddingAcc(false);
+    }
+  };
 
   const handleCheckout = async (mode: "CASH" | "UPI" | "CARD") => {
     if (cart.length === 0) return;
@@ -211,10 +265,11 @@ export default function POSPage() {
     try {
       const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
       const user = userStr ? JSON.parse(userStr) : null;
-      
+
       const res = await posApi.checkout({
         franchiseId: user?.franchiseId || (cart.length > 0 ? (cart[0] as any).inventoryFranchiseId : null),
-        customerId: customer?.id || "WALK_IN",
+        customerId: customer?.id || null,
+        accountId: selectedAccountId,
         customerName: customer ? customer.name : "Walk-in Customer",
         customerPhone: customer?.phone,
         paymentMode: mode,
@@ -277,42 +332,106 @@ export default function POSPage() {
 
   const handlePrintReceipt = () => {
     if (!receiptData) return;
+    
+    const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+    const user = userStr ? JSON.parse(userStr) : null;
+    const franchiseName = user?.franchise?.name || "HEADQUARTERS";
+    const franchiseAddress = user?.franchise?.location || "Industrial Area, Phase 1";
+    const franchisePhone = user?.franchise?.contactNum || "9876543210";
+    const franchiseGst = "37AAAAA0000A1Z5"; // Placeholder GST
+
+    const date = new Date(receiptData.timestamp);
+    const dateStr = date.toLocaleDateString("en-IN");
+    const timeStr = date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    
+    // CGST/SGST calculation (assuming 50/50 split)
+    const cgst = receiptData.gst / 2;
+    const sgst = receiptData.gst / 2;
+    
+    const itemsHtml = receiptData.items.map(item => {
+      const amount = item.price * item.quantity;
+      return `
+        <tr>
+          <td style="text-align:left">${item.name}</td>
+          <td>${item.price}</td>
+          <td>${item.quantity}</td>
+          <td style="text-align:right">₹${amount.toLocaleString()}</td>
+        </tr>
+      `;
+    }).join("");
+
     const w = window.open("", "_blank", "width=400,height=700");
     if (!w) return;
-    const itemsHtml = receiptData.items.map(item => `
-      <div class="row"><span>${item.name} × ${item.quantity}</span><span>₹${(item.price * item.quantity).toLocaleString()}</span></div>
-      ${item.taxPercent > 0 ? `<div class="row sub"><span>  GST ${item.taxPercent}%</span><span>₹${Math.round(item.price * item.quantity * item.taxPercent / 100).toLocaleString()}</span></div>` : ""}
-    `).join("");
+    
     w.document.write(`<!DOCTYPE html><html><head><title>Receipt</title><style>
       *{box-sizing:border-box;margin:0;padding:0}
-      body{font-family:'Courier New',monospace;max-width:300px;margin:0 auto;padding:16px;font-size:13px}
-      h2{text-align:center;font-size:18px;letter-spacing:3px;margin-bottom:4px}
-      .center{text-align:center;color:#666;font-size:11px;margin-bottom:2px}
-      .line{border-top:1px dashed #999;margin:10px 0}
-      .row{display:flex;justify-content:space-between;margin:3px 0}
-      .row.sub{color:#888;font-size:11px}
-      .row.total{font-weight:bold;font-size:15px;margin-top:4px}
-      .row.discount{color:#16a34a}
-      .footer{text-align:center;margin-top:12px;font-size:11px;color:#888}
+      body{font-family:'Courier New',monospace;max-width:320px;margin:0 auto;padding:12px;font-size:12px;color:#000}
+      .header{text-align:center;margin-bottom:15px}
+      .header h1{font-size:20px;font-weight:900;text-transform:uppercase;margin-bottom:2px}
+      .header p{font-size:10px;line-height:1.2}
+      .line{border-top:1px dashed #000;margin:8px 0}
+      .meta{font-size:10px;margin-bottom:10px}
+      table{width:100%;border-collapse:collapse;margin:10px 0}
+      th{border-bottom:1px solid #000;padding:5px 0;font-size:10px;text-transform:uppercase}
+      td{padding:5px 0;font-size:11px;text-align:center}
+      .totals{margin-top:10px;border-top:1px solid #000;padding-top:5px}
+      .row{display:flex;justify-content:space-between;margin:2px 0}
+      .row.bold{font-weight:bold;font-size:14px}
+      .tax-breakdown{margin-top:15px;font-size:9px;width:100%}
+      .tax-breakdown th, .tax-breakdown td{font-size:9px;padding:2px 0;border:none}
+      .footer{text-align:center;margin-top:20px;font-size:11px}
       @media print{body{padding:0}}
     </style></head><body>
-      <h2>RECEIPT</h2>
-      <p class="center">Order #${receiptData.orderId ? receiptData.orderId.slice(-8).toUpperCase() : "—"}</p>
-      <p class="center">${new Date(receiptData.timestamp).toLocaleString("en-IN")}</p>
-      <p class="center">Type: ${receiptData.orderType.toUpperCase()}</p>
+      <div class="header">
+        <h1>KIDDOS FOOD</h1>
+        <p>${franchiseName}</p>
+        <p>${franchiseAddress}</p>
+        <p>Phone: ${franchisePhone}</p>
+        <p>GSTIN: ${franchiseGst}</p>
+      </div>
+
+      <div class="meta">
+        <div class="row"><span>Bill No: #${receiptData.orderId?.slice(-8).toUpperCase()}</span><span>Date: ${dateStr}</span></div>
+        <div class="row"><span>Time: ${timeStr}</span><span>Type: ${receiptData.orderType.toUpperCase()}</span></div>
+      </div>
+
       <div class="line"></div>
-      ${itemsHtml}
+      <table>
+        <thead><tr><th style="text-align:left">Item</th><th>Rate</th><th>Qty</th><th style="text-align:right">Amt</th></tr></thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
       <div class="line"></div>
-      <div class="row"><span>Subtotal</span><span>₹${receiptData.subtotal.toLocaleString()}</span></div>
-      <div class="row"><span>Tax (GST)</span><span>₹${receiptData.gst.toLocaleString()}</span></div>
-      ${receiptData.discount > 0 ? `<div class="row discount"><span>Discount</span><span>− ₹${receiptData.discount.toLocaleString()}</span></div>` : ""}
+
+      <div class="totals">
+        <div class="row"><span>Subtotal</span><span>₹${receiptData.subtotal.toLocaleString()}</span></div>
+        <div class="row"><span>GST (${receiptData.items.reduce((acc, i) => acc + (i.taxPercent || 0), 0) / receiptData.items.length || 0}%)</span><span>₹${receiptData.gst.toLocaleString()}</span></div>
+        <div class="row"><span>Round Off</span><span>₹0.00</span></div>
+        <div class="row bold"><span>TOTAL</span><span>₹${receiptData.total.toLocaleString()}</span></div>
+      </div>
+
+      <table class="tax-breakdown">
+        <thead><tr><th>Tax Value</th><th>CGST%</th><th>CGST</th><th>SGST%</th><th>SGST</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>₹${receiptData.subtotal.toLocaleString()}</td>
+            <td>2.5%</td>
+            <td>₹${cgst.toLocaleString()}</td>
+            <td>2.5%</td>
+            <td>₹${sgst.toLocaleString()}</td>
+          </tr>
+        </tbody>
+      </table>
+
       <div class="line"></div>
-      <div class="row total"><span>TOTAL</span><span>₹${receiptData.total.toLocaleString()}</span></div>
-      <div class="line"></div>
-      <div class="row"><span>Customer</span><span>${receiptData.customer?.name || "Walk-in"}</span></div>
-      ${receiptData.customer?.phone ? `<div class="row"><span>Phone</span><span>${receiptData.customer.phone}</span></div>` : ""}
-      <div class="row"><span>Payment</span><span>${receiptData.paymentMode}</span></div>
-      <div class="footer"><p>— Thank You! —</p></div>
+      <div class="row" style="margin-top:10px font-weight:bold">
+        <span>Last Cash:</span>
+        <span>Rs. ${receiptData.total.toLocaleString()}</span>
+      </div>
+
+      <div class="footer">
+        <p>— THANK YOU —</p>
+        <p>Visit Again!</p>
+      </div>
     </body></html>`);
     w.document.close();
     w.print();
@@ -581,34 +700,104 @@ export default function POSPage() {
             </div>
           </div>
 
-          {/* Payment Mode */}
-          <div className="grid grid-cols-3 gap-2">
-            {([
-              { mode: "CASH" as const, icon: Banknote, activeColor: "bg-emerald-500 text-white border-emerald-500", hoverColor: "hover:border-emerald-400" },
-              { mode: "UPI" as const, icon: QrCode, activeColor: "bg-blue-500 text-white border-blue-500", hoverColor: "hover:border-blue-400" },
-              { mode: "CARD" as const, icon: CreditCard, activeColor: "bg-violet-500 text-white border-violet-500", hoverColor: "hover:border-violet-400" },
-            ]).map(({ mode, icon: Icon, activeColor, hoverColor }) => (
-              <button key={mode} onClick={() => setSelectedPaymentMode(mode)}
-                className={clsx("flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-all",
-                  selectedPaymentMode === mode ? activeColor : clsx("bg-white dark:bg-[#1c1f2a] border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-300", hoverColor))}>
-                <Icon size={20} />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{mode}</span>
+          {/* Business Account Selection */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Source Account</p>
+              <button 
+                onClick={() => setShowAddAccount(true)}
+                className="p-1.5 bg-slate-100 dark:bg-white/5 text-slate-400 hover:text-orange-500 rounded-lg transition-all"
+                title="Quick Add Account"
+              >
+                <Plus size={12} />
               </button>
-            ))}
+            </div>
+            <select
+              value={selectedAccountId}
+              onChange={(e) => {
+                const accId = e.target.value;
+                setSelectedAccountId(accId);
+                const acc = accounts.find(a => a.id === accId);
+                if (acc) {
+                  if (acc.type === "CASH") setSelectedPaymentMode("CASH");
+                  else if (acc.type === "UPI") setSelectedPaymentMode("UPI");
+                  else if (acc.type === "BANK") setSelectedPaymentMode("CARD");
+                }
+              }}
+              className={clsx(
+                "w-full bg-white dark:bg-[#1c1f2a] border rounded-xl px-4 py-2.5 text-xs font-bold outline-none transition-all cursor-pointer",
+                accounts.length === 0 ? "border-rose-500 text-rose-500" : "border-slate-200 dark:border-white/10 focus:border-orange-500"
+              )}
+            >
+              {accounts.length === 0 ? (
+                <option value="">MANDATORY: Create Account</option>
+              ) : (
+                accounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({acc.type}) · ₹{acc.balance.toLocaleString()}
+                  </option>
+                ))
+              )}
+            </select>
           </div>
 
-          <button onClick={() => handleCheckout(selectedPaymentMode)}
-            disabled={cart.length === 0 || loading || (paidAmount !== "" && parseFloat(paidAmount) < total)}
-            className="w-full h-14 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 dark:disabled:bg-white/5 disabled:cursor-not-allowed text-white rounded-2xl font-black text-sm uppercase tracking-[0.3em] shadow-lg shadow-orange-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Processing...
-              </span>
-            ) : (
-              <>Confirm Payment · {selectedPaymentMode}<ArrowRight size={18} /></>
-            )}
-          </button>
+          {/* Payment Mode */}
+          <div className="grid grid-cols-3 gap-2">
+            {( [
+              { mode: "CASH" as const, type: "CASH", icon: Banknote, activeColor: "bg-emerald-500 text-white border-emerald-500", hoverColor: "hover:border-emerald-400" },
+              { mode: "UPI" as const, type: "UPI", icon: QrCode, activeColor: "bg-blue-500 text-white border-blue-500", hoverColor: "hover:border-blue-400" },
+              { mode: "CARD" as const, type: "BANK", icon: CreditCard, activeColor: "bg-violet-500 text-white border-violet-500", hoverColor: "hover:border-violet-400" },
+            ]).map(({ mode, type, icon: Icon, activeColor, hoverColor }) => {
+              const selectedAcc = accounts.find(a => a.id === selectedAccountId);
+              const isDisabled = selectedAcc && selectedAcc.type !== type;
+              
+              return (
+                <button 
+                  key={mode} 
+                  onClick={() => !isDisabled && setSelectedPaymentMode(mode)}
+                  disabled={isDisabled}
+                  className={clsx(
+                    "flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-all relative",
+                    selectedPaymentMode === mode ? activeColor : clsx("bg-white dark:bg-[#1c1f2a] border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-300", hoverColor),
+                    isDisabled && "opacity-20 grayscale cursor-not-allowed border-dashed"
+                  )}
+                >
+                  <Icon size={20} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">{mode}</span>
+                  {isDisabled && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <X size={12} className="text-rose-500/50" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {accounts.length === 0 ? (
+            <button 
+              onClick={() => setShowAddAccount(true)}
+              className="w-full h-14 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-rose-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 animate-in fade-in zoom-in duration-300"
+            >
+              <Banknote size={18} />
+              Quick Set Up Account
+              <Plus size={18} />
+            </button>
+          ) : (
+            <button onClick={() => handleCheckout(selectedPaymentMode)}
+              disabled={cart.length === 0 || loading || (paidAmount !== "" && parseFloat(paidAmount) < total) || !selectedAccountId}
+              className="w-full h-14 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 dark:disabled:bg-white/5 disabled:cursor-not-allowed text-white rounded-2xl font-black text-sm uppercase tracking-[0.3em] shadow-lg shadow-orange-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Processing...
+                </span>
+              ) : (
+                <>Confirm Payment · {selectedPaymentMode}<ArrowRight size={18} /></>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -653,14 +842,17 @@ export default function POSPage() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-xl p-4 animate-in fade-in duration-300">
           <div className="bg-white dark:bg-[#0f1117] rounded-3xl shadow-2xl w-full max-w-md border border-orange-100 dark:border-white/10 overflow-hidden animate-in zoom-in-95 duration-300">
             {/* Receipt header */}
-            <div className="bg-orange-500 px-6 py-5 text-center text-white">
-              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
-                <CheckCircle2 size={28} className="text-white" />
+            <div className="bg-slate-900 px-6 py-8 text-center text-white">
+              <h1 className="text-2xl font-black tracking-[0.3em] text-orange-500">KIDDOS FOOD</h1>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mt-1">Order Confirmed</p>
+              <div className="mt-4 flex flex-col items-center gap-1">
+                <div className="px-3 py-1 bg-white/10 rounded-full text-[9px] font-black uppercase tracking-widest">
+                  #{receiptData.orderId?.slice(-8).toUpperCase()}
+                </div>
+                <p className="text-[10px] font-bold opacity-50">
+                  {new Date(receiptData.timestamp).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                </p>
               </div>
-              <h2 className="text-lg font-black uppercase tracking-[0.2em]">Order Confirmed</h2>
-              <p className="text-xs font-bold opacity-70 mt-1">
-                {receiptData.orderId ? `#${receiptData.orderId.slice(-8).toUpperCase()}` : "—"} · {new Date(receiptData.timestamp).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-              </p>
             </div>
 
             {/* Items */}
@@ -720,6 +912,74 @@ export default function POSPage() {
                 <ArrowRight size={16} /> New Order
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ── QUICK ADD ACCOUNT MODAL ── */}
+      {showAddAccount && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-sm p-8 space-y-6 border border-white/5 animate-in zoom-in-95 duration-300">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-rose-500/10 rounded-2xl text-rose-500"><Banknote size={24} /></div>
+                <div>
+                  <h2 className="text-base font-black text-gray-900 dark:text-white uppercase tracking-widest">New Account</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Financial Setup</p>
+                </div>
+              </div>
+              <button onClick={() => setShowAddAccount(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all"><X size={20} className="text-slate-400" /></button>
+            </div>
+
+            <form onSubmit={handleAddAccount} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Name</label>
+                <input 
+                  autoFocus required
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:border-rose-500 transition-all dark:text-white"
+                  placeholder="e.g. Counter Cash 1"
+                  value={newAccForm.name}
+                  onChange={e => setNewAccForm({...newAccForm, name: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Type</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {["CASH", "BANK", "UPI"].map(t => (
+                    <button 
+                      key={t} type="button"
+                      onClick={() => setNewAccForm({...newAccForm, type: t})}
+                      className={clsx("py-3 rounded-xl border text-[10px] font-black tracking-widest transition-all",
+                        newAccForm.type === t ? "bg-rose-500 border-rose-500 text-white shadow-lg" : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400"
+                      )}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Initial Balance</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">₹</span>
+                  <input 
+                    type="number" required
+                    className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl pl-8 pr-6 py-4 text-sm font-black outline-none focus:border-rose-500 transition-all dark:text-white"
+                    value={newAccForm.balance}
+                    onChange={e => setNewAccForm({...newAccForm, balance: Number(e.target.value)})}
+                  />
+                </div>
+              </div>
+
+              <button 
+                type="submit" disabled={addingAcc}
+                className="w-full py-4 bg-rose-500 hover:bg-rose-600 disabled:bg-slate-300 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-rose-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              >
+                {addingAcc ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                {addingAcc ? "Creating..." : "Initialize Account"}
+              </button>
+            </form>
           </div>
         </div>
       )}

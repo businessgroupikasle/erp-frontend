@@ -25,7 +25,8 @@ export const recipesApi = {
 
 // --- Raw Materials ---
 export const rawMaterialsApi = {
-  getAll: (includeInactive = false) => api.get('/api/raw-materials', { params: { includeInactive } }),
+  getAll: (includeInactive = false, franchiseId?: string) => 
+    api.get('/api/raw-materials', { params: { includeInactive, franchiseId } }),
   getById: (id: string) => api.get(`/api/raw-materials/${id}`),
   create: (data: any) => api.post('/api/raw-materials', data),
   update: (id: string, data: any) => api.patch(`/api/raw-materials/${id}`, data),
