@@ -62,8 +62,8 @@ export default function FranchiseDashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-[#FF6B00]/10 rounded-lg shrink-0">
-              <BarChart3 size={18} className="text-[#FF6B00]" />
+            <div className="p-1.5 bg-indigo-500/10 rounded-lg shrink-0">
+              <BarChart3 size={18} className="text-indigo-500" />
             </div>
             <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">
               Franchise Distribution ERP
@@ -80,16 +80,16 @@ export default function FranchiseDashboardPage() {
           <Link href={monitorId ? `/franchise/analytics?id=${monitorId}` : "/franchise/analytics"} className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 border border-slate-200 dark:border-white/10">
             <BarChart3 size={13} /> View Analytics
           </Link>
-          <Link href="/pos" className="flex items-center gap-1 bg-[#FF6B00] hover:bg-[#e66000] text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95">
+          <Link href="/pos" className="flex items-center gap-1 bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-indigo-500/10">
             <Plus size={13} /> New Invoice
           </Link>
-          <Link href="/purchases/inward" className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95">
+          <Link href="/purchases/inward" className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-purple-500/10">
             <Plus size={13} /> Receive Stock
           </Link>
-          <Link href="/accounting/ledgers" className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95">
+          <Link href="/accounting/ledgers" className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-blue-500/10">
             <Plus size={13} /> Record Payment
           </Link>
-          <Link href="/franchise/dealers" className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95">
+          <Link href="/franchise/dealers" className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-emerald-500/10">
             <Plus size={13} /> Create Dealer
           </Link>
         </div>
@@ -136,12 +136,12 @@ export default function FranchiseDashboardPage() {
         
         {/* Left: Recent Invoices */}
         <div className="lg:col-span-2 bg-white dark:bg-card border border-slate-200/60 dark:border-white/5 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+          <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-white/5 pb-2">
             <div>
               <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Recent Sales Invoices</h3>
               <p className="text-[10px] text-slate-500 font-medium">Today's billing pipeline overview.</p>
             </div>
-            <Link href="/pos/invoices" className="text-[10px] font-black text-[#FF6B00] uppercase tracking-widest hover:underline flex items-center gap-1">
+            <Link href="/pos/invoices" className="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:underline flex items-center gap-1">
               View All <ChevronRight size={10} />
             </Link>
           </div>
@@ -149,14 +149,14 @@ export default function FranchiseDashboardPage() {
           <div className="overflow-x-auto min-h-[220px]">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100">
+                <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Invoice #</th>
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Dealer/Customer</th>
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {(summary?.recentOrders || []).slice(0, 5).map((order: any) => (
                   <tr key={order.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors">
                     <td className="px-4 py-2.5 font-bold text-slate-900 dark:text-white">{order.id}</td>
@@ -186,7 +186,7 @@ export default function FranchiseDashboardPage() {
 
         {/* Right: Today's Operations (Actionable Workflow Center) */}
         <div className="bg-white dark:bg-card border border-slate-200/60 dark:border-white/5 rounded-2xl p-5 shadow-sm">
-          <div className="mb-4 border-b border-slate-100 pb-2">
+          <div className="mb-4 border-b border-slate-100 dark:border-white/5 pb-2">
             <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Today's Operations</h3>
             <p className="text-[10px] text-slate-500 font-medium">Critical action queue with immediate navigation.</p>
           </div>
@@ -202,17 +202,17 @@ export default function FranchiseDashboardPage() {
               <Link 
                 key={idx}
                 href={op.href}
-                className="group flex items-center justify-between p-3 bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 rounded-xl hover:bg-white hover:border-[#FF6B00] hover:shadow-sm transition-all"
+                className="group flex items-center justify-between p-3 bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 rounded-xl hover:bg-white dark:hover:bg-card hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-sm transition-all"
               >
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-700 dark:text-zinc-300 group-hover:text-[#FF6B00] transition-colors">{op.label}</p>
+                  <p className="text-xs font-bold text-slate-700 dark:text-zinc-300 group-hover:text-indigo-500 transition-colors">{op.label}</p>
                   <p className="text-[9px] text-slate-400 font-semibold uppercase">{op.sub}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className={clsx("px-2.5 py-1 rounded-lg text-xs font-black border", op.color)}>
                     {op.val}
                   </span>
-                  <ChevronRight size={14} className="text-slate-300 group-hover:text-[#FF6B00] transition-colors" />
+                  <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
                 </div>
               </Link>
             ))}
@@ -225,16 +225,16 @@ export default function FranchiseDashboardPage() {
         
         {/* Left: Inventory Alerts */}
         <div className="bg-white dark:bg-card border border-slate-200/60 dark:border-white/5 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+          <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-white/5 pb-2">
             <div>
               <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Inventory Status</h3>
               <p className="text-[10px] text-slate-500 font-medium">Finished product batch alerts & refill actions.</p>
             </div>
             <div className="flex gap-2">
-              <Link href="/franchise-orders" className="bg-[#FF6B00]/10 text-[#FF6B00] hover:bg-[#FF6B00]/20 px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-colors">
+              <Link href="/franchise-orders" className="bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-colors">
                 Refill Stock
               </Link>
-              <Link href="/purchases/new" className="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-colors">
+              <Link href="/purchases/new" className="bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/20 px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-colors">
                 Create PO
               </Link>
             </div>
@@ -243,16 +243,16 @@ export default function FranchiseDashboardPage() {
           <div className="overflow-x-auto min-h-[200px]">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
+                <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Product</th>
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Stock</th>
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Days Left</th>
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {(summary?.inventoryAlerts || []).slice(0, 5).map((item: any) => (
-                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors">
                     <td className="px-4 py-2.5 font-bold text-slate-900 dark:text-white">{item.productName}</td>
                     <td className="px-4 py-2.5 text-center font-black text-slate-700 dark:text-zinc-300">{item.currentStock} {item.unit}</td>
                     <td className="px-4 py-2.5 text-center font-bold text-slate-500">{item.daysLeft}</td>
@@ -280,12 +280,12 @@ export default function FranchiseDashboardPage() {
 
         {/* Right: Dealer Outstanding with Aging */}
         <div className="bg-white dark:bg-card border border-slate-200/60 dark:border-white/5 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+          <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-white/5 pb-2">
             <div>
               <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Dealer Outstanding</h3>
               <p className="text-[10px] text-slate-500 font-medium">Dealer credits, last payments and aging prioritization.</p>
             </div>
-            <Link href="/franchise/dealers" className="text-[10px] font-black text-[#FF6B00] uppercase tracking-widest hover:underline">
+            <Link href="/franchise/dealers" className="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:underline">
               Manage Partners
             </Link>
           </div>
@@ -293,16 +293,16 @@ export default function FranchiseDashboardPage() {
           <div className="overflow-x-auto min-h-[200px]">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
+                <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Dealer</th>
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Outstanding</th>
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Last Payment</th>
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Collection Priority</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {(summary?.dealerOutstanding || []).slice(0, 5).map((dealer: any, idx: number) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors">
                     <td className="px-4 py-2.5 font-bold text-slate-900 dark:text-white">{dealer.dealer}</td>
                     <td className="px-4 py-2.5 text-right font-black text-slate-900 dark:text-white">{fmt(dealer.due)}</td>
                     <td className="px-4 py-2.5 text-center text-slate-500 font-semibold">{dealer.lastPayment}</td>
@@ -331,12 +331,12 @@ export default function FranchiseDashboardPage() {
 
       {/* ── Row 4: Pending Dispatch Queue ── */}
       <div className="bg-white dark:bg-card border border-slate-200/60 dark:border-white/5 rounded-2xl p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+        <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-white/5 pb-2">
           <div>
             <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Pending Dispatch Pipeline</h3>
             <p className="text-[10px] text-slate-500 font-medium">Track dealer invoices that require physical shipping.</p>
           </div>
-          <Link href="/franchise-orders" className="text-[10px] font-black text-[#FF6B00] uppercase tracking-widest hover:underline flex items-center gap-1">
+          <Link href="/franchise-orders" className="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:underline flex items-center gap-1">
             Dispatch Queue <ChevronRight size={10} />
           </Link>
         </div>
@@ -344,15 +344,15 @@ export default function FranchiseDashboardPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
+              <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
                 <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Dealer</th>
                 <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Pending Invoices Count</th>
                 <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Dispatch Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
               {(summary?.pendingDispatchQueue || []).slice(0, 5).map((dispatch: any, idx: number) => (
-                <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors">
                   <td className="px-4 py-2.5 font-bold text-slate-900 dark:text-white">{dispatch.dealer}</td>
                   <td className="px-4 py-2.5 text-center font-black text-slate-700 dark:text-zinc-300">{dispatch.invoiceCount}</td>
                   <td className="px-4 py-2.5 text-right">

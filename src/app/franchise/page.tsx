@@ -52,9 +52,7 @@ export default function FranchisePage() {
     }
   }, [currentUser, loading, router]);
   
-  const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'users'>('info');
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedFranchiseUsers, setSelectedFranchiseUsers] = useState<any[]>([]);
   const [notification, setNotification] = useState<{ type: 'error' | 'success' | 'info', title: string, message: string } | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -66,7 +64,6 @@ export default function FranchisePage() {
   const [userForm, setUserForm] = useState({ fullName: "", email: "", password: "", roleId: "FRANCHISE_ADMIN" });
   const [roles, setRoles] = useState<any[]>([]);
   const [editingUser, setEditingUser] = useState<any>(null);
-  const [showUserPassword, setShowUserPassword] = useState(false);
 
   const fetchFranchises = useCallback(async () => {
     setLoading(true);
@@ -139,7 +136,6 @@ export default function FranchisePage() {
           const email = payload.adminUser.email;
           payload.adminUser.email = email.includes('@') ? email : `${email}@gmail.com`;
         } else {
-          // If no email, send as empty string or null
           payload.adminUser.email = ""; 
         }
         await franchiseApi.create(payload);
@@ -299,38 +295,47 @@ export default function FranchisePage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
+      
+      {/* Redesigned Header — matching the premium EOD Settlement layout */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 py-6 border-b border-slate-200/60 dark:border-white/5">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-[#FF6B00]/10 rounded-xl">
-              <Building2 size={24} className="text-[#FF6B00]" />
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-indigo-500 rounded-2xl shadow-xl shadow-indigo-500/20">
+              <Building2 size={24} className="text-white" />
             </div>
-            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-              Franchise Management
+            <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
+              Franchise <span className="text-slate-400 font-medium ml-1 tracking-tighter italic">Management</span>
             </h1>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
-            Master Oversight: Create branches and manage their primary administrators from here.
+          <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium ml-16 uppercase tracking-widest text-[10px]">
+            Master Oversight: Create branches and manage their primary administrators
           </p>
         </div>
+
         {currentUser.role === 'SUPER_ADMIN' && (
           <div className="flex gap-3">
-            <button onClick={fetchFranchises} className="p-3 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
-              <RefreshCw size={18} className="text-slate-400" />
+            <button 
+              onClick={fetchFranchises} 
+              className="p-3.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all shadow-sm"
+              title="Sync Branches"
+            >
+              <RefreshCw size={18} />
             </button>
-            <button onClick={openCreate} className="flex items-center gap-2 bg-[#FF6B00] hover:bg-[#e66000] text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-orange-500/20 transition-all active:scale-95">
+            <button 
+              onClick={openCreate} 
+              className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg shadow-indigo-500/20 transition-all active:scale-95"
+            >
               <Plus size={18} /> Add New Branch
             </button>
           </div>
         )}
-      </div>
+      </header>
 
-      {/* Stats */}
+      {/* Stats Section — Harmonized colors */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { label: "Total Outlets", val: franchises.length, color: "bg-blue-500" },
-          { label: "Active Branches", val: franchises.filter(f => f.status === 'ACTIVE').length, color: "bg-[#FF6B00]" },
+          { label: "Active Branches", val: franchises.filter(f => f.status === 'ACTIVE').length, color: "bg-indigo-500" },
           { label: "Planned Setup", val: franchises.filter(f => f.status === 'PENDING').length, color: "bg-amber-500" },
           { label: "Branch Administrators", val: franchises.reduce((acc, f) => acc + (f._count?.users || 0), 0), color: "bg-purple-500" },
         ].map((stat, i) => (
@@ -344,88 +349,88 @@ export default function FranchisePage() {
         ))}
       </div>
 
-      {/* Search */}
+      {/* Search Input — Indigo focus indicators */}
       <div className="relative group">
-        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#FF6B00] transition-colors" />
+        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
         <input 
           value={search} 
           onChange={(e) => setSearch(e.target.value)} 
           placeholder="Filter by branch name, location, or owner..."
-          className="w-full pl-12 pr-6 py-4 text-sm bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#FF6B00] transition-all shadow-sm font-medium" 
+          className="w-full pl-12 pr-6 py-4 text-sm bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400" 
         />
       </div>
 
-      {/* Grid */}
+      {/* Franchise Grid */}
       {loading ? (
         <div className="py-32 flex flex-col items-center justify-center space-y-4">
-          <div className="w-12 h-12 border-4 border-[#FF6B00]/20 border-t-[#FF6B00] rounded-full animate-spin" />
+          <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
           <p className="text-slate-400 text-sm font-bold tracking-widest uppercase">Fetching Data...</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-32 text-center bg-slate-50 dark:bg-white/[0.02] rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-white/5">
           <Building2 size={64} strokeWidth={1} className="mx-auto text-slate-200 dark:text-slate-800 mb-4" />
           <p className="text-slate-500 dark:text-slate-400 font-bold text-lg">No franchises found</p>
-          <button onClick={openCreate} className="mt-4 text-[#FF6B00] font-black hover:underline">Register your first outlet now</button>
+          <button onClick={openCreate} className="mt-4 text-indigo-500 font-black hover:underline">Register your first outlet now</button>
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((f) => {
-            const isHQ = f.name === "Kiddos Food Headquarters" || f.id === 'hq-001';
             const isActive = f.status === 'ACTIVE';
 
             return (
               <div 
                 key={f.id} 
-                className={clsx(
-                  "group rounded-[2.5rem] border p-7 transition-all duration-500 relative overflow-hidden",
-                  isHQ 
-                    ? "bg-gradient-to-br from-orange-50/80 via-white to-white border-orange-200/50 shadow-2xl shadow-orange-500/10" 
-                    : "bg-white/70 backdrop-blur-md border-slate-100 hover:shadow-2xl hover:shadow-slate-200/50"
-                )}
+                className="group rounded-[32px] border border-slate-100 dark:border-white/5 bg-white dark:bg-card/40 p-7 hover:shadow-2xl hover:shadow-indigo-500/5 transition-all duration-500 relative overflow-hidden"
               >
-                <div className={clsx(
-                  "absolute top-[-10%] right-[-10%] w-48 h-48 rounded-full blur-3xl opacity-20 transition-all duration-700",
-                  isHQ ? "bg-orange-400 group-hover:scale-125" : "bg-slate-200 group-hover:bg-orange-200"
-                )} />
+                {/* Subtle back decorative glow */}
+                <div className="absolute top-[-10%] right-[-10%] w-48 h-48 rounded-full blur-3xl opacity-20 transition-all duration-700 bg-slate-100 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-950/20" />
                 
                 <div className="flex items-start justify-between relative z-10 mb-8">
-                  <div className={clsx(
-                    "w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-3",
-                    "bg-gradient-to-br from-[#FF6B00] to-[#FF8C33] shadow-orange-500/30"
-                  )}>
-                    {isHQ ? <Terminal size={28} className="text-white" /> : <Building2 size={28} className="text-white" />}
+                  {/* Clean standard icon container using indigo shadow/gradient */}
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-indigo-500/30 text-white">
+                    <Building2 size={28} />
                   </div>
                   
-                  <div className="flex gap-2 p-1.5 bg-white/40 backdrop-blur-xl border border-white/50 rounded-2xl shadow-sm">
-                    {!isHQ && (
-                      <button 
-                        onClick={() => handleToggleStatus(f)}
-                        className={clsx(
-                          "p-2.5 rounded-xl transition-all active:scale-90",
-                          isActive 
-                            ? "text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20" 
-                            : "text-red-500 bg-red-500/10 hover:bg-red-500/20"
-                        )}
-                      >
-                        <Power size={16} />
-                      </button>
-                    )}
-                    <button onClick={() => handleVerifyAndRedirect(f)} className="p-2.5 rounded-xl text-slate-400 hover:text-[#FF6B00] transition-all active:scale-90">
+                  {/* Interactive Options list */}
+                  <div className="flex gap-2 p-1.5 bg-white/40 backdrop-blur-xl border border-white/50 dark:bg-white/5 dark:border-white/10 rounded-2xl shadow-sm">
+                    <button 
+                      onClick={() => handleToggleStatus(f)}
+                      className={clsx(
+                        "p-2.5 rounded-xl transition-all active:scale-90",
+                        isActive 
+                          ? "text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20" 
+                          : "text-red-500 bg-red-500/10 hover:bg-red-500/20"
+                      )}
+                      title={isActive ? "Deactivate Branch" : "Activate Branch"}
+                    >
+                      <Power size={16} />
+                    </button>
+                    <button 
+                      onClick={() => handleVerifyAndRedirect(f)} 
+                      className="p-2.5 rounded-xl text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all active:scale-90"
+                      title="View Dashboard"
+                    >
                       <Eye size={18} />
                     </button>
                     {currentUser.role === 'SUPER_ADMIN' && (
                       <div className="flex gap-2">
-                        <button onClick={() => openEdit(f)} className="p-2.5 rounded-xl text-slate-400 hover:text-[#FF6B00] transition-all active:scale-90" title="Edit Branch">
+                        <button 
+                          onClick={() => openEdit(f)} 
+                          className="p-2.5 rounded-xl text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all active:scale-90" 
+                          title="Edit Branch Settings"
+                        >
                           <Edit2 size={18} />
                         </button>
                         <button 
                           onClick={() => setConfirmDelete(f)} 
-                          disabled={f.status === 'ACTIVE'}
+                          disabled={isActive}
                           className={clsx(
                             "p-2.5 rounded-xl transition-all active:scale-90",
-                            f.status === 'ACTIVE' ? "text-slate-200 cursor-not-allowed" : "text-slate-400 hover:text-red-500 hover:bg-red-50"
+                            isActive 
+                              ? "text-slate-200 dark:text-slate-800 cursor-not-allowed" 
+                              : "text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
                           )}
-                          title="Delete/Revoke"
+                          title="Delete Branch"
                         >
                           <Trash2 size={18} />
                         </button>
@@ -436,29 +441,27 @@ export default function FranchisePage() {
 
                 <div className="space-y-6 relative z-10">
                   <div>
-                    <div className="flex items-center gap-3 mb-2">
-                       <h3 className="font-black text-xl tracking-tight transition-colors text-slate-900 group-hover:text-[#FF6B00]">{f.name}</h3>
-                      {isHQ && (
-                        <span className="px-3 py-1 rounded-full bg-orange-500 text-white text-[9px] font-black uppercase tracking-[0.2em] shadow-lg shadow-orange-500/20 animate-pulse">Master</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest pl-0.5">
-                      <MapPin size={14} className="text-orange-500" /> {f.location}
+                    <h3 className="font-black text-xl tracking-tight transition-colors text-slate-900 dark:text-white group-hover:text-indigo-500">
+                      {f.name}
+                    </h3>
+                    <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest pl-0.5 mt-2">
+                      <MapPin size={14} className="text-indigo-500" /> {f.location}
                     </div>
                   </div>
 
-                  <div className="p-5 rounded-[2rem] space-y-3 transition-all duration-500 border border-slate-100 bg-white shadow-sm group-hover:shadow-md">
+                  {/* Clean secondary info cards inside */}
+                  <div className="p-5 rounded-2xl space-y-3 transition-all duration-500 border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/5 shadow-sm group-hover:shadow-md">
                     <div className="flex items-center gap-4 text-sm">
-                      <User size={14} className="text-orange-500/70" />
-                      <span className="font-bold text-slate-800 text-base">{f.ownerName}</span>
+                      <User size={14} className="text-indigo-500" />
+                      <span className="font-bold text-slate-800 dark:text-slate-200 text-base">{f.ownerName}</span>
                     </div>
                     <div className="flex items-center gap-4 text-sm">
-                      <Phone size={14} className="text-blue-500/70" />
-                      <span className="text-slate-500 font-bold tracking-tight">{f.contactNum}</span>
+                      <Phone size={14} className="text-blue-500" />
+                      <span className="text-slate-500 dark:text-slate-400 font-bold tracking-tight">{f.contactNum}</span>
                     </div>
                   </div>
 
-                  <div className="pt-6 flex items-center justify-between border-t border-slate-100/50">
+                  <div className="pt-6 flex items-center justify-between border-t border-slate-100/50 dark:border-white/5">
                     <span className={clsx(
                       "px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em]",
                       STATUS_STYLES[f.status ?? "ACTIVE"] ?? STATUS_STYLES.ACTIVE
@@ -466,9 +469,9 @@ export default function FranchisePage() {
                       {f.status ?? "ACTIVE"}
                     </span>
                     <div className="flex items-center gap-3">
-                       <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Team</span>
+                       <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest">Team</span>
                        <div className="flex items-center -space-x-2.5">
-                        <div className="w-8 h-8 rounded-full bg-slate-900 border-2 border-white flex items-center justify-center text-[10px] font-black text-white">
+                        <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-white/10 border-2 border-white dark:border-card flex items-center justify-center text-[10px] font-black text-white">
                           {f._count?.users || 0}
                         </div>
                       </div>
@@ -481,16 +484,21 @@ export default function FranchisePage() {
         </div>
       )}
 
-      {/* Combined Form Modal */}
+      {/* Redesigned Combined Form Modal */}
       {showForm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-[#0D0F14] rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-white/10">
+          <div className="bg-white dark:bg-card rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-100 dark:border-white/10">
             <div className="p-8 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white">{editing ? "Franchise Settings" : "Add New Franchise"}</h2>
+                <h2 className="text-2xl font-black text-gray-900 dark:text-white">
+                  {editing ? "Franchise Settings" : "Add New Franchise"}
+                </h2>
                 <p className="text-sm text-slate-500 font-medium mt-1">Configure branch details and primary admin.</p>
               </div>
-              <button onClick={() => { setShowForm(false); setShowAddUser(false); setEditingUser(null); }} className="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl transition-all">
+              <button 
+                onClick={() => { setShowForm(false); setShowAddUser(false); setEditingUser(null); }} 
+                className="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl transition-all"
+              >
                 <X size={20} className="text-slate-400" />
               </button>
             </div>
@@ -498,91 +506,294 @@ export default function FranchisePage() {
             <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
               {editing && (
                 <div className="flex gap-4 mb-8">
-                  <button onClick={() => setActiveTab('info')} className={clsx("flex-1 py-3 rounded-2xl text-sm font-black transition-all border", activeTab === 'info' ? "bg-orange-50 border-[#FF6B00] text-[#FF6B00]" : "bg-slate-50 text-slate-400")}>Details</button>
-                  <button onClick={() => setActiveTab('users')} className={clsx("flex-1 py-3 rounded-2xl text-sm font-black transition-all border", activeTab === 'users' ? "bg-orange-50 border-[#FF6B00] text-[#FF6B00]" : "bg-slate-50 text-slate-400")}>Admins</button>
+                  <button 
+                    onClick={() => setActiveTab('info')} 
+                    className={clsx(
+                      "flex-1 py-3 rounded-2xl text-sm font-black transition-all border", 
+                      activeTab === 'info' 
+                        ? "bg-indigo-50 border-indigo-500 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-500 dark:text-indigo-400" 
+                        : "bg-slate-50 dark:bg-white/5 text-slate-400 dark:text-slate-500 border-transparent"
+                    )}
+                  >
+                    Branch Details
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('users')} 
+                    className={clsx(
+                      "flex-1 py-3 rounded-2xl text-sm font-black transition-all border", 
+                      activeTab === 'users' 
+                        ? "bg-indigo-50 border-indigo-500 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-500 dark:text-indigo-400" 
+                        : "bg-slate-50 dark:bg-white/5 text-slate-400 dark:text-slate-500 border-transparent"
+                    )}
+                  >
+                    Administrators
+                  </button>
                 </div>
               )}
 
               {activeTab === 'info' ? (
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Franchise Name</label>
-                    <input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} className="w-full px-5 py-4 bg-slate-50 border rounded-2xl font-bold" placeholder="Branch Name" />
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Franchise Name</label>
+                    <input 
+                      value={form.name} 
+                      onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} 
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                      placeholder="Branch Name" 
+                    />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Location</label>
-                    <input value={form.location} onChange={(e) => setForm(f => ({ ...f, location: e.target.value }))} className="w-full px-5 py-4 bg-slate-50 border rounded-2xl font-bold" placeholder="City / Area" />
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Location</label>
+                    <input 
+                      value={form.location} 
+                      onChange={(e) => setForm(f => ({ ...f, location: e.target.value }))} 
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                      placeholder="City / Area" 
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Owner</label>
-                      <input value={form.ownerName} onChange={(e) => setForm(f => ({ ...f, ownerName: e.target.value }))} className="w-full px-5 py-4 bg-slate-50 border rounded-2xl font-bold" placeholder="Name" />
+                      <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Owner</label>
+                      <input 
+                        value={form.ownerName} 
+                        onChange={(e) => setForm(f => ({ ...f, ownerName: e.target.value }))} 
+                        className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                        placeholder="Name" 
+                      />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Contact</label>
-                      <input value={form.contactNum} onChange={(e) => setForm(f => ({ ...f, contactNum: e.target.value }))} className="w-full px-5 py-4 bg-slate-50 border rounded-2xl font-bold" placeholder="Phone" />
+                      <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Contact</label>
+                      <input 
+                        value={form.contactNum} 
+                        onChange={(e) => setForm(f => ({ ...f, contactNum: e.target.value }))} 
+                        className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                        placeholder="Phone" 
+                      />
                     </div>
                   </div>
 
                   {!editing && (
-                    <div className="mt-8 p-6 bg-orange-50 rounded-[2rem] border border-orange-200 space-y-4">
-                      <h4 className="font-black text-sm uppercase tracking-wider">Primary Admin Account</h4>
-                      <input value={form.adminUser.fullName} onChange={(e) => setForm(f => ({ ...f, adminUser: { ...f.adminUser, fullName: e.target.value } }))} className="w-full px-4 py-3 bg-white border rounded-xl font-bold text-sm" placeholder="Full Name" />
+                    <div className="mt-8 p-6 bg-indigo-50/50 dark:bg-indigo-950/10 rounded-[2rem] border border-indigo-100 dark:border-indigo-900/30 space-y-4">
+                      <h4 className="font-black text-sm uppercase tracking-wider text-indigo-700 dark:text-indigo-400">Primary Admin Account</h4>
+                      <input 
+                        value={form.adminUser.fullName} 
+                        onChange={(e) => setForm(f => ({ ...f, adminUser: { ...f.adminUser, fullName: e.target.value } }))} 
+                        className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                        placeholder="Full Name" 
+                      />
                       <div className="grid grid-cols-2 gap-4">
-                        <input value={form.adminUser.email} onChange={(e) => setForm(f => ({ ...f, adminUser: { ...f.adminUser, email: e.target.value } }))} className="w-full px-4 py-3 bg-white border rounded-xl font-bold text-sm" placeholder="Login ID / Email" />
-                        <input type="password" value={form.adminUser.password} onChange={(e) => {
-                          const pass = e.target.value;
-                          setForm(prev => ({ ...prev, dashboardPassword: pass, adminUser: { ...prev.adminUser, password: pass } }));
-                        }} className="w-full px-4 py-3 bg-white border rounded-xl font-bold text-sm" placeholder="Password" />
+                        <input 
+                          value={form.adminUser.email} 
+                          onChange={(e) => setForm(f => ({ ...f, adminUser: { ...f.adminUser, email: e.target.value } }))} 
+                          className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                          placeholder="Login ID / Email" 
+                        />
+                        <input 
+                          type="password" 
+                          value={form.adminUser.password} 
+                          onChange={(e) => {
+                            const pass = e.target.value;
+                            setForm(prev => ({ ...prev, dashboardPassword: pass, adminUser: { ...prev.adminUser, password: pass } }));
+                          }} 
+                          className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                          placeholder="Password" 
+                        />
                       </div>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Personnel</h4>
-                    <button onClick={() => setShowAddUser(true)} className="text-xs font-black text-[#FF6B00] hover:underline">+ New Admin</button>
-                  </div>
-                  {/* Admin User List Logic */}
-                  <div className="space-y-3">
-                    {selectedFranchiseUsers.map(u => (
-                      <div key={u.id} className="p-4 bg-slate-50 rounded-2xl border flex justify-between items-center">
-                        <div>
-                          <p className="font-black text-sm">{u.fullName}</p>
-                          <p className="text-xs text-slate-500">{u.email}</p>
-                        </div>
-                        <button onClick={() => setResettingPassword(u.id)} className="p-2 text-slate-400 hover:text-[#FF6B00]"><Key size={16} /></button>
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  {showAddUser ? (
+                    /* Inline Admin Add/Edit Form inputs */
+                    <div className="p-6 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-3xl space-y-4 animate-in slide-in-from-top-4 duration-300">
+                      <div className="flex justify-between items-center mb-2">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          {editingUser ? "Edit Branch Admin" : "Create New Branch Admin"}
+                        </h4>
+                        <button 
+                          onClick={() => {
+                            setShowAddUser(false);
+                            setEditingUser(null);
+                            setUserForm({ fullName: "", email: "", password: "", roleId: "FRANCHISE_ADMIN" });
+                          }} 
+                          className="text-xs font-bold text-indigo-500 hover:underline"
+                        >
+                          Back to List
+                        </button>
                       </div>
-                    ))}
-                  </div>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Full Name</label>
+                          <input 
+                            value={userForm.fullName} 
+                            onChange={(e) => setUserForm(u => ({ ...u, fullName: e.target.value }))} 
+                            className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                            placeholder="e.g. John Doe" 
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Email / Login ID</label>
+                          <input 
+                            value={userForm.email} 
+                            onChange={(e) => setUserForm(u => ({ ...u, email: e.target.value }))} 
+                            className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                            placeholder="e.g. johndoe" 
+                          />
+                        </div>
+                        
+                        {!editingUser && (
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Password</label>
+                            <input 
+                              type="password"
+                              value={userForm.password} 
+                              onChange={(e) => setUserForm(u => ({ ...u, password: e.target.value }))} 
+                              className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                              placeholder="Choose account password" 
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Personnel</h4>
+                        <button 
+                          onClick={() => {
+                            setEditingUser(null);
+                            setUserForm({ fullName: "", email: "", password: "", roleId: "FRANCHISE_ADMIN" });
+                            setShowAddUser(true);
+                          }} 
+                          className="text-xs font-black text-indigo-500 hover:underline"
+                        >
+                          + New Admin
+                        </button>
+                      </div>
+                      
+                      {/* Admin User List Logic */}
+                      <div className="space-y-3">
+                        {loadingUsers ? (
+                          <p className="text-xs font-bold text-slate-400 animate-pulse text-center py-4">Loading admins...</p>
+                        ) : selectedFranchiseUsers.length === 0 ? (
+                          <p className="text-xs font-bold text-slate-400 text-center py-4">No branch admins configured yet.</p>
+                        ) : (
+                          selectedFranchiseUsers.map(u => {
+                            const isResetting = resettingPassword === u.id;
+                            return (
+                              <div key={u.id} className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5 flex flex-col gap-3 transition-all duration-300">
+                                <div className="flex justify-between items-center w-full">
+                                  <div>
+                                    <p className="font-black text-sm text-slate-900 dark:text-white">{u.fullName}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
+                                  </div>
+                                  
+                                  <div className="flex gap-2">
+                                    <button 
+                                      onClick={() => {
+                                        setEditingUser(u);
+                                        setUserForm({ fullName: u.fullName, email: u.email, password: "", roleId: u.role || "FRANCHISE_ADMIN" });
+                                        setShowAddUser(true);
+                                      }}
+                                      className="p-2 text-slate-400 hover:text-indigo-500 transition-colors"
+                                      title="Edit Admin"
+                                    >
+                                      <Edit2 size={16} />
+                                    </button>
+                                    {!isResetting && (
+                                      <button 
+                                        onClick={() => {
+                                          setResettingPassword(u.id);
+                                          setNewPassword("");
+                                        }} 
+                                        className="p-2 text-slate-400 hover:text-indigo-500 transition-colors"
+                                        title="Reset Password"
+                                      >
+                                        <Key size={16} />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {isResetting && (
+                                  /* Inline Password Reset form inputs */
+                                  <div className="flex gap-2 items-center mt-2 pt-2 border-t border-slate-100 dark:border-white/5 animate-in slide-in-from-top-2 duration-300">
+                                    <input
+                                      type="password"
+                                      placeholder="New password"
+                                      value={newPassword}
+                                      onChange={(e) => setNewPassword(e.target.value)}
+                                      className="flex-1 px-3 py-2 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                                    />
+                                    <button
+                                      onClick={() => handlePasswordReset(u.id)}
+                                      disabled={saving || !newPassword}
+                                      className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-100 dark:disabled:bg-white/5 disabled:text-slate-400 text-white rounded-xl text-xs font-black uppercase transition-all"
+                                    >
+                                      {saving ? "..." : "Save"}
+                                    </button>
+                                    <button
+                                      onClick={() => setResettingPassword(null)}
+                                      className="px-3 py-2 bg-slate-200 dark:bg-white/5 text-slate-500 dark:text-slate-400 rounded-xl text-xs font-black uppercase hover:bg-slate-300 transition-all"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
 
-            <div className="p-8 border-t bg-slate-50 flex gap-3 justify-end">
-              <button onClick={() => setShowForm(false)} className="px-8 py-4 font-black uppercase text-sm text-slate-500 hover:bg-slate-100 rounded-2xl transition-all">Cancel</button>
-              <button onClick={showAddUser ? handleCreateUser : handleSave} disabled={saving} className="px-12 py-4 bg-[#FF6B00] text-white rounded-2xl font-black uppercase text-sm shadow-xl shadow-orange-500/20 transition-all active:scale-95">
-                {saving ? "..." : "Save Franchise"}
+            {/* Context aware buttons in footer */}
+            <div className="p-8 border-t border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-card/60 flex gap-3 justify-end">
+              <button 
+                onClick={() => {
+                  if (showAddUser) {
+                    setShowAddUser(false);
+                    setEditingUser(null);
+                  } else {
+                    setShowForm(false);
+                  }
+                }} 
+                className="px-8 py-4 font-black uppercase text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-all"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={showAddUser ? handleCreateUser : handleSave} 
+                disabled={saving || (showAddUser ? (!userForm.fullName || !userForm.email || (!editingUser && !userForm.password)) : (!form.name || !form.location))} 
+                className="px-12 py-4 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-100 dark:disabled:bg-white/5 disabled:text-slate-400 text-white rounded-2xl font-black uppercase text-sm shadow-xl shadow-indigo-500/20 transition-all active:scale-95"
+              >
+                {saving ? "..." : (showAddUser ? (editingUser ? "Update Admin" : "Create Admin") : "Save Franchise")}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal — Redesigned */}
       {confirmDelete && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-[#0D0F14] rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-white/10 p-8 text-center">
+          <div className="bg-white dark:bg-card rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 dark:border-white/10 p-8 text-center">
             <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
               <Trash2 size={40} />
             </div>
             <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Confirm Delete</h2>
             <p className="text-slate-500 dark:text-slate-400 font-medium mb-8">
-              Are you sure you want to delete <span className="text-[#FF6B00] font-bold">&quot;{confirmDelete.name}&quot;</span>?
+              Are you sure you want to delete <span className="text-indigo-500 font-bold">&quot;{confirmDelete.name}&quot;</span>?
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmDelete(null)} className="flex-1 px-6 py-4 rounded-2xl text-sm font-black text-slate-500 hover:bg-slate-100 transition-all">Cancel</button>
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 px-6 py-4 rounded-2xl text-sm font-black text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 transition-all">Cancel</button>
               <button onClick={handleDelete} className="flex-1 px-6 py-4 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-sm font-black shadow-xl shadow-red-500/20 transition-all active:scale-95">Delete</button>
             </div>
           </div>
@@ -595,8 +806,8 @@ export default function FranchisePage() {
           <div className={clsx("w-20 h-20 rounded-full flex items-center justify-center", notification?.type === 'success' ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600")}>
             {notification?.type === 'success' ? <CheckCircle2 size={40} /> : <AlertTriangle size={40} />}
           </div>
-          <p className="text-slate-600 font-medium">{notification?.message}</p>
-          <button onClick={() => setNotification(null)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-sm">Dismiss</button>
+          <p className="text-slate-600 dark:text-slate-300 font-medium">{notification?.message}</p>
+          <button onClick={() => setNotification(null)} className="w-full py-4 bg-indigo-500 text-white rounded-2xl font-black uppercase text-sm shadow-xl shadow-indigo-500/10">Dismiss</button>
         </div>
       </Modal>
     </div>

@@ -212,6 +212,12 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         href: "/pos",
         roles: SUPER_ONLY,
       },
+      {
+        icon: FileText,
+        label: "EOD Settlement",
+        href: "/pos/settlement",
+        roles: SUPER_ONLY,
+      },
     ],
   },
   {
@@ -283,13 +289,6 @@ export const franchiseMenuSections: MenuSection[] = [
         label: "Product Inventory",
         href: "/franchise/stock",
         roles: FRANCHISE_ONLY,
-      },
-      {
-        icon: Building2,
-        label: "Warehouses Hub",
-        href: "/inventory/warehouses",
-        roles: FRANCHISE_ONLY,
-        isNew: true,
       },
       {
         icon: AlertTriangle,

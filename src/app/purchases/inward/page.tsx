@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { 
-  Truck as TruckIcon, 
-  Search as SearchIcon, 
-  PackageCheck as PackageCheckIcon, 
-  Calendar as CalendarIcon, 
-  Building2 as Building2Icon, 
-  Clock as ClockIcon, 
+import {
+  Truck as TruckIcon,
+  Search as SearchIcon,
+  PackageCheck as PackageCheckIcon,
+  Calendar as CalendarIcon,
+  Building2 as Building2Icon,
+  Clock as ClockIcon,
   ArrowRight as ArrowRightIcon,
   Package as PackageIcon,
   FileText as FileTextIcon,
@@ -54,13 +54,13 @@ export default function IncomingStockPage() {
       const [ordersRes] = await Promise.all([
         api.get("/api/franchise-orders")
       ]);
-      
+
       const allOrders = ordersRes.data || [];
       // Orders waiting to be received
       setDispatchedOrders(allOrders.filter((o: any) => o.status === 'DISPATCHED'));
       // Recently received orders
       setRecentInwards(allOrders.filter((o: any) => o.status === 'DELIVERED').slice(0, 10));
-      
+
     } catch (error) {
       toast.error("Failed to fetch incoming stock data");
     } finally {
@@ -93,7 +93,7 @@ export default function IncomingStockPage() {
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto p-4 md:p-6 animate-in fade-in duration-700">
-      {/* Header */}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-3 tracking-tight">
@@ -105,19 +105,24 @@ export default function IncomingStockPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={fetchData}
             className="p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl hover:border-slate-300 transition-all shadow-sm shrink-0"
           >
             <RefreshCwIcon size={18} className={clsx("text-slate-400", loading && "animate-spin")} />
           </button>
-          <button 
+          {/*            
+            * SCAN SHIPMENT LABEL TRIGGER
+            * Opens the simulated barcode scanner modal to match dispatched orders 
+            * with physical shipment barcode labels. */}
+
+          {/* <button
             onClick={() => { setShowScanner(true); setScannedOrder(null); setScanInput(""); }}
             className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 active:scale-95 shrink-0"
           >
             <ScanIcon size={18} strokeWidth={3} />
             Scan Shipment Label
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -148,7 +153,7 @@ export default function IncomingStockPage() {
                   <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-10 transition-opacity">
                     <TruckIcon size={120} />
                   </div>
-                  
+
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
@@ -157,7 +162,7 @@ export default function IncomingStockPage() {
                           IN TRANSIT
                         </span>
                       </div>
-                      
+
                       <div className="flex flex-wrap gap-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                         <span className="flex items-center gap-1.5"><CalendarIcon size={12} /> Dispatched: {new Date(order.actualDispatchDate || order.expectedDispatchDate || "").toLocaleDateString()}</span>
                         <span className="flex items-center gap-1.5"><Building2Icon size={12} /> Destination: {order.franchise?.name || "Independent Branch"}</span>
@@ -176,7 +181,7 @@ export default function IncomingStockPage() {
 
                     <div className="flex flex-col items-end gap-3">
                       <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">₹{order.totalAmount.toLocaleString()}</p>
-                      <button 
+                      <button
                         disabled={receivingOrderId === order.id}
                         onClick={() => handleReceiveStock(order.id)}
                         className="flex items-center gap-2 bg-slate-900 dark:bg-orange-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-50"
@@ -219,7 +224,13 @@ export default function IncomingStockPage() {
             </div>
           </div>
 
-          <div className="bg-orange-50 dark:bg-orange-500/5 border border-orange-100 dark:border-orange-500/10 p-8 rounded-[2.5rem] space-y-4 shadow-sm border-l-4 border-l-orange-500">
+          {/* 
+            * RECEIPT POLICY & AUDIT WORKFLOW
+            * Governance rules for receiving goods:
+            * 1. Manifest Matching: Verify actual items against electronic Purchase Inward details.
+            * 2. Late Claim Penalties: Damage reporting post-receipt causes administrative delays for credit notes.
+            */}
+          {/* <div className="bg-orange-50 dark:bg-orange-500/5 border border-orange-100 dark:border-orange-500/10 p-8 rounded-[2.5rem] space-y-4 shadow-sm border-l-4 border-l-orange-500">
             <div className="flex items-center gap-3 text-orange-600">
               <AlertTriangleIcon size={24} />
               <p className="text-xs font-black uppercase tracking-tight">Receipt Policy</p>
@@ -238,9 +249,10 @@ export default function IncomingStockPage() {
                 </p>
               </div>
             </div>
-          </div>
+          </div> */}
 
-          <div className="bg-slate-50 dark:bg-white/5 rounded-[2.5rem] p-8">
+
+          {/* <div className="bg-slate-50 dark:bg-white/5 rounded-[2.5rem] p-8">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Stock Impact</p>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -256,18 +268,24 @@ export default function IncomingStockPage() {
                 <span className="text-[10px] font-black text-orange-500 flex items-center gap-1">UPDATED <ArrowRightIcon size={10} /></span>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 
-      {/* ── Shipment Label Scanner Modal ── */}
+      {/* 
+        * ── Shipment Label Scanner Modal ──
+        * Simulates a hardware/camera barcode decoder to receive in-transit shipments:
+        * - Allows selecting a dispatched order to simulate a successful camera read scan.
+        * - Supports manual shipment code matching.
+        * - Triggers status transition to DELIVERED on confirmation, adjusting inventory and ledgers.
+        */}
       {showScanner && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300 p-8 text-white space-y-6">
-            
+
             {/* Close */}
-            <button 
-              onClick={() => setShowScanner(false)} 
+            <button
+              onClick={() => setShowScanner(false)}
               className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -289,7 +307,7 @@ export default function IncomingStockPage() {
               <div className="relative h-48 bg-slate-950 border border-slate-800 rounded-3xl overflow-hidden flex flex-col items-center justify-center group">
                 {/* Laser animation */}
                 <div className="absolute inset-x-0 h-0.5 bg-emerald-500 shadow-[0_0_8px_#10b981] animate-[scan_2s_ease-in-out_infinite] z-20" />
-                
+
                 {/* Corner Brackets */}
                 <div className="absolute top-6 left-6 w-4 h-4 border-t-2 border-l-2 border-emerald-500 rounded-tl" />
                 <div className="absolute top-6 right-6 w-4 h-4 border-t-2 border-r-2 border-emerald-500 rounded-tr" />
@@ -309,7 +327,8 @@ export default function IncomingStockPage() {
                 )}
 
                 {/* Inline scan animation style */}
-                <style dangerouslySetInnerHTML={{__html: `
+                <style dangerouslySetInnerHTML={{
+                  __html: `
                   @keyframes scan {
                     0% { top: 10%; }
                     50% { top: 90%; }
