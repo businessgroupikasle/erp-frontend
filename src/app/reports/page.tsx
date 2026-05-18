@@ -362,9 +362,9 @@ export default function CentralReports() {
                { label: "Stock Valuation", href: "/inventory/stock-value", actions: ["Open", "CSV"] },
                { label: "Product P&L", href: "/inventory/product-pnl", actions: ["Open"] },
                { label: "Fulfillment Tracking", href: "/sales/orders", actions: ["Open"] },
-               { label: "Franchise Performance", href: "/franchise/performance", actions: ["Open", "CSV"], isNew: true },
-               { label: "Low Stock Forecast", href: "/inventory/forecast", actions: ["Open", "CSV"], isNew: true },
-               { label: "Dispatch Efficiency", href: "/logistics/efficiency", actions: ["Open", "CSV"], isNew: true },
+               { label: "Franchise Performance", href: "/franchise/performance", actions: ["Open", "CSV"] },
+               { label: "Low Stock Forecast", href: "/inventory/forecast", actions: ["Open", "CSV"] },
+               { label: "Dispatch Efficiency", href: "/logistics/efficiency", actions: ["Open", "CSV"] },
              ]}
            />
         </div>
