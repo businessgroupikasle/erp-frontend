@@ -208,9 +208,6 @@ export default function UsersClient() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-slate-400 hover:text-orange-500 transition-colors">
-                          <Lock size={16} />
-                        </button>
                         <button className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg text-slate-400 hover:text-rose-500 transition-colors">
                           <Trash2 size={16} />
                         </button>

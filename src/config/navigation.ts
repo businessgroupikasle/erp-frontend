@@ -129,7 +129,7 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         label: "Warehouses Hub",
         href: "/inventory/warehouses",
         roles: SUPER_ONLY,
-        isNew: true,
+        // isNew: true,
       },
       {
         icon: Landmark,
