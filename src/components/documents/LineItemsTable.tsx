@@ -26,20 +26,30 @@ export default function LineItemsTable() {
     }
   }, [activeSearchId]);
 
+  const [materialRefreshKey, setMaterialRefreshKey] = useState(0);
+
+  // Fetch materials (including filter) – refresh when key changes
   useEffect(() => {
     const fetchMaterials = async () => {
       setLoadingMaterials(true);
       try {
         const response = await rawMaterialsApi.getAll();
+        console.log('Fetched raw materials (filtered):', response.data);
         setMaterials(response.data);
       } catch (error) {
-        console.error("Failed to fetch materials", error);
+        console.error('Failed to fetch materials', error);
       } finally {
         setLoadingMaterials(false);
       }
     };
     fetchMaterials();
-  }, []);
+  }, [materialRefreshKey]);
+
+  // In Add Material Drawer success, trigger refresh
+  const handleAddMaterialSuccess = () => {
+    setMaterialRefreshKey(prev => prev + 1);
+    setShowAddMaterialDrawer(false);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent, itemId: string) => {
     if (e.key === "Enter" && !activeSearchId) {
@@ -53,7 +63,15 @@ export default function LineItemsTable() {
     }
   };
 
+  // Get all material IDs currently selected in the table to prevent duplicate selection
+  const selectedMaterialIds = new Set(
+    items.map(item => item.materialId).filter(Boolean)
+  );
+
   const filteredMaterials = materials.filter(m => {
+    // Exclude materials already added to the table
+    if (selectedMaterialIds.has(m.id)) return false;
+    
     return m.name.toLowerCase().includes(searchQuery.toLowerCase()) || m.sku?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
@@ -156,7 +174,8 @@ export default function LineItemsTable() {
                                   return (
                                     <div
                                       key={m.id}
-                                      onClick={() => {
+                                      onClick={(e) => {
+                                        e.stopPropagation();
                                         updateItem(item.id, {
                                           materialId: m.id,
                                           name: m.name,
@@ -198,7 +217,10 @@ export default function LineItemsTable() {
                                 })}
                                 <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 sticky bottom-0 flex justify-center">
                                    <button 
-                                     onClick={() => setShowAddMaterialDrawer(true)} 
+                                     onClick={(e) => {
+                                       e.stopPropagation();
+                                       setShowAddMaterialDrawer(true);
+                                     }} 
                                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#7C3AED] hover:bg-purple-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm"
                                    >
                                       <Plus size={14} /> Add New Material
@@ -212,7 +234,10 @@ export default function LineItemsTable() {
                                       {!selectedVendor ? "Please select a vendor first" : "No materials found"}
                                    </p>
                                    <button 
-                                     onClick={() => setShowAddMaterialDrawer(true)} 
+                                     onClick={(e) => {
+                                       e.stopPropagation();
+                                       setShowAddMaterialDrawer(true);
+                                     }} 
                                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#7C3AED] hover:bg-purple-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm mt-2"
                                    >
                                       <Plus size={14} /> Add New Material
@@ -328,9 +353,7 @@ export default function LineItemsTable() {
       <AddMaterialDrawer 
         isOpen={showAddMaterialDrawer} 
         onClose={() => setShowAddMaterialDrawer(false)} 
-        onSuccess={() => {
-          setShowAddMaterialDrawer(false);
-        }} 
+        onSuccess={handleAddMaterialSuccess} 
       />
     </div>
   );

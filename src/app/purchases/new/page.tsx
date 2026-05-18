@@ -12,9 +12,19 @@ import { clsx } from "clsx";
 
 import VendorFormModal from "@/components/modals/VendorFormModal";
 import WarehouseFormSidebar from "@/components/modals/WarehouseFormSidebar";
-import { inventoryApi, purchaseOrdersApi } from "@/lib/api";
+import { inventoryApi, purchaseOrdersApi, settingsApi } from "@/lib/api";
+import GSTInvoice from "@/components/documents/GSTInvoice";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
+
+const FALLBACK_COMPANY = {
+  name: "My Restaurant",
+  gstin: "",
+  address: "",
+  phone: "",
+  email: "",
+  state: "Tamil Nadu"
+};
 
 function NewPurchaseContent() {
   const { 
@@ -40,6 +50,8 @@ function NewPurchaseContent() {
   const [showVendorModal, setShowVendorModal] = useState(false);
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([]);
+  const [companyProfile, setCompanyProfile] = useState<any>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     const fetchWarehouses = async () => {
@@ -50,7 +62,16 @@ function NewPurchaseContent() {
         console.error("Failed to fetch warehouses", error);
       }
     };
+    const fetchCompanyProfile = async () => {
+      try {
+        const response = await settingsApi.getCompanyProfile();
+        setCompanyProfile(response.data);
+      } catch (error) {
+        console.error("Failed to fetch company profile", error);
+      }
+    };
     fetchWarehouses();
+    fetchCompanyProfile();
   }, []);
 
   const handleCreatePO = async () => {
@@ -81,6 +102,42 @@ function NewPurchaseContent() {
     } catch (error) {
       console.error("Failed to create PO", error);
       toast.error("Failed to create Purchase Order. Please check your inputs.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!selectedVendor) {
+      toast.error("Please select a vendor to save as draft.");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        vendorId: selectedVendor.id,
+        advancePaid: totals.appliedAdvance || 0,
+        notes: notes || internalNotes || "",
+        warehouseId: warehouseId || undefined,
+        purchaseType: purchaseType,
+        expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate).toISOString() : null,
+        status: "DRAFT",
+        items: items
+          .filter(item => item.materialId)
+          .map(item => ({
+            inventoryItemId: item.materialId,
+            quantity: item.quantity || 0,
+            price: item.price || 0
+          }))
+      };
+      
+      await purchaseOrdersApi.create(payload);
+      toast.success("Draft Purchase Order saved successfully!");
+      router.push("/purchases/orders");
+    } catch (error) {
+      console.error("Failed to save draft", error);
+      toast.error("Failed to save draft. Please check your inputs.");
     } finally {
       setIsSubmitting(false);
     }
@@ -134,12 +191,16 @@ function NewPurchaseContent() {
         
         <div className="flex items-center gap-3">
            <button 
-             onClick={() => {/* Save Draft logic */}}
-             className="px-5 py-2.5 text-xs font-black text-slate-500 hover:bg-slate-50 rounded-xl transition-all uppercase tracking-widest"
+             onClick={handleSaveDraft}
+             disabled={isSubmitting}
+             className="px-5 py-2.5 text-xs font-black text-slate-500 hover:bg-slate-50 rounded-xl transition-all uppercase tracking-widest disabled:opacity-50"
            >
              Save Draft
            </button>
-           <button className="px-5 py-2.5 text-xs font-black text-slate-500 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all flex items-center gap-2 uppercase tracking-widest">
+           <button
+             onClick={() => setShowPreview(true)}
+             className="px-5 py-2.5 text-xs font-black text-slate-500 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all flex items-center gap-2 uppercase tracking-widest"
+           >
               <FileText size={14} /> Preview
            </button>
            <button 
@@ -371,6 +432,31 @@ function NewPurchaseContent() {
              </div>
           </div>
         </div>
+      {showPreview && (
+        <GSTInvoice 
+          order={{
+            poNumber: poNumber || "DRAFT-00001",
+            createdAt: purchaseDate ? new Date(purchaseDate).toISOString() : new Date().toISOString(),
+            poItems: items.map((item, idx) => ({
+              itemName: item.name || `Material #${idx + 1}`,
+              quantity: item.quantity || 0,
+              price: item.price || 0,
+              gstRate: item.gstRate || 0,
+              unit: item.unit || "unit"
+            })),
+            advancePaid: totals.appliedAdvance || 0,
+            paid: totals.appliedAdvance || 0
+          }} 
+          vendor={selectedVendor || {
+            name: "NO VENDOR SELECTED",
+            address: "Please select a vendor in the form",
+            gstin: "",
+            phone: ""
+          }} 
+          companyDetails={companyProfile || FALLBACK_COMPANY} 
+          onClose={() => setShowPreview(false)} 
+        />
+      )}
       </div>
     </div>
   );

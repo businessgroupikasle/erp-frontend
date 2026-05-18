@@ -381,7 +381,15 @@ export default function PurchaseOrdersClient() {
                     <td className="px-6 py-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1 transition-opacity">
                         {/* Workflow simplified: removed Submit/Approve/Reject actions */}
-
+                        {po.status === 'PENDING_APPROVAL' && (
+                          <button
+                            type="button"
+                            onClick={() => handleApprove(po.id)}
+                            className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all mr-1"
+                          >
+                            Approve PO
+                          </button>
+                        )}
 
                         {(po.status === 'APPROVED' || po.status === 'SENT' || po.status === 'PARTIALLY_RECEIVED') && (
                           <button type="button" onClick={() => window.location.href = `/purchases/grn?poId=${po.id}`} className="px-3 py-1.5 bg-orange-50 dark:bg-orange-500/10 text-orange-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-orange-100 transition-all">Receive Goods</button>
@@ -685,7 +693,17 @@ export default function PurchaseOrdersClient() {
             {/* Actions */}
             <div className="p-8 border-t border-gray-100 dark:border-white/5 flex gap-4">
               {/* Workflow simplified: removed Approve button from details */}
-
+              {viewingDetailsPO.status === 'PENDING_APPROVAL' && (
+                <button
+                  onClick={() => {
+                    handleApprove(viewingDetailsPO.id);
+                    setViewingDetailsPO(null);
+                  }}
+                  className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                >
+                  Approve Purchase Order
+                </button>
+              )}
 
               <button onClick={() => { setViewingPO(viewingDetailsPO); setViewingDetailsPO(null); }} className="flex-1 py-4 bg-slate-100 dark:bg-white/5 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest">Download PDF</button>
             </div>

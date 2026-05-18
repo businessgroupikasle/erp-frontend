@@ -15,6 +15,7 @@ import {
   CheckCircle2 as CheckCircle2Icon,
   Clock as ClockIcon
 } from "lucide-react";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { toast } from "react-hot-toast";
@@ -82,9 +83,9 @@ export default function SupplierLedgerPage() {
           >
             <HistoryIcon size={18} className={clsx("text-slate-400", loading && "animate-spin")} />
           </button>
-          <button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 active:scale-95">
+          <Link href="/franchise-orders" className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 active:scale-95 flex items-center justify-center">
             Record Payment to HQ
-          </button>
+          </Link>
         </div>
       </div>
 

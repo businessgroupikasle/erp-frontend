@@ -6,24 +6,37 @@ import {
   Search,
   ArrowDownRight,
   FileText,
-  CreditCard,
   Plus,
   ShieldAlert,
   ChevronRight,
   Calculator,
-  Loader2,
   RefreshCw,
   AlertCircle,
 } from "lucide-react";
 import { clsx } from "clsx";
-import { vendorsApi, vendorLedgerApi } from "@/lib/api";
+import { franchiseApi } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
-interface Vendor {
+interface Franchise {
   id: string;
   name: string;
-  type?: string;
-  category?: string;
-  balance?: number;
+  location: string;
+  ownerName: string;
+  contactNum: string;
+  status: string;
+  outstandingAmount: number;
+  creditLimit: number;
+  walletBalance: number;
+  ledgerEntries?: Array<{
+    id: string;
+    type: "DEBIT" | "CREDIT";
+    amount: number;
+    balanceAfter: number;
+    referenceType: string;
+    referenceId?: string;
+    note?: string;
+    createdAt: string;
+  }>;
 }
 
 interface LedgerLine {
@@ -37,103 +50,142 @@ interface LedgerLine {
   credit: number | null;
 }
 
-export default function VendorLedgerPage() {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [loadingVendors, setLoadingVendors] = useState(true);
-  const [vendorError, setVendorError] = useState<string | null>(null);
+export default function BranchLedgerPage() {
+  const { user } = useAuth();
+  const [franchises, setFranchises] = useState<Franchise[]>([]);
+  const [loadingFranchises, setLoadingFranchises] = useState(true);
+  const [franchiseError, setFranchiseError] = useState<string | null>(null);
 
-  const [activeVendorId, setActiveVendorId] = useState<string | null>(null);
+  const [activeFranchiseId, setActiveFranchiseId] = useState<string | null>(null);
   const [ledgerLines, setLedgerLines] = useState<(LedgerLine & { balance: number })[]>([]);
   const [loadingLedger, setLoadingLedger] = useState(false);
   const [ledgerError, setLedgerError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
 
-  // Fetch vendors
-  const fetchVendors = useCallback(async () => {
-    setLoadingVendors(true);
-    setVendorError(null);
+  // Fetch franchises
+  const fetchFranchises = useCallback(async () => {
+    setLoadingFranchises(true);
+    setFranchiseError(null);
     try {
-      const res = await vendorsApi.getAll();
-      const data: Vendor[] = res.data?.vendors ?? res.data ?? [];
-      setVendors(data);
-      // Auto-select first vendor
-      if (data.length > 0 && !activeVendorId) {
-        setActiveVendorId(data[0].id);
-      }
-    } catch (err) {
-      console.error("Fetch error:", err);
-      setVendors([]);
-    } finally {
-      setLoadingVendors(false);
-    }
-  }, []);
+      const res = await franchiseApi.getAll();
+      const data: Franchise[] = res.data?.franchises ?? res.data ?? [];
+      // Filter out Headquarters / HQ since HQ is the main settlement entity and doesn't settle with itself
+      let filtered = data.filter(
+        (f) =>
+          f.id !== "hq-001" &&
+          !f.name.toLowerCase().includes("headquarters") &&
+          !f.name.toLowerCase().includes("hq")
+      );
 
-  // Fetch ledger when vendor changes
-  const fetchLedger = useCallback(async (vendorId: string) => {
+      // If the user is a franchise admin, filter only their own franchise
+      if (user && user.role === "FRANCHISE_ADMIN" && user.franchiseId) {
+        filtered = filtered.filter((f) => f.id === user.franchiseId);
+      }
+
+      setFranchises(filtered);
+      // Auto-select first franchise
+      if (filtered.length > 0 && !activeFranchiseId) {
+        setActiveFranchiseId(filtered[0].id);
+      }
+    } catch (err: any) {
+      console.error("Fetch error:", err);
+      setFranchiseError(
+        err?.response?.data?.error || err.message || "Failed to load branch directory"
+      );
+      setFranchises([]);
+    } finally {
+      setLoadingFranchises(false);
+    }
+  }, [activeFranchiseId, user]);
+
+  // Fetch ledger when franchise changes
+  const fetchLedger = useCallback(async (franchiseId: string) => {
+    // If franchise admin, restrict to their own franchiseId
+    if (user && user.role === "FRANCHISE_ADMIN" && user.franchiseId && franchiseId !== user.franchiseId) {
+      franchiseId = user.franchiseId;
+    }
     setLoadingLedger(true);
     setLedgerError(null);
     try {
-      const res = await vendorLedgerApi.getLedger(vendorId);
-      const raw: LedgerLine[] = res.data?.entries ?? res.data?.ledger ?? res.data ?? [];
+      const res = await franchiseApi.getById(franchiseId);
+      const franchise: Franchise = res.data;
+      const rawEntries = franchise.ledgerEntries || [];
 
       // Calculate running balances
-      let runningBalance = 0;
-      const computed = raw.map((line) => {
-        runningBalance += (line.debit || 0) - (line.credit || 0);
-        return { ...line, balance: runningBalance };
+      const computed = rawEntries.map((line) => {
+        const isDebit = line.type === "DEBIT";
+        const debit = isDebit ? line.amount : null;
+        const credit = !isDebit ? line.amount : null;
+
+        return {
+          id: line.id,
+          date: line.createdAt,
+          type: line.referenceType,
+          ref: line.referenceId || "—",
+          reference: line.referenceId || "—",
+          description: line.note || "",
+          debit,
+          credit,
+          balance: line.balanceAfter,
+        };
       });
       setLedgerLines(computed);
-    } catch (err) {
-      console.error("Fetch error:", err);
+    } catch (err: any) {
+      console.error("Fetch ledger error:", err);
+      setLedgerError(
+        err?.response?.data?.error || err.message || "Failed to load branch ledger statement"
+      );
       setLedgerLines([]);
     } finally {
       setLoadingLedger(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    fetchVendors();
-  }, [fetchVendors]);
+    fetchFranchises();
+  }, [fetchFranchises]);
 
   useEffect(() => {
-    if (activeVendorId) fetchLedger(activeVendorId);
-  }, [activeVendorId, fetchLedger]);
+    if (user && user.role === "FRANCHISE_ADMIN" && user.franchiseId) {
+      setActiveFranchiseId(user.franchiseId);
+    }
+  }, [user]);
 
-  const filteredVendors = vendors.filter((v) =>
-    v.name.toLowerCase().includes(search.toLowerCase())
+  useEffect(() => {
+    if (activeFranchiseId) fetchLedger(activeFranchiseId);
+  }, [activeFranchiseId, fetchLedger]);
+
+  const filteredFranchises = franchises.filter((f) =>
+    f.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const activeVendor = vendors.find((v) => v.id === activeVendorId);
-  const totalOwed = ledgerLines.length > 0 ? ledgerLines[ledgerLines.length - 1].balance : 0;
-
-  const selectVendor = (id: string) => {
-    setActiveVendorId(id);
-  };
+  const activeFranchise = franchises.find((f) => f.id === activeFranchiseId);
+  const totalOwed = activeFranchise?.outstandingAmount ?? 0;
 
   return (
     <div className="max-w-[1400px] mx-auto h-[calc(100vh-80px)] flex gap-8 py-6 px-4 animate-in fade-in duration-700">
-      {/* LEFT: VENDOR LIST */}
+      {/* LEFT: BRANCH DIRECTORY */}
       <div className="w-80 flex flex-col bg-white border border-slate-100 rounded-[2rem] overflow-hidden shrink-0">
         <div className="p-6 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
               <Building2 size={16} className="text-purple-500" />
-              Vendor Directory
+              Branch Directory
             </h2>
             <button
-              onClick={fetchVendors}
-              disabled={loadingVendors}
+              onClick={fetchFranchises}
+              disabled={loadingFranchises}
               className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-400 border border-slate-100 shadow-sm disabled:opacity-50 transition-all active:scale-95"
             >
-              <RefreshCw size={14} className={loadingVendors ? "animate-spin" : ""} />
+              <RefreshCw size={14} className={loadingFranchises ? "animate-spin" : ""} />
             </button>
           </div>
           <div className="relative group">
             <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-purple-500 transition-colors" />
             <input
               type="text"
-              placeholder="Search directory..."
+              placeholder="Search branches..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-900 placeholder:text-slate-300 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-50 transition-all"
@@ -143,7 +195,7 @@ export default function VendorLedgerPage() {
 
         <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
           {/* Loading */}
-          {loadingVendors &&
+          {loadingFranchises &&
             Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="p-5 flex items-center gap-4 animate-pulse">
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 shrink-0" />
@@ -155,42 +207,40 @@ export default function VendorLedgerPage() {
             ))}
 
           {/* Error */}
-          {!loadingVendors && vendorError && (
+          {!loadingFranchises && franchiseError && (
             <div className="p-8 text-center bg-red-50/50 m-4 rounded-2xl">
               <AlertCircle size={28} className="mx-auto text-red-300 mb-3" />
-              <p className="text-xs font-bold text-red-500 mb-2">{vendorError}</p>
-              <button onClick={fetchVendors} className="text-[10px] uppercase font-black tracking-widest text-orange-500 hover:text-orange-600 transition-colors">
+              <p className="text-xs font-bold text-red-500 mb-2">{franchiseError}</p>
+              <button onClick={fetchFranchises} className="text-[10px] uppercase font-black tracking-widest text-orange-500 hover:text-orange-600 transition-colors">
                 Retry Connection
               </button>
             </div>
           )}
 
           {/* Empty */}
-          {!loadingVendors && !vendorError && filteredVendors.length === 0 && (
+          {!loadingFranchises && !franchiseError && filteredFranchises.length === 0 && (
             <div className="p-10 text-center">
               <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Building2 size={24} className="text-slate-300" strokeWidth={1.5} />
               </div>
               <p className="text-xs font-bold text-slate-400">
-                {search ? "No vendors match your search." : "Vendor directory is empty."}
+                {search ? "No branches match your search." : "Branch directory is empty."}
               </p>
             </div>
           )}
 
-          {/* Vendor list */}
-          {!loadingVendors &&
-            !vendorError &&
-            filteredVendors.map((vendor) => {
-              const isActive = vendor.id === activeVendorId;
+          {/* Franchise list */}
+          {!loadingFranchises &&
+            !franchiseError &&
+            filteredFranchises.map((franchise) => {
+              const isActive = franchise.id === activeFranchiseId;
               return (
                 <button
-                  key={vendor.id}
-                  onClick={() => selectVendor(vendor.id)}
+                  key={franchise.id}
+                  onClick={() => setActiveFranchiseId(franchise.id)}
                   className={clsx(
                     "w-full text-left p-5 flex items-center gap-4 transition-all relative overflow-hidden group",
-                    isActive
-                      ? "bg-purple-50"
-                      : "hover:bg-slate-50/80"
+                    isActive ? "bg-purple-50" : "hover:bg-slate-50/80"
                   )}
                 >
                   {isActive && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-purple-500" />}
@@ -211,10 +261,10 @@ export default function VendorLedgerPage() {
                         isActive ? "text-purple-700" : "text-slate-900 group-hover:text-purple-600"
                       )}
                     >
-                      {vendor.name}
+                      {franchise.name}
                     </h3>
                     <p className={clsx("text-[9px] uppercase tracking-[0.1em] mt-1 font-bold", isActive ? "text-purple-400" : "text-slate-400")}>
-                      {vendor.type || vendor.category || "Vendor"}
+                      {franchise.location || "Branch Outlet"}
                     </p>
                   </div>
                   <ChevronRight size={16} className={clsx("transition-transform group-hover:translate-x-1", isActive ? "text-purple-500" : "text-slate-300")} />
@@ -226,7 +276,7 @@ export default function VendorLedgerPage() {
 
       {/* RIGHT: LEDGER VIEW */}
       <div className="flex-1 flex flex-col bg-white border border-slate-100 rounded-[2rem] overflow-hidden min-w-0 shadow-[0_10px_40px_rgba(0,0,0,0.02)]">
-        {activeVendor ? (
+        {activeFranchise ? (
           <>
             {/* Ledger Header */}
             <div className="p-8 border-b border-slate-100 flex flex-col xl:flex-row xl:items-start justify-between gap-8 bg-slate-50/30">
@@ -234,7 +284,7 @@ export default function VendorLedgerPage() {
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
                   <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] bg-purple-100 text-purple-600 border border-purple-200">
-                    ID: {activeVendor.id}
+                    ID: {activeFranchise.id}
                   </span>
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
                     <Calculator size={12} className="text-slate-300" />
@@ -242,15 +292,15 @@ export default function VendorLedgerPage() {
                   </span>
                 </div>
                 <h1 className="text-3xl font-black text-slate-900 truncate max-w-2xl mb-2 tracking-tight">
-                  {activeVendor.name}
+                  {activeFranchise.name}
                 </h1>
                 <p className="text-[11px] text-slate-500 font-medium max-w-lg leading-relaxed">
-                  Balances calculate dynamically based solely on debits (invoices) and credits (payments). Balances are never statically stored.
+                  Balances calculate dynamically based solely on debits (orders placed) and credits (payments processed). Balances are never statically stored.
                 </p>
               </div>
 
-              <div className="flex items-center gap-6 shrink-0 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
-                <div className="text-right pr-6 border-r border-slate-100">
+              <div className="flex items-center gap-6 shrink-0 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm min-w-[280px]">
+                <div className="flex-1 pr-6 border-r border-slate-100 text-right">
                   <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1.5">
                     Total Outstanding
                   </p>
@@ -263,13 +313,15 @@ export default function VendorLedgerPage() {
                     </p>
                   )}
                 </div>
-                <div className="flex flex-col gap-2.5">
-                  <button className="flex items-center justify-center gap-2 bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-slate-900/10 active:translate-y-0.5 transition-all min-w-[140px]">
-                    <CreditCard size={14} /> Log Payment
-                  </button>
-                  <button className="flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm active:scale-95 transition-all min-w-[140px]">
-                    <Plus size={14} /> Add Advance
-                  </button>
+                <div className="flex flex-col gap-1 text-left min-w-[120px]">
+                  <div>
+                    <span className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400 block">Credit Limit</span>
+                    <span className="text-xs font-extrabold text-slate-900">₹{activeFranchise.creditLimit?.toLocaleString() || 0}</span>
+                  </div>
+                  <div className="mt-1">
+                    <span className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400 block">Wallet Balance</span>
+                    <span className="text-xs font-extrabold text-emerald-600">₹{activeFranchise.walletBalance?.toLocaleString() || 0}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -314,7 +366,7 @@ export default function VendorLedgerPage() {
                           </div>
                           <p className="text-sm font-bold text-red-500 mb-2">{ledgerError}</p>
                           <button
-                            onClick={() => activeVendorId && fetchLedger(activeVendorId)}
+                            onClick={() => activeFranchiseId && fetchLedger(activeFranchiseId)}
                             className="text-[10px] uppercase font-black tracking-widest text-orange-500 hover:text-orange-600 transition-colors"
                           >
                             Retry Request
@@ -360,17 +412,17 @@ export default function VendorLedgerPage() {
                             </p>
                           </td>
                           <td className="px-8 py-5">
-                            {line.type === "PO" || line.type === "INVOICE" || line.type === "PURCHASE" ? (
+                            {line.type === "ORDER" ? (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] bg-red-50 text-red-600">
-                                <FileText size={12} /> Purchase Invoice
+                                <FileText size={12} /> Branch Order
                               </span>
                             ) : line.type === "PAYMENT" ? (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] bg-emerald-50 text-emerald-600">
-                                <ArrowDownRight size={12} /> Payment Sent
+                                <ArrowDownRight size={12} /> Payment Received
                               </span>
-                            ) : line.type === "ADVANCE" ? (
+                            ) : line.type === "ADJUSTMENT" ? (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] bg-indigo-50 text-indigo-600">
-                                <Plus size={12} /> Cash Advance
+                                <Plus size={12} /> Adjustment
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] bg-slate-100 text-slate-600">
@@ -380,14 +432,18 @@ export default function VendorLedgerPage() {
                           </td>
                           <td className="px-8 py-5 text-right">
                             {line.debit ? (
-                              <span className="font-black text-red-500 tabular-nums">₹{line.debit.toLocaleString()}</span>
+                              <span className="font-black text-red-500 tabular-nums">
+                                ₹{line.debit.toLocaleString()}
+                              </span>
                             ) : (
                               <span className="text-slate-300">-</span>
                             )}
                           </td>
                           <td className="px-8 py-5 text-right">
                             {line.credit ? (
-                              <span className="font-black text-emerald-500 tabular-nums">₹{line.credit.toLocaleString()}</span>
+                              <span className="font-black text-emerald-500 tabular-nums">
+                                ₹{line.credit.toLocaleString()}
+                              </span>
                             ) : (
                               <span className="text-slate-300">-</span>
                             )}
@@ -414,9 +470,9 @@ export default function VendorLedgerPage() {
             <div className="w-24 h-24 bg-white rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-center mb-6">
               <Building2 size={40} className="text-slate-300" strokeWidth={1} />
             </div>
-            <h3 className="text-lg font-black text-slate-900 mb-2">Select a Vendor Record</h3>
+            <h3 className="text-lg font-black text-slate-900 mb-2">Select a Branch Record</h3>
             <p className="text-xs max-w-sm mx-auto leading-relaxed">
-              Choose a business entity from the sidebar to inspect their immutable source of truth ledger.
+              Choose a franchise branch from the sidebar to inspect their immutable source of truth ledger and outstanding settlement data.
             </p>
           </div>
         )}

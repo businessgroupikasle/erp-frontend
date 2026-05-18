@@ -10,6 +10,17 @@ import { clsx } from "clsx";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
+import Link from "next/link";
+import GSTInvoice from "@/components/documents/GSTInvoice";
+
+const FALLBACK_COMPANY = {
+  name: "Kiddos Food Headquarters",
+  gstin: "27AAAAA1111A1Z1",
+  address: "123 corporate HQ, Mumbai, MH",
+  phone: "9999999999",
+  email: "admin@kiddosfood.com",
+  state: "Maharashtra"
+};
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING:      "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-700/20",
@@ -44,6 +55,8 @@ export default function FranchiseOrdersPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [invoiceModalData, setInvoiceModalData] = useState<{ order: any; vendor: any } | null>(null);
+  const [companyDetails, setCompanyDetails] = useState<any>(null);
 
   // Create form
   const [selectedFranchise, setSelectedFranchise] = useState(user?.franchiseId ?? "");
@@ -74,6 +87,9 @@ export default function FranchiseOrdersPage() {
         const franchiseRes = await api.get("/api/franchise");
         setFranchises(franchiseRes.data ?? []);
       }
+
+      const compRes = await api.get("/api/settings/company").catch(() => ({ data: null }));
+      if (compRes?.data) setCompanyDetails(compRes.data);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [isFranchiseAdmin]);
@@ -131,10 +147,12 @@ export default function FranchiseOrdersPage() {
         amount: 0,
         accountId: undefined // Backend will now default to CASH
       });
-      toast.success("Payment recorded!");
+      toast.success("Payment recorded! View it in Collections or Supplier Ledger.", { duration: 6000 });
       fetchAll();
     } catch (e: any) {
-      setError(e?.response?.data?.error ?? "Failed to record payment.");
+      const errMsg = e?.response?.data?.error ?? "Failed to record payment.";
+      toast.error(errMsg);
+      setError(errMsg);
     }
   };
 
@@ -142,10 +160,33 @@ export default function FranchiseOrdersPage() {
     try {
       const res = await api.get(`/api/franchise-orders/${orderId}/invoice`);
       const inv = res.data;
-      toast.success(
-        `Invoice: ${inv.invoiceNumber} | Total: ₹${inv.grandTotal}`,
-        { duration: 5000 }
-      );
+      
+      const orderObj = orders.find(o => o.id === orderId);
+      const franchiseGstin = orderObj?.franchise?.gstin || "NOT PROVIDED";
+      
+      const mappedOrder = {
+        id: inv.orderNumber,
+        poNumber: inv.invoiceNumber,
+        createdAt: inv.issuedAt,
+        items: inv.lineItems.map((item: any) => ({
+          itemName: item.productName,
+          quantity: item.quantity,
+          price: item.unitPrice,
+          gstRate: item.gstRate,
+          hsnCode: item.hsnCode,
+        })),
+        paid: inv.grandTotal,
+        advancePaid: 0,
+      };
+
+      const mappedVendor = {
+        name: inv.franchise,
+        address: inv.franchiseLocation,
+        gstin: franchiseGstin,
+        contact: orderObj?.franchise?.contactNum || "",
+      };
+
+      setInvoiceModalData({ order: mappedOrder, vendor: mappedVendor });
     } catch (e: any) {
       toast.error(e?.response?.data?.error ?? "Invoice not available yet (must be paid).");
     }
@@ -208,6 +249,29 @@ export default function FranchiseOrdersPage() {
           </button>
         </div>
       </header>
+
+      {isFranchiseAdmin && (
+        <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/20 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in duration-300">
+          <div className="flex items-start gap-4">
+            <div className="p-2 bg-emerald-500 text-white rounded-2xl shrink-0 mt-1">
+              <CreditCard size={18} />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">How to Monitor Payments</h4>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+                Every payment made to HQ is instantly logged. You can monitor your transactions in real-time under{" "}
+                <Link href="/accounting/payments" className="text-emerald-600 dark:text-emerald-400 font-black hover:underline">
+                  Finance &rarr; Collections
+                </Link>{" "}
+                or review outstanding dues and transaction statements in your{" "}
+                <Link href="/franchise/supplier-ledger" className="text-emerald-600 dark:text-emerald-400 font-black hover:underline">
+                  Supplier Ledger (HQ)
+                </Link>.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -363,12 +427,12 @@ export default function FranchiseOrdersPage() {
                         Mark {nextStatus.replace("_", " ")} <ArrowRight size={12} />
                       </button>
                     )}
-                    {isSuperAdmin && order.status === "DELIVERED" && order.paymentStatus !== "PAID" && (
+                    {order.status === "DELIVERED" && order.paymentStatus !== "PAID" && (
                       <button
                         onClick={() => handlePayment(order.id)}
-                        className="w-full px-4 py-2.5 bg-emerald-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:opacity-90 transition-all"
+                        className="w-full px-4 py-2.5 bg-emerald-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                       >
-                        <Banknote size={12} /> Mark Paid
+                        <Banknote size={12} /> {isSuperAdmin ? "Mark Paid" : "Pay HQ"}
                       </button>
                     )}
                     {(order.paymentStatus === "PAID") && (
@@ -589,6 +653,15 @@ export default function FranchiseOrdersPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {invoiceModalData && (
+        <GSTInvoice
+          order={invoiceModalData.order}
+          vendor={invoiceModalData.vendor}
+          companyDetails={companyDetails || FALLBACK_COMPANY}
+          onClose={() => setInvoiceModalData(null)}
+        />
       )}
     </div>
   );

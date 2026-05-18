@@ -219,7 +219,7 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
                     onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                     className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-2 border-transparent focus:border-orange-500/20 rounded-[1.2rem] px-6 py-4 text-xs font-black dark:text-white transition-all shadow-sm"
                   >
-                    {ITEM_CATEGORIES.map((c) => <option key={c} value={c}>{c.replace(/_/g, " ")}</option>)}
+                    {ITEM_CATEGORIES.filter((c) => c !== "FINISHED_GOOD" && c !== "SEMI_FINISHED").map((c) => <option key={c} value={c}>{c.replace(/_/g, " ")}</option>)}
                   </select>
                   <ChevronDown size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 </div>
