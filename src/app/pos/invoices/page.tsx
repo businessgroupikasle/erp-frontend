@@ -53,7 +53,11 @@ export default function InvoicesPage() {
     try {
       const res = await posApi.getOrders();
       const data = res.data?.data || res.data || [];
-      setInvoices(data);
+      const mapped = data.map((inv: any) => ({
+        ...inv,
+        orderNumber: inv.orderNumber || inv.invoiceNum || inv.id || ''
+      }));
+      setInvoices(mapped);
     } catch (err) {
       toast.error("Failed to fetch invoices");
     } finally {
@@ -62,9 +66,9 @@ export default function InvoicesPage() {
   };
 
   const filteredInvoices = invoices.filter(inv => 
-    inv.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-    inv.customer?.name?.toLowerCase().includes(search.toLowerCase()) ||
-    inv.customer?.phone?.includes(search)
+    (inv.orderNumber || '').toLowerCase().includes(search.toLowerCase()) ||
+    (inv.customer?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (inv.customer?.phone || '').includes(search)
   );
 
   const getPaymentIcon = (mode: string) => {
@@ -150,7 +154,7 @@ export default function InvoicesPage() {
                           selectedInvoice?.id === invoice.id ? "bg-orange-50/50 dark:bg-orange-500/5" : "")}>
                         <td className="px-8 py-5 text-center">
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                            {invoice.orderNumber.split('-').pop()}
+                            {(invoice.orderNumber || '').split('-').pop()}
                           </span>
                         </td>
                         <td className="px-8 py-5">
@@ -207,7 +211,7 @@ export default function InvoicesPage() {
                        </button>
                     </div>
                   </div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{selectedInvoice.orderNumber}</h2>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{selectedInvoice.orderNumber || selectedInvoice.id}</h2>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Placed on {new Date(selectedInvoice.createdAt).toLocaleString()}</p>
                </div>
 

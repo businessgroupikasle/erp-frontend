@@ -102,6 +102,10 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         label: "Purchase Orders",
         href: "/purchases/orders",
         roles: SUPER_ONLY,
+        children: [
+          { label: "View All Orders", href: "/purchases/orders" },
+          { label: "Create New PO", href: "/purchases/new" },
+        ]
       },
       {
         icon: Truck,
@@ -122,8 +126,21 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       },
       {
         icon: Building2,
+        label: "Warehouses Hub",
+        href: "/inventory/warehouses",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: Landmark,
         label: "Central Warehouse",
         href: "/inventory/stock",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Clock,
+        label: "Expiry Tracking",
+        href: "/production/batches",
         roles: SUPER_ONLY,
       },
     ],
@@ -176,6 +193,12 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         icon: Users,
         label: "Branch Settlement",
         href: "/accounting/ledgers",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Users,
+        label: "Dealers Oversight",
+        href: "/franchise/dealers",
         roles: SUPER_ONLY,
       },
     ],
@@ -262,6 +285,13 @@ export const franchiseMenuSections: MenuSection[] = [
         roles: FRANCHISE_ONLY,
       },
       {
+        icon: Building2,
+        label: "Warehouses Hub",
+        href: "/inventory/warehouses",
+        roles: FRANCHISE_ONLY,
+        isNew: true,
+      },
+      {
         icon: AlertTriangle,
         label: "Low Stock Alerts",
         href: "/alerts",
@@ -301,6 +331,12 @@ export const franchiseMenuSections: MenuSection[] = [
   {
     title: "FINANCE",
     items: [
+      {
+        icon: Landmark,
+        label: "Business Accounts",
+        href: "/banking/accounts",
+        roles: FRANCHISE_ONLY,
+      },
       {
         icon: CreditCard,
         label: "Collections",
@@ -350,7 +386,7 @@ export const franchiseMenuSections: MenuSection[] = [
       {
         icon: Settings,
         label: "Branch Profile",
-        href: "/profile",
+        href: "/profile/agency",
         roles: FRANCHISE_ONLY,
       },
     ],

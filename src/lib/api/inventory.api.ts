@@ -48,6 +48,13 @@ export const inventoryApi = {
     api.post('/api/inventory/adjustment', data),
   getMovements: (params?: any) => api.get('/api/inventory/movements', { params }),
   getAlerts: () => api.get('/api/inventory/alerts'),
+  getWarehouses: () => api.get('/api/warehouses'),
+  createWarehouse: (data: { name: string, location?: string, type?: string }) => 
+    api.post('/api/warehouses', data),
+  updateWarehouse: (id: string, data: { name?: string, location?: string, type?: string }) => 
+    api.patch(`/api/warehouses/${id}`, data),
+  deleteWarehouse: (id: string) => 
+    api.delete(`/api/warehouses/${id}`),
 };
 
 // --- Production Workflow ---

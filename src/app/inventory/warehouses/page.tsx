@@ -1,133 +1,266 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
-  ChevronRight, 
-  ChevronDown,
-  Download,
-  Search,
-  Columns
+  Warehouse, Plus, Search, Filter, 
+  MapPin, Tag, ChevronRight, 
+  MoreVertical, Edit2, Trash2, 
+  Loader2, RefreshCcw, LayoutGrid, List
 } from "lucide-react";
-import Link from "next/link";
+import { inventoryApi } from "@/lib/api";
+import WarehouseFormSidebar from "@/components/modals/WarehouseFormSidebar";
+import toast from "react-hot-toast";
 import { clsx } from "clsx";
 
-export default function WarehouseDashboard() {
-  const [activeTab, setActiveTab] = useState("Warehouses");
+export default function WarehousesPage() {
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [warehouseToEdit, setWarehouseToEdit] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  const headers = [
-    "SKU", "Item Name", "Item Type", "Tracking Method", 
-    "Total Stock", "Stock in Hand", "Stock Status", 
-    "Reorder Point", "Overstock Point"
-  ];
+  const fetchWarehouses = async () => {
+    setLoading(true);
+    try {
+      const response = await inventoryApi.getWarehouses();
+      setWarehouses(response.data);
+    } catch (error) {
+      toast.error("Failed to load warehouses");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWarehouses();
+  }, []);
+
+  const handleEdit = (warehouse: any) => {
+    setWarehouseToEdit(warehouse);
+    setShowSidebar(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this warehouse? This action cannot be undone.")) return;
+    
+    try {
+      await inventoryApi.deleteWarehouse(id);
+      toast.success("Warehouse deleted successfully");
+      setWarehouses(prev => prev.filter(w => w.id !== id));
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Failed to delete warehouse");
+    }
+  };
+
+  const filteredWarehouses = warehouses.filter(w => 
+    w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    w.location?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen bg-[#FDFCFD] dark:bg-[#020617] -m-8 font-sans">
-      <div className="p-8 space-y-6">
-        {/* Breadcrumbs & Header */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-[#999] uppercase tracking-widest">
-            <Link href="/" className="hover:text-[#7C3AED]">Azeez</Link>
-            <ChevronRight size={10} />
-            <Link href="/inventory" className="hover:text-[#7C3AED]">Inventory</Link>
-            <ChevronRight size={10} />
-            <span className="text-[#666]">Warehouses</span>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-black text-[#1A1A1A] dark:text-white flex items-center gap-2">
-              Inventory 
+    <div className="flex h-[calc(100vh-100px)] bg-slate-50 dark:bg-[#0b0c14] -m-4 overflow-hidden selection:bg-orange-500/30 selection:text-orange-500 transition-colors">
+      <WarehouseFormSidebar 
+        isOpen={showSidebar}
+        onClose={() => {
+          setShowSidebar(false);
+          setWarehouseToEdit(null);
+        }}
+        warehouseToEdit={warehouseToEdit}
+        onSuccess={(newW) => {
+          if (warehouseToEdit) {
+            setWarehouses(prev => prev.map(w => w.id === newW.id ? newW : w));
+          } else {
+            setWarehouses(prev => [...prev, newW]);
+          }
+        }}
+      />
+
+      <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-white/5">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
+              <Warehouse size={14} className="text-orange-500" />
+              <ChevronRight size={12} />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Inventory</span>
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              Warehouses Directory
             </h1>
+            <p className="text-sm font-medium text-slate-500">Manage your storage locations and distribution centers.</p>
           </div>
+
+          <button 
+            onClick={() => setShowSidebar(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-orange-500/20 active:scale-95"
+          >
+            <Plus size={16} /> Add Location
+          </button>
         </div>
 
-        {/* Primary Tabs */}
-        <div className="flex items-center gap-8 border-b border-[#F0EAF0] dark:border-slate-800">
-          {["All Items", "Warehouses", "Reports & More"].map((tab) => (
-            <button
-               key={tab}
-               onClick={() => setActiveTab(tab)}
-               className={clsx(
-                 "pb-3 text-[13px] font-bold transition-all relative flex items-center gap-2",
-                 activeTab === tab 
-                  ? "text-[#7C3AED]" 
-                  : "text-[#666] dark:text-slate-500 hover:text-[#1A1A1A] dark:hover:text-white"
-               )}
-            >
-              {tab}
-              {tab === "Reports & More" && <ChevronRight size={12} />}
-              {activeTab === tab && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#7C3AED]" />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Section Title & Search */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-4">
-          <h2 className="text-lg font-black text-[#1A1A1A] dark:text-white">Inventory Items in Warehouses</h2>
+        {/* Toolbar */}
+        <div className="flex flex-col md:flex-row items-center gap-4">
+          <div className="flex-1 relative w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input 
+              type="text"
+              placeholder="Search by name or location..."
+              className="w-full bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-xl py-3 pl-10 pr-4 text-xs font-bold outline-none focus:ring-2 ring-orange-500/20 transition-all text-slate-900 dark:text-white"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           
-          <div className="flex items-center gap-3">
-             <button className="flex items-center gap-2 px-4 py-2 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[12px] font-bold text-[#666] hover:bg-slate-50 transition-colors bg-white dark:bg-slate-900 shadow-sm">
-                <Download size={14} />
-                Download CSV
-             </button>
-             <div className="relative group min-w-[300px]">
-                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#999]" />
-                <input 
-                  type="text" 
-                  placeholder="Search Items"
-                  className="w-full pl-10 pr-10 py-2 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[13px] font-medium outline-none focus:border-[#7C3AED] transition-colors bg-white dark:bg-slate-900 shadow-sm"
-                />
-                <ChevronRight size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#999]" />
-             </div>
+          <div className="flex items-center gap-2 p-1 bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-white/5">
+            <button 
+              onClick={() => setViewMode("grid")}
+              className={clsx(
+                "p-2 rounded-lg transition-all",
+                viewMode === "grid" ? "bg-slate-100 dark:bg-white/10 text-orange-600 dark:text-white shadow-sm" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              )}
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button 
+              onClick={() => setViewMode("list")}
+              className={clsx(
+                "p-2 rounded-lg transition-all",
+                viewMode === "list" ? "bg-slate-100 dark:bg-white/10 text-orange-600 dark:text-white shadow-sm" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              )}
+            >
+              <List size={16} />
+            </button>
           </div>
+
+          <button 
+            onClick={fetchWarehouses}
+            className="p-3 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 text-slate-400 hover:text-orange-500 rounded-xl transition-all"
+          >
+            <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
+          </button>
         </div>
 
-        {/* Warehouse Item Table */}
-        <div className="bg-white dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between p-4 border-b border-[#F0EAF0] dark:border-slate-800 bg-[#FAF9FA] dark:bg-slate-800/50">
-             <span className="text-[12px] font-bold text-[#666]">No item Found</span>
-             <button className="flex items-center gap-2 px-3 py-1.5 border border-[#F0EAF0] dark:border-slate-800 rounded-md text-[11px] font-bold text-[#666] hover:bg-slate-50 transition-colors">
-                <Columns size={14} />
-                Show/Hide Columns
-             </button>
+        {/* Content */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4 text-slate-400">
+            <Loader2 size={30} className="animate-spin text-orange-500" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Loading Locations...</p>
           </div>
+        ) : filteredWarehouses.length === 0 ? (
+          <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl p-16 flex flex-col items-center text-center space-y-4">
+            <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-full">
+              <Warehouse size={40} className="text-slate-300" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Locations Found</h3>
+              <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
+                Start by adding your first warehouse or distribution center.
+              </p>
+            </div>
+          </div>
+        ) : viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredWarehouses.map((w) => (
+              <div 
+                key={w.id}
+                className="bg-white dark:bg-slate-900/40 rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-sm hover:shadow-md transition-all group relative"
+              >
+                <div className="absolute top-6 right-6 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => handleEdit(w)}
+                    className="p-1.5 text-slate-400 hover:text-orange-500 transition-colors"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(w.id)}
+                    className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
 
-          <div className="overflow-x-auto min-h-[400px]">
-            <table className="w-full text-left border-collapse min-w-[1500px]">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl text-slate-400 group-hover:text-orange-500 transition-colors">
+                    <Warehouse size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white">{w.name}</h3>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className={clsx(
+                        "w-1.5 h-1.5 rounded-full",
+                        w.type === "MAIN" ? "bg-emerald-500" : "bg-blue-500"
+                      )} />
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">{w.type || "MAIN"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-white/5">
+                  <div className="flex items-start gap-2 text-xs font-medium text-slate-500">
+                    <MapPin size={14} className="text-slate-400 shrink-0 mt-0.5" />
+                    <span>{w.location || "No address provided"}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+            <table className="w-full text-left">
               <thead>
-                <tr className="bg-white dark:bg-slate-900 border-b border-[#F0EAF0] dark:border-slate-800">
-                  <th className="p-4 w-10 sticky left-0 bg-white dark:bg-slate-900 z-10">
-                     <div className="w-4 h-4 rounded border border-[#DDD] dark:border-slate-600" />
-                  </th>
-                  {headers.map((head) => (
-                    <th key={head} className="p-4 text-[11px] font-bold text-[#999] dark:text-slate-500 uppercase tracking-wider">
-                      <div className="flex items-center gap-2 italic">
-                        {head} <ChevronDown size={10} className="inline opacity-40 ml-1" />
-                      </div>
-                    </th>
-                  ))}
+                <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/5">
+                  <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Warehouse</th>
+                  <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Type</th>
+                  <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Location</th>
+                  <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em] text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                   <td colSpan={10} className="py-40">
-                      <div className="flex flex-col items-center justify-center space-y-4">
-                        <div className="w-20 h-20 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center opacity-30">
-                           <div className="w-10 h-8 bg-slate-400 rounded-md" />
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                {filteredWarehouses.map((w) => (
+                  <tr key={w.id} className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-slate-100 dark:bg-white/10 rounded-lg text-slate-400">
+                          <Warehouse size={16} />
                         </div>
-                        <p className="text-[12px] font-black uppercase tracking-widest text-[#999]">No Data</p>
+                        <span className="font-bold text-sm text-slate-900 dark:text-white">{w.name}</span>
                       </div>
-                   </td>
-                </tr>
+                    </td>
+                    <td className="p-4">
+                      <span className="px-2.5 py-1 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-md text-[10px] font-bold uppercase tracking-[0.1em]">
+                        {w.type || "MAIN"}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                        <MapPin size={14} className="text-slate-400" />
+                        {w.location || "N/A"}
+                      </div>
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => handleEdit(w)}
+                          className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-orange-500 transition-colors shadow-sm"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(w.id)}
+                          className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-red-500 transition-colors shadow-sm"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-          
-          <div className="p-4 bg-[#FAF9FA] dark:bg-slate-800/50 border-t border-[#F0EAF0] dark:border-slate-800 text-[12px] font-bold text-[#666]">
-             <span>No item Found</span>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

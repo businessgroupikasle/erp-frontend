@@ -1,0 +1,204 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { 
+  Building2, TrendingUp, RefreshCw, BarChart3, ArrowLeft, 
+  ShoppingBag, IndianRupee, Layers, PieChart
+} from "lucide-react";
+import { dashboardApi } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { 
+  RevenueIntelligence, KPICard 
+} from "@/components/dashboard/DashboardComponents";
+import { Cell, Pie, PieChart as ReChartsPieChart, ResponsiveContainer, Tooltip } from "recharts";
+
+function fmt(n: number) {
+  return "₹" + Math.round(n).toLocaleString("en-IN");
+}
+
+const COLORS = ["#FF6B00", "#8B5CF6", "#10B981", "#3B82F6", "#EC4899"];
+
+export default function FranchiseAnalyticsPage() {
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const monitorId = searchParams.get("id");
+
+  const [summary, setSummary] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState("month");
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const fId = monitorId || undefined;
+      const res = await dashboardApi.getSummary({ franchiseId: fId, period });
+      setSummary(res.data);
+    } catch (e) {
+      console.error("Analytics fetch failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [monitorId, period]);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-8 py-6 px-4 pb-16 animate-in fade-in duration-300">
+      
+      {/* ── Top Header ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <Link href={monitorId ? `/franchise/dashboard?id=${monitorId}` : "/franchise/dashboard"} className="p-3 bg-white dark:bg-card border border-slate-200 dark:border-white/5 rounded-2xl hover:bg-slate-50 transition-all shadow-sm">
+            <ArrowLeft size={16} className="text-slate-600 dark:text-slate-300" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+                Distribution Intelligence Engine
+              </h1>
+              {loading && <RefreshCw size={12} className="text-slate-400 animate-spin ml-2" />}
+            </div>
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-xs mt-0.5">
+              {monitorId ? "Historical Intelligence Monitor" : "Analyze margins, trends, and network performance."}
+            </p>
+          </div>
+        </div>
+
+        <button onClick={fetchAll} className="flex items-center gap-2 bg-white dark:bg-card border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white px-4 py-2.5 rounded-2xl text-xs font-bold shadow-sm hover:bg-slate-50 transition-all">
+          <RefreshCw size={13} /> Sync Analytics
+        </button>
+      </div>
+
+      {/* ── Premium High-Level Metrics ── */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <KPICard 
+          title="Period Sales" 
+          value={fmt(summary?.stats?.totalSales ?? 0)} 
+          trend={summary?.stats?.revenueChangePct ?? "0.0"} 
+          trendType={parseFloat(summary?.stats?.revenueChangePct ?? "0") >= 0 ? "up" : "down"}
+          icon={TrendingUp} 
+          colorClass="emerald"
+          subtext="Total revenue generated"
+          insight="Gross Receipts"
+        />
+        <KPICard 
+          title="Stock Valuation" 
+          value={fmt(summary?.stats?.inventoryValue ?? 0)} 
+          icon={Layers} 
+          colorClass="amber"
+          subtext="Value of finished stock"
+          insight={`${summary?.stats?.inventoryItemCount ?? 0} active lines`}
+        />
+        <KPICard 
+          title="Total Receivables" 
+          value={fmt(summary?.stats?.outstandingAmount ?? 0)} 
+          icon={IndianRupee} 
+          colorClass="rose"
+          subtext="Dealer outstanding credits"
+          insight={`${summary?.stats?.overdueDealersCount ?? 0} overdue dealers`}
+        />
+        <KPICard 
+          title="Period Expenses" 
+          value={fmt(summary?.stats?.expensesToday ?? 0)} 
+          icon={Building2} 
+          colorClass="indigo"
+          subtext="Recorded branch costs"
+          insight="Operational spend"
+        />
+      </div>
+
+      {/* ── Revenue Intelligence Chart ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 min-h-[480px]">
+          <RevenueIntelligence 
+            data={summary?.historicalSales ?? []} 
+            title="Revenue Intelligence" 
+            trend={summary?.stats?.revenueChangePct ?? "0.0"} 
+            period={period} 
+            setPeriod={setPeriod} 
+          />
+        </div>
+
+        {/* Right: Revenue Breakdown & Top Sellers */}
+        <div className="space-y-6 flex flex-col">
+          {/* Pie Chart of Revenue Streams */}
+          <div className="bg-white dark:bg-card border border-slate-200/60 dark:border-white/5 rounded-[2rem] p-6 shadow-sm flex-1 flex flex-col justify-between">
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em] mb-4">
+              Revenue Breakdown
+            </h3>
+            
+            <div className="h-[180px] w-full relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <ReChartsPieChart>
+                  <Pie
+                    data={summary?.revenueBreakdown ?? []}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={75}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {(summary?.revenueBreakdown ?? []).map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => fmt(value)} />
+                </ReChartsPieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Sales</p>
+                <p className="text-lg font-black text-slate-900 dark:text-white leading-none mt-1">
+                  {fmt(summary?.stats?.totalSales ?? 0)}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 mt-4">
+              {(summary?.revenueBreakdown ?? []).map((item: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 font-bold text-slate-600 dark:text-zinc-400">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                    <span>{item.label}</span>
+                  </div>
+                  <span className="font-black text-slate-950 dark:text-white">{fmt(item.value)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Sellers */}
+          <div className="bg-white dark:bg-card border border-slate-200/60 dark:border-white/5 rounded-[2rem] p-6 shadow-sm flex-1">
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em] mb-4">
+              Top Selling Lines
+            </h3>
+
+            <div className="space-y-3">
+              {(summary?.topSellers ?? []).map((prod: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-[#FF6B00] font-black text-xs">
+                      #{idx + 1}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">{prod.name}</p>
+                      <p className="text-[9px] text-slate-400 font-semibold uppercase">{prod.value} units sold</p>
+                    </div>
+                  </div>
+                  <TrendingUp size={14} className="text-emerald-500" />
+                </div>
+              ))}
+              {(summary?.topSellers ?? []).length === 0 && (
+                <p className="text-center py-8 text-slate-400 font-bold uppercase tracking-wider text-[10px]">No sales recorded in this period.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -13,6 +13,7 @@ export interface LineItem {
 }
 
 export interface Vendor {
+  [x: string]: string;
   id: string;
   name: string;
   phone?: string;
@@ -33,6 +34,7 @@ interface PurchaseOrderContextType {
   notes: string;
   setNotes: (notes: string) => void;
   totals: {
+    [x: string]: any;
     subtotal: number;
     totalGst: number;
     total: number;
@@ -43,6 +45,34 @@ interface PurchaseOrderContextType {
   errors: string[];
   isSubmitting: boolean;
   setIsSubmitting: (submitting: boolean) => void;
+  poNumber: string;
+  setPoNumber: (num: string) => void;
+  invoiceNo: string;
+  setInvoiceNo: (num: string) => void;
+  quotationNo: string;
+  setQuotationNo: (num: string) => void;
+  purchaseDate: string;
+  setPurchaseDate: (date: string) => void;
+  dueDate: string;
+  setDueDate: (date: string) => void;
+  expectedDeliveryDate: string;
+  setExpectedDeliveryDate: (date: string) => void;
+  warehouseId: string;
+  setWarehouseId: (id: string) => void;
+  purchaseType: string;
+  setPurchaseType: (type: string) => void;
+  paymentTerms: string;
+  setPaymentTerms: (terms: string) => void;
+  poStatus: string;
+  setPoStatus: (status: string) => void;
+  discountAmount: number;
+  setDiscountAmount: (amount: number) => void;
+  freightCost: number;
+  setFreightCost: (amount: number) => void;
+  internalNotes: string;
+  setInternalNotes: (notes: string) => void;
+  vendorNotes: string;
+  setVendorNotes: (notes: string) => void;
   getVendorPrice: (materialId: string) => number | null;
   autoFilledIds: Set<string>;
   setAutoFilledIds: (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
@@ -61,8 +91,17 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     if (selectedVendor) {
       if (selectedVendor.suppliedMaterials && selectedVendor.suppliedMaterials.length > 0) {
-        // Pre-fill with all materials linked to this vendor
-        const newItems = selectedVendor.suppliedMaterials.map((sm, index) => ({
+        // Deduplicate materials by materialId to prevent repeated rows
+        const uniqueMaterials = [];
+        const seen = new Set();
+        for (const sm of selectedVendor.suppliedMaterials) {
+          if (!seen.has(sm.materialId)) {
+            seen.add(sm.materialId);
+            uniqueMaterials.push(sm);
+          }
+        }
+
+        const newItems = uniqueMaterials.map((sm, index) => ({
           id: (index + 1).toString(),
           materialId: sm.materialId,
           name: sm.name || "Unknown Material",
@@ -84,6 +123,30 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
   const [useAdvance, setUseAdvance] = useState(false);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [poNumber, setPoNumber] = useState("A00001");
+  const [invoiceNo, setInvoiceNo] = useState("");
+  const [quotationNo, setQuotationNo] = useState("");
+  const [purchaseDate, setPurchaseDate] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
+  const [warehouseId, setWarehouseId] = useState("");
+  const [purchaseType, setPurchaseType] = useState("RAW_MATERIAL");
+  const [paymentTerms, setPaymentTerms] = useState("NET_30");
+  const [poStatus, setPoStatus] = useState("DRAFT");
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [freightCost, setFreightCost] = useState(0);
+  const [internalNotes, setInternalNotes] = useState("");
+  const [vendorNotes, setVendorNotes] = useState("");
+
+  // Initialize dates on mount to avoid hydration mismatch
+  useEffect(() => {
+    const today = new Date();
+    setPurchaseDate(today.toISOString().split('T')[0]);
+    
+    const due = new Date();
+    due.setDate(due.getDate() + 15);
+    setDueDate(due.toISOString().split('T')[0]);
+  }, []);
 
   const addItem = () => {
     setItems(prev => [
@@ -115,23 +178,36 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
   const totals = useMemo(() => {
     const subtotal = items.reduce((acc, item) => acc + (item.quantity * item.price), 0);
     const totalGst = items.reduce((acc, item) => acc + (item.quantity * item.price * (item.gstRate / 100)), 0);
-    const total = subtotal + totalGst;
     
+    // CGST/SGST vs IGST split (simplified logic for now)
+    const cgst = totalGst / 2;
+    const sgst = totalGst / 2;
+    
+    const grandTotal = subtotal + totalGst - discountAmount + freightCost;
+    const roundoff = Math.round(grandTotal) - grandTotal;
+    const finalTotal = grandTotal + roundoff;
+
     let appliedAdvance = 0;
     if (useAdvance && selectedVendor && selectedVendor.advanceBalance > 0) {
-      appliedAdvance = Math.min(selectedVendor.advanceBalance, total);
+      appliedAdvance = Math.min(selectedVendor.advanceBalance, finalTotal);
     }
     
-    const balanceDue = total - appliedAdvance;
+    const balanceDue = finalTotal - appliedAdvance;
     
     return {
       subtotal,
       totalGst,
-      total,
+      cgst,
+      sgst,
+      igst: 0, // Placeholder
+      discountAmount,
+      freightCost,
+      roundoff,
+      total: finalTotal,
       appliedAdvance,
       balanceDue
     };
-  }, [items, useAdvance, selectedVendor]);
+  }, [items, useAdvance, selectedVendor, discountAmount, freightCost]);
 
   const errors = useMemo(() => {
     const errs: string[] = [];
@@ -163,6 +239,34 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
       errors,
       isSubmitting,
       setIsSubmitting,
+      poNumber,
+      setPoNumber,
+      invoiceNo,
+      setInvoiceNo,
+      quotationNo,
+      setQuotationNo,
+      purchaseDate,
+      setPurchaseDate,
+      dueDate,
+      setDueDate,
+      expectedDeliveryDate,
+      setExpectedDeliveryDate,
+      warehouseId,
+      setWarehouseId,
+      purchaseType,
+      setPurchaseType,
+      paymentTerms,
+      setPaymentTerms,
+      poStatus,
+      setPoStatus,
+      discountAmount,
+      setDiscountAmount,
+      freightCost,
+      setFreightCost,
+      internalNotes,
+      setInternalNotes,
+      vendorNotes,
+      setVendorNotes,
       getVendorPrice,
       autoFilledIds,
       setAutoFilledIds,

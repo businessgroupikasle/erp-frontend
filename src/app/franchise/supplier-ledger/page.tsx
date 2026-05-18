@@ -52,12 +52,8 @@ export default function SupplierLedgerPage() {
           api.get(`/api/accounting/ledger-summary?franchiseId=${user.franchiseId}`)
         ]);
         setFranchiseData(frRes.data);
-        // Mocking some transactions if real ones aren't available for the demo
-        setTransactions(transRes.data?.transactions || [
-          { id: "1", type: "CREDIT", amount: 50000, description: "Opening Balance / Credit Limit", date: new Date().toISOString(), status: "COMPLETED" },
-          { id: "2", type: "DEBIT", amount: 15000, description: "Product Order #ORD-2024-001", date: new Date().toISOString(), reference: "ORD-2024-001", status: "COMPLETED" },
-          { id: "3", type: "CREDIT", amount: 10000, description: "Payment to HQ - Bank Transfer", date: new Date().toISOString(), status: "SUCCESS" },
-        ]);
+        setLedger(transRes.data);
+        setTransactions(transRes.data?.transactions || []);
       }
     } catch (error) {
       toast.error("Failed to fetch ledger data");
@@ -121,7 +117,7 @@ export default function SupplierLedgerPage() {
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recent Payments</p>
-              <p className="text-2xl font-black text-slate-900 dark:text-white">₹1,24,000</p>
+              <p className="text-2xl font-black text-slate-900 dark:text-white">₹{(ledger?.expenses?.paid || 0).toLocaleString()}</p>
             </div>
           </div>
           <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -129,7 +125,7 @@ export default function SupplierLedgerPage() {
           </div>
           <p className="text-[10px] font-bold text-slate-500 mt-3 flex items-center gap-1.5">
             <CheckCircle2Icon size={12} className="text-emerald-500" />
-            Last payment: ₹10,000 cleared 2 days ago
+            Total payments made this period
           </p>
         </div>
 
@@ -140,12 +136,14 @@ export default function SupplierLedgerPage() {
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unpaid Invoices</p>
-              <p className="text-2xl font-black text-slate-900 dark:text-white">04</p>
+              <p className="text-2xl font-black text-slate-900 dark:text-white">
+                {(ledger?.invoices?.due || 0) > 0 ? (ledger?.invoices?.due || 0).toLocaleString() : '0'}
+              </p>
             </div>
           </div>
           <p className="text-[10px] font-bold text-slate-500 flex items-center gap-1.5">
             <ClockIcon size={12} className="text-orange-500" />
-            Next due date: 24th May 2024
+            Pending dues to be cleared
           </p>
           <button className="mt-6 text-orange-500 text-[10px] font-black uppercase tracking-widest hover:underline text-left">
             View Invoice History →
