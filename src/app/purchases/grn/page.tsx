@@ -395,7 +395,6 @@ export default function GRNPage() {
                 </div>
               </div> */}
           </div>
-          </div>
       ) : (
       /* --- STEP 2: VERIFY QUANTITIES --- */
       <div className="space-y-8 animate-in slide-in-from-right-4 duration-500">

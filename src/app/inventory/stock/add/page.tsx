@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { 
-  ArrowLeft, Save, Info, X,
-  Sparkles, ChevronDown, 
+import { useState, useEffect, useMemo } from "react";
+import {
+  ArrowLeft, Save, X,
+  ChevronDown,
   AlertCircle, CheckCircle2,
-  Layers, Package, Scale, Lock,
-  Database, Tag, LayoutGrid,
-  RefreshCw,
-  Plus
+  Scale, Tag, LayoutGrid,
+  RefreshCw, Plus, Percent,
+  Coins, Calendar, Search, Barcode, Globe
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,7 +15,7 @@ import { rawMaterialsApi, franchiseApi, vendorsApi } from "@/lib/api";
 import { ITEM_CATEGORIES, UNITS } from "@/lib/constants";
 import { clsx } from "clsx";
 import { useAuth } from "@/context/AuthContext";
-import { generateSKU } from "@/lib/utils/erp";
+import Fuse from "fuse.js";
 
 export default function AddItemPage() {
   const router = useRouter();
@@ -25,29 +24,156 @@ export default function AddItemPage() {
   const [vendors, setVendors] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sourceType, setSourceType] = useState<"VENDOR" | "DIRECT">("DIRECT");
-  const [directAllocate, setDirectAllocate] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"specs" | "opening">("specs");
 
-  const [form, setForm] = useState({
-    name: "",
-    sku: "",
-    unit: "kg",
-    minimumStock: 10,
-    category: "RAW_MATERIAL",
-    hsnCode: "",
-    gstRate: 5,
-    vendorId: "",
-    initialStock: 0,
-    franchiseId: "hq-001",
-    costPrice: 0,
-    basePrice: 0
+  // Core product details
+  const [name, setName] = useState("");
+  const [itemCode, setItemCode] = useState("");
+  const [hsnCode, setHsnCode] = useState("");
+  const [category, setCategory] = useState("RAW_MATERIAL");
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryInput, setNewCategoryInput] = useState("");
+  const [showHsnSearch, setShowHsnSearch] = useState(false);
+  const [hsnSearchQuery, setHsnSearchQuery] = useState("");
+  const [hsnList, setHsnList] = useState<Array<{ hsn: string; description: string }>>([]);
+  const [loadingHsn, setLoadingHsn] = useState(false);
+
+  // Dynamic loading of the comprehensive HSN database on modal open
+  useEffect(() => {
+    if (showHsnSearch && hsnList.length === 0) {
+      setLoadingHsn(true);
+      import("@/lib/data/hsn_all.json")
+        .then((module) => {
+          setHsnList(module.default);
+          setLoadingHsn(false);
+        })
+        .catch((err) => {
+          console.error("Failed to load HSN master database", err);
+          setLoadingHsn(false);
+        });
+    }
+  }, [showHsnSearch, hsnList.length]);
+
+  // Initialize Fuse.js for high-fidelity fuzzy searches
+  const fuse = useMemo(() => {
+    if (hsnList.length === 0) return null;
+    return new Fuse(hsnList, {
+      keys: ["hsn", "description"],
+      threshold: 0.3,
+      minMatchCharLength: 2,
+    });
+  }, [hsnList]);
+
+  // Compute fuzzy search and code-prefix matches combined
+  const filteredHsnResults = useMemo(() => {
+    if (!hsnSearchQuery.trim()) {
+      // Popular standard HSN codes to display initially
+      const popularCodes = ["190190", "210690", "110100", "110290", "150910", "200190", "090411", "090420", "090910", "230990", "481190", "392329", "999999"];
+      return hsnList.filter(item => popularCodes.includes(item.hsn));
+    }
+
+    const query = hsnSearchQuery.trim().toLowerCase();
+
+    // 1. Chapter/prefix direct matching (starts-with)
+    const prefixMatches = hsnList.filter(item => item.hsn.startsWith(query));
+
+    // 2. Fuzzy match using Fuse.js
+    if (!fuse) return prefixMatches.slice(0, 100);
+    const fuzzyResults = fuse.search(query).map(r => r.item);
+
+    // Merge and deduplicate
+    const merged = [...prefixMatches];
+    const seen = new Set(merged.map(item => item.hsn));
+    for (const item of fuzzyResults) {
+      if (!seen.has(item.hsn)) {
+        merged.push(item);
+        seen.add(item.hsn);
+      }
+    }
+
+    return merged.slice(0, 100);
+  }, [hsnSearchQuery, hsnList, fuse]);
+
+  // UOM Quantity settings
+  const [primaryUnit, setPrimaryUnit] = useState("kg");
+  const [secondaryUnit, setSecondaryUnit] = useState("box");
+  const [conversionRatio, setConversionRatio] = useState(10); // e.g. 1 Box = 10 KG
+
+  // Tax brackets
+  const [gstRate, setGstRate] = useState(18); // Default 18%
+  const [customGstInput, setCustomGstInput] = useState(""); // custom GST text input value
+
+  // Discount options
+  const [discountType, setDiscountType] = useState<"PERCENT" | "VALUE">("PERCENT");
+  const [discountValue, setDiscountValue] = useState(0);
+
+  // Pricing models - Track both "Without Tax" and "With Tax" versions!
+  const [prices, setPrices] = useState({
+    purchasePrice: 0,
+    purchasePriceWithTax: 0,
+    sellingPrice: 0,
+    sellingPriceWithTax: 0,
+    franchisePrice: 0,
+    franchisePriceWithTax: 0,
+    dealerPrice: 0,
+    dealerPriceWithTax: 0,
+    customerPrice: 0,
+    customerPriceWithTax: 0,
+    customModeName: "Amazon",
+    customModePrice: 0,
+    customModePriceWithTax: 0,
   });
+
+  // Dynamic Custom Channels State for multi-card option
+  const [customChannels, setCustomChannels] = useState<Array<{
+    id: string;
+    name: string;
+    price: number;
+    priceWithTax: number;
+  }>>([
+    { id: "1", name: "Amazon", price: 0, priceWithTax: 0 }
+  ]);
+
+  // Dynamic double-way calculator for custom channels
+  const handleCustomChannelChange = (index: number, field: "name" | "price" | "priceWithTax", value: any) => {
+    setCustomChannels(prev => {
+      const updated = [...prev];
+      const channel = { ...updated[index] };
+      const factor = 1 + gstRate / 100;
+      
+      if (field === "name") {
+        channel.name = value;
+      } else if (field === "price") {
+        channel.price = value;
+        channel.priceWithTax = Math.round(value * factor * 100) / 100;
+      } else if (field === "priceWithTax") {
+        channel.priceWithTax = value;
+        channel.price = Math.round((value / factor) * 100) / 100;
+      }
+      
+      updated[index] = channel;
+      return updated;
+    });
+  };
+
+  // Parallel Tab: Opening stock setup
+  const [openingStock, setOpeningStock] = useState(0);
+  const [openingDate, setOpeningDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  });
+  const [openingPurchasePrice, setOpeningPurchasePrice] = useState(0);
+  const [openingPurchasePriceWithTax, setOpeningPurchasePriceWithTax] = useState(0);
+  const [minimumStock, setMinimumStock] = useState<string | number>("5");
+  const [itemLocation, setItemLocation] = useState("");
 
   const [size, setSize] = useState("1KG");
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [customValue, setCustomValue] = useState("");
-  const [customUnit, setCustomUnit] = useState("KG");
 
+  // Fetch initial dependencies
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -55,7 +181,7 @@ export default function AddItemPage() {
           franchiseApi.getAll().catch(() => ({ data: [] })),
           vendorsApi.getAll().catch(() => ({ data: [] }))
         ]);
-        setFranchises((fRes.data || []).filter((f: any) => 
+        setFranchises((fRes.data || []).filter((f: any) =>
           !f.name.toUpperCase().includes("HEADQUARTERS") && f.id !== "hq-001"
         ));
         setVendors(vRes.data || []);
@@ -66,290 +192,1095 @@ export default function AddItemPage() {
     fetchData();
   }, []);
 
+  // Handle Dynamic Double-Way Tax Calculations when GST Rate changes
   useEffect(() => {
-    const sku = generateSKU(form.category, form.name, size);
-    setForm(f => ({ ...f, sku }));
-  }, [form.category, form.name, size]);
+    setPrices(prev => {
+      const factor = 1 + gstRate / 100;
+      return {
+        ...prev,
+        purchasePriceWithTax: Math.round(prev.purchasePrice * factor * 100) / 100,
+        sellingPriceWithTax: Math.round(prev.sellingPrice * factor * 100) / 100,
+        franchisePriceWithTax: Math.round(prev.franchisePrice * factor * 100) / 100,
+        dealerPriceWithTax: Math.round(prev.dealerPrice * factor * 100) / 100,
+        customerPriceWithTax: Math.round(prev.customerPrice * factor * 100) / 100,
+        customModePriceWithTax: Math.round(prev.customModePrice * factor * 100) / 100,
+      };
+    });
+    setCustomChannels(prev => {
+      const factor = 1 + gstRate / 100;
+      return prev.map(ch => ({
+        ...ch,
+        priceWithTax: Math.round(ch.price * factor * 100) / 100
+      }));
+    });
+    setOpeningPurchasePriceWithTax(prev => {
+      const factor = 1 + gstRate / 100;
+      return Math.round(openingPurchasePrice * factor * 100) / 100;
+    });
+  }, [gstRate]);
+
+  // Double-Way Calculation Handlers for Price changes
+  const handlePriceChange = (field: keyof typeof prices, value: number, isWithTax: boolean) => {
+    const factor = 1 + gstRate / 100;
+
+    setPrices(prev => {
+      const updated = { ...prev };
+      if (isWithTax) {
+        updated[`${field}WithTax` as keyof typeof prices] = value as never;
+        const cleanField = field.replace("WithTax", "") as keyof typeof prices;
+        updated[cleanField] = Math.round((value / factor) * 100) / 100 as never;
+      } else {
+        updated[field] = value as never;
+        const taxField = `${field}WithTax` as keyof typeof prices;
+        updated[taxField] = Math.round(value * factor * 100) / 100 as never;
+      }
+      return updated;
+    });
+  };
+
+  // Helper for Opening stock price calculations
+  const handleOpeningPriceChange = (value: number, isWithTax: boolean) => {
+    const factor = 1 + gstRate / 100;
+    if (isWithTax) {
+      setOpeningPurchasePriceWithTax(value);
+      setOpeningPurchasePrice(Math.round((value / factor) * 100) / 100);
+    } else {
+      setOpeningPurchasePrice(value);
+      setOpeningPurchasePriceWithTax(Math.round(value * factor * 100) / 100);
+    }
+  };
+
+  // Calculate final discounted selling prices
+  const discountAmount = discountType === "PERCENT"
+    ? (prices.sellingPrice * (discountValue / 100))
+    : discountValue;
+
+  const discountedSellingPrice = Math.max(0, prices.sellingPrice - discountAmount);
+  const discountedSellingPriceWithTax = Math.round(discountedSellingPrice * (1 + gstRate / 100) * 100) / 100;
 
   const handleSave = async () => {
-    if (!form.name || !form.sku) {
-      setError("Please provide Item Name and SKU.");
+    if (!name) {
+      setError("Please provide an Item Name.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     setSaving(true);
     setError(null);
+    setSuccess(null);
+
+    // Prepare payload
+    const payload = {
+      name,
+      sku: itemCode || name.toUpperCase().replace(/\s+/g, "-").slice(0, 20),
+      unit: primaryUnit,
+      category,
+      hsnCode,
+      gstRate,
+      minimumStock: Number(minimumStock) || 0,
+      initialStock: Number(openingStock) || 0,
+      franchiseId: "hq-001",
+      costPrice: prices.purchasePrice,
+      basePrice: discountedSellingPrice,
+      secondaryUnit,
+      conversionRatio,
+      discountType,
+      discountValue,
+      franchisePrice: prices.franchisePrice,
+      dealerPrice: prices.dealerPrice,
+      customerPrice: prices.customerPrice,
+      customModeName: customChannels[0]?.name || "",
+      customModePrice: customChannels[0]?.price || 0,
+      openingStockDate: openingDate,
+      openingPurchasePrice: openingPurchasePrice,
+      binLocation: itemLocation,
+    };
+
     try {
-      await rawMaterialsApi.create({
-        ...form,
-        vendorId: sourceType === "VENDOR" ? form.vendorId : null,
-      });
-      router.push("/inventory/stock");
+      await rawMaterialsApi.create(payload);
+      setSuccess("Inventory Product Master successfully registered!");
+      setTimeout(() => {
+        router.push("/inventory/stock");
+      }, 1500);
     } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to create item.");
+      setError(e.response?.data?.error || e.message || "Failed to finalize product registration.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
+    <div className="max-w-6xl mx-auto pb-24 px-4 sm:px-6">
+      {/* Hide native browser spinners for number inputs to prevent overlapping with custom overlays */}
+      <style>{`
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type="number"] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
+
+      {/* Strategic Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6 border-b border-slate-100 dark:border-white/5 pb-6 animate-in fade-in duration-300">
         <div className="space-y-1">
-          <div className="flex items-center gap-4 mb-2">
-            <Link href="/inventory/stock" className="p-3 rounded-2xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-gray-500 hover:text-orange-500 transition-all shadow-xl">
-              <ArrowLeft size={22} />
+          <div className="flex items-center gap-3">
+            <Link href="/inventory/stock" className="p-2 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-orange-500 hover:border-orange-200 transition-all shadow-sm active:scale-95">
+              <ArrowLeft size={16} />
             </Link>
-            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">
-              Create <span className="text-orange-500">Item Master</span>
-            </h1>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">
+                Add <span className="text-orange-600">Inventory Product</span>
+              </h1>
+              <p className="text-[10px] sm:text-xs text-slate-400 font-medium tracking-wide mt-0.5 uppercase flex items-center gap-1.5">
+                <Tag size={12} className="text-orange-500" />
+                Comprehensive Pricing, Tax & Stock Intelligence Center
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-slate-500 font-bold ml-16 flex items-center gap-2">
-            <Tag size={14} className="text-orange-500" />
-            Defining product specifications & inventory rules.
-          </p>
         </div>
-        <div className="flex gap-4 invisible pointer-events-none">
-          {/* Moved to bottom */}
+
+        {/* Dynamic Navigation Parallel Tabs */}
+        <div className="flex border-b border-slate-200 dark:border-white/10 w-full md:w-80">
+          <button 
+            type="button"
+            onClick={() => setActiveTab("specs")} 
+            className={clsx(
+              "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 outline-none",
+              activeTab === "specs" 
+                ? "border-rose-500 text-rose-600 dark:text-rose-400 font-extrabold" 
+                : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            )}
+          >
+            Pricing
+          </button>
+          <button 
+            type="button"
+            onClick={() => setActiveTab("opening")} 
+            className={clsx(
+              "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 outline-none",
+              activeTab === "opening" 
+                ? "border-rose-500 text-rose-600 dark:text-rose-400 font-extrabold" 
+                : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            )}
+          >
+            Stock
+          </button>
         </div>
       </div>
 
       {error && (
-        <div className="mb-8 p-6 rounded-3xl bg-red-50 border border-red-100 flex items-center gap-4 text-red-600 text-sm font-bold animate-in zoom-in-95">
-          <AlertCircle size={20} />
-          {error}
+        <div className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 flex items-center gap-3 text-red-600 dark:text-red-400 text-xs font-bold animate-in zoom-in-95">
+          <AlertCircle size={16} className="shrink-0" />
+          <div>{error}</div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white dark:bg-card rounded-[3rem] border border-gray-100 dark:border-white/5 p-10 shadow-2xl relative overflow-hidden">
-            <div className="flex items-center justify-between mb-10">
-              <div className="flex items-center gap-3 text-slate-400">
-                <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-900 dark:text-white"><LayoutGrid size={20} /></div>
-                <h2 className="text-[11px] font-black uppercase tracking-[0.3em]">Identity & Variants</h2>
-              </div>
-              <div className="flex p-1.5 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10">
-                <button onClick={() => setSourceType("DIRECT")} className={clsx("px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", sourceType === "DIRECT" ? "bg-white dark:bg-slate-800 text-blue-600 shadow-xl" : "text-slate-400")}>Internal/Production</button>
-                <button onClick={() => setSourceType("VENDOR")} className={clsx("px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", sourceType === "VENDOR" ? "bg-white dark:bg-slate-800 text-indigo-600 shadow-xl" : "text-slate-400")}>External Vendor</button>
-              </div>
-            </div>
+      {success && (
+        <div className="mb-6 p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 flex items-center gap-3 text-emerald-700 dark:text-emerald-400 text-xs font-bold animate-in zoom-in-95">
+          <CheckCircle2 size={16} className="shrink-0" />
+          <div>{success}</div>
+        </div>
+      )}
 
-            <div className="space-y-8">
-               <div className="space-y-3">
-                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">Official Item Name *</label>
-                  <input 
-                    placeholder="e.g. Idly Batter" 
-                    value={form.name}
-                    onChange={e => setForm({...form, name: e.target.value})}
-                    className="w-full px-8 py-5 text-lg font-black bg-slate-50 dark:bg-white/5 border-2 border-transparent focus:border-slate-900/10 rounded-[2rem] outline-none dark:text-white transition-all"
-                  />
-               </div>
+      {/* Main Container */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Left Hand: Config Tabs */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* TAB 1: Product Specifications & pricing models */}
+          {activeTab === "specs" && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              
+              {/* General Identity */}
+              <div className="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-white/5 p-6 shadow-md space-y-6">
+                <div className="flex items-center gap-2 border-b border-slate-100 dark:border-white/5 pb-4">
+                  <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-500"><LayoutGrid size={16} /></div>
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200">Identity Details</h2>
+                    <p className="text-xs text-slate-400">Classify product within master ledger</p>
+                  </div>
+                </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">Item Category</label>
-                    <div className="relative">
-                       <select 
-                         value={form.category} 
-                         onChange={e => {
-                           const cat = e.target.value;
-                           setForm({
-                             ...form, 
-                             category: cat,
-                             unit: cat === 'FINISHED_GOOD' ? 'pkt' : 'kg'
-                           });
-                         }} 
-                         className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-8 py-5 text-sm font-black focus:ring-4 ring-slate-900/5 dark:text-white"
-                       >
-                          {ITEM_CATEGORIES.map(c => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
-                       </select>
-                       <ChevronDown size={20} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <div className="space-y-4">
+                  {/* Item Name */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Item Name *</label>
+                    <input
+                      placeholder="e.g. Batter Dosa"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-slate-800 dark:text-white transition-all text-sm font-semibold"
+                    />
+                  </div>
+
+                  {/* Item Code / Barcode */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Item Code / Barcode</label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          placeholder="Enter item code or scan barcode"
+                          value={itemCode}
+                          onChange={e => setItemCode(e.target.value)}
+                          className="w-full pl-3 pr-10 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-slate-800 dark:text-white transition-all text-xs font-semibold"
+                        />
+                        <Barcode size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const code = "ITM-" + Math.random().toString(36).toUpperCase().slice(2, 8);
+                          setItemCode(code);
+                        }}
+                        className="px-3 py-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-slate-800 rounded-lg text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:border-orange-400 hover:text-orange-600 transition-all whitespace-nowrap"
+                      >
+                        Assign Code
+                      </button>
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">Base Unit (UOM)</label>
-                    <div className="relative">
-                       <select 
-                         value={form.unit} 
-                         onChange={e => setForm({...form, unit: e.target.value})} 
-                         className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-8 py-5 text-sm font-black focus:ring-4 ring-slate-900/5 dark:text-white"
-                       >
-                          {form.category === "FINISHED_GOOD" ? (
-                            <>
-                              <option value="pkt">PKT (Packet)</option>
-                              <option value="pc">PCS (Piece)</option>
-                              <option value="box">BOX</option>
-                              <option value="kg">KG (Bulk Weight)</option>
-                            </>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Item Category */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Item Category</label>
+                      {showAddCategory ? (
+                        <div className="flex gap-2">
+                          <input
+                            autoFocus
+                            placeholder="New category name"
+                            value={newCategoryInput}
+                            onChange={e => setNewCategoryInput(e.target.value.toUpperCase())}
+                            className="flex-1 px-3 py-2 text-xs font-semibold bg-white dark:bg-slate-900 border border-orange-400 rounded-lg outline-none text-slate-800 dark:text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (newCategoryInput.trim()) {
+                                const key = newCategoryInput.trim().replace(/\s+/g, "_");
+                                setCustomCategories(prev => [...prev, key]);
+                                setCategory(key);
+                              }
+                              setShowAddCategory(false);
+                              setNewCategoryInput("");
+                            }}
+                            className="px-3 py-2 bg-orange-500 text-white rounded-lg text-[10px] font-bold"
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowAddCategory(false); setNewCategoryInput(""); }}
+                            className="px-2 py-2 bg-slate-100 dark:bg-white/5 rounded-lg text-slate-400"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <select
+                              value={category}
+                              onChange={e => setCategory(e.target.value)}
+                              className="w-full appearance-none border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-xs font-semibold bg-white dark:bg-slate-900 dark:text-white outline-none focus:border-orange-500 cursor-pointer"
+                            >
+                              {[...ITEM_CATEGORIES, ...customCategories].map(c => (
+                                <option key={c} value={c} className="dark:bg-slate-950">{c.replace(/_/g, " ")}</option>
+                              ))}
+                            </select>
+                            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddCategory(true)}
+                            className="px-3 py-2 bg-slate-100 dark:bg-white/5 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg text-[10px] font-bold text-slate-500 hover:text-orange-600 hover:border-orange-400 transition-all whitespace-nowrap flex items-center gap-1"
+                          >
+                            <Plus size={11} /> New
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* HSN / SAC Code */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">HSN / SAC Code</label>
+                      <div className="flex gap-2">
+                        <input
+                          placeholder="e.g. 190190"
+                          value={hsnCode}
+                          onChange={e => setHsnCode(e.target.value)}
+                          className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-slate-800 dark:text-white transition-all font-semibold"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowHsnSearch(true)}
+                          className="px-3 py-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-500 hover:text-orange-600 hover:border-orange-400 transition-all"
+                          title="Search HSN Code"
+                        >
+                          <Search size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* HSN Search Modal */}
+                  {showHsnSearch && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+                      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md mx-4 p-5 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Search HSN / SAC Code</h3>
+                          <button type="button" onClick={() => { setShowHsnSearch(false); setHsnSearchQuery(""); }} className="text-slate-400 hover:text-slate-600">
+                            <X size={16} />
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            autoFocus
+                            placeholder="Search by description or code..."
+                            value={hsnSearchQuery}
+                            onChange={e => setHsnSearchQuery(e.target.value)}
+                            className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-orange-500 bg-slate-50 dark:bg-slate-800 dark:text-white font-semibold"
+                          />
+                        </div>
+                        <div className="max-h-64 overflow-y-auto space-y-1 divide-y divide-slate-50 dark:divide-white/5">
+                          {loadingHsn ? (
+                            <div className="flex flex-col items-center justify-center py-8 text-slate-400 space-y-2">
+                              <RefreshCw size={24} className="animate-spin text-orange-500" />
+                              <span className="text-xs font-medium uppercase tracking-wider">Loading HSN Database...</span>
+                            </div>
+                          ) : filteredHsnResults.length === 0 ? (
+                            <div className="text-center py-8 text-xs font-medium text-slate-400">
+                              No matching HSN codes found
+                            </div>
                           ) : (
-                            UNITS.map(u => <option key={u} value={u}>{u.toUpperCase()}</option>)
+                            filteredHsnResults.map(h => (
+                              <button
+                                key={h.hsn}
+                                type="button"
+                                onClick={() => {
+                                  setHsnCode(h.hsn);
+                                  setShowHsnSearch(false);
+                                  setHsnSearchQuery("");
+                                }}
+                                className="w-full flex items-center justify-between gap-4 px-3 py-2.5 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-lg transition-all text-left group"
+                              >
+                                <span className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">{h.description}</span>
+                                <span className="text-xs font-bold text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-2 py-0.5 rounded shrink-0">{h.hsn}</span>
+                              </button>
+                            ))
                           )}
-                       </select>
-                       <ChevronDown size={20} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-               </div>
+                  )}
 
-               {form.category === "FINISHED_GOOD" && (
-                 <div className="p-6 bg-blue-50 dark:bg-blue-500/5 rounded-[2.5rem] border border-blue-100 dark:border-blue-500/10 flex items-center justify-between animate-in slide-in-from-top-2 duration-500">
-                    <div>
-                       <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Stock Tracking Logic</p>
-                       <p className="text-xs font-bold text-slate-600 dark:text-slate-300">You are tracking this product in <span className="text-blue-600 uppercase">{form.unit}s</span>. Each unit contains <span className="text-blue-600">{size}</span> of product.</p>
-                    </div>
-                    <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500"><Package size={24} /></div>
-                 </div>
-               )}
-
-               <div className="space-y-3 pt-6 border-t border-slate-50 dark:border-white/5">
-                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">Available Pack Variants</label>
-                  <div className="flex flex-wrap gap-3">
-                     {["1KG", "500G", "250G", "100G"].map(s => (
-                       <button 
-                         key={s} 
-                         type="button" 
-                         onClick={() => {
+                  <div className="space-y-2 pt-2 border-t border-slate-50 dark:border-white/5">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Product Weight Variants</label>
+                    <div className="flex flex-wrap gap-2">
+                      {["1KG", "500G", "250G", "100G"].map(s => (
+                        <button 
+                          key={s} 
+                          type="button" 
+                          onClick={() => {
                             setSize(s);
                             setIsCustomMode(false);
-                         }} 
-                         className={clsx("px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all", 
-                           size === s && !isCustomMode ? "bg-slate-900 text-white shadow-xl scale-105" : "bg-slate-50 dark:bg-white/5 text-slate-400"
-                         )}
-                       >
-                         {s}
-                       </button>
-                     ))}
-                     
-                     <div className="flex items-center gap-2">
-                        {isCustomMode ? (
-                          <div className="flex items-center bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden animate-in slide-in-from-right-4">
-                             <input 
-                               autoFocus
-                               placeholder="e.g. 2KG" 
-                               value={customValue}
-                               onChange={e => {
-                                  const val = e.target.value.toUpperCase();
-                                  setCustomValue(val);
-                                  setSize(val);
-                               }}
-                               className="bg-transparent px-6 py-4 text-[10px] font-black uppercase outline-none w-32 dark:text-white"
-                             />
-                             <button onClick={() => setIsCustomMode(false)} className="px-4 py-4 bg-slate-200 dark:bg-slate-800 text-slate-600"><X size={14} /></button>
-                          </div>
-                        ) : (
-                          <button 
-                            type="button" 
-                            onClick={() => setIsCustomMode(true)}
-                            className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-dashed border-slate-300 dark:border-white/10 text-slate-400 hover:text-slate-900 transition-all"
-                          >
-                             <Plus size={20} />
-                          </button>
-                        )}
-                     </div>
+                          }} 
+                          className={clsx("px-4 py-2 rounded-lg text-xs font-bold transition-all border", 
+                            size === s && !isCustomMode 
+                              ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white shadow-sm scale-105" 
+                              : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-slate-800 text-slate-400"
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                      {isCustomMode ? (
+                        <div className="flex items-center bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden animate-in slide-in-from-right-4">
+                          <input 
+                            autoFocus
+                            placeholder="e.g. 5KG" 
+                            value={customValue}
+                            onChange={e => {
+                              const val = e.target.value.toUpperCase();
+                              setCustomValue(val);
+                              setSize(val);
+                            }}
+                            className="bg-transparent px-3 py-1.5 text-xs font-bold uppercase outline-none w-20 dark:text-white"
+                          />
+                          <button type="button" onClick={() => setIsCustomMode(false)} className="px-2 py-2 bg-slate-200 dark:bg-slate-800 text-slate-500"><X size={10} /></button>
+                        </div>
+                      ) : (
+                        <button 
+                          type="button" 
+                          onClick={() => setIsCustomMode(true)}
+                          className="p-2 rounded-lg bg-slate-50 dark:bg-white/5 border border-dashed border-slate-300 dark:border-slate-800 text-slate-400 hover:text-slate-900 hover:border-slate-400 transition-all"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-               </div>
+                </div>
+              </div>
+
+              {/* UOM Setup */}
+              <div className="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-white/5 p-6 shadow-md space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-100 dark:border-white/5 pb-3">
+                  <Scale size={16} className="text-orange-500" />
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Stocking Units (UOM)</span>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Primary Unit</label>
+                    <div className="relative">
+                      <select 
+                        value={primaryUnit} 
+                        onChange={e => setPrimaryUnit(e.target.value)}
+                        className="w-full appearance-none border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-xs font-semibold bg-white dark:bg-slate-900 dark:text-white outline-none focus:border-orange-500 cursor-pointer"
+                      >
+                        {UNITS.map(u => <option key={u} value={u} className="dark:bg-slate-950">{u.toUpperCase()}</option>)}
+                      </select>
+                      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Secondary Unit (Bulk)</label>
+                    <div className="relative">
+                      <select 
+                        value={secondaryUnit} 
+                        onChange={e => setSecondaryUnit(e.target.value)}
+                        className="w-full appearance-none border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-xs font-semibold bg-white dark:bg-slate-900 dark:text-white outline-none focus:border-orange-500 cursor-pointer"
+                      >
+                        <option value="box" className="dark:bg-slate-950">BOX</option>
+                        <option value="bag" className="dark:bg-slate-950">BAG</option>
+                        <option value="dozen" className="dark:bg-slate-950">DOZEN</option>
+                        <option value="carton" className="dark:bg-slate-950">CARTON</option>
+                        <option value="packet" className="dark:bg-slate-950">PACKET</option>
+                      </select>
+                      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Conversion Ratio</label>
+                    <div className="relative">
+                      <input 
+                        type="number"
+                        value={conversionRatio}
+                        onChange={e => setConversionRatio(Math.max(1, Number(e.target.value) || 0))}
+                        className="w-full pl-3 pr-16 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-xs font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-slate-400 font-bold uppercase">
+                        PCS/{secondaryUnit.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                {(() => {
+                  const kgMatch = size.match(/^([\d.]+)\s*KG$/i);
+                  const gMatch  = size.match(/^([\d.]+)\s*G$/i);
+                  const pieceG  = kgMatch ? parseFloat(kgMatch[1]) * 1000
+                                : gMatch  ? parseFloat(gMatch[1])
+                                : null;
+                  const totalG  = pieceG !== null ? pieceG * conversionRatio : null;
+                  const totalLabel = totalG !== null
+                    ? totalG >= 1000 ? `${(totalG / 1000).toFixed(2)} KG` : `${totalG.toFixed(0)} G`
+                    : null;
+                  return (
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 px-4 py-2.5 rounded-lg border border-slate-100 dark:border-white/5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                      <span>Stocking translation:</span>
+                      <strong className="text-slate-700 dark:text-slate-200">1 {secondaryUnit.toUpperCase()}</strong>
+                      <span>=</span>
+                      <strong className="text-orange-500">{conversionRatio} pieces</strong>
+                      <span>×</span>
+                      <strong className="text-slate-700 dark:text-slate-200">{size} each</strong>
+                      {totalLabel && (
+                        <>
+                          <span>=</span>
+                          <strong className="text-emerald-600 dark:text-emerald-400">{totalLabel} total</strong>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* GST Compliance */}
+              <div className="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-white/5 p-6 shadow-md space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-100 dark:border-white/5 pb-3">
+                  <Percent size={16} className="text-orange-500" />
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">GST Compliance Tax Rate</span>
+                  <span className="ml-auto text-[10px] font-bold text-orange-500 bg-orange-50 dark:bg-orange-500/10 px-2 py-0.5 rounded-md">
+                    Active: {gstRate}%
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2 items-center">
+                  {[0, 5, 12, 18, 28].map(rate => (
+                    <button
+                      key={rate}
+                      type="button"
+                      onClick={() => { setGstRate(rate); setCustomGstInput(""); }}
+                      className={clsx(
+                        "px-4 py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1 border",
+                        gstRate === rate && !customGstInput
+                          ? "bg-orange-500 border-orange-500 text-white shadow-sm scale-105"
+                          : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"
+                      )}
+                    >
+                      {rate === 0 ? "Without Tax (0%)" : `${rate}% GST`}
+                    </button>
+                  ))}
+
+                  {/* Custom GST divider */}
+                  <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
+
+                  {/* Custom GST input */}
+                  <div className="flex items-center gap-1.5">
+                    <div className={clsx(
+                      "flex items-center gap-1 border rounded-lg transition-all overflow-hidden",
+                      customGstInput
+                        ? "border-orange-500 bg-orange-50 dark:bg-orange-500/10 shadow-sm"
+                        : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-white/5"
+                    )}>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        value={customGstInput}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setCustomGstInput(val);
+                          const num = parseFloat(val);
+                          if (!isNaN(num) && num >= 0 && num <= 100) setGstRate(num);
+                        }}
+                        placeholder="Custom %"
+                        className={clsx(
+                          "w-24 px-3 py-2 font-bold text-xs outline-none bg-transparent",
+                          customGstInput ? "text-orange-600 dark:text-orange-400" : "text-slate-400"
+                        )}
+                      />
+                      <span className={clsx(
+                        "pr-2.5 text-[10px] font-black",
+                        customGstInput ? "text-orange-500" : "text-slate-400"
+                      )}>%</span>
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Custom GST</span>
+                  </div>
+                </div>
+
+                {/* Summary row */}
+                <div className="flex items-center gap-3 pt-1 flex-wrap">
+                  {gstRate === 0 ? (
+                    <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-white/5">
+                      No GST active → Base Price is identical to Gross Price
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-white/5">
+                        Without GST base price → <span className="text-slate-700 dark:text-slate-200">any price excl. column</span>
+                      </div>
+                      <div className="text-[10px] font-bold text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-3 py-1.5 rounded-lg border border-orange-100 dark:border-orange-500/20">
+                        With GST ({gstRate}%) → auto-calculated in incl. column
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Pricing Tiers Table */}
+              <div className="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-white/5 p-6 shadow-md space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-500"><Coins size={16} /></div>
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200">Pricing Tiers Matrix</h2>
+                      <p className="text-xs text-slate-400">Manage all wholesale and retail channels</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2.5 py-1 rounded-md uppercase tracking-wider">
+                      Double-Way Tax Auto-Sync
+                    </span>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100 dark:border-white/5 text-slate-400 font-bold uppercase tracking-wider">
+                        <th className="py-3 px-2">Pricing Channel</th>
+                        <th className="py-3 px-2">Excl. GST (Base Rate)</th>
+                        <th className="py-3 px-2">Incl. GST (Gross Rate)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+                      {/* Tier A: Purchase Price */}
+                      <tr className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all">
+                        <td className="py-4 px-2 font-semibold text-slate-700 dark:text-slate-300">
+                          <div>Purchase Price</div>
+                          <div className="text-[10px] text-slate-400 font-normal">Standard acquisition cost</div>
+                        </td>
+                        <td className="py-4 px-2">
+                          <div className="relative max-w-[160px]">
+                            <input 
+                              type="number"
+                              value={prices.purchasePrice}
+                              onChange={e => handlePriceChange("purchasePrice", Number(e.target.value) || 0, false)}
+                              className="w-full pl-3 pr-8 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-sm font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">₹</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-2">
+                          <div className="relative max-w-[160px]">
+                            <input 
+                              type="number"
+                              value={prices.purchasePriceWithTax}
+                              onChange={e => handlePriceChange("purchasePrice", Number(e.target.value) || 0, true)}
+                              className="w-full pl-3 pr-8 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-sm font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">₹</span>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Tier B: Selling Price */}
+                      <tr className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all">
+                        <td className="py-4 px-2 font-semibold text-slate-700 dark:text-slate-300">
+                          <div>Selling Price</div>
+                          <div className="text-[10px] text-slate-400 font-normal">Catalog base rate</div>
+                        </td>
+                        <td className="py-4 px-2">
+                          <div className="relative max-w-[160px]">
+                            <input 
+                              type="number"
+                              value={prices.sellingPrice}
+                              onChange={e => handlePriceChange("sellingPrice", Number(e.target.value) || 0, false)}
+                              className="w-full pl-3 pr-8 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-sm font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">₹</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-2">
+                          <div className="relative max-w-[160px]">
+                            <input 
+                              type="number"
+                              value={prices.sellingPriceWithTax}
+                              onChange={e => handlePriceChange("sellingPrice", Number(e.target.value) || 0, true)}
+                              className="w-full pl-3 pr-8 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-sm font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">₹</span>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Tier C: Franchise Price */}
+                      <tr className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all">
+                        <td className="py-4 px-2 font-semibold text-slate-700 dark:text-slate-300">
+                          <div>Franchise Price</div>
+                          <div className="text-[10px] text-slate-400 font-normal">Wholesale supply cost</div>
+                        </td>
+                        <td className="py-4 px-2">
+                          <div className="relative max-w-[160px]">
+                            <input 
+                              type="number"
+                              value={prices.franchisePrice}
+                              onChange={e => handlePriceChange("franchisePrice", Number(e.target.value) || 0, false)}
+                              className="w-full pl-3 pr-8 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-sm font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">₹</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-2">
+                          <div className="relative max-w-[160px]">
+                            <input 
+                              type="number"
+                              value={prices.franchisePriceWithTax}
+                              onChange={e => handlePriceChange("franchisePrice", Number(e.target.value) || 0, true)}
+                              className="w-full pl-3 pr-8 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-sm font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">₹</span>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Tier D: Dealer Price */}
+                      <tr className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all">
+                        <td className="py-4 px-2 font-semibold text-slate-700 dark:text-slate-300">
+                          <div>Dealer Price</div>
+                          <div className="text-[10px] text-slate-400 font-normal">Distributor channel cost</div>
+                        </td>
+                        <td className="py-4 px-2">
+                          <div className="relative max-w-[160px]">
+                            <input 
+                              type="number"
+                              value={prices.dealerPrice}
+                              onChange={e => handlePriceChange("dealerPrice", Number(e.target.value) || 0, false)}
+                              className="w-full pl-3 pr-8 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-sm font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">₹</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-2">
+                          <div className="relative max-w-[160px]">
+                            <input 
+                              type="number"
+                              value={prices.dealerPriceWithTax}
+                              onChange={e => handlePriceChange("dealerPrice", Number(e.target.value) || 0, true)}
+                              className="w-full pl-3 pr-8 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-sm font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">₹</span>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Tier E: Customer Price */}
+                      <tr className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all">
+                        <td className="py-4 px-2 font-semibold text-slate-700 dark:text-slate-300">
+                          <div>Customer Retail</div>
+                          <div className="text-[10px] text-slate-400 font-normal">Direct B2C counter sales</div>
+                        </td>
+                        <td className="py-4 px-2">
+                          <div className="relative max-w-[160px]">
+                            <input 
+                              type="number"
+                              value={prices.customerPrice}
+                              onChange={e => handlePriceChange("customerPrice", Number(e.target.value) || 0, false)}
+                              className="w-full pl-3 pr-8 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-sm font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">₹</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-2">
+                          <div className="relative max-w-[160px]">
+                            <input 
+                              type="number"
+                              value={prices.customerPriceWithTax}
+                              onChange={e => handlePriceChange("customerPrice", Number(e.target.value) || 0, true)}
+                              className="w-full pl-3 pr-8 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-sm font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">₹</span>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Direct B2C Customer Price ends here */}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Dedicated Custom Sales Channel Override Cards */}
+              <div className="space-y-4">
+                {customChannels.map((ch, idx) => (
+                  <div key={ch.id} className="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-white/5 p-6 shadow-md space-y-4 animate-in fade-in duration-300 relative">
+                    {/* Delete dynamic card option */}
+                    {customChannels.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setCustomChannels(prev => prev.filter(c => c.id !== ch.id))}
+                        className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-slate-50 dark:hover:bg-slate-950/40 transition-all border border-transparent hover:border-slate-100 dark:hover:border-white/5"
+                        title="Delete Channel"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+
+                    <div className="flex items-center gap-2 border-b border-slate-100 dark:border-white/5 pb-3">
+                      <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-500">
+                        <Globe size={16} />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200">Custom Sales Channel Platform</h3>
+                        <p className="text-[10px] text-slate-400">Configure distinct override rates for this custom marketplace</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Channel Platform Name</label>
+                        <input 
+                          type="text"
+                          value={ch.name}
+                          onChange={e => handleCustomChannelChange(idx, "name", e.target.value)}
+                          placeholder="e.g. Amazon"
+                          className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-xs font-semibold text-slate-800 dark:text-white"
+                        />
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Price Excl. GST (Without Tax)</label>
+                        <div className="relative">
+                          <input 
+                            type="number"
+                            value={ch.price || ""}
+                            onChange={e => handleCustomChannelChange(idx, "price", Number(e.target.value) || 0)}
+                            className="w-full pl-3 pr-8 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-xs font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">₹</span>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Price Incl. GST (With Tax)</label>
+                        <div className="relative">
+                          <input 
+                            type="number"
+                            value={ch.priceWithTax || ""}
+                            onChange={e => handleCustomChannelChange(idx, "priceWithTax", Number(e.target.value) || 0)}
+                            className="w-full pl-3 pr-8 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-xs font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">₹</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Add dynamic channel card option button */}
+                <button
+                  type="button"
+                  onClick={() => setCustomChannels(prev => [
+                    ...prev,
+                    { id: Date.now().toString(), name: "Flipkart", price: 0, priceWithTax: 0 }
+                  ])}
+                  className="w-full py-3.5 bg-orange-50/50 dark:bg-orange-500/5 hover:bg-orange-100/70 dark:hover:bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-dashed border-orange-200 dark:border-orange-500/20 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-[0.99] mb-4"
+                >
+                  <Plus size={14} />
+                  Add Custom Sales Channel Card
+                </button>
+              </div>
+
+              {/* Promo Discount Configuration */}
+              <div className="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-white/5 p-6 shadow-md space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Percent size={16} className="text-orange-500" />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Catalog Discount Override</span>
+                  </div>
+                  <div className="flex bg-slate-100 dark:bg-white/5 p-0.5 rounded-lg border border-slate-200 dark:border-white/10">
+                    <button 
+                      type="button" 
+                      onClick={() => setDiscountType("PERCENT")} 
+                      className={clsx("px-3 py-1 rounded-md text-[10px] font-bold transition-all", discountType === "PERCENT" ? "bg-white dark:bg-slate-800 text-orange-600 shadow-sm" : "text-slate-400")}
+                    >
+                      Percent %
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setDiscountType("VALUE")} 
+                      className={clsx("px-3 py-1 rounded-md text-[10px] font-bold transition-all", discountType === "VALUE" ? "bg-white dark:bg-slate-800 text-orange-600 shadow-sm" : "text-slate-400")}
+                    >
+                      Flat ₹
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                  <div className="relative">
+                    <input 
+                      type="number"
+                      value={discountValue}
+                      onChange={e => setDiscountValue(Math.max(0, Number(e.target.value) || 0))}
+                      placeholder="Enter discount value..."
+                      className="w-full pl-3 pr-10 py-2 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-orange-500 text-sm font-semibold bg-white dark:bg-slate-900 dark:text-white"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-orange-500">
+                      {discountType === "PERCENT" ? "%" : "₹"}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 px-4 py-2.5 rounded-lg border border-slate-100 dark:border-white/5">
+                    {discountValue > 0 ? (
+                      <span>Selling Price reduces to <strong className="text-orange-500">₹{discountedSellingPriceWithTax}</strong> (incl. tax)</span>
+                    ) : (
+                      <span>No discount applied. Standard selling rates apply.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB 2: Parallel Tab (Opening Stock Setup) */}
+          {activeTab === "opening" && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-white/5 p-6 shadow-md space-y-6">
+                
+                {/* Row 1: Opening Stock */}
+                <div className="relative mt-2">
+                  <label className="absolute -top-2 left-3 bg-white dark:bg-[#12141a] px-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 z-10 transition-all select-none">
+                    Opening Stock
+                    <span className="w-3.5 h-3.5 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-[8px] text-slate-400 cursor-pointer font-bold select-none hover:bg-slate-200">i</span>
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="number" 
+                      placeholder="Ex: 300"
+                      value={openingStock || ""}
+                      onChange={e => setOpeningStock(Math.max(0, Number(e.target.value) || 0))}
+                      className="w-full px-3.5 py-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-rose-500 dark:focus:border-rose-500 text-slate-700 dark:text-slate-200 font-semibold transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: As of Date & Price/Unit */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="relative mt-2">
+                    <label className="absolute -top-2 left-3 bg-white dark:bg-[#12141a] px-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 z-10 transition-all select-none">
+                      As of Date
+                    </label>
+                    <input 
+                      type="date" 
+                      value={openingDate}
+                      onChange={e => setOpeningDate(e.target.value)}
+                      className="w-full px-3.5 py-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-rose-500 dark:focus:border-rose-500 text-slate-700 dark:text-slate-200 font-semibold transition-all cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="relative mt-2">
+                    <label className="absolute -top-2 left-3 bg-white dark:bg-[#12141a] px-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 z-10 transition-all select-none">
+                      At Price/Unit
+                      <span className="w-3.5 h-3.5 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-[8px] text-slate-400 cursor-pointer font-bold select-none hover:bg-slate-200">i</span>
+                    </label>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        placeholder="Ex: 2,000"
+                        value={openingPurchasePrice || ""}
+                        onChange={e => handleOpeningPriceChange(Number(e.target.value) || 0, false)}
+                        className="w-full px-3.5 py-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-rose-500 dark:focus:border-rose-500 text-slate-700 dark:text-slate-200 font-semibold transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                      />
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500">
+                        ₹
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 3: Min Stock Qty & Item Location */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="relative mt-2">
+                    <label className="absolute -top-2 left-3 bg-white dark:bg-[#12141a] px-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 z-10 transition-all select-none">
+                      Min Stock Qty
+                      <span className="w-3.5 h-3.5 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-[8px] text-slate-400 cursor-pointer font-bold select-none hover:bg-slate-200">i</span>
+                    </label>
+                    <input 
+                      type="number" 
+                      placeholder="Ex: 5"
+                      value={minimumStock || ""}
+                      onChange={e => setMinimumStock(Math.max(0, Number(e.target.value) || 0))}
+                      className="w-full px-3.5 py-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-rose-500 dark:focus:border-rose-500 text-slate-700 dark:text-slate-200 font-semibold transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                    />
+                  </div>
+
+                  <div className="relative mt-2">
+                    <label className="absolute -top-2 left-3 bg-white dark:bg-[#12141a] px-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 z-10 transition-all select-none">
+                      Item Location
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="Item Location"
+                      value={itemLocation}
+                      onChange={e => setItemLocation(e.target.value)}
+                      className="w-full px-3.5 py-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-rose-500 dark:focus:border-rose-500 text-slate-700 dark:text-slate-200 font-semibold transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                    />
+                  </div>
+                </div>
+
+                {openingStock > 0 && openingPurchasePrice > 0 && (
+                  <div className="mt-4 p-4 rounded-lg bg-rose-500/5 border border-rose-500/10 flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 animate-in fade-in duration-300">
+                    <div>
+                      <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider block">Computed Asset Value</span>
+                      <span>Total ledger startup valuation</span>
+                    </div>
+                    <span className="text-base font-black text-rose-600 dark:text-rose-400">
+                      ₹{(openingStock * openingPurchasePrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* Right Hand Side: Summary and Actions */}
+        <div className="space-y-6">
+          
+          {/* Item Code Card */}
+          <div className="bg-slate-900 text-white rounded-xl p-6 shadow-md relative overflow-hidden group">
+            <div className="absolute -right-16 -top-16 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl group-hover:bg-orange-500/20 transition-all duration-700" />
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Item Code / Barcode</p>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold tracking-tight uppercase select-all">
+                {itemCode || <span className="text-slate-500 text-sm font-normal">Not assigned</span>}
+              </h3>
+              <Barcode className="text-orange-500 shrink-0" size={18} />
             </div>
           </div>
-          
-          <div className="bg-white dark:bg-card rounded-[3rem] border border-gray-100 dark:border-white/5 p-10 shadow-2xl">
-              <div className="flex items-center gap-3 mb-8 text-slate-400">
-                <Scale size={20} />
-                <h2 className="text-[11px] font-black uppercase tracking-widest">Inventory & Pricing</h2>
+
+          {/* Pricing & Valuation Dashboard */}
+          <div className="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-white/5 p-6 shadow-md space-y-4">
+            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 dark:border-white/5 pb-2">Commercial Summary</h3>
+            
+            <div className="space-y-2.5 text-xs">
+              <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                <span>Base Purchase Cost</span>
+                <span className="text-slate-900 dark:text-white font-bold">₹{prices.purchasePrice}</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  <div className="space-y-3">
-                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">Avg. Purchase Cost</label>
-                    <div className="relative group">
-                       <input 
-                         type="number" 
-                         value={form.costPrice} 
-                         onChange={e => setForm({...form, costPrice: parseFloat(e.target.value) || 0})}
-                         onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                         className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-8 py-5 text-lg font-black focus:ring-4 ring-slate-900/5 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                       />
-                       <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 uppercase tracking-widest">INR</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="block text-[11px] font-black text-blue-500 uppercase tracking-widest ml-2">Standard Selling Price</label>
-                    <div className="relative group">
-                       <input 
-                         type="number" 
-                         value={form.basePrice} 
-                         onChange={e => setForm({...form, basePrice: parseFloat(e.target.value) || 0})}
-                         onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                         className="w-full bg-blue-50 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10 rounded-2xl px-8 py-5 text-lg font-black focus:ring-4 ring-blue-500/10 text-blue-600 dark:text-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                       />
-                       <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-blue-300 uppercase tracking-widest">SALE</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">Opening Stock Balance</label>
-                    <div className="relative">
-                       <input 
-                         type="number" 
-                         value={form.initialStock} 
-                         onChange={e => setForm({...form, initialStock: parseFloat(e.target.value) || 0})}
-                         onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                         className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-8 py-5 text-lg font-black focus:ring-4 ring-slate-900/5 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                       />
-                       <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                          <Scale size={14} className="text-slate-300" />
-                          <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{form.unit}</span>
-                       </div>
-                    </div>
-                  </div>
-               </div>
+              <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                <span>GST Tax Bracket</span>
+                <span className="text-orange-600 font-bold">{gstRate}% GST</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                <span>Selling price (Base)</span>
+                <span className="text-slate-900 dark:text-white font-bold">₹{prices.sellingPrice}</span>
+              </div>
+              {discountValue > 0 && (
+                <div className="flex justify-between items-center text-red-500 font-bold">
+                  <span>Applied Discount</span>
+                  <span>-{discountType === "PERCENT" ? `${discountValue}%` : `₹${discountValue}`}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center pt-2.5 border-t border-slate-50 dark:border-white/5 text-slate-800 dark:text-slate-200 font-bold">
+                <span>Final Retail (incl. tax)</span>
+                <span className="text-orange-600 font-black">₹{discountValue > 0 ? discountedSellingPriceWithTax : prices.sellingPriceWithTax}</span>
+              </div>
+            </div>
           </div>
+
+          {/* Action Bar */}
+          <div className="flex flex-col gap-2">
+            <button 
+              type="button"
+              onClick={handleSave} 
+              disabled={saving} 
+              className="flex items-center justify-center gap-2 w-full py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 border-none cursor-pointer"
+            >
+              {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+              {saving ? "Registering..." : "Launch Item Master"}
+            </button>
+
+            <Link 
+              href="/inventory/stock" 
+              className="w-full text-center py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+            >
+              Discard & Quit
+            </Link>
+          </div>
+
         </div>
 
-        <div className="space-y-8">
-           <div className="bg-slate-900 text-white rounded-[3rem] p-10 shadow-2xl">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Auto-Generated SKU</p>
-              <div className="flex items-center justify-between mb-6">
-                 <h3 className="text-2xl font-black tracking-tighter">{form.sku}</h3>
-                 <Sparkles className="text-orange-500" size={24} />
-              </div>
-              <div className="space-y-2 pt-6 border-t border-white/10">
-                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">System validation ready. This identifier is unique across the manufacturing ledger.</p>
-              </div>
-           </div>
-
-           <div className="bg-white dark:bg-card/40 rounded-[3rem] border border-slate-100 dark:border-white/5 p-10 shadow-xl">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Tax Compliance</h3>
-              <div className="space-y-6">
-                 <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">HSN Code</label>
-                    <input value={form.hsnCode} onChange={e => setForm({...form, hsnCode: e.target.value})} className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-xl px-6 py-4 text-xs font-black outline-none" />
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">GST Bracket (%)</label>
-                    <select value={form.gstRate} onChange={e => setForm({...form, gstRate: Number(e.target.value)})} className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-xl px-6 py-4 text-xs font-black outline-none">
-                       {[0, 5, 12, 18, 28].map(r => <option key={r} value={r}>{r}%</option>)}
-                    </select>
-                 </div>
-              </div>
-           </div>
-        </div>
-      </div>
-
-      <div className="mt-12 flex flex-col md:flex-row items-center justify-center gap-4">
-         <Link 
-           href="/inventory/stock" 
-           className="px-12 py-5 rounded-[2rem] text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-all"
-         >
-           Cancel & Discard
-         </Link>
-         <button 
-           onClick={handleSave} 
-           disabled={saving} 
-           className="group relative flex items-center gap-4 px-16 py-6 bg-slate-900 text-white rounded-[2.5rem] text-[13px] font-black uppercase tracking-[0.3em] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] transition-all active:scale-95 disabled:opacity-50 overflow-hidden"
-         >
-            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-orange-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-            {saving ? <RefreshCw size={20} className="animate-spin" /> : <Save size={20} />}
-            {saving ? "Processing System Entry..." : "Finalize Item Master"}
-         </button>
       </div>
     </div>
   );
