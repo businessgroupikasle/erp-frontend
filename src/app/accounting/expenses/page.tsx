@@ -238,11 +238,11 @@ export default function ExpensesPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-12 py-4 animate-in fade-in duration-700">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-gray-100 pb-10">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-gray-100 dark:border-white/10 pb-10">
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="w-2 h-8 bg-orange-500 rounded-full" />
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Expense Workflow</h1>
+            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Expense Workflow</h1>
           </div>
           <p className="text-sm font-medium text-slate-400 max-w-md leading-relaxed">
             Manage operational spending, utilities, and bills. Record payables and track payment history.
@@ -252,7 +252,7 @@ export default function ExpensesPage() {
         <div className="flex items-center gap-4">
           <button
             onClick={fetchData}
-            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-all active:scale-90"
+            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-white/10 transition-all active:scale-90"
           >
             <RefreshCwIcon size={18} className={clsx(loading && "animate-spin")} />
           </button>
@@ -261,19 +261,19 @@ export default function ExpensesPage() {
 
       {/* Enterprise Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 px-2">
-        <div className="p-6 bg-slate-50/50 rounded-3xl border border-slate-100 space-y-2">
+        <div className="p-6 bg-slate-50/50 dark:bg-white/5 rounded-3xl border border-slate-100 dark:border-white/10 space-y-2">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Monthly Bill</p>
-          <p className="text-2xl font-black text-slate-900">₹{totalThisMonth.toLocaleString()}</p>
+          <p className="text-2xl font-black text-slate-900 dark:text-white">₹{totalThisMonth.toLocaleString()}</p>
         </div>
-        <div className="p-6 bg-emerald-50/30 rounded-3xl border border-emerald-100 space-y-2">
+        <div className="p-6 bg-emerald-50/30 dark:bg-emerald-500/10 rounded-3xl border border-emerald-100 dark:border-emerald-500/20 space-y-2">
           <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Amount Paid</p>
-          <p className="text-2xl font-black text-emerald-600">₹{totalPaid.toLocaleString()}</p>
+          <p className="text-2xl font-black text-emerald-500">₹{totalPaid.toLocaleString()}</p>
         </div>
-        <div className="p-6 bg-orange-50/30 rounded-3xl border border-orange-100 space-y-2">
+        <div className="p-6 bg-orange-50/30 dark:bg-orange-500/10 rounded-3xl border border-orange-100 dark:border-orange-500/20 space-y-2">
           <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Outstanding Due</p>
-          <p className="text-2xl font-black text-orange-600">₹{totalDue.toLocaleString()}</p>
+          <p className="text-2xl font-black text-orange-500">₹{totalDue.toLocaleString()}</p>
         </div>
-        <div className="p-6 bg-slate-900 rounded-3xl space-y-2">
+        <div className="p-6 bg-slate-900 dark:bg-[#12141c] dark:border dark:border-white/10 rounded-3xl space-y-2">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Bills</p>
           <p className="text-2xl font-black text-white">{expenses.filter(e => e.status !== "PAID" && !e.isCancelled).length}</p>
         </div>
@@ -281,12 +281,12 @@ export default function ExpensesPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* ADD EXPENSE FORM */}
-        <div className="lg:col-span-1 border border-slate-100 bg-white rounded-[2rem] overflow-hidden flex flex-col p-6 shadow-sm">
-          <div className="mb-6 flex items-center gap-3 border-b border-slate-50 pb-4">
+        <div className="lg:col-span-1 border border-slate-100 dark:border-white/10 bg-white dark:bg-[#12141c] rounded-[2rem] overflow-hidden flex flex-col p-6 shadow-sm">
+          <div className="mb-6 flex items-center gap-3 border-b border-slate-50 dark:border-white/5 pb-4">
             <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center">
               <PlusIcon size={16} className="text-orange-500" />
             </div>
-            <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">
+            <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">
               Create Expense Bill
             </h3>
           </div>
@@ -301,7 +301,7 @@ export default function ExpensesPage() {
                 <select
                   value={form.category}
                   onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as ExpenseCategory }))}
-                  className="w-full appearance-none bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 text-slate-900 transition-all cursor-pointer"
+                  className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:bg-white dark:focus:bg-white/10 focus:ring-4 focus:ring-slate-100 text-slate-900 dark:text-white transition-all cursor-pointer"
                 >
                   {Object.entries(CATEGORY_CONFIG).map(([key, conf]) => (
                     <option key={key} value={key}>{conf.label}</option>
@@ -325,7 +325,7 @@ export default function ExpensesPage() {
                   value={form.payee}
                   onChange={(e) => setForm((f) => ({ ...f, payee: e.target.value }))}
                   placeholder="e.g. Airtel Office, EB Department"
-                  className="w-full pl-12 pr-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all"
+                  className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-white/5 border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-300 focus:outline-none focus:bg-white dark:focus:bg-white/10 focus:ring-4 focus:ring-slate-100 transition-all"
                 />
               </div>
             </div>
@@ -343,7 +343,7 @@ export default function ExpensesPage() {
                   value={form.amount}
                   onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
                   placeholder="0.00"
-                  className="w-full pl-9 pr-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-black text-slate-900 placeholder:text-slate-300 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all tabular-nums"
+                  className="w-full pl-9 pr-5 py-4 bg-slate-50 dark:bg-white/5 border-none rounded-2xl text-sm font-black text-slate-900 dark:text-white placeholder:text-slate-300 focus:outline-none focus:bg-white dark:focus:bg-white/10 focus:ring-4 focus:ring-slate-100 transition-all tabular-nums"
                 />
               </div>
             </div>
@@ -358,7 +358,7 @@ export default function ExpensesPage() {
                   type="date"
                   value={form.date}
                   onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                  className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-[11px] font-bold text-slate-900 focus:outline-none transition-all"
+                  className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-5 py-4 text-[11px] font-bold text-slate-900 dark:text-white focus:outline-none transition-all"
                 />
               </div>
               <div className="space-y-2.5">
@@ -369,13 +369,13 @@ export default function ExpensesPage() {
                   type="date"
                   value={form.dueDate}
                   onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
-                  className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-[11px] font-bold text-slate-900 focus:outline-none transition-all"
+                  className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-5 py-4 text-[11px] font-bold text-slate-900 dark:text-white focus:outline-none transition-all"
                 />
               </div>
             </div>
 
             {/* Immediate Payment Toggle */}
-            <div className="p-4 bg-slate-50/50 rounded-2xl space-y-4">
+            <div className="p-4 bg-slate-50/50 dark:bg-white/5 rounded-2xl space-y-4">
               <label className="flex items-center gap-3 cursor-pointer group">
                 <div className="relative">
                   <input
@@ -397,7 +397,7 @@ export default function ExpensesPage() {
                     <select
                       value={form.accountId}
                       onChange={(e) => setForm(f => ({ ...f, accountId: e.target.value }))}
-                      className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-900 focus:outline-none"
+                      className="w-full bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none"
                     >
                       <option value="">Select Account</option>
                       {accounts.map(acc => (
@@ -410,7 +410,7 @@ export default function ExpensesPage() {
                     <select
                       value={form.paymentMode}
                       onChange={(e) => setForm(f => ({ ...f, paymentMode: e.target.value }))}
-                      className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-900 focus:outline-none"
+                      className="w-full bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none"
                     >
                       {["CASH", "UPI", "BANK_TRANSFER", "CARD", "CHEQUE"].map(m => (
                         <option key={m} value={m}>{m.replace("_", " ")}</option>
@@ -430,7 +430,7 @@ export default function ExpensesPage() {
                 value={form.note}
                 onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
                 placeholder="Electricity bill Jan 2026..."
-                className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-medium text-slate-900 placeholder:text-slate-300 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all min-h-[80px] resize-none"
+                className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-5 py-4 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-300 focus:outline-none focus:bg-white dark:focus:bg-white/10 focus:ring-4 focus:ring-slate-100 transition-all min-h-[80px] resize-none"
               />
             </div>
 
@@ -447,7 +447,7 @@ export default function ExpensesPage() {
             )}
           </div>
 
-          <div className="pt-6 mt-6 border-t border-slate-50">
+          <div className="pt-6 mt-6 border-t border-slate-50 dark:border-white/5">
             <button
               onClick={handleSubmit}
               disabled={submitting || !form.amount}
@@ -463,9 +463,9 @@ export default function ExpensesPage() {
         </div>
 
         {/* EXPENSE LEDGER */}
-        <div className="lg:col-span-2 border border-slate-100 bg-white rounded-[2rem] overflow-hidden flex flex-col shadow-sm">
-          <div className="px-8 py-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+        <div className="lg:col-span-2 border border-slate-100 dark:border-white/10 bg-white dark:bg-[#12141c] rounded-[2rem] overflow-hidden flex flex-col shadow-sm">
+          <div className="px-8 py-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#0c0e17]/50 flex items-center justify-between">
+            <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">
               Audit Logs & Ledger
             </h2>
             <div className="flex items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -475,7 +475,7 @@ export default function ExpensesPage() {
             </div>
           </div>
 
-          <div className="divide-y divide-slate-50 overflow-y-auto max-h-[850px]">
+          <div className="divide-y divide-slate-50 dark:divide-white/5 overflow-y-auto max-h-[850px]">
             {/* Loading */}
             {loading && Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="p-6 flex items-center gap-4 animate-pulse">
@@ -508,7 +508,7 @@ export default function ExpensesPage() {
               const isOverdue = expense.dueDate && new Date(expense.dueDate) < new Date() && expense.status !== "PAID";
 
               return (
-                <div key={expense.id} className="p-6 flex flex-col group hover:bg-slate-50/30 transition-colors">
+                <div key={expense.id} className="p-6 flex flex-col group hover:bg-slate-50/30 dark:hover:bg-white/5 transition-colors">
                   <div className="flex items-start gap-5">
                     <div className={clsx("w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105", conf.bg)}>
                       <Icon className={conf.color} size={24} strokeWidth={1.5} />
@@ -521,11 +521,11 @@ export default function ExpensesPage() {
                           {getStatusBadge(expense.status)}
                           {isOverdue && <span className="px-1.5 py-0.5 bg-red-100 text-red-600 text-[8px] font-black uppercase rounded">Overdue</span>}
                         </div>
-                        <span className="text-xl font-black text-slate-900 tabular-nums">₹{expense.amount.toLocaleString()}</span>
+                        <span className="text-xl font-black text-slate-900 dark:text-white tabular-nums">₹{expense.amount.toLocaleString()}</span>
                       </div>
                       
                       <div className="flex items-center justify-between">
-                        <h3 className="text-base font-black text-slate-900 truncate">
+                        <h3 className="text-base font-black text-slate-900 dark:text-white truncate">
                           {expense.payee || expense.category.replace("_", " ")}
                         </h3>
                         <div className="flex items-center gap-6">
@@ -542,7 +542,7 @@ export default function ExpensesPage() {
                         </div>
                       </div>
 
-                      <div className="mt-4 flex items-center justify-between border-t border-slate-50 pt-4">
+                      <div className="mt-4 flex items-center justify-between border-t border-slate-50 dark:border-white/5 pt-4">
                         <div className="flex items-center gap-4">
                           <span className="flex items-center gap-1.5 text-[9px] text-slate-400 font-bold uppercase tracking-widest">
                             <CalendarIcon size={12} className="text-slate-300" />
@@ -598,14 +598,14 @@ export default function ExpensesPage() {
       {/* RECORD PAYMENT MODAL */}
       {payingExpense && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="px-8 py-6 bg-slate-50 dark:bg-[#0c0e17] border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center">
                   <CreditCardIcon className="text-orange-500" size={20} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Record Payment</h3>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Record Payment</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ref: {payingExpense.expenseNumber}</p>
                 </div>
               </div>
@@ -628,7 +628,7 @@ export default function ExpensesPage() {
                     type="number"
                     value={payAmount}
                     onChange={(e) => setPayAmount(e.target.value)}
-                    className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-black text-slate-900 focus:ring-4 focus:ring-slate-100 transition-all tabular-nums"
+                    className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-5 py-4 text-sm font-black text-slate-900 dark:text-white focus:ring-4 focus:ring-slate-100 transition-all tabular-nums"
                   />
                 </div>
 
@@ -637,7 +637,7 @@ export default function ExpensesPage() {
                   <select
                     value={payAccountId}
                     onChange={(e) => setPayAccountId(e.target.value)}
-                    className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-slate-100 transition-all cursor-pointer"
+                    className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white focus:ring-4 focus:ring-slate-100 transition-all cursor-pointer"
                   >
                     <option value="">Select Account</option>
                     {accounts.map(acc => (
@@ -651,7 +651,7 @@ export default function ExpensesPage() {
                   <select
                     value={payMode}
                     onChange={(e) => setPayMode(e.target.value)}
-                    className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-slate-100 transition-all cursor-pointer"
+                    className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white focus:ring-4 focus:ring-slate-100 transition-all cursor-pointer"
                   >
                     {["CASH", "UPI", "BANK_TRANSFER", "CARD", "CHEQUE"].map(m => (
                       <option key={m} value={m}>{m.replace("_", " ")}</option>
@@ -677,14 +677,14 @@ export default function ExpensesPage() {
       {/* HISTORY MODAL */}
       {viewingHistory && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-             <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+             <div className="px-8 py-6 bg-slate-50 dark:bg-[#0c0e17] border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center">
                   <HistoryIcon className="text-indigo-500" size={20} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Payment History</h3>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Payment History</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{viewingHistory.expenseNumber}</p>
                 </div>
               </div>
@@ -707,13 +707,13 @@ export default function ExpensesPage() {
               ) : (
                 <div className="space-y-4">
                   {history.map(pay => (
-                    <div key={pay.id} className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between border border-slate-100 group">
+                    <div key={pay.id} className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-between border border-slate-100 dark:border-white/10 group">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                        <div className="w-10 h-10 rounded-xl bg-white dark:bg-white/10 flex items-center justify-center shadow-sm">
                           <CreditCardIcon size={18} className="text-emerald-500" />
                         </div>
                         <div>
-                          <p className="text-sm font-black text-slate-900 tabular-nums">₹{pay.paidAmount.toLocaleString()}</p>
+                          <p className="text-sm font-black text-slate-900 dark:text-white tabular-nums">₹{pay.paidAmount.toLocaleString()}</p>
                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                             {new Date(pay.createdAt).toLocaleDateString()} • {pay.paymentMode} • {pay.account?.name || "N/A"}
                           </p>

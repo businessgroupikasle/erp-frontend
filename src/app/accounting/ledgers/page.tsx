@@ -169,7 +169,7 @@ export default function BranchLedgerPage() {
       <div className="w-80 flex flex-col bg-white border border-slate-100 rounded-[2rem] overflow-hidden shrink-0">
         <div className="p-6 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
+            <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-900 dark:text-white flex items-center gap-2">
               <Building2 size={16} className="text-purple-500" />
               Branch Directory
             </h2>
@@ -188,12 +188,12 @@ export default function BranchLedgerPage() {
               placeholder="Search branches..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-900 placeholder:text-slate-300 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-50 transition-all"
+              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-300 outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-50 dark:focus:ring-purple-500/10 transition-all"
             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-50 dark:divide-white/5">
           {/* Loading */}
           {loadingFranchises &&
             Array.from({ length: 4 }).map((_, i) => (
@@ -249,7 +249,7 @@ export default function BranchLedgerPage() {
                       "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all",
                       isActive
                         ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20"
-                        : "bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-purple-500 group-hover:shadow-sm"
+                        : "bg-slate-50 dark:bg-white/5 text-slate-400 group-hover:bg-white dark:group-hover:bg-white/10 group-hover:text-purple-500 group-hover:shadow-sm"
                     )}
                   >
                     <Building2 size={20} strokeWidth={isActive ? 2 : 1.5} />
@@ -258,7 +258,7 @@ export default function BranchLedgerPage() {
                     <h3
                       className={clsx(
                         "text-sm font-black truncate transition-colors",
-                        isActive ? "text-purple-700" : "text-slate-900 group-hover:text-purple-600"
+                        isActive ? "text-purple-400 dark:text-purple-300" : "text-slate-900 dark:text-white group-hover:text-purple-600"
                       )}
                     >
                       {franchise.name}
@@ -267,7 +267,7 @@ export default function BranchLedgerPage() {
                       {franchise.location || "Branch Outlet"}
                     </p>
                   </div>
-                  <ChevronRight size={16} className={clsx("transition-transform group-hover:translate-x-1", isActive ? "text-purple-500" : "text-slate-300")} />
+                  <ChevronRight size={16} className={clsx("transition-transform group-hover:translate-x-1", isActive ? "text-purple-500" : "text-slate-300 dark:text-slate-600")} />
                 </button>
               );
             })}
@@ -279,7 +279,7 @@ export default function BranchLedgerPage() {
         {activeFranchise ? (
           <>
             {/* Ledger Header */}
-            <div className="p-8 border-b border-slate-100 flex flex-col xl:flex-row xl:items-start justify-between gap-8 bg-slate-50/30">
+            <div className="p-8 border-b border-slate-100 dark:border-white/5 flex flex-col xl:flex-row xl:items-start justify-between gap-8 bg-slate-50/30 dark:bg-[#0c0e17]/30">
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
@@ -327,10 +327,10 @@ export default function BranchLedgerPage() {
             </div>
 
             {/* Ledger Table */}
-            <div className="flex-1 overflow-hidden flex flex-col bg-white">
+            <div className="flex-1 overflow-hidden flex flex-col bg-white dark:bg-[#12141c]">
               <div className="overflow-x-auto flex-1">
                 <table className="w-full text-left border-collapse min-w-[700px]">
-                  <thead className="sticky top-0 bg-slate-50/80 backdrop-blur-md z-10 border-b border-slate-100">
+                  <thead className="sticky top-0 bg-slate-50/80 dark:bg-[#0c0e17]/90 backdrop-blur-md z-10 border-b border-slate-100 dark:border-white/5">
                     <tr className="text-[10px] uppercase font-black tracking-widest text-slate-400">
                       <th className="px-8 py-5">Date</th>
                       <th className="px-8 py-5">Reference</th>
@@ -344,7 +344,7 @@ export default function BranchLedgerPage() {
                       <th className="px-8 py-5 text-right">Running Balance</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-slate-50 dark:divide-white/5">
                     {/* Loading skeleton */}
                     {loadingLedger &&
                       Array.from({ length: 5 }).map((_, i) => (
@@ -396,9 +396,9 @@ export default function BranchLedgerPage() {
                     {!loadingLedger &&
                       !ledgerError &&
                       ledgerLines.map((line) => (
-                        <tr key={line.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <tr key={line.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors group">
                           <td className="px-8 py-5">
-                            <p className="font-bold text-slate-900 uppercase text-[11px] tracking-wide">
+                            <p className="font-bold text-slate-900 dark:text-slate-200 uppercase text-[11px] tracking-wide">
                               {new Date(line.date).toLocaleDateString("en-IN", {
                                 day: "2-digit",
                                 month: "short",
@@ -407,7 +407,7 @@ export default function BranchLedgerPage() {
                             </p>
                           </td>
                           <td className="px-8 py-5">
-                            <p className="font-black text-slate-700 text-xs">
+                            <p className="font-black text-slate-700 dark:text-slate-300 text-xs">
                               {line.ref || line.reference || line.description || "—"}
                             </p>
                           </td>
@@ -452,7 +452,7 @@ export default function BranchLedgerPage() {
                             <span
                               className={clsx(
                                 "font-black text-sm tabular-nums",
-                                line.balance > 0 ? "text-slate-900" : "text-emerald-500"
+                                line.balance > 0 ? "text-slate-900 dark:text-white" : "text-emerald-500"
                               )}
                             >
                               ₹{line.balance.toLocaleString()}
@@ -466,8 +466,8 @@ export default function BranchLedgerPage() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-20 text-center text-slate-400 bg-slate-50/30">
-            <div className="w-24 h-24 bg-white rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-center mb-6">
+          <div className="flex-1 flex flex-col items-center justify-center p-20 text-center text-slate-400 bg-slate-50/30 dark:bg-transparent">
+            <div className="w-24 h-24 bg-white dark:bg-white/5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-white/10 flex items-center justify-center mb-6">
               <Building2 size={40} className="text-slate-300" strokeWidth={1} />
             </div>
             <h3 className="text-lg font-black text-slate-900 mb-2">Select a Branch Record</h3>

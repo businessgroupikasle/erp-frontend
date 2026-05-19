@@ -24,7 +24,7 @@ export const franchiseApi = {
 
 // --- Franchise Orders (HQ → Franchise fulfillment) ---
 export const franchiseOrdersApi = {
-  getAll: (params?: { franchiseId?: string; status?: string }) =>
+  getAll: (params?: { franchiseId?: string; status?: string; startDate?: string; endDate?: string; [key: string]: any }) =>
     api.get('/api/franchise-orders', { params }),
   getById: (id: string) => api.get(`/api/franchise-orders/${id}`),
   create: (data: {

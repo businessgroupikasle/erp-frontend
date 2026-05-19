@@ -254,7 +254,7 @@ export default function PaymentsPage() {
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="w-2 h-8 bg-orange-500 rounded-full" />
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Payments</h1>
+            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Payments</h1>
           </div>
           <p className="text-sm font-medium text-slate-400 max-w-md leading-relaxed">
             Unified money control centre tracing all income and accounts payable.
@@ -264,19 +264,19 @@ export default function PaymentsPage() {
         <div className="flex items-center gap-4">
           <button
             onClick={fetchFinancials}
-            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-all active:scale-90"
+            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10 transition-all active:scale-90"
           >
             <RefreshCw size={18} className={clsx(loading && "animate-spin")} />
           </button>
           <button
             onClick={() => { setTransferForm({ fromAccountId: "", toAccountId: "", amount: "", note: "" }); setShowTransferModal(true); }}
-            className="flex items-center gap-3 bg-white border border-slate-200 text-slate-900 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.15em] transition-all hover:bg-slate-50 active:scale-95 shadow-sm"
+            className="flex items-center gap-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.15em] transition-all hover:bg-slate-50 dark:hover:bg-white/10 active:scale-95 shadow-sm"
           >
             <RefreshCw size={16} /> Internal Transfer
           </button>
           <button
             onClick={openModal}
-            className="flex items-center gap-3 bg-slate-900 text-white pl-6 pr-8 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.15em] transition-all hover:bg-black hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-slate-900/10"
+            className="flex items-center gap-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 pl-6 pr-8 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.15em] transition-all hover:bg-black dark:hover:bg-slate-200 hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-slate-900/10 dark:shadow-white/10"
           >
             <Plus size={16} strokeWidth={3} /> Record Payment
           </button>
@@ -293,28 +293,28 @@ export default function PaymentsPage() {
           <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Total Outflow</p>
           <p className="text-xl font-black tabular-nums text-orange-500">₹{totalOut.toLocaleString()}</p>
         </div>
-        <div className="space-y-1 border-l border-slate-100 pl-8">
+        <div className="space-y-1 border-l border-slate-100 dark:border-white/10 pl-8">
           <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Cash Balance</p>
-          <p className="text-xl font-black tabular-nums text-slate-900">₹{cashFlow?.breakdown?.cash.toLocaleString() || "0"}</p>
+          <p className="text-xl font-black tabular-nums text-slate-900 dark:text-white">₹{cashFlow?.breakdown?.cash.toLocaleString() || "0"}</p>
         </div>
         <div className="space-y-1">
           <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Bank Balance</p>
-          <p className="text-xl font-black tabular-nums text-slate-900">₹{cashFlow?.breakdown?.bank.toLocaleString() || "0"}</p>
+          <p className="text-xl font-black tabular-nums text-slate-900 dark:text-white">₹{cashFlow?.breakdown?.bank.toLocaleString() || "0"}</p>
         </div>
         <div className="space-y-1">
           <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">UPI Wallet</p>
-          <p className="text-xl font-black tabular-nums text-slate-900">₹{cashFlow?.breakdown?.upi.toLocaleString() || "0"}</p>
+          <p className="text-xl font-black tabular-nums text-slate-900 dark:text-white">₹{cashFlow?.breakdown?.upi.toLocaleString() || "0"}</p>
         </div>
       </div>
 
       {/* Minimalist Search & Filter */}
       <div className="flex flex-col gap-6">
         <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-          <div className="flex p-1 bg-slate-50 rounded-2xl shrink-0">
+          <div className="flex p-1 bg-slate-50 dark:bg-white/5 rounded-2xl shrink-0">
             {(["ALL", "IN", "OUT"] as FlowType[]).map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={clsx("px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all",
-                  activeTab === tab ? "bg-white text-orange-500 shadow-sm" : "text-slate-400 hover:text-slate-900"
+                  activeTab === tab ? "bg-white dark:bg-[#1A1A1A] text-orange-500 shadow-sm" : "text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 )}>
                 {tab === "ALL" ? "All History" : tab === "IN" ? "Customer (IN)" : "Vendor (OUT)"}
               </button>
@@ -328,14 +328,14 @@ export default function PaymentsPage() {
               placeholder="Search payment # or entity..." 
               value={search} 
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border-none rounded-2xl font-bold text-slate-900 placeholder:text-slate-300 focus:bg-white focus:ring-4 focus:ring-slate-100 outline-none transition-all" 
+              className="w-full pl-14 pr-6 py-4 bg-slate-50/50 dark:bg-white/5 border-none rounded-2xl font-bold text-slate-900 dark:text-white placeholder:text-slate-300 focus:bg-white dark:focus:bg-white/10 focus:ring-4 focus:ring-slate-100 dark:focus:ring-white/5 outline-none transition-all" 
             />
           </div>
         </div>
 
         {/* Advanced Filters Bar */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
+          <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/10">
             <Filter size={14} className="text-slate-400" />
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filters:</span>
           </div>
@@ -344,7 +344,7 @@ export default function PaymentsPage() {
           <select 
             value={moduleFilter}
             onChange={e => setModuleFilter(e.target.value)}
-            className="px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-bold text-slate-600 outline-none focus:border-orange-500 transition-all cursor-pointer"
+            className="px-4 py-2.5 bg-white dark:bg-[#1A1A1A] border border-slate-100 dark:border-white/10 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 outline-none focus:border-orange-500 transition-all cursor-pointer"
           >
             <option value="ALL">All Modules</option>
             {Object.keys(MODULE_COLORS).map(m => (
@@ -356,7 +356,7 @@ export default function PaymentsPage() {
           <select 
             value={methodFilter}
             onChange={e => setMethodFilter(e.target.value)}
-            className="px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-bold text-slate-600 outline-none focus:border-orange-500 transition-all cursor-pointer"
+            className="px-4 py-2.5 bg-white dark:bg-[#1A1A1A] border border-slate-100 dark:border-white/10 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 outline-none focus:border-orange-500 transition-all cursor-pointer"
           >
             <option value="ALL">All Methods</option>
             {METHOD_OPTIONS.map(m => (
@@ -368,7 +368,7 @@ export default function PaymentsPage() {
           <select 
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            className="px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-bold text-slate-600 outline-none focus:border-orange-500 transition-all cursor-pointer"
+            className="px-4 py-2.5 bg-white dark:bg-[#1A1A1A] border border-slate-100 dark:border-white/10 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 outline-none focus:border-orange-500 transition-all cursor-pointer"
           >
             <option value="ALL">All Status</option>
             <option value="PAID">Paid</option>
@@ -399,8 +399,8 @@ export default function PaymentsPage() {
         </div>
       ) : error ? (
         <div className="py-40 text-center space-y-6">
-          <div className="p-8 bg-red-50 w-fit mx-auto rounded-[2.5rem]">
-            <XCircle size={48} className="text-red-200" strokeWidth={1} />
+          <div className="p-8 bg-red-50 dark:bg-red-500/10 w-fit mx-auto rounded-[2.5rem]">
+            <XCircle size={48} className="text-red-200 dark:text-red-500/50" strokeWidth={1} />
           </div>
           <div className="space-y-2">
             <p className="text-red-400 font-medium">{error}</p>
@@ -409,17 +409,17 @@ export default function PaymentsPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-40 text-center space-y-6">
-          <div className="p-8 bg-slate-50 w-fit mx-auto rounded-[2.5rem]">
-            <CreditCard size={48} className="text-slate-200" strokeWidth={1} />
+          <div className="p-8 bg-slate-50 dark:bg-white/5 w-fit mx-auto rounded-[2.5rem]">
+            <CreditCard size={48} className="text-slate-200 dark:text-slate-700" strokeWidth={1} />
           </div>
           <p className="text-slate-400 font-medium">No payment history matches your filters.</p>
         </div>
       ) : (
-        <div className="border border-slate-100 rounded-[2rem] overflow-hidden bg-white">
+        <div className="border border-slate-100 dark:border-white/5 rounded-[2rem] overflow-hidden bg-white dark:bg-[#12141c]">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/50">
+                <tr className="border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5">
                   <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400">Date & No</th>
                   <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400">Source & Link</th>
                   <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400">Entity & Account</th>
@@ -430,13 +430,13 @@ export default function PaymentsPage() {
                   <th className="px-6 py-5 text-[10px] uppercase font-black tracking-widest text-slate-400 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-white/5">
                 {paginated.map(payment => (
                   <tr key={payment.id} 
                     onClick={() => setSelectedPayment(payment)}
-                    className={clsx("hover:bg-slate-50/50 transition-colors group cursor-pointer", payment.isCancelled && "opacity-60 bg-red-50/20")}>
+                    className={clsx("hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors group cursor-pointer", payment.isCancelled && "opacity-60 bg-red-50/20 dark:bg-red-500/10")}>
                     <td className="px-6 py-4">
-                      <p className="text-xs font-black text-slate-900 uppercase">
+                      <p className="text-xs font-black text-slate-900 dark:text-white uppercase">
                         {payment.paymentNumber || "N/A"}
                       </p>
                       <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
@@ -449,14 +449,14 @@ export default function PaymentsPage() {
                           {payment.sourceModule || "MANUAL"}
                         </span>
                         {payment.linkedDocType && (
-                          <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-400">
+                          <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-white dark:bg-[#1A1A1A] border border-slate-200 dark:border-white/10 text-slate-400">
                             {payment.linkedDocType}: {payment.linkedDocId || "—"}
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm font-bold text-slate-900">{payment.entity || "—"}</p>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">{payment.entity || "—"}</p>
                       <p className="text-[10px] text-slate-400 font-medium">via {payment.accountName || "Unknown Account"}</p>
                     </td>
                     <td className="px-6 py-4">
@@ -467,7 +467,7 @@ export default function PaymentsPage() {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-50 text-slate-500">{payment.method || "—"}</span>
+                      <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400">{payment.method || "—"}</span>
                     </td>
                     <td className="px-6 py-4">
                       {payment.isCancelled ? (
@@ -481,7 +481,7 @@ export default function PaymentsPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <p className={clsx("text-sm font-black tabular-nums", payment.flow === "IN" ? "text-emerald-500" : "text-slate-900", payment.isCancelled && "line-through")}>
+                      <p className={clsx("text-sm font-black tabular-nums", payment.flow === "IN" ? "text-emerald-500" : "text-slate-900 dark:text-white", payment.isCancelled && "line-through")}>
                         {payment.flow === "IN" ? "+" : "-"}₹{payment.amount.toLocaleString()}
                       </p>
                     </td>
@@ -504,7 +504,7 @@ export default function PaymentsPage() {
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-50 flex items-center justify-between">
+            <div className="px-6 py-4 bg-slate-50/50 dark:bg-white/5 border-t border-slate-50 dark:border-white/5 flex items-center justify-between">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                 Showing page {currentPage} of {totalPages} • {filtered.length} total entries
               </p>
@@ -512,14 +512,14 @@ export default function PaymentsPage() {
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="px-4 py-2 rounded-xl text-[10px] font-black uppercase bg-white border border-slate-200 text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-all"
+                  className="px-4 py-2 rounded-xl text-[10px] font-black uppercase bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-white/10 transition-all"
                 >
                   Prev
                 </button>
                 <button 
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-4 py-2 rounded-xl text-[10px] font-black uppercase bg-white border border-slate-200 text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-all"
+                  className="px-4 py-2 rounded-xl text-[10px] font-black uppercase bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-white/10 transition-all"
                 >
                   Next
                 </button>
@@ -529,21 +529,20 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      {/* ── Payment Detail Drawer ── */}
       {selectedPayment && (
         <div className="fixed inset-0 z-[60] flex items-center justify-end">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setSelectedPayment(null)} />
-          <div className="relative z-10 w-full max-w-md h-full bg-white shadow-2xl flex flex-col overflow-y-auto animate-in slide-in-from-right duration-500">
-            <div className="px-8 py-10 border-b border-slate-100 sticky top-0 bg-white/80 backdrop-blur-md z-10">
+          <div className="relative z-10 w-full max-w-md h-full bg-white dark:bg-[#0f111a] shadow-2xl flex flex-col overflow-y-auto animate-in slide-in-from-right duration-500">
+            <div className="px-8 py-10 border-b border-slate-100 dark:border-white/5 sticky top-0 bg-white/80 dark:bg-[#0f111a]/80 backdrop-blur-md z-10">
               <div className="flex justify-between items-start mb-6">
                 <div className={clsx("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border", MODULE_COLORS[selectedPayment.sourceModule || "MANUAL"])}>
                   {selectedPayment.sourceModule || "MANUAL"} Transaction
                 </div>
-                <button onClick={() => setSelectedPayment(null)} className="p-2 hover:bg-slate-50 rounded-xl transition-all">
+                <button onClick={() => setSelectedPayment(null)} className="p-2 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-400 dark:hover:text-white rounded-xl transition-all">
                   <X size={20} />
                 </button>
               </div>
-              <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-2">
+              <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter mb-2">
                 {selectedPayment.paymentNumber}
               </h2>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
@@ -555,32 +554,32 @@ export default function PaymentsPage() {
               <div className="grid grid-cols-2 gap-8">
                 <div>
                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Entity</p>
-                  <p className="text-lg font-black text-slate-900">{selectedPayment.entity}</p>
+                  <p className="text-lg font-black text-slate-900 dark:text-white">{selectedPayment.entity}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Amount</p>
-                  <p className={clsx("text-lg font-black", selectedPayment.flow === "IN" ? "text-emerald-500" : "text-slate-900")}>
+                  <p className={clsx("text-lg font-black", selectedPayment.flow === "IN" ? "text-emerald-500" : "text-slate-900 dark:text-white")}>
                     ₹{selectedPayment.amount.toLocaleString()}
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-6 bg-slate-50 p-6 rounded-3xl">
+              <div className="space-y-6 bg-slate-50 dark:bg-white/5 p-6 rounded-3xl">
                 <div>
                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Linked Document</p>
-                  <p className="text-sm font-bold text-slate-900">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">
                     {selectedPayment.linkedDocType || "Direct"} - {selectedPayment.linkedDocId || "No Reference"}
                   </p>
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Payment Method</p>
-                  <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                  <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
                     <CreditCard size={16} /> {selectedPayment.method}
                   </div>
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Settled In</p>
-                  <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                  <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
                     <Landmark size={16} /> {selectedPayment.accountName}
                   </div>
                 </div>
@@ -593,7 +592,7 @@ export default function PaymentsPage() {
                 </p>
               </div>
 
-              <div className="pt-8 border-t border-slate-100">
+              <div className="pt-8 border-t border-slate-100 dark:border-white/5">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Audit Status</p>
@@ -606,7 +605,7 @@ export default function PaymentsPage() {
                     </div>
                   </div>
                   {selectedPayment.isCancelled && (
-                    <div className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest">
+                    <div className="px-4 py-2 bg-red-50 dark:bg-red-500/10 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest">
                       Reversed
                     </div>
                   )}
@@ -615,10 +614,10 @@ export default function PaymentsPage() {
             </div>
 
             {!selectedPayment.isCancelled && selectedPayment.status === "PAID" && (
-              <div className="p-8 border-t border-slate-100 sticky bottom-0 bg-white">
+              <div className="p-8 border-t border-slate-100 dark:border-white/5 sticky bottom-0 bg-white dark:bg-[#0f111a]">
                 <button 
                   onClick={() => { handleCancelPayment(selectedPayment.id); setSelectedPayment(null); }}
-                  className="w-full py-4 border-2 border-red-100 text-red-500 hover:bg-red-50 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2"
+                  className="w-full py-4 border-2 border-red-100 dark:border-red-500/20 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2"
                 >
                   <RotateCcw size={16} /> Reverse Transaction
                 </button>
@@ -635,14 +634,14 @@ export default function PaymentsPage() {
           <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" onClick={closeModal} />
 
           {/* Drawer */}
-          <div className="relative z-10 w-full max-w-md h-full bg-white shadow-[0_0_40px_rgba(0,0,0,0.05)] flex flex-col overflow-y-auto animate-in slide-in-from-right duration-500">
+          <div className="relative z-10 w-full max-w-md h-full bg-white dark:bg-[#0f111a] shadow-[0_0_40px_rgba(0,0,0,0.05)] flex flex-col overflow-y-auto animate-in slide-in-from-right duration-500">
             {/* Drawer Header */}
-            <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 sticky top-0 bg-white/80 backdrop-blur-md z-10">
+            <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 dark:border-white/5 sticky top-0 bg-white/80 dark:bg-[#0f111a]/80 backdrop-blur-md z-10">
               <div>
-                <h2 className="text-lg font-black text-slate-900">Record Payment</h2>
+                <h2 className="text-lg font-black text-slate-900 dark:text-white">Record Payment</h2>
                 <p className="text-[11px] font-medium text-slate-400 mt-0.5">This will be logged in the payment ledger instantly</p>
               </div>
-              <button onClick={closeModal} className="p-2 rounded-xl hover:bg-slate-50 text-slate-400 transition-colors">
+              <button onClick={closeModal} className="p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 text-slate-400 dark:hover:text-white transition-colors">
                 <X size={18} />
               </button>
             </div>
@@ -708,11 +707,11 @@ export default function PaymentsPage() {
                       : "e.g. Spice Valley, Electricity Board, Landlord"
                   }
                   className={clsx(
-                    "w-full px-4 py-4 bg-slate-50 border-2 rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:bg-white focus:ring-4 transition-all",
+                    "w-full px-4 py-4 bg-slate-50 dark:bg-white/5 border-2 rounded-2xl text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:outline-none focus:bg-white dark:focus:bg-[#1A1A1A] focus:ring-4 transition-all",
                     // Warn in real-time if user types an expense keyword while direction is IN
                     form.flow === "IN" && EXPENSE_KEYWORDS.some(kw => form.entity.toLowerCase().includes(kw))
-                      ? "border-red-300 focus:ring-red-100 bg-red-50"
-                      : "border-transparent focus:ring-slate-100"
+                      ? "border-red-300 dark:border-red-500 focus:ring-red-100 dark:focus:ring-red-500/10 bg-red-50 dark:bg-red-500/5"
+                      : "border-transparent focus:ring-slate-100 dark:focus:ring-white/5"
                   )}
                 />
                 {/* Real-time expense-in-inflow warning */}
@@ -727,7 +726,7 @@ export default function PaymentsPage() {
               </div>
 
               {/* Linked To */}
-              <div className="space-y-3 p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+              <div className="space-y-3 p-4 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-2xl">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
                   Linked To Document
                 </label>
@@ -736,8 +735,8 @@ export default function PaymentsPage() {
                     <button key={t} onClick={() => setForm(p => ({ ...p, linkedToType: t, linkedToId: t === "DIRECT" ? "" : p.linkedToId }))}
                       className={clsx("py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all",
                         form.linkedToType === t
-                          ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-200 text-slate-400 bg-white hover:bg-slate-50"
+                          ? "border-slate-900 bg-slate-900 dark:bg-white text-white dark:text-slate-900"
+                          : "border-slate-200 dark:border-white/10 text-slate-400 bg-white dark:bg-transparent hover:bg-slate-50 dark:hover:bg-white/5"
                       )}>
                       {t}
                     </button>
@@ -749,7 +748,7 @@ export default function PaymentsPage() {
                       value={form.linkedToId}
                       onChange={e => setForm(p => ({ ...p, linkedToId: e.target.value }))}
                       placeholder={`Enter ${form.linkedToType} ID (e.g. ${form.linkedToType}-102)`}
-                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 transition-all"
+                      className="w-full px-4 py-3 bg-white dark:bg-[#1A1A1A] border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:outline-none focus:border-slate-900 dark:focus:border-white/20 focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-white/5 transition-all"
                     />
                   </div>
                 )}
@@ -767,7 +766,7 @@ export default function PaymentsPage() {
                       value={form.amount}
                       onChange={e => setForm(p => ({ ...p, amount: e.target.value }))}
                       placeholder="0.00"
-                      className="w-full pl-8 pr-4 py-4 bg-slate-50 border-none rounded-2xl text-sm font-black text-slate-900 placeholder:text-slate-300 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all"
+                      className="w-full pl-8 pr-4 py-4 bg-slate-50 dark:bg-white/5 border-none rounded-2xl text-sm font-black text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:outline-none focus:bg-white dark:focus:bg-[#1A1A1A] focus:ring-4 focus:ring-slate-100 dark:focus:ring-white/5 transition-all"
                     />
                   </div>
                 </div>
@@ -779,7 +778,7 @@ export default function PaymentsPage() {
                     type="date"
                     value={form.date}
                     onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
-                    className="w-full px-4 py-4 bg-slate-50 border-none rounded-2xl text-sm font-black text-slate-900 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all"
+                    className="w-full px-4 py-4 bg-slate-50 dark:bg-white/5 border-none rounded-2xl text-sm font-black text-slate-900 dark:text-white focus:outline-none focus:bg-white dark:focus:bg-[#1A1A1A] focus:ring-4 focus:ring-slate-100 dark:focus:ring-white/5 transition-all"
                   />
                 </div>
               </div>
@@ -792,8 +791,8 @@ export default function PaymentsPage() {
                     <button key={acc.id} onClick={() => setForm(p => ({ ...p, sourceAccount: acc.id }))}
                       className={clsx("px-4 py-3 rounded-2xl border-2 text-[9px] font-black uppercase tracking-[0.1em] transition-all flex items-center gap-3",
                         form.sourceAccount === acc.id
-                          ? "border-blue-500 bg-blue-50 text-blue-600"
-                          : "border-slate-100 text-slate-400 hover:border-slate-200 bg-white"
+                          ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                          : "border-slate-100 dark:border-white/10 text-slate-400 hover:border-slate-200 dark:hover:border-white/20 bg-white dark:bg-transparent"
                       )}>
                       {acc.type === "CASH" ? <Banknote size={16} /> : acc.type === "BANK" ? <Building2 size={16} /> : <Smartphone size={16} />}
                       <div className="text-left">
@@ -813,8 +812,8 @@ export default function PaymentsPage() {
                     <button key={m.key} onClick={() => setForm(p => ({ ...p, method: m.key }))}
                       className={clsx("py-3 rounded-2xl border-2 flex flex-col items-center gap-1.5 transition-all text-[9px] font-black uppercase tracking-widest",
                         form.method === m.key
-                          ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-100 text-slate-400 hover:border-slate-200 bg-white"
+                          ? "border-slate-900 bg-slate-900 dark:bg-white text-white dark:text-slate-900"
+                          : "border-slate-100 dark:border-white/10 text-slate-400 hover:border-slate-200 dark:hover:border-white/20 bg-white dark:bg-transparent"
                       )}>
                       {m.icon}
                       <span>{m.label}</span>
@@ -831,10 +830,10 @@ export default function PaymentsPage() {
                     <button key={s} onClick={() => setForm(p => ({ ...p, status: s }))}
                       className={clsx("py-3 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all text-center",
                         form.status === s
-                          ? s === "PAID" ? "border-emerald-500 bg-emerald-50 text-emerald-600"
-                            : s === "PENDING" ? "border-amber-500 bg-amber-50 text-amber-600"
-                            : "border-red-500 bg-red-50 text-red-600"
-                          : "border-slate-100 text-slate-400 hover:bg-slate-50/50 bg-white"
+                          ? s === "PAID" ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            : s === "PENDING" ? "border-amber-500 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            : "border-red-500 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"
+                          : "border-slate-100 dark:border-white/10 text-slate-400 bg-white dark:bg-transparent hover:bg-slate-50/50 dark:hover:bg-white/5"
                       )}>
                       {s}
                       {form.status === s && s === "PAID" && <span className="block text-[7px] text-emerald-400 mt-0.5">Adjusts ledger</span>}
@@ -851,7 +850,7 @@ export default function PaymentsPage() {
                   value={form.reference}
                   onChange={e => setForm(p => ({ ...p, reference: e.target.value }))}
                   placeholder="e.g. UPI-TXNID, CHQ-00123"
-                  className="w-full px-4 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all"
+                  className="w-full px-4 py-4 bg-slate-50 dark:bg-white/5 border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:outline-none focus:bg-white dark:focus:bg-[#1A1A1A] focus:ring-4 focus:ring-slate-100 dark:focus:ring-white/5 transition-all"
                 />
               </div>
 
@@ -863,31 +862,31 @@ export default function PaymentsPage() {
                   onChange={e => setForm(p => ({ ...p, note: e.target.value }))}
                   placeholder="e.g. Payment for March invoice"
                   rows={2}
-                  className="w-full px-4 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all resize-none"
+                  className="w-full px-4 py-4 bg-slate-50 dark:bg-white/5 border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:outline-none focus:bg-white dark:focus:bg-[#1A1A1A] focus:ring-4 focus:ring-slate-100 dark:focus:ring-white/5 transition-all resize-none"
                 />
               </div>
 
             </div>
 
             {/* Drawer Footer */}
-            <div className="px-8 py-6 border-t border-slate-100 sticky bottom-0 bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-20">
+            <div className="px-8 py-6 border-t border-slate-100 dark:border-white/5 sticky bottom-0 bg-white dark:bg-[#0f111a] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-20">
               {/* Error */}
               {submitError && (
-                <div className="flex items-center gap-2 p-4 mb-4 bg-red-50 rounded-2xl text-red-600 text-[11px] font-black uppercase tracking-widest animate-in slide-in-from-bottom-2 fade-in duration-300">
+                <div className="flex items-center gap-2 p-4 mb-4 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-600 dark:text-red-400 text-[11px] font-black uppercase tracking-widest animate-in slide-in-from-bottom-2 fade-in duration-300">
                   <XCircle size={16} className="shrink-0" /> {submitError}
                 </div>
               )}
 
               {/* Success */}
               {submitSuccess && (
-                <div className="flex items-center gap-2 p-4 mb-4 bg-emerald-50 rounded-2xl text-emerald-600 text-[11px] font-black uppercase tracking-widest animate-in slide-in-from-bottom-2 fade-in duration-300">
+                <div className="flex items-center gap-2 p-4 mb-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-400 text-[11px] font-black uppercase tracking-widest animate-in slide-in-from-bottom-2 fade-in duration-300">
                   <CheckCircle2 size={16} className="shrink-0" /> Payment recorded successfully!
                 </div>
               )}
 
               <div className="flex gap-4">
                 <button onClick={closeModal} disabled={submitting}
-                  className="flex-1 py-4 bg-slate-50 hover:bg-slate-100 rounded-2xl text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] transition-colors disabled:opacity-50">
+                  className="flex-1 py-4 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 rounded-2xl text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] transition-colors disabled:opacity-50">
                   Cancel
                 </button>
                 <button onClick={handleSubmit} disabled={submitting || submitSuccess}
@@ -912,13 +911,13 @@ export default function PaymentsPage() {
       {showTransferModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-end">
           <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" onClick={() => setShowTransferModal(false)} />
-          <div className="relative z-10 w-full max-w-md h-full bg-white shadow-xl flex flex-col overflow-y-auto animate-in slide-in-from-right duration-500">
-            <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 sticky top-0 bg-white/80 backdrop-blur-md z-10">
+          <div className="relative z-10 w-full max-w-md h-full bg-white dark:bg-[#0f111a] shadow-xl flex flex-col overflow-y-auto animate-in slide-in-from-right duration-500">
+            <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 dark:border-white/5 sticky top-0 bg-white/80 dark:bg-[#0f111a]/80 backdrop-blur-md z-10">
               <div>
-                <h2 className="text-lg font-black text-slate-900">Internal Fund Transfer</h2>
+                <h2 className="text-lg font-black text-slate-900 dark:text-white">Internal Fund Transfer</h2>
                 <p className="text-[11px] font-medium text-slate-400 mt-0.5">Move money between your internal accounts</p>
               </div>
-              <button onClick={() => setShowTransferModal(false)} className="p-2 rounded-xl hover:bg-slate-50 text-slate-400 transition-colors">
+              <button onClick={() => setShowTransferModal(false)} className="p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 text-slate-400 dark:hover:text-white transition-colors">
                 <X size={18} />
               </button>
             </div>
@@ -929,7 +928,7 @@ export default function PaymentsPage() {
                 <select 
                   value={transferForm.fromAccountId}
                   onChange={e => setTransferForm(p => ({ ...p, fromAccountId: e.target.value }))}
-                  className="w-full px-4 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all appearance-none"
+                  className="w-full px-4 py-4 bg-slate-50 dark:bg-[#1A1A1A] border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:bg-white dark:focus:bg-[#2A2A2A] focus:ring-4 focus:ring-slate-100 dark:focus:ring-white/5 transition-all appearance-none"
                 >
                   <option value="">Select Source</option>
                   {accounts.map(acc => (
@@ -939,8 +938,8 @@ export default function PaymentsPage() {
               </div>
 
               <div className="flex justify-center -my-2 relative z-10">
-                <div className="bg-white p-2 rounded-full border border-slate-100 shadow-sm">
-                  <ArrowUpRight className="text-slate-300 rotate-90" size={20} />
+                <div className="bg-white dark:bg-[#0f111a] p-2 rounded-full border border-slate-100 dark:border-white/10 shadow-sm">
+                  <ArrowUpRight className="text-slate-300" size={20} />
                 </div>
               </div>
 
@@ -949,7 +948,7 @@ export default function PaymentsPage() {
                 <select 
                   value={transferForm.toAccountId}
                   onChange={e => setTransferForm(p => ({ ...p, toAccountId: e.target.value }))}
-                  className="w-full px-4 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all appearance-none"
+                  className="w-full px-4 py-4 bg-slate-50 dark:bg-[#1A1A1A] border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:bg-white dark:focus:bg-[#2A2A2A] focus:ring-4 focus:ring-slate-100 dark:focus:ring-white/5 transition-all appearance-none"
                 >
                   <option value="">Select Destination</option>
                   {accounts.map(acc => (
@@ -965,7 +964,7 @@ export default function PaymentsPage() {
                   value={transferForm.amount}
                   onChange={e => setTransferForm(p => ({ ...p, amount: e.target.value }))}
                   placeholder="0.00"
-                  className="w-full px-4 py-4 bg-slate-50 border-none rounded-2xl text-sm font-black text-slate-900 placeholder:text-slate-300 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all"
+                  className="w-full px-4 py-4 bg-slate-50 dark:bg-white/5 border-none rounded-2xl text-sm font-black text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:outline-none focus:bg-white dark:focus:bg-[#1A1A1A] focus:ring-4 focus:ring-slate-100 dark:focus:ring-white/5 transition-all"
                 />
               </div>
 
@@ -976,16 +975,16 @@ export default function PaymentsPage() {
                   onChange={e => setTransferForm(p => ({ ...p, note: e.target.value }))}
                   placeholder="Reason for transfer..."
                   rows={2}
-                  className="w-full px-4 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-100 transition-all resize-none"
+                  className="w-full px-4 py-4 bg-slate-50 dark:bg-white/5 border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:outline-none focus:bg-white dark:focus:bg-[#1A1A1A] focus:ring-4 focus:ring-slate-100 dark:focus:ring-white/5 transition-all resize-none"
                 />
               </div>
             </div>
 
-            <div className="px-8 py-6 border-t border-slate-100 sticky bottom-0 bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
-              {submitError && <div className="p-4 mb-4 bg-red-50 rounded-2xl text-red-600 text-[10px] font-black uppercase tracking-widest">{submitError}</div>}
-              {submitSuccess && <div className="p-4 mb-4 bg-emerald-50 rounded-2xl text-emerald-600 text-[10px] font-black uppercase tracking-widest">Transfer Successful</div>}
+            <div className="px-8 py-6 border-t border-slate-100 dark:border-white/5 sticky bottom-0 bg-white dark:bg-[#0f111a] shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+              {submitError && <div className="p-4 mb-4 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest">{submitError}</div>}
+              {submitSuccess && <div className="p-4 mb-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest">Transfer Successful</div>}
               <button onClick={handleTransfer} disabled={submitting || submitSuccess}
-                className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 shadow-lg disabled:bg-slate-300">
+                className="w-full py-4 bg-slate-900 dark:bg-white hover:bg-black dark:hover:bg-slate-200 text-white dark:text-slate-900 rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50">
                 {submitting ? <RefreshCw size={16} className="animate-spin" /> : <><RefreshCw size={16} /> Complete Transfer</>}
               </button>
             </div>

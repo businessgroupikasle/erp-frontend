@@ -171,17 +171,17 @@ export default function SalesReturnsPage() {
   ];
 
   return (
-    <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen">
+    <div className="p-6 space-y-6 bg-slate-50/50 dark:bg-[#090a0f] min-h-screen -m-8 mt-0 pt-10">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
             <div className="p-2 bg-orange-500 rounded-xl text-white">
               <Undo2 size={24} />
             </div>
             Sales Return Management
           </h1>
-          <p className="text-slate-500 font-medium mt-1">Manage product returns from Franchisees and Dealers/Retailers</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">Manage product returns from Franchisees and Dealers/Retailers</p>
         </div>
         <button 
           onClick={() => { setShowNewModal(true); fetchEntities(); }}
@@ -194,29 +194,29 @@ export default function SalesReturnsPage() {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s, i) => (
-          <div key={i} className="bg-white p-5 rounded-[2rem] border border-slate-200/60 shadow-sm flex items-center gap-4">
-            <div className={clsx("p-4 rounded-2xl", s.bg, s.color)}>
+          <div key={i} className="bg-white dark:bg-[#12141c] p-5 rounded-[2rem] border border-slate-200/60 dark:border-white/10 shadow-sm flex items-center gap-4">
+            <div className={clsx("p-4 rounded-2xl", s.bg, "dark:bg-white/5", s.color)}>
               <s.icon size={24} />
             </div>
             <div>
               <p className="text-xs font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
-              <h3 className="text-xl font-black text-slate-900 mt-1">{s.value}</h3>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white mt-1">{s.value}</h3>
             </div>
           </div>
         ))}
       </div>
 
       {/* Main Content */}
-      <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
+      <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] border border-slate-200/60 dark:border-white/10 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-100 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex bg-slate-100 dark:bg-white/5 p-1.5 rounded-2xl gap-1">
             {(['ALL', 'FRANCHISE', 'PARTNER'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setActiveTab(t)}
                 className={clsx(
                   "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
-                  activeTab === t ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  activeTab === t ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white"
                 )}
               >
                 {t === 'PARTNER' ? 'Dealer' : t} Returns
@@ -228,7 +228,7 @@ export default function SalesReturnsPage() {
             <input 
               type="text" 
               placeholder="Search returns..." 
-              className="pl-12 pr-6 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all w-full md:w-80"
+              className="pl-12 pr-6 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-sm font-medium dark:text-white outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all w-full md:w-80"
             />
           </div>
         </div>
@@ -236,7 +236,7 @@ export default function SalesReturnsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
+              <tr className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10">
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Return #</th>
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Source</th>
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Order Ref</th>
@@ -247,7 +247,7 @@ export default function SalesReturnsPage() {
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 text-sm">
+            <tbody className="divide-y divide-slate-50 dark:divide-white/5 text-sm">
               {loading ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-20 text-center">
@@ -268,17 +268,17 @@ export default function SalesReturnsPage() {
                 </tr>
               ) : (
                 returns.map((ret) => (
-                  <tr key={ret.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <tr key={ret.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors group">
                     <td className="px-6 py-4">
-                      <span className="font-black text-slate-900">{ret.returnNumber}</span>
+                      <span className="font-black text-slate-900 dark:text-white">{ret.returnNumber}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={clsx("p-2 rounded-lg", ret.franchise ? "bg-indigo-50 text-indigo-600" : "bg-emerald-50 text-emerald-600")}>
+                        <div className={clsx("p-2 rounded-lg", ret.franchise ? "bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400" : "bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400")}>
                           {ret.franchise ? <Building2 size={16} /> : <User size={16} />}
                         </div>
                         <div>
-                          <p className="font-bold text-slate-900 leading-none">{ret.franchise?.name || ret.customer?.name || "N/A"}</p>
+                          <p className="font-bold text-slate-900 dark:text-white leading-none">{ret.franchise?.name || ret.customer?.name || "N/A"}</p>
                           <p className="text-[10px] font-black text-slate-400 uppercase mt-1">{ret.franchise ? "Franchise" : "Dealer/Retailer"}</p>
                         </div>
                       </div>
@@ -287,18 +287,18 @@ export default function SalesReturnsPage() {
                       <span className="text-xs font-bold text-slate-500">{ret.franchiseOrder?.orderNumber || ret.salesOrder?.orderNumber || "Direct Return"}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-slate-600 line-clamp-1 max-w-[150px]">{ret.reason}</span>
+                      <span className="text-slate-600 dark:text-slate-300 line-clamp-1 max-w-[150px]">{ret.reason}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="font-black text-slate-900">₹{ret.refundAmount.toLocaleString()}</span>
+                      <span className="font-black text-slate-900 dark:text-white">₹{ret.refundAmount.toLocaleString()}</span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={clsx(
                         "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                        ret.status === 'COMPLETED' ? "bg-emerald-100 text-emerald-700" :
-                        ret.status === 'PENDING' ? "bg-orange-100 text-orange-700" :
-                        ret.status === 'REJECTED' ? "bg-rose-100 text-rose-700" :
-                        "bg-blue-100 text-blue-700"
+                        ret.status === 'COMPLETED' ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" :
+                        ret.status === 'PENDING' ? "bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400" :
+                        ret.status === 'REJECTED' ? "bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400" :
+                        "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400"
                       )}>
                         {ret.status}
                       </span>
@@ -339,14 +339,14 @@ export default function SalesReturnsPage() {
       {/* New Return Modal */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
             {/* Modal Header */}
-            <div className="p-8 border-b border-slate-100 shrink-0 flex items-center justify-between">
+            <div className="p-8 border-b border-slate-100 dark:border-white/10 shrink-0 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Create New Return Request</h2>
+                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Create New Return Request</h2>
                 <p className="text-slate-500 font-medium text-sm mt-1">Initiate a return from a specific order</p>
               </div>
-              <button onClick={() => { setShowNewModal(false); resetModal(); }} className="p-2 hover:bg-slate-50 rounded-xl transition-all">
+              <button onClick={() => { setShowNewModal(false); resetModal(); }} className="p-2 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all">
                 <ArrowLeft size={20} className="text-slate-400" />
               </button>
             </div>
@@ -361,21 +361,21 @@ export default function SalesReturnsPage() {
                     onClick={() => { setReturnSource('PARTNER'); resetModal(); fetchEntities(); }}
                     className={clsx(
                       "p-6 rounded-[2rem] border-2 transition-all flex flex-col items-center gap-3",
-                      returnSource === 'PARTNER' ? "border-orange-500 bg-orange-50/50" : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
+                      returnSource === 'PARTNER' ? "border-orange-500 bg-orange-50/50 dark:bg-orange-500/10" : "border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 hover:border-slate-200 dark:hover:border-white/20"
                     )}
                   >
                     <User className={clsx(returnSource === 'PARTNER' ? "text-orange-500" : "text-slate-400")} size={32} />
-                    <span className={clsx("font-black uppercase tracking-widest text-xs", returnSource === 'PARTNER' ? "text-orange-600" : "text-slate-500")}>Dealer / Retailer</span>
+                    <span className={clsx("font-black uppercase tracking-widest text-xs", returnSource === 'PARTNER' ? "text-orange-600 dark:text-orange-400" : "text-slate-500")}>Dealer / Retailer</span>
                   </button>
                   <button 
                     onClick={() => { setReturnSource('FRANCHISE'); resetModal(); fetchEntities(); }}
                     className={clsx(
                       "p-6 rounded-[2rem] border-2 transition-all flex flex-col items-center gap-3",
-                      returnSource === 'FRANCHISE' ? "border-orange-500 bg-orange-50/50" : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
+                      returnSource === 'FRANCHISE' ? "border-orange-500 bg-orange-50/50 dark:bg-orange-500/10" : "border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 hover:border-slate-200 dark:hover:border-white/20"
                     )}
                   >
                     <Building2 className={clsx(returnSource === 'FRANCHISE' ? "text-orange-500" : "text-slate-400")} size={32} />
-                    <span className={clsx("font-black uppercase tracking-widest text-xs", returnSource === 'FRANCHISE' ? "text-orange-600" : "text-slate-500")}>Franchise</span>
+                    <span className={clsx("font-black uppercase tracking-widest text-xs", returnSource === 'FRANCHISE' ? "text-orange-600 dark:text-orange-400" : "text-slate-500")}>Franchise</span>
                   </button>
                 </div>
               </div>
@@ -386,7 +386,7 @@ export default function SalesReturnsPage() {
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Select {returnSource === 'FRANCHISE' ? 'Franchise' : 'Customer'}</label>
                   <select 
                     onChange={(e) => handleEntityChange(e.target.value)}
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:border-orange-500 appearance-none"
+                    className="w-full p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 dark:text-white rounded-2xl text-sm font-bold outline-none focus:border-orange-500 appearance-none"
                     value={selectedEntity?.id || ""}
                   >
                     <option value="">Choose {returnSource === 'FRANCHISE' ? 'Franchise' : 'Customer'}...</option>
@@ -400,7 +400,7 @@ export default function SalesReturnsPage() {
                   <select 
                     disabled={!selectedEntity}
                     onChange={(e) => handleOrderChange(e.target.value)}
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:border-orange-500 appearance-none disabled:opacity-50"
+                    className="w-full p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 dark:text-white rounded-2xl text-sm font-bold outline-none focus:border-orange-500 appearance-none disabled:opacity-50"
                     value={selectedOrder?.id || ""}
                   >
                     <option value="">{selectedEntity ? "Choose Order..." : "Select entity first"}</option>
@@ -418,9 +418,9 @@ export default function SalesReturnsPage() {
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Items from Order</label>
                     <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-3 py-1 rounded-full uppercase">Order: {selectedOrder.orderNumber}</span>
                   </div>
-                  <div className="border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+                  <div className="border border-slate-100 dark:border-white/10 rounded-3xl overflow-hidden shadow-sm">
                     <table className="w-full text-left">
-                      <thead className="bg-slate-50 border-b border-slate-100">
+                      <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10">
                         <tr>
                           <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Product</th>
                           <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Qty Bought</th>
@@ -428,11 +428,11 @@ export default function SalesReturnsPage() {
                           <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Condition</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-50">
+                      <tbody className="divide-y divide-slate-50 dark:divide-white/5">
                         {returnItems.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                          <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
                             <td className="px-6 py-4">
-                              <p className="font-bold text-slate-900">{item.productName}</p>
+                              <p className="font-bold text-slate-900 dark:text-white">{item.productName}</p>
                               <p className="text-[10px] font-black text-slate-400 uppercase mt-0.5">₹{item.rate} / unit</p>
                             </td>
                             <td className="px-6 py-4 text-center font-black text-slate-500">{item.orderQuantity}</td>
@@ -453,7 +453,7 @@ export default function SalesReturnsPage() {
                                     next[idx].returnQuantity = Math.min(item.orderQuantity, item.returnQuantity + 1);
                                     setReturnItems(next);
                                   }}
-                                  className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50"
+                                  className="w-8 h-8 rounded-lg border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5"
                                 >+</button>
                               </div>
                             </td>
@@ -464,7 +464,7 @@ export default function SalesReturnsPage() {
                                   next[idx].condition = e.target.value;
                                   setReturnItems(next);
                                 }}
-                                className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 text-xs font-bold outline-none"
+                                className="bg-slate-50 dark:bg-[#1A1A1A] dark:text-white border border-slate-100 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs font-bold outline-none"
                               >
                                 <option value="Good">Good Condition</option>
                                 <option value="Damaged">Damaged / Broken</option>
@@ -487,7 +487,7 @@ export default function SalesReturnsPage() {
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Explain why this return is being processed (e.g., Transit damage, wrong delivery, quality issue...)"
-                  className="w-full p-5 bg-slate-50 border border-slate-200 rounded-[1.5rem] text-sm font-medium outline-none focus:border-orange-500 h-32 resize-none"
+                  className="w-full p-5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[1.5rem] text-sm font-medium dark:text-white outline-none focus:border-orange-500 h-32 resize-none"
                 />
               </div>
 
@@ -505,10 +505,10 @@ export default function SalesReturnsPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex gap-4 shrink-0">
+            <div className="p-8 border-t border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-[#12141c] flex gap-4 shrink-0">
               <button 
                 onClick={() => { setShowNewModal(false); resetModal(); }}
-                className="flex-1 py-4 px-6 border-2 border-slate-200 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-white transition-all"
+                className="flex-1 py-4 px-6 border-2 border-slate-200 dark:border-white/10 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-white dark:hover:bg-white/5 transition-all"
               >
                 Cancel
               </button>

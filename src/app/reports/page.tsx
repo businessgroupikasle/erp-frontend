@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { 
   ChevronRight as ChevronRightIcon, 
   ChevronDown as ChevronDownIcon,
@@ -16,7 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { accountingApi } from "@/lib/api";
+import { accountingApi, reportsApi, posApi, salesApi, procurementApi, franchiseApi, franchiseOrdersApi, inventoryApi } from "@/lib/api";
 import toast from "react-hot-toast";
 
 // ─── Sub-Components ─────────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ function ReportCategory({ title, items, searchTerm, dateRange }: {
   searchTerm: string,
   dateRange: { startDate: string, endDate: string }
 }) {
+  const router = useRouter();
   const filteredItems = items.filter(item => item.label.toLowerCase().includes(searchTerm.toLowerCase()));
   
   if (filteredItems.length === 0) return null;
@@ -56,87 +58,171 @@ function ReportCategory({ title, items, searchTerm, dateRange }: {
   const handleExport = async (item: any) => {
     const toastId = toast.loading(`Generating CSV for ${item.label}...`);
     try {
-      await new Promise(res => setTimeout(res, 800));
-      
-      const reportsWithData = [
-        "Sales Order Report", 
-        "POS Invoices", 
-        "Purchase Orders", 
-        "Operational Expenses", 
-        "Profit & Loss", 
-        "Balance Sheet", 
-        "Stock Valuation",
-        "Product P&L",
-        "Franchise Performance",
-        "Low Stock Forecast",
-        "Dispatch Efficiency",
-        "General Ledger"
-      ];
-      
-      if (!reportsWithData.includes(item.label)) {
-        toast.error(`No records found for ${item.label} between ${dateRange.startDate} and ${dateRange.endDate}`, { 
-          id: toastId,
-          style: { borderRadius: '10px', background: '#333', color: '#fff' }
-        });
+      await new Promise(res => setTimeout(res, 500));
+
+      const rows: string[][] = [];
+
+      switch(item.label) {
+        case "Sales Order Report": {
+          const soRes = await salesApi.getSalesOrders({ startDate: dateRange.startDate, endDate: dateRange.endDate });
+          const orders = soRes.data?.orders ?? soRes.data ?? [];
+          rows.push(["Order ID", "Date", "Customer", "Amount", "Status"]);
+          orders.forEach((so: any) => rows.push([
+            so.orderNumber ?? so.id ?? "",
+            so.createdAt ? new Date(so.createdAt).toLocaleDateString("en-IN") : "",
+            so.customer?.name ?? "Walk-in",
+            String(so.totalAmount ?? 0),
+            so.status ?? ""
+          ]));
+          break;
+        }
+        case "POS Invoices": {
+          const posRes = await posApi.getOrders({ startDate: dateRange.startDate, endDate: dateRange.endDate });
+          const orders = posRes.data?.orders ?? posRes.data ?? [];
+          rows.push(["Invoice No", "Date", "Amount", "Payment Mode", "Status"]);
+          orders.forEach((inv: any) => rows.push([
+            inv.invoiceNum ?? inv.orderNumber ?? inv.id ?? "",
+            inv.createdAt ? new Date(inv.createdAt).toLocaleDateString("en-IN") : "",
+            String(inv.totalAmount ?? 0),
+            inv.paymentMethod ?? inv.paymentMode ?? "CASH",
+            inv.status ?? ""
+          ]));
+          break;
+        }
+        case "Purchase Orders": {
+          const poRes = await procurementApi.getPOs({ startDate: dateRange.startDate, endDate: dateRange.endDate });
+          const orders = poRes.data?.orders ?? poRes.data ?? [];
+          rows.push(["PO Number", "Date", "Vendor", "Total Value", "Status"]);
+          orders.forEach((po: any) => rows.push([
+            po.poNumber ?? po.id ?? "",
+            po.createdAt ? new Date(po.createdAt).toLocaleDateString("en-IN") : "",
+            po.vendor?.name ?? "N/A",
+            String(po.totalAmount ?? 0),
+            po.status ?? ""
+          ]));
+          break;
+        }
+        case "Operational Expenses": {
+          const expRes = await accountingApi.getExpenses({ startDate: dateRange.startDate, endDate: dateRange.endDate });
+          const expenses = expRes.data?.expenses ?? expRes.data ?? [];
+          rows.push(["Expense No", "Date", "Category", "Payee", "Amount", "Paid Amount", "Status"]);
+          expenses.forEach((exp: any) => rows.push([
+            exp.expenseNumber ?? exp.id ?? "",
+            (exp.expenseDate ?? exp.date ?? exp.createdAt) ? new Date(exp.expenseDate ?? exp.date ?? exp.createdAt).toLocaleDateString("en-IN") : "",
+            exp.category ?? "",
+            exp.payee ?? "",
+            String(exp.amount ?? exp.totalAmount ?? 0),
+            String(exp.paidAmount ?? 0),
+            exp.status ?? ""
+          ]));
+          break;
+        }
+        case "Profit & Loss": {
+          const plRes = await reportsApi.getDetailedProfit({ startDate: dateRange.startDate, endDate: dateRange.endDate });
+          const pl = plRes.data ?? {};
+          rows.push(["Category", "Metric", "Amount (INR)"]);
+          rows.push(["Revenue", "Total Revenue", String(pl.revenue ?? 0)]);
+          rows.push(["Expenses", "Cost of Goods Sold", String(pl.cogs ?? 0)]);
+          rows.push(["Expenses", "Operating Expenses", String(pl.expenses ?? 0)]);
+          rows.push(["Profit", "Net Profit", String((pl.revenue ?? 0) - (pl.cogs ?? 0) - (pl.expenses ?? 0))]);
+          break;
+        }
+        case "Balance Sheet": {
+          const bsRes = await accountingApi.getCashFlow();
+          const bs = bsRes.data?.breakdown ?? bsRes.data ?? {};
+          rows.push(["Account Type", "Account", "Balance (INR)"]);
+          rows.push(["Asset", "Cash in Hand", String(bs.cash ?? 0)]);
+          rows.push(["Asset", "Bank Accounts", String(bs.bank ?? 0)]);
+          rows.push(["Asset", "UPI / Digital", String(bs.upi ?? 0)]);
+          break;
+        }
+        case "Stock Valuation": {
+          const stockRes = await reportsApi.getInventoryValue();
+          const items = stockRes.data?.items ?? stockRes.data ?? [];
+          rows.push(["SKU", "Item Name", "Category", "Quantity", "Unit Cost", "Total Value"]);
+          items.forEach((itm: any) => {
+            const cost = itm.basePrice ?? itm.costPrice ?? itm.avgPrice ?? 0;
+            rows.push([itm.sku ?? "", itm.name ?? "", itm.category ?? "", String(itm.currentStock ?? 0), String(cost), String((itm.currentStock ?? 0) * cost)]);
+          });
+          break;
+        }
+        case "Franchise Performance": {
+          const fRes = await franchiseApi.getAll();
+          const franchises = fRes.data?.franchises ?? fRes.data ?? [];
+          rows.push(["Franchise ID", "Name", "Location", "Status"]);
+          franchises.forEach((f: any) => rows.push([f.id ?? "", f.name ?? "", f.city ?? f.location ?? "Local", f.isActive ? "Active" : "Inactive"]));
+          break;
+        }
+        case "Low Stock Forecast": {
+          const alertRes = await inventoryApi.getAlerts();
+          const alerts = alertRes.data?.alerts ?? alertRes.data ?? [];
+          rows.push(["SKU", "Item Name", "Category", "Current Stock", "Minimum Stock", "Status"]);
+          alerts.forEach((itm: any) => rows.push([
+            itm.sku ?? "", itm.name ?? "", itm.category ?? "",
+            String(itm.currentStock ?? 0), String(itm.minimumStock ?? 0),
+            (itm.currentStock ?? 0) <= (itm.minimumStock ?? 0) / 2 ? "Critical" : "Warning"
+          ]));
+          break;
+        }
+        case "Dispatch Efficiency": {
+          const dispRes = await franchiseOrdersApi.getAll({ startDate: dateRange.startDate, endDate: dateRange.endDate });
+          const orders = dispRes.data?.orders ?? dispRes.data ?? [];
+          rows.push(["Order ID", "Franchise", "Total Value", "Status", "Dispatch Date"]);
+          orders.forEach((order: any) => rows.push([
+            order.id ?? "", order.franchise?.name ?? "N/A", String(order.totalAmount ?? 0), order.status ?? "",
+            order.expectedDispatchDate ? new Date(order.expectedDispatchDate).toLocaleDateString("en-IN") : "N/A"
+          ]));
+          break;
+        }
+        case "General Ledger": {
+          const glRes = await accountingApi.getLedgerSummary({ startDate: dateRange.startDate, endDate: dateRange.endDate });
+          const d = glRes.data ?? {};
+          rows.push(["Category", "Count", "Total Value", "Due", "Received/Paid"]);
+          rows.push(["Invoices", String(d.invoices?.count ?? 0), String(d.invoices?.total ?? 0), String(d.invoices?.due ?? 0), String(d.invoices?.received ?? 0)]);
+          rows.push(["Purchases/Expenses", String(d.expenses?.count ?? 0), String(d.expenses?.total ?? 0), String(d.expenses?.due ?? 0), String(d.expenses?.paid ?? 0)]);
+          break;
+        }
+        default:
+          toast.error(`CSV export not available for "${item.label}"`, { id: toastId });
+          return;
+      }
+
+      if (rows.length <= 1) {
+        toast.error(`No data found for "${item.label}" in the selected date range.`, { id: toastId });
         return;
       }
 
-      const csvContent = "data:text/csv;charset=utf-8,Date,Reference,Description,Amount,Status\n" +
-                         `2026-04-15,REF-001,Sample Entry 1,5000,Completed\n` + 
-                         `2026-04-18,REF-002,Sample Entry 2,12000,Completed\n`;
-      
-      const encodedUri = encodeURI(csvContent);
+      // Safe CSV serialisation — quote fields containing commas/newlines/quotes
+      const csvString = rows.map(row =>
+        row.map(cell => {
+          const str = String(cell ?? "").replace(/"/g, '""');
+          return str.includes(",") || str.includes("\n") || str.includes('"') ? `"${str}"` : str;
+        }).join(",")
+      ).join("\n");
+
+      // Blob + createObjectURL — reliable in all browsers, handles UTF-8 + special chars
+      const blob = new Blob(["\uFEFF" + csvString], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `${item.label.replace(/\s+/g, '_').toLowerCase()}_${dateRange.startDate}_${dateRange.endDate}.csv`);
+      link.href = url;
+      link.download = `${item.label.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_${dateRange.startDate}_to_${dateRange.endDate}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
-      toast.success("CSV Exported Successfully", { 
+      toast.success(`Exported ${rows.length - 1} records successfully`, { 
         id: toastId,
-        style: { borderRadius: '10px', background: '#10b981', color: '#fff' }
+        style: { borderRadius: "10px", background: "#10b981", color: "#fff" }
       });
-    } catch (error) {
-      toast.error("Failed to generate export", { id: toastId });
+    } catch (error: any) {
+      console.error("CSV export error:", error);
+      toast.error(error?.response?.data?.error ?? "Failed to generate CSV export", { id: toastId });
     }
   };
 
-  const handleOpen = async (item: any) => {
-    const toastId = toast.loading(`Loading ${item.label}...`);
-    try {
-      await new Promise(res => setTimeout(res, 500));
-      
-      const reportsWithData = [
-        "Sales Order Report", 
-        "POS Invoices", 
-        "Purchase Orders", 
-        "Operational Expenses", 
-        "Profit & Loss", 
-        "Balance Sheet", 
-        "Stock Valuation",
-        "Product P&L",
-        "Cash Flow Statement",
-        "Trial Balance",
-        "General Ledger",
-        "Franchise Performance",
-        "Low Stock Forecast",
-        "Dispatch Efficiency"
-      ];
-      
-      if (!reportsWithData.includes(item.label)) {
-        toast.error(`No data available to display for ${item.label} in the selected period.`, { 
-          id: toastId,
-          style: { borderRadius: '10px', background: '#333', color: '#fff' }
-        });
-        return;
-      }
-
-      toast.success(`Opening ${item.label}`, { id: toastId });
-      window.location.href = item.href;
-    } catch (error) {
-      toast.error("Failed to open report", { id: toastId });
-    }
+  const handleOpen = (item: any) => {
+    router.push(item.href);
   };
 
   return (
@@ -181,6 +267,7 @@ function ReportCategory({ title, items, searchTerm, dateRange }: {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function CentralReports() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -199,8 +286,8 @@ export default function CentralReports() {
     setLoading(true);
     try {
       const res = await accountingApi.getLedgerSummary({
-        startDate: new Date(dateRange.startDate).toISOString(),
-        endDate: new Date(dateRange.endDate).toISOString()
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate
       });
       setSummary(res.data);
     } catch (err) {
@@ -308,12 +395,25 @@ export default function CentralReports() {
                        {expandedSections.includes("Purchases and Expenses Summary") ? <ChevronUpIcon size={16} /> : <ChevronDownIcon size={16} />}
                     </button>
                     {expandedSections.includes("Purchases and Expenses Summary") && (
-                      <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-8">
-                         <SummaryCard icon={<ShoppingCartIcon size={20} />} label="Total POs" value={summary?.expenses?.count?.toString() || "0"} color="blue" />
-                         <SummaryCard icon={<PlusIcon size={20} />} label="Total Billed" value={`₹${summary?.expenses?.total?.toLocaleString() || "0"}`} color="blue" />
-                         <SummaryCard icon={<BadgeDollarSignIcon size={20} />} label="Vendor Dues" value={`₹${summary?.expenses?.due?.toLocaleString() || "0"}`} color="orange" />
-                         <SummaryCard icon={<BadgeDollarSignIcon size={20} />} label="Payment Made" value={`₹${summary?.expenses?.paid?.toLocaleString() || "0"}`} color="green" />
-                      </div>
+                       <div className="p-6 space-y-4">
+                         {/* Purchase Orders Row */}
+                         <div>
+                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Purchase Orders</p>
+                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                             <SummaryCard icon={<ShoppingCartIcon size={20} />} label="Total POs" value={summary?.purchaseOrders?.count?.toString() || "0"} color="blue" />
+                             <SummaryCard icon={<PlusIcon size={20} />} label="PO Value" value={`₹${(summary?.purchaseOrders?.total || 0).toLocaleString()}`} color="blue" />
+                             <SummaryCard icon={<BadgeDollarSignIcon size={20} />} label="PO Due" value={`₹${(summary?.purchaseOrders?.due || 0).toLocaleString()}`} color="orange" />
+                           </div>
+                         </div>
+                         <div className="border-t border-[#F0EAF0] dark:border-slate-700 pt-4">
+                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Operational Expenses</p>
+                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                             <SummaryCard icon={<ShoppingCartIcon size={20} />} label="Total Expenses" value={summary?.expenses?.count?.toString() || "0"} color="blue" />
+                             <SummaryCard icon={<BadgeDollarSignIcon size={20} />} label="Total Billed" value={`₹${(summary?.expenses?.total || 0).toLocaleString()}`} color="orange" />
+                             <SummaryCard icon={<BadgeDollarSignIcon size={20} />} label="Amount Paid" value={`₹${(summary?.expenses?.paid || 0).toLocaleString()}`} color="green" />
+                           </div>
+                         </div>
+                       </div>
                     )}
                  </div>
               </div>
@@ -329,7 +429,7 @@ export default function CentralReports() {
              items={[
                { label: "Sales Order Report", href: "/sales/orders", actions: ["Open", "CSV"] },
                { label: "POS Invoices", href: "/pos/invoices", actions: ["Open", "CSV"] },
-               { label: "Franchise Royalty Dues", href: "/franchise/dues", actions: ["Open"] },
+              //  { label: "Franchise Royalty Dues", href: "/franchise/dues", actions: ["Open"] },
              ]}
            />
            <ReportCategory 
@@ -363,7 +463,7 @@ export default function CentralReports() {
                { label: "Product P&L", href: "/inventory/product-pnl", actions: ["Open"] },
                { label: "Fulfillment Tracking", href: "/sales/orders", actions: ["Open"] },
                { label: "Franchise Performance", href: "/franchise/performance", actions: ["Open", "CSV"] },
-               { label: "Low Stock Forecast", href: "/inventory/forecast", actions: ["Open", "CSV"] },
+               { label: "Low Stock Forecast", href: "/inventory/forecast", actions: ["Open", "CSV"]},
                { label: "Dispatch Efficiency", href: "/logistics/efficiency", actions: ["Open", "CSV"] },
              ]}
            />

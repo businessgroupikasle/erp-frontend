@@ -779,87 +779,96 @@ export default function VendorsClient() {
 
       {showPaymentModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6">
-            <h2 className="text-lg font-black text-gray-900 dark:text-white">Record Transaction</h2>
-            <div className="p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl flex border border-slate-200 dark:border-white/5">
-              <button onClick={() => setPaymentForm({...paymentForm, type: 'PAYMENT'})} className={clsx("flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all", paymentForm.type === 'PAYMENT' ? "bg-white dark:bg-slate-700 text-orange-600 dark:text-white shadow-sm" : "text-slate-500")}>Pay Due</button>
-              <button onClick={() => setPaymentForm({...paymentForm, type: 'ADVANCE'})} className={clsx("flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all", paymentForm.type === 'ADVANCE' ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm" : "text-slate-500")}>Advance</button>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Transaction Amount</label>
-              <div className="relative group">
-                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl font-black text-slate-300">₹</span>
-                <input value={paymentForm.amount} onChange={e => setPaymentForm({...paymentForm, amount: e.target.value.replace(/[^0-9.]/g, '')})} placeholder="0.00" className="w-full pl-12 pr-6 py-5 text-3xl font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-white/5 rounded-2xl outline-none focus:ring-4 ring-orange-500/10" />
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
+            {/* Sticky Header */}
+            <div className="px-8 pt-8 pb-4 border-b border-slate-100 dark:border-white/5 shrink-0">
+              <h2 className="text-lg font-black text-gray-900 dark:text-white">Record Transaction</h2>
+              <div className="mt-4 p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl flex border border-slate-200 dark:border-white/5">
+                <button onClick={() => setPaymentForm({...paymentForm, type: 'PAYMENT'})} className={clsx("flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all", paymentForm.type === 'PAYMENT' ? "bg-white dark:bg-slate-700 text-orange-600 dark:text-white shadow-sm" : "text-slate-500")}>Pay Due</button>
+                <button onClick={() => setPaymentForm({...paymentForm, type: 'ADVANCE'})} className={clsx("flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all", paymentForm.type === 'ADVANCE' ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm" : "text-slate-500")}>Advance</button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto px-8 py-5 space-y-5">
               <div className="space-y-1">
-                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Debit From Account</label>
-                {accounts.length === 0 ? (
-                  <div className="px-4 py-2 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl">
-                    <p className="text-[9px] font-bold text-rose-600 dark:text-rose-400">No accounts found. Create one in <span className="underline cursor-pointer" onClick={() => router.push('/banking/accounts')}>Banking</span></p>
+                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Transaction Amount</label>
+                <div className="relative group">
+                  <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl font-black text-slate-300">₹</span>
+                  <input value={paymentForm.amount} onChange={e => setPaymentForm({...paymentForm, amount: e.target.value.replace(/[^0-9.]/g, '')})} placeholder="0.00" className="w-full pl-12 pr-6 py-5 text-3xl font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-white/5 rounded-2xl outline-none focus:ring-4 ring-orange-500/10" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Debit From Account</label>
+                  {accounts.length === 0 ? (
+                    <div className="px-4 py-2 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl">
+                      <p className="text-[9px] font-bold text-rose-600 dark:text-rose-400">No accounts found. Create one in <span className="underline cursor-pointer" onClick={() => router.push('/banking/accounts')}>Banking</span></p>
+                    </div>
+                  ) : (
+                    <select value={paymentForm.accountId} onChange={e => setPaymentForm({...paymentForm, accountId: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none dark:text-white">
+                      {accounts.map(a => <option key={a.id} value={a.id}>{a.name} (₹{Math.round(a.balance).toLocaleString()})</option>)}
+                    </select>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Payment Mode</label>
+                  <select value={paymentForm.paymentMode} onChange={e => setPaymentForm({...paymentForm, paymentMode: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none dark:text-white">
+                    <option value="CASH">Cash</option>
+                    <option value="BANK_TRANSFER">Bank Transfer</option>
+                    <option value="UPI">UPI / Digital</option>
+                    <option value="CHEQUE">Cheque</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Reference No.</label>
+                  <input placeholder="TXN-123456" value={paymentForm.referenceId} onChange={e => setPaymentForm({...paymentForm, referenceId: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                </div>
+                {paymentForm.type === 'PAYMENT' && (
+                  <div className="space-y-1 col-span-2">
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Allocate to Invoice (Recommended)</label>
+                    <select 
+                      value={paymentForm.vendorInvoiceId} 
+                      onChange={e => {
+                        const inv = vendorInvoices.find(i => i.id === e.target.value);
+                        setPaymentForm({
+                          ...paymentForm, 
+                          vendorInvoiceId: e.target.value,
+                          amount: inv ? inv.amount.toString() : paymentForm.amount
+                        });
+                      }} 
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none dark:text-white"
+                    >
+                      <option value="">Direct Payment (Unallocated)</option>
+                      {vendorInvoices.map(inv => (
+                        <option key={inv.id} value={inv.id}>{inv.invoiceNumber} (₹{inv.amount.toLocaleString()}) - {inv.status}</option>
+                      ))}
+                    </select>
                   </div>
-                ) : (
-                  <select value={paymentForm.accountId} onChange={e => setPaymentForm({...paymentForm, accountId: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none">
-                    {accounts.map(a => <option key={a.id} value={a.id}>{a.name} (₹{Math.round(a.balance).toLocaleString()})</option>)}
-                  </select>
                 )}
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Transaction Date</label>
+                  <input type="date" value={paymentForm.date} onChange={e => setPaymentForm({...paymentForm, date: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Payment Mode</label>
-                <select value={paymentForm.paymentMode} onChange={e => setPaymentForm({...paymentForm, paymentMode: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none">
-                  <option value="CASH">Cash</option>
-                  <option value="BANK_TRANSFER">Bank Transfer</option>
-                  <option value="UPI">UPI / Digital</option>
-                  <option value="CHEQUE">Cheque</option>
-                </select>
+                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Remarks / Internal Notes</label>
+                 <input placeholder="Note for accounting..." value={paymentForm.note} onChange={e => setPaymentForm({...paymentForm, note: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none dark:text-white" />
               </div>
-              <div className="space-y-1">
-                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Reference No.</label>
-                <input placeholder="TXN-123456" value={paymentForm.referenceId} onChange={e => setPaymentForm({...paymentForm, referenceId: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
-              </div>
-              {paymentForm.type === 'PAYMENT' && (
-                <div className="space-y-1 col-span-2">
-                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Allocate to Invoice (Recommended)</label>
-                  <select 
-                    value={paymentForm.vendorInvoiceId} 
-                    onChange={e => {
-                      const inv = vendorInvoices.find(i => i.id === e.target.value);
-                      setPaymentForm({
-                        ...paymentForm, 
-                        vendorInvoiceId: e.target.value,
-                        amount: inv ? inv.amount.toString() : paymentForm.amount
-                      });
-                    }} 
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none"
-                  >
-                    <option value="">Direct Payment (Unallocated)</option>
-                    {vendorInvoices.map(inv => (
-                      <option key={inv.id} value={inv.id}>{inv.invoiceNumber} (₹{inv.amount.toLocaleString()}) - {inv.status}</option>
-                    ))}
-                  </select>
+              {amountNum > 0 && (
+                <div className="p-4 bg-orange-500/5 border border-orange-500/10 rounded-2xl space-y-2">
+                  <p className="text-[8px] font-black text-orange-600 uppercase tracking-widest flex items-center gap-1.5"><Zap size={10} /> Live Impact Preview</p>
+                  <div className="grid grid-cols-2 gap-4 text-[10px] font-black">
+                    <div><p className="text-[7px] text-slate-500 uppercase">Vendor Position</p><span>₹{Math.round(paymentForm.type === 'PAYMENT' ? Math.max(0, (selectedVendor?.due || 0) - amountNum) : (selectedVendor?.advance || 0) + amountNum).toLocaleString()}</span></div>
+                    <div><p className="text-[7px] text-slate-500 uppercase">Account Balance</p><span className="text-rose-500">₹{Math.round(accountBalance - amountNum).toLocaleString()}</span></div>
+                  </div>
                 </div>
               )}
-              <div className="space-y-1">
-                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Transaction Date</label>
-                <input type="date" value={paymentForm.date} onChange={e => setPaymentForm({...paymentForm, date: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
-              </div>
             </div>
-            <div className="space-y-1">
-               <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Remarks / Internal Notes</label>
-               <input placeholder="Note for accounting..." value={paymentForm.note} onChange={e => setPaymentForm({...paymentForm, note: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
-            </div>
-            {amountNum > 0 && (
-              <div className="p-4 bg-orange-500/5 border border-orange-500/10 rounded-2xl space-y-2">
-                <p className="text-[8px] font-black text-orange-600 uppercase tracking-widest flex items-center gap-1.5"><Zap size={10} /> Live Impact Preview</p>
-                <div className="grid grid-cols-2 gap-4 text-[10px] font-black">
-                  <div><p className="text-[7px] text-slate-500 uppercase">Vendor Position</p><span>₹{Math.round(paymentForm.type === 'PAYMENT' ? Math.max(0, (selectedVendor?.due || 0) - amountNum) : (selectedVendor?.advance || 0) + amountNum).toLocaleString()}</span></div>
-                  <div><p className="text-[7px] text-slate-500 uppercase">Account Balance</p><span className="text-rose-500">₹{Math.round(accountBalance - amountNum).toLocaleString()}</span></div>
-                </div>
-              </div>
-            )}
-            <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-white/5">
-              <button onClick={() => setShowPaymentModal(false)} className="px-5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded-lg transition-all">Cancel</button>
+
+            {/* Sticky Footer */}
+            <div className="px-8 py-5 border-t border-slate-100 dark:border-white/5 flex gap-3 shrink-0">
+              <button onClick={() => setShowPaymentModal(false)} className="px-5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5 rounded-lg transition-all">Cancel</button>
               <button 
                 onClick={handlePayment} 
                 className={clsx(

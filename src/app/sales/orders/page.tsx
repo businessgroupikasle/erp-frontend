@@ -69,7 +69,7 @@ export default function SalesOrdersPage() {
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <div className="w-2 h-10 bg-orange-500 rounded-full" />
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase">Sales Orders</h1>
+            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Sales Orders</h1>
           </div>
           <p className="text-sm font-medium text-slate-400 max-w-md leading-relaxed ml-5">
             Full transaction history and order lifecycle management.
@@ -79,7 +79,7 @@ export default function SalesOrdersPage() {
         <div className="flex items-center gap-4">
           <button
             onClick={fetchOrders}
-            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-orange-500 hover:border-orange-200 transition-all active:scale-90 shadow-sm"
+            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white dark:bg-[#12141c] border border-slate-100 dark:border-white/10 text-slate-400 hover:text-orange-500 hover:border-orange-200 transition-all active:scale-90 shadow-sm"
           >
             <RefreshCw size={18} className={clsx(loading && "animate-spin")} />
           </button>
@@ -91,11 +91,11 @@ export default function SalesOrdersPage() {
         {/* Quick Stats */}
         <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-6">
           {[
-            { label: "Today's Orders", value: orders.filter(o => format(new Date(o.createdAt), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')).length, color: "text-slate-900" },
+            { label: "Today's Orders", value: orders.filter(o => format(new Date(o.createdAt), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')).length, color: "text-slate-900 dark:text-white" },
             { label: "Completed", value: orders.filter(o => o.status === 'COMPLETED').length, color: "text-emerald-500" },
             { label: "Total Revenue", value: `₹${orders.reduce((acc, o) => acc + o.totalAmount, 0).toLocaleString()}`, color: "text-orange-500" },
           ].map((s) => (
-            <div key={s.label} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+            <div key={s.label} className="bg-white dark:bg-[#12141c] p-6 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-sm">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
               <p className={clsx("text-2xl font-black mt-1 tabular-nums", s.color)}>{s.value}</p>
             </div>
@@ -103,24 +103,24 @@ export default function SalesOrdersPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col md:flex-row items-center gap-4 min-w-[400px]">
+        <div className="bg-white dark:bg-[#12141c] p-4 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-sm flex flex-col md:flex-row items-center gap-4 min-w-[400px]">
           <div className="relative flex-1 w-full">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search Invoice / Customer..."
-              className="w-full pl-11 pr-4 py-3 bg-slate-50 border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500/10 transition-all"
+              className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-white/5 border-none rounded-xl text-xs font-bold dark:text-white outline-none focus:ring-2 focus:ring-orange-500/10 transition-all"
             />
           </div>
-          <div className="flex bg-slate-50 p-1 rounded-xl">
+          <div className="flex bg-slate-50 dark:bg-white/5 p-1 rounded-xl">
             {["ALL", "COMPLETED"].map(f => (
               <button
                 key={f}
                 onClick={() => setStatusFilter(f)}
                 className={clsx(
                   "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
-                  statusFilter === f ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  statusFilter === f ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm" : "text-slate-400 hover:text-slate-600 dark:hover:text-white"
                 )}
               >
                 {f}
@@ -131,11 +131,11 @@ export default function SalesOrdersPage() {
       </div>
 
       {/* Orders Table/List */}
-      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] border border-slate-100 dark:border-white/10 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50">
+              <tr className="bg-slate-50/50 dark:bg-white/5">
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Order Info</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Items</th>
@@ -144,7 +144,7 @@ export default function SalesOrdersPage() {
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-50 dark:divide-white/5">
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
@@ -162,10 +162,10 @@ export default function SalesOrdersPage() {
                 </tr>
               ) : (
                 filtered.map((order) => (
-                  <tr key={order.id} className="group hover:bg-slate-50/50 transition-colors">
+                  <tr key={order.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
                     <td className="px-8 py-6">
                       <div className="flex flex-col">
-                        <span className="text-xs font-black text-slate-900 uppercase tracking-tight">{order.invoiceNum}</span>
+                        <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{order.invoiceNum}</span>
                         <span className="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1">
                           <Calendar size={10} /> {format(new Date(order.createdAt), 'dd MMM yyyy, HH:mm')}
                         </span>
@@ -173,11 +173,11 @@ export default function SalesOrdersPage() {
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-black text-[10px] uppercase">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 font-black text-[10px] uppercase">
                           {order.customer?.name?.[0] || "W"}
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-xs font-black text-slate-800 uppercase tracking-tight">{order.customer?.name || "Walk-in Customer"}</span>
+                          <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight">{order.customer?.name || "Walk-in Customer"}</span>
                           {order.customer?.phone && <span className="text-[10px] font-bold text-slate-400">{order.customer.phone}</span>}
                         </div>
                       </div>
@@ -186,7 +186,7 @@ export default function SalesOrdersPage() {
                       {order.orderItems?.length || 0} items
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <span className="text-sm font-black text-slate-900">₹{order.totalAmount.toLocaleString()}</span>
+                      <span className="text-sm font-black text-slate-900 dark:text-white">₹{order.totalAmount.toLocaleString()}</span>
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex justify-center">
