@@ -2,30 +2,31 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  TrendingDown,
-  Home,
-  Briefcase,
-  Truck,
-  Zap,
-  PackageMinus,
-  Plus,
-  Calendar,
+  TrendingDown as TrendingDownIcon,
+  Home as HomeIcon,
+  Briefcase as BriefcaseIcon,
+  Truck as TruckIcon,
+  Zap as ZapIcon,
+  PackageMinus as PackageMinusIcon,
+  Plus as PlusIcon,
+  Calendar as CalendarIcon,
+  ChevronDown as ChevronDownIcon,
+  BarChart2 as BarChart2Icon,
+  RefreshCw as RefreshCwIcon,
+  CheckCircle2 as CheckCircle2Icon,
+  Loader2 as Loader2Icon,
+  AlertCircle as AlertCircleIcon,
+  CreditCard as CreditCardIcon,
+  History as HistoryIcon,
+  X as XIcon,
+  Trash2 as Trash2Icon,
+  AlertTriangle as AlertTriangleIcon,
+  Receipt as ReceiptIcon,
+  Wallet as WalletIcon,
+  Building as BuildingIcon,
+  User as UserIcon,
+  Clock as ClockIcon,
   ChevronDown,
-  BarChart2,
-  RefreshCw,
-  CheckCircle2,
-  Loader2,
-  AlertCircle,
-  CreditCard,
-  History,
-  X,
-  Trash2,
-  AlertTriangle,
-  Receipt,
-  Wallet,
-  Building,
-  User,
-  Clock,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { accountingApi, accountsApi } from "@/lib/api";
@@ -61,11 +62,11 @@ interface PaymentRecord {
 }
 
 const CATEGORY_CONFIG: Record<ExpenseCategory, { icon: any; label: string; color: string; bg: string }> = {
-  RENT:      { icon: Home,         label: "Rent & Leases",        color: "text-indigo-500", bg: "bg-indigo-50" },
-  SALARY:    { icon: Briefcase,    label: "Payroll & Wages",      color: "text-blue-500",   bg: "bg-blue-50" },
-  TRANSPORT: { icon: Truck,        label: "Transport & Logistics", color: "text-orange-500", bg: "bg-orange-50" },
-  UTILITIES: { icon: Zap,          label: "Electricity & Bills",   color: "text-yellow-500", bg: "bg-yellow-50" },
-  OTHER:     { icon: PackageMinus, label: "Miscellaneous",         color: "text-slate-500",  bg: "bg-slate-100" },
+  RENT:      { icon: HomeIcon,         label: "Rent & Leases",        color: "text-indigo-500", bg: "bg-indigo-50" },
+  SALARY:    { icon: BriefcaseIcon,    label: "Payroll & Wages",      color: "text-blue-500",   bg: "bg-blue-50" },
+  TRANSPORT: { icon: TruckIcon,        label: "Transport & Logistics", color: "text-orange-500", bg: "bg-orange-50" },
+  UTILITIES: { icon: ZapIcon,          label: "Electricity & Bills",   color: "text-yellow-500", bg: "bg-yellow-50" },
+  OTHER:     { icon: PackageMinusIcon, label: "Miscellaneous",         color: "text-slate-500",  bg: "bg-slate-100" },
 };
 
 const EMPTY_FORM = {
@@ -219,13 +220,13 @@ export default function ExpensesPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PAID":
-        return <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase rounded-md flex items-center gap-1"><CheckCircle2 size={10} /> Paid</span>;
+        return <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase rounded-md flex items-center gap-1"><CheckCircle2Icon size={10} /> Paid</span>;
       case "PARTIAL":
-        return <span className="px-2 py-0.5 bg-orange-50 text-orange-600 text-[9px] font-black uppercase rounded-md flex items-center gap-1"><RefreshCw size={10} className="animate-spin-slow" /> Partial</span>;
+        return <span className="px-2 py-0.5 bg-orange-50 text-orange-600 text-[9px] font-black uppercase rounded-md flex items-center gap-1"><RefreshCwIcon size={10} className="animate-spin-slow" /> Partial</span>;
       case "UNPAID":
-        return <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[9px] font-black uppercase rounded-md flex items-center gap-1"><AlertCircle size={10} /> Unpaid</span>;
+        return <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[9px] font-black uppercase rounded-md flex items-center gap-1"><AlertCircleIcon size={10} /> Unpaid</span>;
       case "CANCELLED":
-        return <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-black uppercase rounded-md flex items-center gap-1"><X size={10} /> Cancelled</span>;
+        return <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-black uppercase rounded-md flex items-center gap-1"><XIcon size={10} /> Cancelled</span>;
       default:
         return null;
     }
@@ -253,7 +254,7 @@ export default function ExpensesPage() {
             onClick={fetchData}
             className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-all active:scale-90"
           >
-            <RefreshCw size={18} className={clsx(loading && "animate-spin")} />
+            <RefreshCwIcon size={18} className={clsx(loading && "animate-spin")} />
           </button>
         </div>
       </div>
@@ -283,7 +284,7 @@ export default function ExpensesPage() {
         <div className="lg:col-span-1 border border-slate-100 bg-white rounded-[2rem] overflow-hidden flex flex-col p-6 shadow-sm">
           <div className="mb-6 flex items-center gap-3 border-b border-slate-50 pb-4">
             <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center">
-              <Plus size={16} className="text-orange-500" />
+              <PlusIcon size={16} className="text-orange-500" />
             </div>
             <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">
               Create Expense Bill
@@ -317,7 +318,7 @@ export default function ExpensesPage() {
               </label>
               <div className="relative">
                 <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400">
-                  <User size={16} />
+                  <UserIcon size={16} />
                 </span>
                 <input
                   type="text"
@@ -436,12 +437,12 @@ export default function ExpensesPage() {
             {/* Error & Success States */}
             {submitError && (
               <div className="flex items-center gap-2 p-4 bg-red-50 rounded-2xl text-red-600 text-[11px] font-black uppercase tracking-widest animate-in shake duration-300">
-                <AlertCircle size={14} className="shrink-0" /> {submitError}
+                <AlertCircleIcon size={14} className="shrink-0" /> {submitError}
               </div>
             )}
             {submitSuccess && (
               <div className="flex items-center gap-2 p-4 bg-emerald-50 rounded-2xl text-emerald-600 text-[11px] font-black uppercase tracking-widest">
-                <CheckCircle2 size={14} className="shrink-0" /> Expense bill recorded!
+                <CheckCircle2Icon size={14} className="shrink-0" /> Expense bill recorded!
               </div>
             )}
           </div>
@@ -453,9 +454,9 @@ export default function ExpensesPage() {
               className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] shadow-lg shadow-slate-900/10 transition-all active:translate-y-0.5 disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2"
             >
               {submitting ? (
-                <><Loader2 size={16} className="animate-spin" /> Processing...</>
+                <><Loader2Icon size={16} className="animate-spin" /> Processing...</>
               ) : (
-                <><Plus size={16} /> Save Expense Entry</>
+                <><PlusIcon size={16} /> Save Expense Entry</>
               )}
             </button>
           </div>
@@ -490,7 +491,7 @@ export default function ExpensesPage() {
             {!loading && expenses.length === 0 && (
               <div className="p-32 text-center space-y-6">
                 <div className="p-8 bg-slate-50 w-fit mx-auto rounded-[2.5rem]">
-                  <Receipt size={48} className="text-slate-200" strokeWidth={1} />
+                  <ReceiptIcon size={48} className="text-slate-200" strokeWidth={1} />
                 </div>
                 <div className="space-y-1">
                   <p className="text-slate-900 font-black uppercase tracking-widest text-xs">No expense bills created yet.</p>
@@ -544,12 +545,12 @@ export default function ExpensesPage() {
                       <div className="mt-4 flex items-center justify-between border-t border-slate-50 pt-4">
                         <div className="flex items-center gap-4">
                           <span className="flex items-center gap-1.5 text-[9px] text-slate-400 font-bold uppercase tracking-widest">
-                            <Calendar size={12} className="text-slate-300" />
+                            <CalendarIcon size={12} className="text-slate-300" />
                             {new Date(expense.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                           </span>
                           {expense.dueDate && (
                              <span className={clsx("flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest", isOverdue ? "text-red-500" : "text-slate-400")}>
-                              <Clock size={12} className={isOverdue ? "text-red-400" : "text-slate-300"} />
+                              <ClockIcon size={12} className={isOverdue ? "text-red-400" : "text-slate-300"} />
                               Due: {new Date(expense.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
                             </span>
                           )}
@@ -557,7 +558,7 @@ export default function ExpensesPage() {
                             onClick={() => fetchHistory(expense)}
                             className="text-[9px] text-slate-400 hover:text-slate-900 font-black uppercase tracking-widest flex items-center gap-1.5 transition-colors"
                           >
-                            <History size={12} /> View History
+                            <HistoryIcon size={12} /> View History
                           </button>
                         </div>
                         
@@ -580,7 +581,7 @@ export default function ExpensesPage() {
                               onClick={() => handleCancel(expense.id)}
                               className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                             >
-                              <Trash2 size={14} />
+                              <Trash2Icon size={14} />
                             </button>
                           )}
                         </div>
@@ -601,14 +602,14 @@ export default function ExpensesPage() {
             <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center">
-                  <CreditCard className="text-orange-500" size={20} />
+                  <CreditCardIcon className="text-orange-500" size={20} />
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Record Payment</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ref: {payingExpense.expenseNumber}</p>
                 </div>
               </div>
-              <button onClick={() => setPayingExpense(null)} className="p-2 hover:bg-slate-200 rounded-xl transition-colors"><X size={20} /></button>
+              <button onClick={() => setPayingExpense(null)} className="p-2 hover:bg-slate-200 rounded-xl transition-colors"><XIcon size={20} /></button>
             </div>
 
             <div className="p-8 space-y-6">
@@ -617,7 +618,7 @@ export default function ExpensesPage() {
                   <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Remaining Balance</p>
                   <p className="text-xl font-black text-orange-600 tabular-nums">₹{(payingExpense.amount - payingExpense.paidAmount).toLocaleString()}</p>
                 </div>
-                <CreditCard size={24} className="text-orange-200" />
+                <CreditCardIcon size={24} className="text-orange-200" />
               </div>
 
               <div className="space-y-5">
@@ -665,7 +666,7 @@ export default function ExpensesPage() {
                   disabled={isPaying || !payAmount || parseFloat(payAmount) <= 0}
                   className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-900/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {isPaying ? <><Loader2 size={16} className="animate-spin" /> Processing...</> : <>Confirm Payment Out</>}
+                  {isPaying ? <><Loader2Icon size={16} className="animate-spin" /> Processing...</> : <>Confirm Payment Out</>}
                 </button>
               </div>
             </div>
@@ -680,26 +681,26 @@ export default function ExpensesPage() {
              <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center">
-                  <History className="text-indigo-500" size={20} />
+                  <HistoryIcon className="text-indigo-500" size={20} />
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Payment History</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{viewingHistory.expenseNumber}</p>
                 </div>
               </div>
-              <button onClick={() => setViewingHistory(null)} className="p-2 hover:bg-slate-200 rounded-xl transition-colors"><X size={20} /></button>
+              <button onClick={() => setViewingHistory(null)} className="p-2 hover:bg-slate-200 rounded-xl transition-colors"><XIcon size={20} /></button>
             </div>
 
             <div className="p-8">
               {loadingHistory ? (
                 <div className="py-20 flex flex-col items-center gap-4">
-                  <Loader2 className="animate-spin text-slate-200" size={48} />
+                  <Loader2Icon className="animate-spin text-slate-200" size={48} />
                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Loading Ledger Entries...</p>
                 </div>
               ) : history.length === 0 ? (
                 <div className="py-20 text-center space-y-4">
                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
-                    <Receipt className="text-slate-200" size={32} />
+                    <ReceiptIcon className="text-slate-200" size={32} />
                   </div>
                   <p className="text-slate-400 font-medium tracking-tight">No payments recorded yet for this bill.</p>
                 </div>
@@ -709,7 +710,7 @@ export default function ExpensesPage() {
                     <div key={pay.id} className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between border border-slate-100 group">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm">
-                          <CreditCard size={18} className="text-emerald-500" />
+                          <CreditCardIcon size={18} className="text-emerald-500" />
                         </div>
                         <div>
                           <p className="text-sm font-black text-slate-900 tabular-nums">₹{pay.paidAmount.toLocaleString()}</p>

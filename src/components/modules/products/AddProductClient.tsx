@@ -237,7 +237,7 @@ export default function AddProductClient() {
                         : "bg-slate-50 text-slate-400 hover:bg-slate-100"
                     )}
                   >
-                    {rate}%
+                    {rate === 0 ? "Without Tax (0%)" : `${rate}%`}
                   </button>
                 ))}
                 <input 

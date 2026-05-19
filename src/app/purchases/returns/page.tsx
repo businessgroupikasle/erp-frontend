@@ -1,7 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, Plus, Search, ArrowRight, History, CheckCircle2, XCircle, Clock, CheckCircle, Loader2 } from "lucide-react";
+import { 
+  Package as PackageIcon, 
+  Plus as PlusIcon, 
+  Search as SearchIcon, 
+  ArrowRight as ArrowRightIcon, 
+  History as HistoryIcon, 
+  CheckCircle2 as CheckCircle2Icon, 
+  XCircle as XCircleIcon, 
+  Clock as ClockIcon, 
+  CheckCircle as CheckCircleIcon, 
+  Loader2 as Loader2Icon 
+} from "lucide-react";
 import api from "@/lib/api";
 import { clsx } from "clsx";
 
@@ -77,7 +88,7 @@ export default function PurchaseReturnsPage() {
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
              <div className="w-14 h-14 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
-                <History size={28} />
+                <HistoryIcon size={28} />
              </div>
              <div>
                 <h1 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Purchase Returns</h1>
@@ -93,17 +104,17 @@ export default function PurchaseReturnsPage() {
               onClick={() => setShowForm(true)}
               className="px-6 py-2.5 bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all flex items-center gap-2"
             >
-              <Plus size={16} /> New Return
+              <PlusIcon size={16} /> New Return
             </button>
           </div>
         </header>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { label: "Pending", status: "PENDING", icon: Clock, color: "text-amber-500", bg: "bg-amber-50/30 dark:bg-amber-500/5" },
-            { label: "Approved", status: "APPROVED", icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-50/30 dark:bg-emerald-500/5" },
-            { label: "Rejected", status: "REJECTED", icon: XCircle, color: "text-rose-500", bg: "bg-rose-50/30 dark:bg-rose-500/5" },
-            { label: "Completed", status: "COMPLETED", icon: CheckCircle, color: "text-blue-500", bg: "bg-blue-50/30 dark:bg-blue-500/5" },
+            { label: "Pending", status: "PENDING", icon: ClockIcon, color: "text-amber-500", bg: "bg-amber-50/30 dark:bg-amber-500/5" },
+            { label: "Approved", status: "APPROVED", icon: CheckCircle2Icon, color: "text-emerald-500", bg: "bg-emerald-50/30 dark:bg-emerald-500/5" },
+            { label: "Rejected", status: "REJECTED", icon: XCircleIcon, color: "text-rose-500", bg: "bg-rose-50/30 dark:bg-rose-500/5" },
+            { label: "Completed", status: "COMPLETED", icon: CheckCircleIcon, color: "text-blue-500", bg: "bg-blue-50/30 dark:bg-blue-500/5" },
           ].map(s => (
             <div key={s.label} className={clsx("rounded-[2rem] p-8 border border-gray-100 dark:border-white/5 shadow-xl shadow-black/[0.02] text-center bg-white dark:bg-[#12141c]")}>
                <div className={clsx("text-4xl font-black tracking-tighter mb-2", s.color)}>
@@ -116,7 +127,7 @@ export default function PurchaseReturnsPage() {
 
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -145,7 +156,7 @@ export default function PurchaseReturnsPage() {
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-white/5">
               {loading ? (
-                <tr><td colSpan={7} className="px-8 py-16 text-center"><Loader2 className="mx-auto text-orange-500 animate-spin" /></td></tr>
+                <tr><td colSpan={7} className="px-8 py-16 text-center"><Loader2Icon className="mx-auto text-orange-500 animate-spin" /></td></tr>
               ) : returns.length === 0 ? (
                 <tr><td colSpan={7} className="px-8 py-16 text-center text-gray-400 font-bold uppercase text-xs tracking-widest">No purchase returns found</td></tr>
               ) : returns.map((r) => (

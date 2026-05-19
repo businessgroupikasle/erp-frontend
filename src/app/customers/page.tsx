@@ -9,6 +9,7 @@ import {
 import { clsx } from "clsx";
 import { customersApi } from "@/lib/api";
 import { toast } from "react-hot-toast";
+import { useAuth } from "@/context/AuthContext";
 
 interface Customer {
   id: string;
@@ -56,6 +57,7 @@ function mapCustomer(c: any): Customer {
 const EMPTY_FORM = { name: "", phone: "", email: "" };
 
 export default function CustomersPage() {
+  const { user } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -70,7 +72,11 @@ export default function CustomersPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await customersApi.getAll({ take: 200 });
+      const params: any = { take: 200 };
+      if ((user as any)?.role?.name === 'FRANCHISE_ADMIN' && (user as any).franchiseId) {
+        params.franchiseId = (user as any).franchiseId;
+      }
+      const res = await customersApi.getAll(params);
       const raw = res.data?.data || res.data || [];
       const arr = Array.isArray(raw) ? raw : [];
       setCustomers(arr.map(mapCustomer));
@@ -79,7 +85,7 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 

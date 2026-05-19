@@ -151,7 +151,7 @@ export default function BankingDashboard({
               <ChevronRight size={10} />
             </div>
             <h1 className="text-2xl font-black text-[#1A1A1A] dark:text-white flex items-center gap-2">
-               Payment Accounts <span className="text-sm">✨</span>
+               Payment Accounts 
             </h1>
           </div>
           <div className="flex">

@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Menu,
+  Menu as MenuIcon,
   Bell,
   ChevronDown,
   Settings,
@@ -18,6 +18,7 @@ import {
   Store,
   Sun,
   Moon,
+  ExternalLink,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { clsx } from "clsx";
@@ -26,24 +27,10 @@ import { useAuth } from "@/context/AuthContext";
 import { useSidebar } from "@/context/SidebarContext";
 import { SUPER_ADMIN_SIDEBAR, menuItems } from "@/config/navigation";
 import { useTheme } from "@/context/ThemeContext";
+import { useNotification, Notification } from "@/context/NotificationContext";
 import Link from "next/link";
+import router from "next/router";
 
-interface Notification {
-  id: string;
-  type: "success" | "warning" | "info" | "alert";
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-}
-
-const MOCK_NOTIFICATIONS: Notification[] = [
-  { id: "1", type: "success",  title: "Order Completed",    message: "Table #5 order ₹840 paid via UPI.",         time: "2m ago",    read: false },
-  { id: "2", type: "alert",    title: "Low Stock ⚠️",        message: "Chicken stock below 2kg threshold.",          time: "15m ago",   read: false },
-  { id: "3", type: "warning",  title: "Fulfillment Delay",  message: "Order #47 waiting 18 mins in queue.",         time: "20m ago",   read: false },
-  { id: "4", type: "success",  title: "Daily Target Hit",   message: "Today's sales crossed ₹25,000 🎉",            time: "1h ago",    read: true  },
-  { id: "5", type: "info",     title: "Recipe Updated",     message: "Biryani recipe modified by Chef Ramesh.",     time: "3h ago",    read: true  },
-];
 
 function NIcon({ type }: { type: Notification["type"] }) {
   if (type === "success") return <CheckCircle size={14} className="text-emerald-500 shrink-0" />;
@@ -179,20 +166,14 @@ export default function RefrensHeader() {
   const [showSearch,        setShowSearch]        = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile,       setShowProfile]       = useState(false);
-  const [notifications,     setNotifications]     = useState(MOCK_NOTIFICATIONS);
+  
+  const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotification();
 
   const notifRef   = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
   const initials =
     user?.fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "NX";
-
-  const markAllRead = () => setNotifications((p) => p.map((n) => ({ ...n, read: true })));
-  const markRead = (id: string) =>
-    setNotifications((p) => p.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  const removeNotification = (id: string) =>
-    setNotifications((p) => p.filter((n) => n.id !== id));
 
   const getPageTitle = () => {
     for (const section of SUPER_ADMIN_SIDEBAR) {
@@ -245,7 +226,7 @@ export default function RefrensHeader() {
           className="lg:hidden p-2 -ml-2 rounded-xl text-gray-500 hover:bg-orange-50 hover:text-orange-600 transition-colors"
           aria-label="Toggle Menu"
         >
-          <Menu size={20} />
+          <MenuIcon size={20} />
         </button>
 
         <button
@@ -253,7 +234,7 @@ export default function RefrensHeader() {
           className="hidden lg:flex p-2 -ml-2 rounded-xl text-gray-500 hover:bg-orange-50 hover:text-orange-600 transition-colors"
           title="Toggle Sidebar"
         >
-          <Menu size={20} />
+          <MenuIcon size={20} />
         </button>
 
         {/* Dynamic Page Title */}
@@ -299,7 +280,7 @@ export default function RefrensHeader() {
                     )}
                   </h3>
                   {unreadCount > 0 && (
-                    <button onClick={markAllRead} className="text-[10px] font-black uppercase text-indigo-500 hover:underline">
+                    <button onClick={markAllAsRead} className="text-[10px] font-black uppercase text-indigo-500 hover:underline">
                       Acknowledge All
                     </button>
                   )}
@@ -308,7 +289,13 @@ export default function RefrensHeader() {
                   {notifications.map((n) => (
                     <div
                       key={n.id}
-                      onClick={() => markRead(n.id)}
+                      onClick={() => {
+                        markAsRead(n.id);
+                        if (n.link) {
+                          router.push(n.link);
+                          setShowNotifications(false);
+                        }
+                      }}
                       className={clsx(
                         "group w-full flex items-start gap-4 px-4 py-4 text-left cursor-pointer hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors",
                         !n.read && "bg-slate-50/40 dark:bg-indigo-900/5"
@@ -316,12 +303,15 @@ export default function RefrensHeader() {
                     >
                       <div className="mt-0.5"><NIcon type={n.type} /></div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-bold text-gray-900 dark:text-white leading-tight uppercase tracking-tight">
+                        <p className="text-[12px] font-bold text-gray-900 dark:text-white leading-tight uppercase tracking-tight flex items-center justify-between">
                           {n.title}
-                          {!n.read && <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-indigo-500 align-middle" />}
+                          {n.link && <ExternalLink size={10} className="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
                         </p>
                         <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-1 italic leading-snug">{n.message}</p>
-                        <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2 font-black uppercase tracking-tighter">{n.time}</p>
+                        <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2 font-black uppercase tracking-tighter flex items-center gap-1.5">
+                          {n.time}
+                          {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                        </p>
                       </div>
                       <button 
                         onClick={(e) => { e.stopPropagation(); removeNotification(n.id); }}

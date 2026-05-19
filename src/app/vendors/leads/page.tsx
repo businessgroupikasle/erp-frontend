@@ -20,7 +20,7 @@ export default function VendorLeadsPage() {
           
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-black text-[#1A1A1A] dark:text-white flex items-center gap-2">
-              Your Vendor Leads <span>✨</span>
+              Your Vendor Leads 
             </h1>
             
             <div className="flex items-center gap-3">

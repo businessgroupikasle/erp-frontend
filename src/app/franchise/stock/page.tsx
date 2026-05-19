@@ -9,20 +9,18 @@ import {
 import { clsx } from "clsx";
 import { productBatchesApi, productsFullApi } from "@/lib/api";
 
-type ExpiryStatus = "EXPIRED" | "EXPIRING_SOON" | "VALID" | "NO_EXPIRY";
+type ExpiryStatus = "EXPIRED" | "EXPIRING_SOON" | "VALID";
 
 const EXPIRY_CARD: Record<ExpiryStatus, { badge: string; bar: string; label: string }> = {
   EXPIRED:       { badge: "bg-red-500/15 text-red-400 border-red-500/30",    bar: "bg-red-500",    label: "EXPIRED"      },
   EXPIRING_SOON: { badge: "bg-amber-500/15 text-amber-400 border-amber-500/30", bar: "bg-amber-500", label: "Expiring Soon" },
   VALID:         { badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", bar: "bg-emerald-500", label: "Safe" },
-  NO_EXPIRY:     { badge: "bg-zinc-700/60 text-zinc-400 border-zinc-600/40", bar: "bg-zinc-600",   label: "No Expiry"    },
 };
 
 const EXPIRY_ICONS: Record<ExpiryStatus, JSX.Element> = {
   EXPIRED:       <AlertTriangle className="w-3 h-3" />,
   EXPIRING_SOON: <Clock className="w-3 h-3" />,
   VALID:         <CheckCircle2 className="w-3 h-3" />,
-  NO_EXPIRY:     <Package className="w-3 h-3" />,
 };
 
 const FILTER_TABS: Array<{ key: string; label: string }> = [
@@ -30,7 +28,6 @@ const FILTER_TABS: Array<{ key: string; label: string }> = [
   { key: "VALID",         label: "Safe"         },
   { key: "EXPIRING_SOON", label: "Expiring Soon"},
   { key: "EXPIRED",       label: "Expired"      },
-  { key: "NO_EXPIRY",     label: "No Expiry"    },
 ];
 
 export default function FranchiseStockPage() {
@@ -62,7 +59,7 @@ export default function FranchiseStockPage() {
   };
 
   const filtered = batches.filter((b) => {
-    const status = b.expiryStatus ?? "NO_EXPIRY";
+    const status = b.expiryStatus ?? "VALID";
     const matchExpiry  = expiryFilter === "ALL" || status === expiryFilter;
     const matchSearch  = !searchTerm || (b.product?.name ?? "").toLowerCase().includes(searchTerm.toLowerCase());
     return matchExpiry && matchSearch;
@@ -73,7 +70,7 @@ export default function FranchiseStockPage() {
     total:    batches.length,
     expired:  batches.filter((b) => b.expiryStatus === "EXPIRED").length,
     expiring: batches.filter((b) => b.expiryStatus === "EXPIRING_SOON").length,
-    safe:     batches.filter((b) => !b.expiryStatus || b.expiryStatus === "VALID" || b.expiryStatus === "NO_EXPIRY").length,
+    safe:     batches.filter((b) => b.expiryStatus === "VALID").length,
   };
 
   return (
@@ -181,7 +178,7 @@ export default function FranchiseStockPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((batch: any) => {
-            const status = (batch.expiryStatus ?? "NO_EXPIRY") as ExpiryStatus;
+            const status = (batch.expiryStatus ?? "VALID") as ExpiryStatus;
             const isLow = batch.quantity < 10;
             const effectiveExpiry = batch.expiryDate || batch.production?.expiryDate;
             const daysLeft = effectiveExpiry
@@ -200,7 +197,7 @@ export default function FranchiseStockPage() {
                     status === "EXPIRING_SOON" ? "bg-amber-50 text-amber-500 border-amber-100" :
                     "bg-emerald-50 text-emerald-500 border-emerald-100"
                   )}>
-                    {status === "NO_EXPIRY" ? "Valid" : status}
+                    {status}
                   </div>
                 </div>
 
@@ -221,7 +218,7 @@ export default function FranchiseStockPage() {
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Expires In</p>
                     {effectiveExpiry ? (
                       <div>
-                        <p className={clsx("text-xl font-black tracking-tight", daysLeft !== null && daysLeft <= 3 ? "text-red-500" : "text-slate-900 dark:text-white")}>
+                        <p className={clsx("text-xl font-black tracking-tight", daysLeft !== null && daysLeft <= 7 ? "text-red-500" : "text-slate-900 dark:text-white")}>
                           {daysLeft === null ? "—" : daysLeft <= 0 ? "EXPIRED" : `${daysLeft}d`}
                         </p>
                         <p className="text-[9px] font-bold text-slate-400 uppercase">{new Date(effectiveExpiry).toLocaleDateString("en-IN", { month: "short", year: "2-digit" })}</p>

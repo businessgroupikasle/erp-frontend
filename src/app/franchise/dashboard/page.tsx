@@ -3,296 +3,375 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
-  ShoppingCart, Package, AlertTriangle, TrendingUp,
-  RefreshCw, ArrowRight, Clock, CheckCircle2, Truck,
-  PackageCheck, CreditCard, ChevronRight, BarChart3,
-  User,
+  Package, AlertTriangle, TrendingUp, RefreshCw, ArrowRight, Truck,
+  Landmark, CreditCard, ChevronRight, BarChart3, Undo2, Users,
+  Receipt, Plus, ClipboardList, CheckCircle2, AlertCircle, ShoppingCart
 } from "lucide-react";
 import { clsx } from "clsx";
-import { franchiseOrdersApi, productBatchesApi, posApi, inventoryApi } from "@/lib/api";
+import { dashboardApi } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useSearchParams } from "next/navigation";
-import { franchiseApi } from "@/lib/api";
-
-type FranchiseOrderStatus = "PENDING" | "APPROVED" | "IN_PRODUCTION" | "DISPATCHED" | "DELIVERED";
-const STATUS_STEPS: FranchiseOrderStatus[] = ["PENDING", "APPROVED", "IN_PRODUCTION", "DISPATCHED", "DELIVERED"];
-const STATUS_LABELS: Record<FranchiseOrderStatus, string> = {
-  PENDING: "Pending",
-  APPROVED: "Approved",
-  IN_PRODUCTION: "In Production",
-  DISPATCHED: "Dispatched",
-  DELIVERED: "Delivered",
-};
-
-const EXPIRY_BADGE: Record<string, string> = {
-  EXPIRED:       "bg-red-500/15 text-red-400 border-red-500/30",
-  EXPIRING_SOON: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  VALID:         "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  NO_EXPIRY:     "bg-zinc-700/60 text-zinc-400 border-zinc-600/40",
-};
 
 function fmt(n: number) {
   return "₹" + Math.round(n).toLocaleString("en-IN");
 }
-function isToday(d: string) {
-  return new Date(d).toDateString() === new Date().toDateString();
-}
+
 export default function FranchiseDashboardPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const monitorId = searchParams.get("id");
-  const [monitoredFranchise, setMonitoredFranchise] = useState<any>(null);
 
-  const [franchiseOrders, setFranchiseOrders] = useState<any[]>([]);
-  const [batches, setBatches]                 = useState<any[]>([]);
-  const [salesOrders, setSalesOrders]         = useState<any[]>([]);
-  const [loading, setLoading]                 = useState(true);
+  const [summary, setSummary] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
       const fId = monitorId || undefined;
-      
-      const [foRes, bRes, soRes, fRes] = await Promise.allSettled([
-        franchiseOrdersApi.getAll({ franchiseId: fId }),
-        productBatchesApi.getAll({ franchiseId: fId }),
-        posApi.getOrders({ franchiseId: fId, take: 100 }),
-        monitorId ? franchiseApi.getById(monitorId) : Promise.reject("No monitor ID"),
-      ]);
-
-      if (foRes.status === "fulfilled") setFranchiseOrders(foRes.value.data ?? []);
-      if (bRes.status  === "fulfilled") setBatches(bRes.value.data ?? []);
-      if (soRes.status === "fulfilled") setSalesOrders(soRes.value.data ?? []);
-      if (fRes.status  === "fulfilled") setMonitoredFranchise(fRes.value.data);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+      const res = await dashboardApi.getSummary({ franchiseId: fId });
+      setSummary(res.data);
+    } catch (e) {
+      console.error("Dashboard synchronization error", e);
+    } finally {
+      setLoading(false);
+    }
   }, [monitorId]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  // Dynamic Polling every 30 seconds for real-time operational KPI sync
+  useEffect(() => {
+    fetchAll();
+    const interval = setInterval(() => {
+      fetchAll();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [fetchAll]);
 
-  // ── Stats ────────────────────────────────────────────────────────────────────
-  const todaySales      = salesOrders.filter((o: any) => isToday(o.createdAt)).reduce((s: number, o: any) => s + (o.totalAmount ?? 0), 0);
-  const todayOrderCount = salesOrders.filter((o: any) => isToday(o.createdAt)).length;
-  const pendingCount    = franchiseOrders.filter((o: any) => ["PENDING", "APPROVED"].includes(o.status)).length;
-  const activeOrders    = franchiseOrders.filter((o: any) => ["PENDING", "APPROVED", "IN_PRODUCTION", "DISPATCHED"].includes(o.status));
-
-  const expiryAlerts    = batches.filter((b: any) => b.expiryStatus === "EXPIRED" || b.expiryStatus === "EXPIRING_SOON");
-  const lowStockBatches = batches.filter((b: any) => b.quantity < 10);
-  const stockItems      = batches.slice(0, 6);
-
-  const pendingPayment  = franchiseOrders
-    .filter((o: any) => o.paymentStatus === "UNPAID" && o.status === "DELIVERED")
-    .reduce((s: number, o: any) => s + (o.totalAmount ?? 0), 0);
-  const totalOrderValue = franchiseOrders.reduce((s: number, o: any) => s + (o.totalAmount ?? 0), 0);
+  const kpis = [
+    { label: "Today's Billing", val: fmt(summary?.stats?.revenueToday ?? 0), sub: "Gross billing today", icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/20" },
+    { label: "Pending Collections", val: fmt(summary?.stats?.pendingCollections ?? 0), sub: "Dealer unpaid amount", icon: Landmark, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-950/20" },
+    { label: "Low Stock Alerts", val: summary?.stats?.lowStockCount ?? 0, sub: "Below threshold", icon: Package, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950/20" },
+    { label: "Pending Deliveries", val: summary?.stats?.pendingDeliveries ?? 0, sub: "Orders not delivered", icon: Truck, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/20" },
+    { label: "Active Dealers", val: summary?.stats?.dealerCount ?? 0, sub: "Active network size", icon: Users, color: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-950/20" },
+    { label: "Sales Returns", val: fmt(summary?.stats?.salesReturnsToday ?? 0), sub: "Returned today value", icon: Undo2, color: "text-slate-500", bg: "bg-slate-50 dark:bg-slate-900" },
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 py-8 px-4">
+    <div className="max-w-7xl mx-auto space-y-4 py-4 px-4 pb-16 animate-in fade-in duration-300">
       
-      {/* ── Header ── */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
+      {/* ── Top Header ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-[#FF6B00]/10 rounded-xl">
-              <BarChart3 size={24} className="text-[#FF6B00]" />
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-indigo-500/10 rounded-lg shrink-0">
+              <BarChart3 size={18} className="text-indigo-500" />
             </div>
-            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-              Branch Dashboard
+            <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">
+              Franchise Distribution ERP
             </h1>
+            {loading && <RefreshCw size={12} className="text-slate-400 animate-spin ml-2" />}
           </div>
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
-            {monitorId && monitoredFranchise ? `Monitoring: ${monitoredFranchise.name}` : `Welcome back, ${user?.fullName ?? "Partner"}`}
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-xs mt-0.5">
+            {monitorId ? "Monitoring Franchise Node" : `Welcome back, ${user?.fullName ?? "Partner"}`}
           </p>
         </div>
-        <div className="flex gap-3">
-          <button 
-            onClick={fetchAll} 
-            className="p-3 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
-          >
-            <RefreshCw size={18} className={clsx("text-slate-400", loading && "animate-spin")} />
-          </button>
-          <Link 
-            href="/franchise-orders" 
-            className="flex items-center gap-2 bg-[#FF6B00] hover:bg-[#e66000] text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-orange-500/20 transition-all active:scale-95"
-          >
-            <ShoppingCart size={18} /> New Stock Order
+
+        {/* ── High-Velocity Quick Actions ── */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href={monitorId ? `/franchise/analytics?id=${monitorId}` : "/franchise/analytics"} className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 border border-slate-200 dark:border-white/10">
+            <BarChart3 size={13} /> View Analytics
+          </Link>
+          <Link href="/pos" className="flex items-center gap-1 bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-indigo-500/10">
+            <Plus size={13} /> New Invoice
+          </Link>
+          <Link href="/purchases/inward" className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-purple-500/10">
+            <Plus size={13} /> Receive Stock
+          </Link>
+          <Link href="/accounting/ledgers" className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-blue-500/10">
+            <Plus size={13} /> Record Payment
+          </Link>
+          <Link href="/franchise/dealers" className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-emerald-500/10">
+            <Plus size={13} /> Create Dealer
           </Link>
         </div>
       </div>
 
       {/* ── Expiry Alert Banner ── */}
-      {expiryAlerts.length > 0 && (
-        <div className="bg-red-50 border border-red-100 rounded-3xl p-5 flex items-center justify-between gap-4 animate-in slide-in-from-top-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-6 h-6 text-red-500" />
-            </div>
+      {summary?.stats?.lowStockCount > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 rounded-xl p-3 flex items-center justify-between gap-3 animate-in slide-in-from-top-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
             <div>
-              <p className="text-sm font-black text-red-900">Inventory Expiry Warning</p>
-              <p className="text-xs text-red-600 font-medium mt-0.5">
-                {expiryAlerts.length} batches require immediate attention or disposal.
+              <p className="text-xs font-bold text-amber-900 dark:text-amber-300">Inventory Alert Queue</p>
+              <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                {summary?.stats?.lowStockCount} items require immediate replenishment or are near expiration.
               </p>
             </div>
           </div>
-          <Link href="/production/batches" className="px-4 py-2 bg-white border border-red-100 text-red-500 text-xs font-black rounded-xl hover:bg-red-50 transition-all uppercase tracking-widest">
-            Manage Stock
+          <Link href="/franchise/stock" className="px-3 py-1 bg-white dark:bg-white/10 border border-amber-200 dark:border-white/10 text-amber-600 dark:text-amber-300 text-[10px] font-black rounded-lg hover:bg-amber-50 transition-all uppercase tracking-wider">
+            Reorder Stock
           </Link>
         </div>
       )}
 
-      {/* ── Stats Grid (Matches Franchise Page) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: "Today Revenue", val: fmt(todaySales), sub: `${todayOrderCount} sales`, color: "bg-emerald-500" },
-          { label: "Pending Supply", val: pendingCount, sub: "Inbound orders", color: "bg-[#FF6B00]" },
-          { label: "Low Stock Items", val: lowStockBatches.length, sub: "Below 10 units", color: "bg-amber-500" },
-          { label: "Unpaid Deliveries", val: fmt(pendingPayment), sub: "Payable amount", color: "bg-red-500" },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white dark:bg-card rounded-2xl border border-slate-100 dark:border-white/5 p-6 shadow-sm hover:shadow-md transition-all">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-3xl font-black text-slate-900 dark:text-white leading-none">{stat.val}</p>
-                <p className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">{stat.sub}</p>
-              </div>
-              <div className={`w-1.5 h-8 rounded-full ${stat.color} opacity-20`} />
+      {/* ── Operational KPI Cards Grid ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {kpis.map((stat, i) => (
+          <div key={i} className="bg-white dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm hover:shadow-md hover:border-slate-200 dark:hover:border-white/10 transition-all duration-200 flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">{stat.label}</span>
+              <p className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{stat.val}</p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{stat.sub}</p>
+            </div>
+            <div className={clsx("p-2.5 rounded-xl shrink-0 flex items-center justify-center", stat.bg)}>
+              <stat.icon size={16} className={clsx(stat.color, "stroke-[2px]")} />
             </div>
           </div>
         ))}
       </div>
 
-      {/* ── Main Layout ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* ── Row 2: Recent Invoices & Clickable Today's Operations ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         
-        {/* Left: Inventory and Tracking */}
-        <div className="lg:col-span-2 space-y-8">
-          
-          <div className="bg-white dark:bg-card rounded-[2.5rem] border border-slate-100 dark:border-white/5 p-8 shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white">Active Inventory</h3>
-                <p className="text-xs text-slate-500 font-medium mt-1">Batches currently available for sale.</p>
-              </div>
-              <Link href="/franchise/stock" className="text-xs font-black text-[#FF6B00] uppercase tracking-widest hover:underline">
-                View Full Stock
-              </Link>
+        {/* Left: Recent Invoices */}
+        <div className="lg:col-span-2 bg-white dark:bg-card border border-slate-200/60 dark:border-white/5 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-white/5 pb-2">
+            <div>
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Recent Sales Invoices</h3>
+              <p className="text-[10px] text-slate-500 font-medium">Today's billing pipeline overview.</p>
             </div>
-
-            {loading ? (
-              <div className="py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs animate-pulse">Syncing Data...</div>
-            ) : stockItems.length === 0 ? (
-              <div className="py-20 text-center bg-slate-50 dark:bg-white/[0.02] rounded-[2rem] border-2 border-dashed border-slate-200">
-                <Package size={48} strokeWidth={1} className="mx-auto text-slate-200 mb-4" />
-                <p className="text-slate-500 font-bold">No stock detected in branch.</p>
-                <Link href="/franchise-orders" className="mt-4 inline-block text-[#FF6B00] font-black text-xs uppercase underline">Place first order</Link>
-              </div>
-            ) : (
-              <div className="grid gap-3">
-                {stockItems.map((batch: any) => (
-                  <div key={batch.id} className="group flex items-center justify-between p-5 bg-slate-50 dark:bg-white/[0.03] hover:bg-white border border-transparent hover:border-[#FF6B00]/20 rounded-[1.5rem] transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/10 flex items-center justify-center text-slate-400 group-hover:text-[#FF6B00] transition-colors shadow-sm">
-                        <Package size={20} />
-                      </div>
-                      <div>
-                        <p className="font-black text-slate-900 dark:text-white text-sm">{batch.product?.name}</p>
-                        <p className={clsx("text-xs font-bold", batch.quantity < 10 ? "text-amber-500" : "text-slate-400")}>
-                          {batch.quantity} {batch.product?.unit} available
-                        </p>
-                      </div>
-                    </div>
-                    <div className={clsx(
-                      "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm",
-                      batch.expiryStatus === "EXPIRED" ? "bg-red-50 text-red-500 border-red-100" : 
-                      batch.expiryStatus === "EXPIRING_SOON" ? "bg-amber-50 text-amber-500 border-amber-100" :
-                      "bg-emerald-50 text-emerald-500 border-emerald-100"
-                    )}>
-                      {batch.expiryStatus === "NO_EXPIRY" ? "Valid" : batch.expiryStatus}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <Link href="/pos/invoices" className="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:underline flex items-center gap-1">
+              View All <ChevronRight size={10} />
+            </Link>
           </div>
 
-          {/* Shipment Pipeline */}
-          {activeOrders.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] ml-2">Shipment Pipeline</h3>
-              <div className="space-y-3">
-                {activeOrders.slice(0, 3).map((order: any) => (
-                  <div key={order.id} className="bg-white dark:bg-card border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 flex items-center gap-6 shadow-sm">
-                    <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center text-[#FF6B00] shrink-0 border border-orange-100">
-                      <Truck size={24} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Order #{order.id.slice(-6)}</span>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">• {fmt(order.totalAmount)}</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-[#FF6B00] shadow-[0_0_10px_rgba(255,107,0,0.3)] transition-all duration-1000"
-                          style={{ width: `${((STATUS_STEPS.indexOf(order.status) + 1) / STATUS_STEPS.length) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-[10px] font-black text-[#FF6B00] uppercase tracking-widest">{STATUS_LABELS[order.status as FranchiseOrderStatus]}</p>
-                      <p className="text-[9px] text-slate-400 font-bold mt-1 uppercase">ETA: {order.expectedDispatchDate ? new Date(order.expectedDispatchDate).toLocaleDateString() : "TBD"}</p>
-                    </div>
-                  </div>
+          <div className="overflow-x-auto min-h-[220px]">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
+                  <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Invoice #</th>
+                  <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Dealer/Customer</th>
+                  <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
+                  <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                {(summary?.recentOrders || []).slice(0, 5).map((order: any) => (
+                  <tr key={order.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors">
+                    <td className="px-4 py-2.5 font-bold text-slate-900 dark:text-white">{order.id}</td>
+                    <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300 font-semibold">{order.customerName}</td>
+                    <td className="px-4 py-2.5 text-right font-black text-slate-900 dark:text-white">{fmt(order.amount)}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className={clsx(
+                        "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border",
+                        order.status === "completed" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                        order.status === "pending" ? "bg-amber-50 text-amber-600 border-amber-100" :
+                        "bg-red-50 text-red-600 border-red-100"
+                      )}>
+                        {order.status}
+                      </span>
+                    </td>
+                  </tr>
                 ))}
-              </div>
-            </div>
-          )}
+                {(summary?.recentOrders || []).length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="text-center py-8 text-slate-400 font-bold uppercase tracking-wider text-[10px]">No invoices recorded today.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Right: Quick Stats and Actions */}
-        <div className="space-y-8">
-          
-          {/* Revenue Focus Card */}
-          <div className="bg-gradient-to-br from-[#FF6B00] to-[#FF8C33] rounded-[2.5rem] p-8 shadow-xl shadow-orange-500/20 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-2xl rounded-full -mr-16 -mt-16" />
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-6">
-                <TrendingUp size={18} />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Live Revenue</span>
-              </div>
-              <p className="text-4xl font-black tracking-tighter mb-1">{fmt(todaySales)}</p>
-              <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Generated Today</p>
-              
-              <Link href="/reports" className="mt-8 flex items-center justify-center gap-2 w-full py-4 bg-white text-[#FF6B00] rounded-2xl text-xs font-black uppercase tracking-widest transition-all hover:bg-orange-50 active:scale-95 shadow-lg">
-                View Reports <ArrowRight size={14} />
+        {/* Right: Today's Operations (Actionable Workflow Center) */}
+        <div className="bg-white dark:bg-card border border-slate-200/60 dark:border-white/5 rounded-2xl p-5 shadow-sm">
+          <div className="mb-4 border-b border-slate-100 dark:border-white/5 pb-2">
+            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Today's Operations</h3>
+            <p className="text-[10px] text-slate-500 font-medium">Critical action queue with immediate navigation.</p>
+          </div>
+
+          <div className="space-y-2">
+            {[
+              { label: "Pending Deliveries", val: summary?.stats?.pendingDeliveries ?? 0, sub: "items needing shipment", href: "/franchise-orders", color: "text-blue-600 border-blue-100 bg-blue-50/50" },
+              { label: "Pending Collections", val: fmt(summary?.stats?.pendingCollections ?? 0), sub: "overdue from dealers", href: "/accounting/ledgers", color: "text-rose-600 border-rose-100 bg-rose-50/50" },
+              { label: "Low Stock Alerts", val: summary?.stats?.lowStockCount ?? 0, sub: "under safety limit", href: "/franchise/stock", color: "text-amber-600 border-amber-100 bg-amber-50/50" },
+              { label: "Invoices Pending", val: summary?.stats?.orderCountToday ?? 0, sub: "sales draft status", href: "/pos/invoices", color: "text-slate-600 border-slate-100 bg-slate-50" },
+              { label: "Overdue Dealers", val: summary?.stats?.overdueDealersCount ?? 0, sub: "requires ledger review", href: "/franchise/dealers", color: "text-purple-600 border-purple-100 bg-purple-50/50" }
+            ].map((op, idx) => (
+              <Link 
+                key={idx}
+                href={op.href}
+                className="group flex items-center justify-between p-3 bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 rounded-xl hover:bg-white dark:hover:bg-card hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-sm transition-all"
+              >
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-700 dark:text-zinc-300 group-hover:text-indigo-500 transition-colors">{op.label}</p>
+                  <p className="text-[9px] text-slate-400 font-semibold uppercase">{op.sub}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={clsx("px-2.5 py-1 rounded-lg text-xs font-black border", op.color)}>
+                    {op.val}
+                  </span>
+                  <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Row 3: Inventory Alerts & Dealer Outstanding ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        {/* Left: Inventory Alerts */}
+        <div className="bg-white dark:bg-card border border-slate-200/60 dark:border-white/5 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-white/5 pb-2">
+            <div>
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Inventory Status</h3>
+              <p className="text-[10px] text-slate-500 font-medium">Finished product batch alerts & refill actions.</p>
+            </div>
+            <div className="flex gap-2">
+              <Link href="/franchise-orders" className="bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-colors">
+                Refill Stock
+              </Link>
+              <Link href="/purchases/new" className="bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/20 px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-colors">
+                Create PO
               </Link>
             </div>
           </div>
 
-          {/* Quick Actions Menu */}
-          <div className="bg-white dark:bg-card border border-slate-100 dark:border-white/5 rounded-[2.5rem] p-8 shadow-sm">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-6">Operations</h3>
-            <div className="space-y-1.5">
-              {[
-                { label: "Sales Terminal", href: "/pos", icon: ShoppingCart, color: "text-blue-500", bg: "bg-blue-50" },
-                { label: "Restock Stock", href: "/franchise-orders", icon: Package, color: "text-[#FF6B00]", bg: "bg-orange-50" },
-                { label: "Branch Ledger", href: "/franchise/payments", icon: CreditCard, color: "text-emerald-500", bg: "bg-emerald-50" },
-                { label: "Manage Staff", href: "/franchise", icon: User, color: "text-purple-500", bg: "bg-purple-50" },
-              ].map((link) => (
-                <Link 
-                  key={link.label}
-                  href={link.href}
-                  className="group flex items-center justify-between p-4 bg-slate-50 dark:bg-white/[0.03] hover:bg-white border border-transparent hover:border-slate-100 rounded-2xl transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={clsx("p-2 rounded-xl border border-transparent group-hover:border-slate-100 transition-all", link.color, link.bg, "dark:bg-slate-900")}>
-                      <link.icon size={18} />
-                    </div>
-                    <span className="text-sm font-black text-slate-600 dark:text-zinc-400 group-hover:text-slate-900 transition-colors">{link.label}</span>
-                  </div>
-                  <ChevronRight size={16} className="text-slate-300 group-hover:text-[#FF6B00] transition-colors" />
-                </Link>
-              ))}
-            </div>
+          <div className="overflow-x-auto min-h-[200px]">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
+                  <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Product</th>
+                  <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Stock</th>
+                  <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Days Left</th>
+                  <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                {(summary?.inventoryAlerts || []).slice(0, 5).map((item: any) => (
+                  <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors">
+                    <td className="px-4 py-2.5 font-bold text-slate-900 dark:text-white">{item.productName}</td>
+                    <td className="px-4 py-2.5 text-center font-black text-slate-700 dark:text-zinc-300">{item.currentStock} {item.unit}</td>
+                    <td className="px-4 py-2.5 text-center font-bold text-slate-500">{item.daysLeft}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className={clsx(
+                        "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border",
+                        item.status === "GREEN" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                        item.status === "YELLOW" ? "bg-amber-50 text-amber-600 border-amber-100" :
+                        "bg-red-50 text-red-600 border-red-100"
+                      )}>
+                        {item.refillSuggestion}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {(summary?.inventoryAlerts || []).length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="text-center py-8 text-slate-400 font-bold uppercase tracking-wider text-[10px]">No active inventory data.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
+        </div>
+
+        {/* Right: Dealer Outstanding with Aging */}
+        <div className="bg-white dark:bg-card border border-slate-200/60 dark:border-white/5 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-white/5 pb-2">
+            <div>
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Dealer Outstanding</h3>
+              <p className="text-[10px] text-slate-500 font-medium">Dealer credits, last payments and aging prioritization.</p>
+            </div>
+            <Link href="/franchise/dealers" className="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:underline">
+              Manage Partners
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto min-h-[200px]">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
+                  <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Dealer</th>
+                  <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Outstanding</th>
+                  <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Last Payment</th>
+                  <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Collection Priority</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                {(summary?.dealerOutstanding || []).slice(0, 5).map((dealer: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors">
+                    <td className="px-4 py-2.5 font-bold text-slate-900 dark:text-white">{dealer.dealer}</td>
+                    <td className="px-4 py-2.5 text-right font-black text-slate-900 dark:text-white">{fmt(dealer.due)}</td>
+                    <td className="px-4 py-2.5 text-center text-slate-500 font-semibold">{dealer.lastPayment}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className={clsx(
+                        "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border",
+                        dealer.priority === "LOW" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                        dealer.priority === "MEDIUM" ? "bg-amber-50 text-amber-600 border-amber-100" :
+                        "bg-red-50 text-red-600 border-red-100"
+                      )}>
+                        {dealer.priority} ({dealer.agingDays}d)
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {(summary?.dealerOutstanding || []).length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="text-center py-8 text-slate-400 font-bold uppercase tracking-wider text-[10px]">No active dealer debts detected.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Row 4: Pending Dispatch Queue ── */}
+      <div className="bg-white dark:bg-card border border-slate-200/60 dark:border-white/5 rounded-2xl p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-white/5 pb-2">
+          <div>
+            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Pending Dispatch Pipeline</h3>
+            <p className="text-[10px] text-slate-500 font-medium">Track dealer invoices that require physical shipping.</p>
+          </div>
+          <Link href="/franchise-orders" className="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:underline flex items-center gap-1">
+            Dispatch Queue <ChevronRight size={10} />
+          </Link>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
+                <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Dealer</th>
+                <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Pending Invoices Count</th>
+                <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Dispatch Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+              {(summary?.pendingDispatchQueue || []).slice(0, 5).map((dispatch: any, idx: number) => (
+                <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors">
+                  <td className="px-4 py-2.5 font-bold text-slate-900 dark:text-white">{dispatch.dealer}</td>
+                  <td className="px-4 py-2.5 text-center font-black text-slate-700 dark:text-zinc-300">{dispatch.invoiceCount}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    <span className={clsx(
+                      "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border",
+                      dispatch.dispatchStatus === "Ready to Dispatch" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                      dispatch.dispatchStatus === "Preparing" ? "bg-blue-50 text-blue-600 border-blue-100" :
+                      "bg-amber-50 text-amber-600 border-amber-100"
+                    )}>
+                      {dispatch.dispatchStatus}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {(summary?.pendingDispatchQueue || []).length === 0 && (
+                <tr>
+                  <td colSpan={3} className="text-center py-8 text-slate-400 font-bold uppercase tracking-wider text-[10px]">All shipments dispatched and settled.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

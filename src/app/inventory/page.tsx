@@ -5,7 +5,7 @@ import {
   Plus, 
   AlertTriangle, 
   Package, 
-  History,
+  History as HistoryIcon,
   AlertCircle,
   Scale,
   TrendingDown,
@@ -17,13 +17,39 @@ import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
 
+const getStockInPhysicalUnit = (stock: number, sku: string, category?: string): number => {
+  if (!sku || category !== 'FINISHED_GOOD') return stock;
+  const parts = sku.split('-');
+  const sizePart = parts.length >= 2 ? parts[parts.length - 1] : "";
+  const match = sizePart.match(/^(\d+(?:\.\d+)?)\s*([A-Z]+)$/i);
+  if (!match) return stock;
+
+  const weightVal = parseFloat(match[1]);
+  const weightUnit = match[2].toUpperCase();
+
+  const totalVal = stock * weightVal;
+  if (weightUnit === "G" || weightUnit === "ML") {
+    return totalVal / 1000;
+  }
+  return totalVal;
+};
+
 export default function InventoryPage() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { user } = useAuth();
+
+  const totalValue = useMemo(() => {
+    return items.reduce((acc, i) => acc + ((i.currentStock || 0) * (i.costPrice || 0)), 0);
+  }, [items]);
+
 
   const [formData, setFormData] = useState({
     name: "",
@@ -39,12 +65,28 @@ export default function InventoryPage() {
     fetchInventory();
   }, [user]);
 
+
   const fetchInventory = async () => {
     try {
       setLoading(true);
       const franchiseId = user?.franchiseId || "root";
       const response = await inventoryApi.getInventory(franchiseId);
-      setItems(response.data);
+      const mapped = response.data.map((item: any) => {
+        const physicalStock = getStockInPhysicalUnit(item.currentStock || 0, item.sku, item.category);
+        
+        const parts = item.sku ? item.sku.split('-') : [];
+        const sizePart = parts.length >= 2 ? parts[parts.length - 1] : "";
+        const match = sizePart.match(/^(\d+(?:\.\d+)?)\s*([A-Z]+)$/i);
+        const displayUnit = (item.category === 'FINISHED_GOOD' && match) ? match[2].toUpperCase() : item.unit;
+
+        return {
+          ...item,
+          quantity: physicalStock,
+          unit: displayUnit,
+          minStockLevel: item.minimumStock
+        };
+      });
+      setItems(mapped);
     } catch (error) {
       console.error("Failed to fetch inventory:", error);
     } finally {
@@ -151,6 +193,8 @@ export default function InventoryPage() {
     });
   }, [items, searchTerm]);
 
+  if (!mounted) return <div className="min-h-screen bg-[#FDFCFD] dark:bg-[#020617]" />;
+
   return (
     <div className="max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 py-6 border-b border-slate-200 dark:border-slate-800">
@@ -164,7 +208,7 @@ export default function InventoryPage() {
         </div>
         <div className="flex items-center gap-4">
           <button className="hidden md:flex items-center gap-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-500 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95 shadow-sm">
-            <History size={16} />
+            <HistoryIcon size={16} />
             History
           </button>
           <button 
@@ -183,7 +227,7 @@ export default function InventoryPage() {
           { label: "Total Items", value: items.length, icon: Package, color: "bg-blue-500" },
           { label: "Low Stock", value: items.filter(i => i.quantity <= i.minStockLevel).length, icon: AlertTriangle, color: "bg-red-500" },
           { label: "Expiring", value: 0, icon: TrendingDown, color: "bg-amber-500" },
-          { label: "Total Value", value: "₹0", icon: Scale, color: "bg-green-500" },
+          { label: "Total Value", value: `₹${totalValue.toLocaleString()}`, icon: Scale, color: "bg-green-500" },
         ].map((stat, i) => (
           <div key={i} className="bg-white dark:bg-[#020617] p-6 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
             <div className="space-y-1">

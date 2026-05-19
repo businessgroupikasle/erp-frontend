@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Plus, Upload, FileText, Image as ImageIcon } from "lucide-react";
+import { Play, Plus, Upload, FileText, Image as LucideImage } from "lucide-react";
 import { clsx } from "clsx";
 
 interface RefrensEmptyStateProps {
@@ -46,7 +46,7 @@ export default function RefrensEmptyState({
              </div>
           ) : (
              <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4 bg-slate-50 dark:bg-slate-800">
-                <ImageIcon size={64} className="text-[#DDD] dark:text-slate-700" />
+                <LucideImage size={64} className="text-[#DDD] dark:text-slate-700" />
                 <div className="h-2 w-32 bg-slate-100 dark:bg-slate-700 rounded-full" />
                 <div className="h-2 w-24 bg-slate-100 dark:bg-slate-700 rounded-full opacity-50" />
              </div>

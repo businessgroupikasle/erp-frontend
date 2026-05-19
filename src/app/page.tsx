@@ -3,504 +3,258 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
-  ShoppingCart,
-  Tv,
-  UtensilsCrossed,
-  ChefHat,
-  Factory,
-  Trash2,
-  Package,
-  Bell,
-  Users,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  ArrowRight,
-  IndianRupee,
-  Star,
-  Zap,
-  BarChart3,
-  Loader2,
-  RotateCcw,
-  Calendar,
-  Layers,
-  Activity,
-  ArrowDownRight,
-  ArrowUpRight,
-  Search,
-  Plus,
-  Wallet,
-  CreditCard,
-  QrCode,
-  PackagePlus,
-  Receipt,
-  ChevronDown,
-  LayoutDashboard,
-  UserCheck,
-  Settings2,
-  Settings,
-  Banknote,
-  Smartphone,
-  Building2,
-  Landmark
+  ShoppingCart, Package, Users, TrendingUp, TrendingDown,
+  AlertTriangle, Clock, IndianRupee, RotateCcw, Target, Calendar,
+  CreditCard, Receipt, Activity, ChevronRight, Search, 
+  BarChart3, Wallet, Zap, LayoutDashboard, Factory, Settings2, Settings, UserCheck, Plus, Send, Building2,
+  Bell, ShieldAlert, History, Repeat, Store, Truck, CheckCircle2, XCircle, Landmark, PackageCheck
 } from "lucide-react";
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  Cell,
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis
-} from "recharts";
 import { clsx } from "clsx";
-import { dashboardApi, franchiseApi } from "@/lib/api";
+import { dashboardApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
-
-
-const STATUS_STYLES: Record<string, string> = {
-  completed: "bg-emerald-50 text-emerald-600 border-emerald-100",
-  preparing: "bg-amber-50 text-amber-600 border-amber-100",
-  ready:     "bg-blue-50 text-blue-600 border-blue-100",
-  pending:   "bg-slate-50 text-slate-500 border-slate-100",
-  cancelled: "bg-rose-50 text-rose-600 border-rose-100",
-};
-
-function Skeleton({ className }: { className?: string }) {
-  return <div className={clsx("animate-pulse bg-gray-100 dark:bg-white/5 rounded-lg", className)} />;
-}
-
+import {
+  KPICard, RevenueIntelligence, PremiumFilter, ReportTableWidget
+} from "@/components/dashboard/DashboardComponents";
 
 export default function Dashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] = useState("month");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
 
   const fetchDashboard = useCallback(() => {
     setLoading(true);
-    setError(null);
+    
+    let endDateStr = new Date().toISOString();
+    let startDateStr = new Date().toISOString();
 
-    const periodEnd = new Date();
-    const periodStart = new Date();
-    periodStart.setHours(0,0,0,0);
+    if (period === "custom" && customStartDate && customEndDate) {
+      startDateStr = new Date(customStartDate).toISOString();
+      const endD = new Date(customEndDate);
+      endD.setHours(23, 59, 59, 999);
+      endDateStr = endD.toISOString();
+    } else {
+      let startDate = new Date();
+      if (period === "today") startDate.setHours(0,0,0,0);
+      else if (period === "week") startDate.setDate(startDate.getDate() - 7);
+      else if (period === "month") startDate.setMonth(startDate.getMonth() - 1);
+      else startDate.setFullYear(2020);
+      startDateStr = startDate.toISOString();
+    }
 
-    dashboardApi.getSummary({ 
-      startDate: periodStart.toISOString(), 
-      endDate: periodEnd.toISOString(),
-    })
-      .then((res) => {
-        setData(res.data);
-      })
+    dashboardApi.getSummary({ startDate: startDateStr, endDate: endDateStr, period })
+      .then((res) => setData(res.data))
       .catch((err) => setError(err.response?.data?.error || "Failed to load dashboard"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [period, customStartDate, customEndDate]);
 
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
 
-  if (error && !data) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] bg-white dark:bg-[#0f1117] rounded-3xl border border-red-100 dark:border-white/5 shadow-sm p-8 text-center animate-in fade-in zoom-in-95 duration-500">
-        <div className="w-20 h-20 bg-red-50 dark:bg-red-900/10 rounded-full flex items-center justify-center mb-6 shadow-sm ring-8 ring-red-50 dark:ring-red-900/5">
-          <AlertTriangle size={36} className="text-red-500" />
+  if (error) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#090a0f] p-4">
+      <div className="bg-white dark:bg-[#12141c] p-10 rounded-[3rem] border border-rose-500/20 shadow-2xl shadow-rose-500/10 flex flex-col items-center text-center max-w-md animate-in zoom-in-95 duration-500">
+        <div className="w-20 h-20 rounded-3xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-500 mb-6">
+          <AlertTriangle size={40} />
         </div>
-        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">System Offline</h2>
-        <p className="text-gray-500 dark:text-slate-400 mb-8 max-w-sm">Synchronizing with enterprise cloud...</p>
-        <button onClick={fetchDashboard} className="flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg">
-          <RotateCcw size={18} /> Retry Connection
+        <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-widest mb-3">Telemetry Failure</h2>
+        <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">{error}</p>
+        <button 
+          onClick={() => { setError(null); fetchDashboard(); }}
+          className="px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:scale-105 transition-all shadow-xl active:scale-95"
+        >
+          Re-establish Connection
         </button>
       </div>
-    );
-  }
+    </div>
+  );
+
+  if (loading && !data) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#090a0f]">
+      <div className="flex flex-col items-center gap-6 animate-pulse">
+        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin shadow-xl shadow-blue-600/20" />
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Establishing Mission Control Link...</p>
+      </div>
+    </div>
+  );
 
   const stats = data?.stats;
-  const recentOrders: any[] = data?.recentOrders || [];
-  const weeklySales: any[] = data?.weeklySales || [];
-  
-  const revenueChange = parseFloat(stats?.revenueChangePct || "0");
-  const isRevenueUp = revenueChange >= 0;
 
-  // Synthesis / Mock Data for new visualizations as per request
-  const profitData = (weeklySales || []).map(s => ({ ...s, profit: (s.value || 0) * 0.28 })); 
-  const purchaseData = [
-    { month: 'Jan', amount: 45000 },
-    { month: 'Feb', amount: 52000 },
-    { month: 'Mar', amount: 48000 },
-    { month: 'Apr', amount: 61000 },
-    { month: 'May', amount: 55000 },
+  // --- LAYER 1: CEO SUMMARY (LIVE DATA) ---
+  const executiveKPIs = [
+    { title: "Today Revenue", value: formatCurrency(stats?.revenueToday || 0), trend: stats?.revenueChangePct || "0", icon: Zap, colorClass: "emerald", insight: `${stats?.orderCountToday || 0} Orders Today` },
+    { title: "Net Profit", value: formatCurrency((stats?.totalSales || 0) - (stats?.totalPurchase || 0)), icon: TrendingUp, colorClass: "emerald", subtext: `Profit for this ${period}`, insight: `Margin: ${stats?.totalSales > 0 ? (((stats.totalSales - stats.totalPurchase) / stats.totalSales) * 100).toFixed(1) : 0}%` },
+    { title: "Vendor Payables", value: formatCurrency(stats?.vendorPayables || 0), icon: CreditCard, colorClass: "rose", subtext: "Dues to Suppliers", insight: `From ${stats?.vendorCountActive || 0} Vendors` },
+    { title: "Inventory Value", value: formatCurrency(stats?.inventoryValue || 0), icon: Package, colorClass: "blue", subtext: "Warehouse Asset Net Worth", insight: `${stats?.inventoryItemCount || 0} Active SKUs` },
+    { title: "Active Franchise Orders", value: stats?.activeFranchiseOrders || 0, icon: Send, colorClass: "indigo", subtext: "Fulfillment Queue", insight: `${stats?.lowStockCount || 0} Critical Stock Alerts` },
+    { title: "Total Sales", value: stats?.totalSalesCount || 0, icon: BarChart3, colorClass: "orange", subtext: `Volume for this ${period}`, insight: `Revenue: ${formatCurrency(stats?.totalSales || 0)}` },
   ];
-  const stockData = [
-    { name: 'Flour', value: 85 },
-    { name: 'Sugar', value: 42 },
-    { name: 'Butter', value: 65 },
-    { name: 'Milk', value: 30 },
-    { name: 'Oil', value: 75 },
-  ];
-  const performanceData = [
-    { subject: 'Sales', A: 120, fullMark: 150 },
-    { subject: 'Compliance', A: 98, fullMark: 150 },
-    { subject: 'SLA', A: 86, fullMark: 150 },
-    { subject: 'Inventory', A: 99, fullMark: 150 },
-    { subject: 'Support', A: 85, fullMark: 150 },
-    { subject: 'Churn', A: 65, fullMark: 150 },
-  ];
+
+  // --- LAYER 2: REVENUE SOURCES ---
+  const revenueBreakdown = (data?.revenueBreakdown || []).map((b: any, i: number) => ({
+    label: b.label,
+    value: b.value,
+    percent: stats?.revenueToday ? (b.value / stats.revenueToday) * 100 : 0,
+    color: i === 0 ? "bg-blue-500" : i === 1 ? "bg-emerald-500" : i === 2 ? "bg-amber-500" : "bg-rose-500"
+  }));
+
+  // --- ANALYTICS & OPERATIONS ---
+  const chartData = (data?.historicalSales || []).map((s: any) => ({
+    date: s.date,
+    sales: s.sales || 0,
+    orders: s.orders,
+    purchase: s.purchase || 0,
+    profit: (s.sales || 0) - (s.purchase || 0),
+  }));
 
   return (
-    <div className="min-h-full bg-[#F8FAFC] dark:bg-[#090a0f] p-4 md:p-6 space-y-6">
+    <div className="min-h-full bg-[#F8FAFC] dark:bg-[#090a0f] p-4 md:p-8 space-y-8 animate-in fade-in duration-1000">
       
-
-
-      {/* ── 🥈 MODULE OVERVIEW ───────────────────────── */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Daily Sales */}
-        <div className="bg-white dark:bg-[#12141c] rounded-3xl p-6 border border-slate-200/60 dark:border-white/5 shadow-sm space-y-4 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400">
-                <TrendingUp size={20} />
-              </div>
-              <span className={clsx(
-                "text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wider",
-                isRevenueUp ? "text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" : "text-rose-500 bg-rose-50 dark:bg-rose-500/10"
-              )}>
-                 {isRevenueUp ? '+' : ''}{revenueChange}%
-              </span>
-            </div>
-            <div>
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Daily Sales</p>
-                <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">
-                  {loading ? <Skeleton className="h-8 w-32" /> : formatCurrency(stats?.revenueToday || 0)}
-                </div>
-            </div>
-        </div>
-
-        {/* Daily Profit */}
-        <div className="bg-white dark:bg-[#12141c] rounded-3xl p-6 border border-slate-200/60 dark:border-white/5 shadow-sm space-y-4 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                <IndianRupee size={20} />
-              </div>
-              <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">
-                 Realized
-              </span>
-            </div>
-            <div>
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Net Cash Flow Today</p>
-                <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">
-                   {loading ? <Skeleton className="h-8 w-32" /> : formatCurrency(stats?.profitToday || 0)}
-                </div>
-            </div>
-        </div>
-
-        {/* Inventory Stock */}
-        <div className="bg-white dark:bg-[#12141c] rounded-3xl p-6 border border-slate-200/60 dark:border-white/5 shadow-sm space-y-4 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                <Package size={20} />
-              </div>
-              <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">
-                 92% Active
-              </span>
-            </div>
-            <div>
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Inventory Stock</p>
-                <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">{stats?.inventoryCount ?? '0'} SKU</div>
-            </div>
-        </div>
-
-        {/* System Activity */}
-        <div className="bg-white dark:bg-[#12141c] rounded-3xl p-6 border border-slate-200/60 dark:border-white/5 shadow-sm space-y-4 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 dark:bg-white/10 flex items-center justify-center text-white">
-                <Zap size={20} />
-              </div>
-              <span className="text-[10px] font-black text-slate-400 bg-slate-50 dark:bg-white/5 px-2 py-1 rounded-lg uppercase tracking-wider">
-                 Enterprise
-              </span>
-            </div>
-            <div>
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Health Score</p>
-                <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">94%</div>
-            </div>
-        </div>
-      </section>
-
-      {/* ── 🪙 TREASURY & LIQUIDITY ──────────────────── */}
-      <section className="bg-slate-900 text-white rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-          <div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Total Treasury Liquidity</h3>
-            <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-black tracking-tighter">₹{(stats?.treasury?.total || 0).toLocaleString()}</span>
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Available Now</span>
-            </div>
-          </div>
-          
-          <div className="flex flex-wrap gap-4 md:gap-8 w-full md:w-auto">
-            <div className="bg-white/5 border border-white/10 px-6 py-4 rounded-2xl min-w-[140px]">
-              <div className="flex items-center gap-2 mb-1">
-                <Banknote size={14} className="text-slate-400" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cash</span>
-              </div>
-              <p className="text-xl font-black tabular-nums">₹{(stats?.treasury?.cash || 0).toLocaleString()}</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 px-6 py-4 rounded-2xl min-w-[140px]">
-              <div className="flex items-center gap-2 mb-1">
-                <Landmark size={14} className="text-slate-400" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Bank</span>
-              </div>
-              <p className="text-xl font-black tabular-nums">₹{(stats?.treasury?.bank || 0).toLocaleString()}</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 px-6 py-4 rounded-2xl min-w-[140px]">
-              <div className="flex items-center gap-2 mb-1">
-                <Smartphone size={14} className="text-slate-400" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">UPI</span>
-              </div>
-              <p className="text-xl font-black tabular-nums">₹{(stats?.treasury?.upi || 0).toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-        <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/5 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-1000" />
-      </section>
-
-      {/* ── 🥉 CORE WORKFLOWS ───────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Main Analytics (8 Columns) */}
-        <div className="lg:col-span-8 space-y-6">
-           {/* Section Header */}
-           <div className="flex items-center justify-between">
-              <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-3">
-                 <div className="w-1.5 h-6 bg-slate-900 dark:bg-white rounded-full" />
-                 Operational Intelligence
-              </h2>
-              <div className="flex items-center gap-2">
-                 <button className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-all">
-                    <Activity size={18} className="text-slate-400" />
-                 </button>
-              </div>
+      {/* ── HEADER ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+           <div className="flex items-center gap-4 mb-1">
+             <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">HQ Control Center</h1>
            </div>
-
-           <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] border border-slate-200/60 dark:border-white/5 shadow-sm p-8">
-              <div className="flex items-center justify-between mb-10">
-                 <div>
-                    <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter mb-1">Growth Matrix</h3>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest italic">Daily Sales & Projected Profit</p>
-                 </div>
-                 <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                       <div className="w-3 h-3 rounded-full bg-slate-900 dark:bg-white" />
-                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Daily Sales</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                       <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Daily Profit</span>
-                    </div>
-                 </div>
-              </div>
+           <div className="flex items-center gap-6">
+              <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.3em] hidden xl:block">ADMINISTRATIVE INTERFACE • {new Date().getFullYear()}</p>
               
-              <div className="h-[350px] w-full">
-                 <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={profitData}>
-                       <defs>
-                          <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                             <stop offset="5%" stopColor="#0f172a" stopOpacity={0.1}/>
-                             <stop offset="95%" stopColor="#0f172a" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                             <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                          </linearGradient>
-                       </defs>
-                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                       <XAxis 
-                         dataKey="day" 
-                         axisLine={false} 
-                         tickLine={false} 
-                         tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} 
-                         dy={15}
-                       />
-                       <YAxis 
-                         axisLine={false} 
-                         tickLine={false} 
-                         tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
-                       />
-                       <Tooltip 
-                         contentStyle={{ borderRadius: '24px', border: 'none', background: '#000', color: '#fff', padding: '16px' }}
-                         itemStyle={{ fontSize: '14px', fontWeight: 900 }}
-                         labelStyle={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}
-                       />
-                       <Area 
-                         type="monotone" 
-                         dataKey="value" 
-                         stroke="#0f172a" 
-                         strokeWidth={4} 
-                         fill="url(#salesGradient)" 
-                         name="Sales"
-                         isAnimationActive={!loading}
-                       />
-                       <Area 
-                         type="monotone" 
-                         dataKey="profit" 
-                         stroke="#10b981" 
-                         strokeWidth={4} 
-                         fill="url(#profitGradient)" 
-                         name="Profit"
-                         isAnimationActive={!loading}
-                       />
-                    </AreaChart>
-                 </ResponsiveContainer>
-              </div>
-           </div>
-
-           {/* Visualization Hub: Monthly Purchase & Inventory Stock */}
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] border border-slate-200/60 dark:border-white/5 shadow-sm p-8">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Monthly Purchase Trends</h3>
-                  <div className="h-[200px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={purchaseData}>
-                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} />
-                        <YAxis hide />
-                        <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px' }} />
-                        <Bar dataKey="amount" fill="#6366f1" radius={[4, 4, 0, 0]}>
-                           {purchaseData.map((entry, index) => (
-                             <Cell key={`cell-${index}`} fill={index === purchaseData.length - 1 ? '#6366f1' : '#e2e8f0'} />
-                           ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+              <div className="flex items-center gap-2">
+                {period === 'custom' && (
+                  <div className="flex items-center gap-2 mr-2 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <input 
+                      type="date" 
+                      value={customStartDate} 
+                      onChange={e => setCustomStartDate(e.target.value)}
+                      className="px-4 py-1.5 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-full text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    />
+                    <span className="text-slate-400 font-bold">-</span>
+                    <input 
+                      type="date" 
+                      value={customEndDate} 
+                      onChange={e => setCustomEndDate(e.target.value)}
+                      className="px-4 py-1.5 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-full text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    />
                   </div>
+                )}
+                <PremiumFilter 
+                  options={[
+                    { label: 'Today', value: 'today' },
+                    { label: 'Week', value: 'week' },
+                    { label: 'Month', value: 'month' },
+                    { label: 'All', value: 'all' },
+                    { label: 'Custom', value: 'custom' },
+                  ]}
+                  active={period}
+                  onChange={setPeriod}
+                />
               </div>
-              <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] border border-slate-200/60 dark:border-white/5 shadow-sm p-8">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Inventory Stock Highlights</h3>
-                  <div className="h-[200px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={stockData} layout="vertical">
-                        <XAxis type="number" hide />
-                        <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 800, fill: '#64748b' }} width={60} />
-                        <Tooltip contentStyle={{ borderRadius: '12px' }} />
-                        <Bar dataKey="value" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={12} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-              </div>
-           </div>
-
-           {/* Company Performance Hub */}
-           <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] border border-slate-200/60 dark:border-white/5 shadow-sm p-8">
-              <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xs font-black text-slate-950 dark:text-white uppercase tracking-widest flex items-center gap-2">
-                    <Activity size={16} className="text-orange-500" />
-                    Company Performance Hub
-                  </h3>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enterprise KPIs</span>
-              </div>
-              <div className="h-[300px] w-full flex items-center justify-center">
-                 <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={performanceData}>
-                      <PolarGrid stroke="#e2e8f0" />
-                      <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 150]} hide />
-                      <Radar name="Performance" dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6} />
-                    </RadarChart>
-                 </ResponsiveContainer>
-              </div>
-           </div>
-
-           {/* Quick Action Dock */}
-           {/* ── 🚀 QUICK ACCESS DOCK (REQUESTED LINKS) ───────────────── */}
-           <div className="grid grid-cols-3 lg:grid-cols-3 gap-4">
-              {[
-                { label: 'Leads', icon: Users, href: '/crm', color: 'bg-indigo-500', desc: 'CRM Pipeline' },
-                { label: 'Products', icon: Package, href: '/products', color: 'bg-orange-500', desc: 'Catalog' },
-                { label: 'Sales', icon: IndianRupee, href: '/sales', color: 'bg-emerald-500', desc: 'Orders' },
-                { label: 'Purchase', icon: ShoppingCart, href: '/purchases', color: 'bg-rose-500', desc: 'Procurement' },
-                { label: 'GRN', icon: Receipt, href: '/purchases/grn', color: 'bg-blue-500', desc: 'Goods Receipt' },
-                { label: 'Production', icon: Factory, href: '/production', color: 'bg-slate-900', desc: 'Manufacturing' },
-                { label: 'Customers', icon: UserCheck, href: '/customers', color: 'bg-amber-500', desc: 'Accounts' },
-                { label: 'Users', icon: Settings2, href: '/admin', color: 'bg-slate-400', desc: 'Permissions' },
-                { label: 'Settings', icon: Settings, href: '/settings', color: 'bg-slate-600', desc: 'System' },
-              ].map((action) => (
-                <Link key={action.label} href={action.href} className="bg-white dark:bg-[#12141c] p-5 rounded-[2.5rem] border border-slate-200/60 dark:border-white/5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col items-center text-center gap-2">
-                   <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform shadow-current/20", action.color)}>
-                      <action.icon size={20} />
-                   </div>
-                   <div>
-                      <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">{action.label}</p>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">{action.desc}</p>
-                   </div>
-                </Link>
-              ))}
            </div>
         </div>
+        <div className="flex items-center gap-3">
+          <Link href="/purchases/new" className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3">
+            <Plus size={16} strokeWidth={3} /> Create PO
+          </Link>
+          <Link href="/franchise-orders" className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 hover:scale-105 transition-all active:scale-95 flex items-center gap-3 shadow-xl shadow-blue-500/20">
+            <Send size={16} strokeWidth={3} /> Dispatch
+          </Link>
+        </div>
+      </div>
 
-        {/* Side Info (4 Columns) */}
-        <div className="lg:col-span-4 space-y-6">
-           
-           {/* Enterprise Health Score */}
-           <div className="bg-slate-900 text-white rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
-              <div className="relative z-10 flex flex-col gap-6">
-                 <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Enterprise Health Score</h3>
-                 <div className="flex items-baseline gap-2">
-                    <span className="text-7xl font-black tracking-tighter">94</span>
-                    <span className="text-xl font-bold text-emerald-400">/100</span>
-                 </div>
-                 <div className="space-y-4">
-                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                       <span>Compliance</span>
-                       <span className="text-emerald-400">100%</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                       <div className="h-full bg-white rounded-full w-[94%]" />
-                    </div>
-                    <p className="text-[11px] text-slate-400 font-medium leading-relaxed italic">
-                      Performance is optimal. 0 compliance issues detected. 2 invoices pending approval in Accounts.
-                    </p>
-                 </div>
-              </div>
-              <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-white/5 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700" />
-           </div>
+      {/* ── LAYER 1: CEO SUMMARY ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+        {executiveKPIs.map((kpi, i) => (
+          <KPICard key={i} {...kpi} />
+        ))}
+      </div>
 
-           {/* Recent Transactions / Tickets */}
-           <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] border border-slate-200/60 dark:border-white/5 shadow-sm overflow-hidden">
-              <div className="px-8 py-6 border-b border-slate-200/60 dark:border-white/5 flex items-center justify-between">
-                 <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">Active Queue</h3>
-                 <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-              </div>
-              <div className="divide-y divide-slate-100 dark:divide-white/5">
-                 {[
-                   { ref: 'TKT-892', type: 'SUPPORT', status: 'Priority', desc: 'SLA breach risk: Vendor A inquiry' },
-                   { ref: 'SO-4421', type: 'SALES', status: 'Pending', desc: 'Quotation accepted by Client X' },
-                   { ref: 'LEAD-90', type: 'CRM', status: 'New', desc: 'High-value lead from Website' },
-                   { ref: 'EMP-012', type: 'HR', status: 'Review', desc: 'Leave request: Sarah J.' },
-                 ].map((item, idx) => (
-                   <div key={idx} className="p-6 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer group">
-                      <div className="flex items-center justify-between mb-2">
-                         <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-400/10 px-2 py-0.5 rounded uppercase tracking-tighter">{item.type}</span>
-                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.ref}</span>
-                      </div>
-                      <p className="text-xs font-black text-slate-900 dark:text-white mb-1 group-hover:text-indigo-600 transition-colors uppercase">{item.status}</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium italic">{item.desc}</p>
-                   </div>
-                 ))}
-              </div>
-              <Link href="/reports" className="w-full py-5 bg-slate-50 dark:bg-white/[0.02] text-center text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] hover:text-slate-950 transition-colors block border-t border-slate-100 dark:border-white/5">
-                 View Full Intelligence Report
-              </Link>
-           </div>
+      {/* ── LAYER 2: REVENUE INTELLIGENCE ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-12">
+          <RevenueIntelligence 
+            data={chartData} 
+            title="Revenue Analytics" 
+            trend={stats?.revenueChangePct || "0"} 
+            period={period} 
+            setPeriod={setPeriod} 
+          />
+        </div>
+        <div className="lg:col-span-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <ReportTableWidget 
+              title="Recent Purchase Report View" 
+              icon={PackageCheck} 
+              color="indigo"
+              headers={['PO Number', 'Vendor', 'Amount']}
+              data={(data?.recentPurchases || []).map((p: any) => ({
+                col1: p.poNumber,
+                col2: p.vendor?.name || p.items?.[0]?.inventoryItem?.name || 'Vendor',
+                col3: formatCurrency(p.totalAmount)
+              }))}
+            />
+            
+            <ReportTableWidget 
+              title="Recent B2B Sales Details" 
+              icon={Building2} 
+              color="blue"
+              headers={['Invoice #', 'Client', 'Amount']}
+              data={(data?.recentB2BSales || []).map((s: any) => ({
+                col1: s.invoiceNum,
+                col2: s.customerName || 'B2B Client',
+                col3: formatCurrency(s.totalAmount)
+              }))}
+            />
+
+            <ReportTableWidget 
+              title="Recent B2C Sales Details" 
+              icon={Store} 
+              color="emerald"
+              headers={['Invoice #', 'Amount']}
+              data={(data?.recentB2CBills || []).map((s: any) => ({
+                col1: `#${s.invoiceNum}`,
+                col2: formatCurrency(s.totalAmount)
+              }))}
+            />
+
+            <ReportTableWidget 
+              title="Top Selling Products of the Week" 
+              icon={TrendingUp} 
+              color="amber"
+              headers={['Product', 'Units Sold', 'Trend']}
+              data={(data?.topSellers || []).map((p: any) => ({
+                col1: p.name,
+                col2: `${p.value} ${p.unit}`,
+                col3: `${p.growth}%`
+              }))}
+            />
+
+            <ReportTableWidget 
+              title="Stock Urgent Report" 
+              icon={AlertTriangle} 
+              color="rose"
+              headers={['Product', 'Current Stock', 'Action']}
+              data={(data?.lowStock || []).map((p: any) => ({
+                col1: p.name,
+                col2: `${p.currentStock} ${p.unit}`,
+                col3: p.action
+              }))}
+            />
+
+            <ReportTableWidget 
+              title="Supplier payment Tracking View" 
+              icon={CreditCard} 
+              color="purple"
+              headers={['Vendor', 'PO Number', 'Amount Due']}
+              data={(data?.supplierPaymentsDue || []).map((p: any) => ({
+                col1: p.vendor?.name || 'Vendor',
+                col2: p.poNumber,
+                col3: formatCurrency(p.totalAmount)
+              }))}
+            />
+          </div>
         </div>
       </div>
     </div>

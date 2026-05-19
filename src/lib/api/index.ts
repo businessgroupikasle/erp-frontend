@@ -1,0 +1,9 @@
+export { default as api } from './base';
+export * from './auth.api';
+export * from './franchise.api';
+export * from './inventory.api';
+export * from './sales.api';
+export * from './procurement.api';
+export * from './accounting.api';
+export * from './user.api';
+export * from './dashboard.api';

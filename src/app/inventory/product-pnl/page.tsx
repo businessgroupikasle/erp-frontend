@@ -36,7 +36,7 @@ export default function ProductProfitabilityReport() {
           
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-black text-[#1A1A1A] dark:text-white flex items-center gap-2">
-              Inventory <span className="text-xl">✨</span>
+              Inventory
             </h1>
             
             <div className="flex items-center gap-2">
@@ -77,7 +77,7 @@ export default function ProductProfitabilityReport() {
         {/* Section Title & Export */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-black text-[#1A1A1A] dark:text-white flex items-center gap-2">
-            Product-wise Profitability Report <span className="text-sm">✨</span>
+            Product-wise Profitability Report 
           </h2>
           <button className="flex items-center gap-2 px-4 py-2 border border-[#F0EAF0] dark:border-slate-800 rounded-lg text-[12px] font-bold text-[#666] hover:bg-slate-50 transition-colors bg-white dark:bg-slate-900 shadow-sm">
              <Download size={14} />

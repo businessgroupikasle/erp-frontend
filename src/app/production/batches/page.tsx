@@ -3,47 +3,61 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   PackageCheck, RefreshCw, AlertTriangle,
-  CheckCircle2, Clock, Filter, Package,
+  CheckCircle2, Clock, Filter, Package, Building2
 } from "lucide-react";
 import { clsx } from "clsx";
-import { productBatchesApi, productsFullApi } from "@/lib/api";
+import { productBatchesApi, productsFullApi, franchiseApi } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
-type ExpiryStatus = "EXPIRED" | "EXPIRING_SOON" | "VALID" | "NO_EXPIRY";
+type ExpiryStatus = "EXPIRED" | "EXPIRING_SOON" | "VALID";
 
 const EXPIRY_CONFIG: Record<ExpiryStatus, { bg: string; text: string; border: string; dot: string; label: string }> = {
   EXPIRED:       { bg: "bg-rose-50 dark:bg-rose-500/10",       text: "text-rose-700 dark:text-rose-400",      border: "border-rose-200 dark:border-rose-500/20",    dot: "bg-rose-500",    label: "Expired" },
   EXPIRING_SOON: { bg: "bg-amber-50 dark:bg-amber-500/10",     text: "text-amber-700 dark:text-amber-400",    border: "border-amber-200 dark:border-amber-500/20",  dot: "bg-amber-500",   label: "Expiring Soon" },
   VALID:         { bg: "bg-emerald-50 dark:bg-emerald-500/10", text: "text-emerald-700 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-500/20", dot: "bg-emerald-500", label: "Valid" },
-  NO_EXPIRY:     { bg: "bg-slate-50 dark:bg-white/5",          text: "text-slate-600 dark:text-slate-400",    border: "border-slate-200 dark:border-white/10",      dot: "bg-slate-400",   label: "No Expiry" },
 };
 
 function getEffectiveExpiry(batch: any): string | null {
   return batch.expiryDate ?? batch.production?.expiryDate ?? null;
 }
 
-function computeExpiryStatus(expiryDate: string | null): ExpiryStatus {
-  if (!expiryDate) return "NO_EXPIRY";
-  const now = Date.now();
-  const exp = new Date(expiryDate).getTime();
-  if (exp < now) return "EXPIRED";
-  if (exp - now < 3 * 86_400_000) return "EXPIRING_SOON";
-  return "VALID";
-}
-
-const FILTER_TABS = ["ALL", "VALID", "EXPIRING_SOON", "EXPIRED", "NO_EXPIRY"] as const;
+const FILTER_TABS = ["ALL", "VALID", "EXPIRING_SOON", "EXPIRED"] as const;
 
 export default function ProductBatchesPage() {
-  const [batches, setBatches]     = useState<any[]>([]);
-  const [products, setProducts]   = useState<any[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [productFilter, setProductFilter] = useState("");
-  const [expiryFilter, setExpiryFilter]   = useState<string>("ALL");
+  const { user } = useAuth();
+  const isSuper = user?.role === "SUPER_ADMIN";
 
-  const fetchBatches = useCallback(async (productId?: string) => {
+  const [batches, setBatches] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [franchises, setFranchises] = useState<any[]>([]);
+  const [selectedFranchiseId, setSelectedFranchiseId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [productFilter, setProductFilter] = useState("");
+  const [expiryFilter, setExpiryFilter] = useState<string>("ALL");
+
+  // Fetch active franchises for Super Admin
+  useEffect(() => {
+    if (isSuper) {
+      franchiseApi.getAll()
+        .then((res) => {
+          const branches = (res.data ?? []).filter((f: any) => 
+            !f.name.includes("Headquarters (HQ)") && 
+            f.id !== "hq-001"
+          );
+          setFranchises(branches);
+        })
+        .catch((err) => console.error("Failed to load franchises", err));
+    }
+  }, [isSuper]);
+
+  const fetchBatches = useCallback(async (productId?: string, franchiseId?: string) => {
     setLoading(true);
     try {
       const [bRes, pRes] = await Promise.all([
-        productBatchesApi.getAll({ productId: productId || undefined }),
+        productBatchesApi.getAll({ 
+          productId: productId || undefined,
+          franchiseId: franchiseId || undefined
+        }),
         productsFullApi.getAll(),
       ]);
       setBatches(bRes.data ?? []);
@@ -55,23 +69,29 @@ export default function ProductBatchesPage() {
     }
   }, []);
 
-  useEffect(() => { fetchBatches(); }, [fetchBatches]);
+  useEffect(() => { 
+    fetchBatches(productFilter || undefined, selectedFranchiseId || undefined); 
+  }, [fetchBatches, productFilter, selectedFranchiseId]);
 
   const handleProductFilter = (pid: string) => {
     setProductFilter(pid);
-    fetchBatches(pid || undefined);
   };
 
   const filtered = batches.filter((b) =>
-    expiryFilter === "ALL" || (b.expiryStatus ?? "NO_EXPIRY") === expiryFilter
+    expiryFilter === "ALL" || (b.expiryStatus ?? "VALID") === expiryFilter
   );
 
   const stats = [
     { label: "Total Batches",     value: batches.length,                                                                               icon: Package,       color: "text-indigo-500",  bg: "bg-indigo-500/10" },
-    { label: "Valid",             value: batches.filter(b => !b.expiryStatus || b.expiryStatus === "VALID" || b.expiryStatus === "NO_EXPIRY").length, icon: CheckCircle2,  color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: "Valid",             value: batches.filter(b => b.expiryStatus === "VALID").length,                                       icon: CheckCircle2,  color: "text-emerald-500", bg: "bg-emerald-500/10" },
     { label: "Expiring Soon",     value: batches.filter(b => b.expiryStatus === "EXPIRING_SOON").length,                               icon: Clock,         color: "text-amber-500",   bg: "bg-amber-500/10" },
     { label: "Expired",           value: batches.filter(b => b.expiryStatus === "EXPIRED").length,                                     icon: AlertTriangle, color: "text-rose-500",    bg: "bg-rose-500/10" },
   ];
+
+  // Dynamic grid configuration based on role view
+  const gridClasses = isSuper 
+    ? "grid grid-cols-[1fr_1.2fr_1.2fr_0.6fr_1fr_1fr_1fr] px-5 py-3.5 gap-2" 
+    : "grid grid-cols-[1fr_1.5fr_0.7fr_1fr_1fr_1fr] px-5 py-3.5 gap-2";
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 md:space-y-8 animate-in fade-in duration-700 px-4 sm:px-0">
@@ -85,22 +105,22 @@ export default function ProductBatchesPage() {
               <PackageCheck size={20} className="text-white hidden md:block" />
             </div>
             <h1 className="text-xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
-              Product <span className="text-slate-400 font-medium ml-1 tracking-tighter italic hidden sm:inline">Batches</span>
+              Expiry <span className="text-slate-400 font-medium ml-1 tracking-tighter italic">Tracking</span>
             </h1>
           </div>
           <p className="text-slate-500 dark:text-slate-400 mt-1.5 font-medium ml-10 md:ml-12 uppercase tracking-widest text-[7px] md:text-[9px]">
-            Expiry tracking & batch quantity management
+            {isSuper ? "Global batch registry and shelf-life monitoring across all branches" : "Branch batch registry & shelf-life tracking"}
           </p>
         </div>
         <button
-          onClick={() => fetchBatches(productFilter || undefined)}
+          onClick={() => fetchBatches(productFilter || undefined, selectedFranchiseId || undefined)}
           className="p-2.5 md:p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg md:rounded-xl hover:border-slate-300 transition-all shadow-sm group shrink-0"
         >
           <RefreshCw size={14} className={clsx("text-slate-400 group-hover:rotate-180 transition-transform duration-500 md:w-4 md:h-4", loading && "animate-spin")} />
         </button>
       </header>
 
-      {/* Stats */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
         {stats.map((s, i) => (
           <div key={i} className="bg-white dark:bg-card/40 backdrop-blur-sm p-4 md:p-6 rounded-[24px] md:rounded-[32px] border border-slate-100 dark:border-white/5 shadow-lg shadow-black/[0.01]">
@@ -116,9 +136,9 @@ export default function ProductBatchesPage() {
         ))}
       </div>
 
-      {/* Filters */}
+      {/* Filters Strip */}
       <div className="flex flex-col sm:flex-row gap-3">
-        {/* Product filter */}
+        {/* Product selector filter */}
         <div className="flex items-center gap-2 bg-white dark:bg-card/40 border border-slate-100 dark:border-white/5 rounded-xl px-4 py-2.5 shadow-sm">
           <Filter size={14} className="text-slate-400 shrink-0" />
           <select
@@ -133,6 +153,23 @@ export default function ProductBatchesPage() {
           </select>
         </div>
 
+        {/* Franchise select dropdown for Super Admin */}
+        {isSuper && (
+          <div className="flex items-center gap-2 bg-white dark:bg-card/40 border border-slate-100 dark:border-white/5 rounded-xl px-4 py-2.5 shadow-sm">
+            <Building2 size={14} className="text-slate-400 shrink-0" />
+            <select
+              value={selectedFranchiseId}
+              onChange={(e) => setSelectedFranchiseId(e.target.value)}
+              className="bg-transparent text-[11px] font-black text-slate-600 dark:text-slate-300 outline-none uppercase tracking-widest cursor-pointer"
+            >
+              <option value="">All Branches</option>
+              {franchises.map((f) => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Expiry filter tabs */}
         <div className="flex gap-2 flex-wrap">
           {FILTER_TABS.map((f) => (
@@ -146,13 +183,13 @@ export default function ProductBatchesPage() {
                   : "bg-white dark:bg-card/40 border-slate-100 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:border-slate-300"
               )}
             >
-              {f === "ALL" ? "All" : f === "NO_EXPIRY" ? "No Expiry" : f.replace("_", " ")}
+              {f === "ALL" ? "All" : f.replace("_", " ")}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Batch List */}
+      {/* Batch Registry List */}
       <div className="space-y-3 md:space-y-4">
         <h2 className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-3 ml-2">
           <PackageCheck size={12} /> Batch Registry
@@ -173,22 +210,28 @@ export default function ProductBatchesPage() {
           </div>
         ) : (
           <div className="bg-white dark:bg-card/40 backdrop-blur-md rounded-[24px] md:rounded-[32px] border border-slate-100 dark:border-white/5 overflow-hidden shadow-lg">
+            
             {/* Table header */}
-            <div className="grid grid-cols-[1fr_1.5fr_0.7fr_1fr_1fr_1fr] px-5 py-3 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.01]">
-              {["Batch Code", "Product", "Qty", "Produced", "Expiry Date", "Status"].map((h) => (
-                <p key={h} className="text-[8px] font-black text-slate-400 uppercase tracking-[0.25em]">{h}</p>
-              ))}
+            <div className={clsx("border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.01]", gridClasses)}>
+              {isSuper 
+                ? ["Batch Code", "Product", "Branch Outlet", "Qty", "Produced", "Expiry Date", "Status"].map((h) => (
+                    <p key={h} className="text-[8px] font-black text-slate-400 uppercase tracking-[0.25em]">{h}</p>
+                  ))
+                : ["Batch Code", "Product", "Qty", "Produced", "Expiry Date", "Status"].map((h) => (
+                    <p key={h} className="text-[8px] font-black text-slate-400 uppercase tracking-[0.25em]">{h}</p>
+                  ))
+              }
             </div>
 
             {/* Rows */}
             <div className="divide-y divide-slate-50 dark:divide-white/[0.03]">
               {filtered.map((batch: any) => {
-                const status: ExpiryStatus = batch.expiryStatus ?? "NO_EXPIRY";
+                const status: ExpiryStatus = batch.expiryStatus ?? "VALID";
                 const conf = EXPIRY_CONFIG[status];
                 return (
                   <div
                     key={batch.id}
-                    className="grid grid-cols-[1fr_1.5fr_0.7fr_1fr_1fr_1fr] px-5 py-4 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors items-center"
+                    className={clsx("hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors items-center", gridClasses)}
                   >
                     {/* Batch Code */}
                     <p className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-wider font-mono">
@@ -204,6 +247,16 @@ export default function ProductBatchesPage() {
                         {batch.product?.name ?? "—"}
                       </p>
                     </div>
+
+                    {/* Branch (Super Admin Only) */}
+                    {isSuper && (
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Building2 size={12} className="text-slate-400 shrink-0" />
+                        <p className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 truncate">
+                          {batch.franchise?.name ?? "Independent Branch"}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Quantity */}
                     <p className="text-[13px] font-black text-slate-900 dark:text-white tabular-nums">
@@ -232,7 +285,7 @@ export default function ProductBatchesPage() {
                       "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest w-fit",
                       conf.bg, conf.text, conf.border
                     )}>
-                      <span className={clsx("w-1.5 h-1.5 rounded-full shrink-0", conf.dot, status !== "NO_EXPIRY" && "animate-pulse")} />
+                      <span className={clsx("w-1.5 h-1.5 rounded-full shrink-0", conf.dot, status === "EXPIRING_SOON" && "animate-pulse")} />
                       {conf.label}
                     </span>
                   </div>

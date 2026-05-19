@@ -1,8 +1,12 @@
-import { ChevronDown, Edit3, Plus, Search, User, Phone, Wallet, Package } from "lucide-react";
+"use client";
+
+import { ChevronDown, Edit3, X, Plus, Search, User, Phone, Wallet, Package, MapPin, Hash, BarChart3, ArrowRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { usePurchaseOrder, Vendor } from "@/context/PurchaseOrderContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { vendorsApi } from "@/lib/api";
+import Link from "next/link";
+import { clsx } from "clsx";
 
 interface BillingSectionProps {
   fromLabel: string;
@@ -15,9 +19,7 @@ interface BillingSectionProps {
 
 export default function BillingSection({ 
   fromLabel, 
-  fromSubLabel, 
   toLabel, 
-  toSubLabel,
   targetType,
   onAddTarget 
 }: BillingSectionProps) {
@@ -28,9 +30,18 @@ export default function BillingSection({
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const placeholderText = targetType === "client" ? "Select a Client" : "Select Vendor By Bill";
-  const buttonText = targetType === "client" ? "Add New Client" : "Add New Vendor";
-  const secondaryText = targetType === "client" ? "Select Client/Business from the list" : "Select Vendor/Business from the list";
+  const placeholderText = targetType === "client" ? "Select a Client" : "Search Vendor Name / Code...";
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSearch(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (showSearch) {
@@ -38,13 +49,16 @@ export default function BillingSection({
         setLoading(true);
         try {
           const response = await vendorsApi.getAll();
-          // Map to our Vendor interface
           const mappedVendors = response.data.map((v: any) => ({
             id: v.id,
             name: v.name,
             phone: v.phone || v.mobile || v.contact,
+            email: v.email,
+            gstNumber: v.gstNumber,
             advanceBalance: v.advanceBalance || (v.balance > 0 ? v.balance : 0),
             balanceDue: v.balanceDue || (v.balance < 0 ? Math.abs(v.balance) : 0),
+            creditLimit: v.creditLimit || 0,
+            vendorCode: v.vendorCode,
             suppliedMaterials: v.suppliedMaterials?.map((sm: any) => ({
               materialId: sm.materialId,
               price: sm.price,
@@ -63,134 +77,104 @@ export default function BillingSection({
   }, [showSearch]);
 
   const filteredVendors = vendors.filter(v => 
-    v.name.toLowerCase().includes(searchQuery.toLowerCase())
+    v.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    v.vendorCode?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-8">
-      {/* From Section */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold text-[#1A1A1A] dark:text-white flex items-center gap-2">
-          {fromLabel} <span className="text-[#999] font-medium text-xs">{fromSubLabel}</span>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* From Section: Professional & Compact */}
+      <div className="space-y-3">
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+          {fromLabel}
         </h3>
         
-        <div className="p-6 bg-white dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-xl space-y-4">
-          <div className="flex items-center justify-between p-3 border border-[#F0EAF0] rounded-lg cursor-pointer hover:border-[#7C3AED] transition-all">
-             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-md bg-[#3D3D3D] text-white flex items-center justify-center font-bold text-xs uppercase shadow-md">
-                   {user?.fullName?.charAt(0) || "A"}
-                </div>
-                <span className="text-sm font-bold text-[#1A1A1A] dark:text-white">{user?.fullName || "Azeez"}</span>
-             </div>
-             <ChevronDown size={14} className="text-[#999]" />
-          </div>
-
-          <div className="space-y-4 pt-2">
-             <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#666] uppercase tracking-wider">Business details</span>
-                <button className="text-[#7C3AED] text-xs font-bold flex items-center gap-1 hover:underline">
-                   <Edit3 size={12} /> Edit
-                </button>
-             </div>
-             <div className="space-y-2">
-                <div className="flex justify-between items-start">
-                   <span className="text-xs text-[#999]">Business Name</span>
-                   <span className="text-sm font-medium text-[#1A1A1A] dark:text-slate-200">{user?.fullName || "Azeez"}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                   <span className="text-xs text-[#999]">Address</span>
-                   <span className="text-sm font-medium text-[#1A1A1A] dark:text-slate-200">India</span>
-                </div>
-             </div>
-          </div>
+        <div className="p-4 bg-white dark:bg-[#0A0D14] border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center gap-4 group">
+           <div className="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-lg shadow-inner uppercase">
+              {user?.fullName?.charAt(0) || "U"}
+           </div>
+           <div className="flex-1">
+              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{user?.fullName || "System Admin"}</h4>
+              <div className="flex items-center gap-3 text-[10px] text-slate-400 font-bold mt-0.5">
+                 <span className="flex items-center gap-1 uppercase"><MapPin size={10} /> {user?.role?.replace('_', ' ') || "ADMIN"}</span>
+                 <Link href="/settings" className="flex items-center gap-1 text-[#7C3AED] hover:underline cursor-pointer"><Edit3 size={10} /> Edit profile</Link>
+              </div>
+           </div>
         </div>
       </div>
 
-      {/* To Section */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold text-[#1A1A1A] dark:text-white flex items-center gap-2">
-          {toLabel} <span className="text-[#999] font-medium text-xs">{toSubLabel}</span>
+      {/* To Section: Dynamic Vendor Card */}
+      <div className="space-y-3">
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+          {toLabel}
         </h3>
         
         {selectedVendor ? (
-          <div className="p-6 bg-white dark:bg-slate-900 border border-[#7C3AED]/30 dark:border-slate-800 rounded-xl space-y-6 relative group overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-               <button 
+          <div className="p-4 bg-white dark:bg-[#0A0D14] border border-purple-200 dark:border-slate-800 rounded-2xl relative group">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-4">
+                 <div className="w-12 h-12 rounded-xl bg-purple-600 text-white flex items-center justify-center font-black text-lg shadow-lg shadow-purple-100">
+                    {selectedVendor.name.charAt(0)}
+                 </div>
+                 <div className="flex-1">
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
+                       {selectedVendor.name}
+                       <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded border border-slate-200">{selectedVendor.vendorCode || "V-001"}</span>
+                    </h4>
+                    <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-400 font-bold mt-1">
+                       <span className="flex items-center gap-1"><Hash size={10} /> {selectedVendor.gstNumber || "GST UNREGISTERED"}</span>
+                       <span className="flex items-center gap-1"><Phone size={10} /> {selectedVendor.phone || "N/A"}</span>
+                       <span className="text-purple-500 font-black">● {selectedVendor.suppliedMaterials?.length || 0} Materials Available</span>
+                    </div>
+                 </div>
+              </div>
+              <button 
                 onClick={() => setSelectedVendor(null)}
-                className="text-xs font-bold text-red-500 hover:underline"
-               >
-                 Change Vendor
-               </button>
-            </div>
-            
-            <div className="flex items-start gap-4">
-               <div className="w-12 h-12 rounded-xl bg-purple-50 text-[#7C3AED] flex items-center justify-center font-black text-xl shadow-sm">
-                  {selectedVendor.name.charAt(0)}
-               </div>
-               <div className="flex-1">
-                  <h4 className="text-lg font-black text-[#1A1A1A] dark:text-white leading-tight">{selectedVendor.name}</h4>
-                  <div className="flex items-center gap-3 text-[#999] text-xs font-medium mt-1">
-                     <span className="flex items-center gap-1"><Phone size={12} /> {selectedVendor.phone || "No phone"}</span>
-                     <span className="flex items-center gap-1 text-purple-500 font-bold"><Package size={12} /> {selectedVendor.suppliedMaterials?.length || 0} Materials</span>
-                  </div>
-               </div>
+                className="p-1.5 text-slate-300 hover:text-red-500 transition-colors"
+                title="Remove Selected Vendor"
+              >
+                <X size={14} />
+              </button>
             </div>
 
-            <div className="pt-4 border-t border-dashed border-[#F0EAF0] grid grid-cols-2 gap-4">
-               <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-[#999] uppercase tracking-widest">Financial Context</span>
-                  <div className="flex items-center gap-2">
-                    {selectedVendor.advanceBalance > 0 ? (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 text-green-700 rounded-md text-[11px] font-bold">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                        ₹{selectedVendor.advanceBalance.toLocaleString()} Advance
-                      </div>
-                    ) : selectedVendor.balanceDue > 0 ? (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-red-50 text-red-700 rounded-md text-[11px] font-bold">
-                        <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                        ₹{selectedVendor.balanceDue.toLocaleString()} Due
-                      </div>
-                    ) : (
-                      <div className="text-[11px] font-bold text-[#666]">No outstanding balance</div>
-                    )}
-                  </div>
+            <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-50 dark:border-slate-800">
+               <div className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter flex items-center gap-1"><Wallet size={8} /> Balance Due</span>
+                  <span className={clsx(
+                    "text-xs font-black",
+                    selectedVendor.balanceDue > 0 ? "text-red-500" : "text-green-600"
+                  )}>₹{selectedVendor.balanceDue.toLocaleString()}</span>
                </div>
-               <div className="flex flex-col justify-end items-end">
-                  <button className="text-[10px] font-bold text-[#7C3AED] uppercase tracking-widest flex items-center gap-1 hover:bg-purple-50 p-1 px-2 rounded transition-all">
-                     <Wallet size={12} /> View Ledger
-                  </button>
+               <div className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter flex items-center gap-1"><BarChart3 size={8} /> Performance</span>
+                  <span className="text-xs font-black text-slate-900 dark:text-white">98% OTD</span>
                </div>
+
             </div>
           </div>
         ) : (
-          <div 
-            className="p-6 bg-[#F9F7F9] dark:bg-slate-900/50 border border-dashed border-[#F0EAF0] dark:border-slate-800 rounded-xl flex flex-col items-center justify-center min-h-[220px] text-center gap-6 relative"
-          >
-            <div className="w-full relative">
-              <div 
-                onClick={() => setShowSearch(!showSearch)}
-                className="flex items-center justify-between p-3 bg-white dark:bg-slate-950 border border-[#F0EAF0] rounded-lg cursor-pointer hover:border-[#7C3AED] transition-all"
-              >
-                 <span className="text-sm text-[#999]">{placeholderText}</span>
-                 <ChevronDown size={14} className="text-[#999]" />
+          <div className="p-4 bg-white dark:bg-[#0A0D14] border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col justify-center min-h-[88px] relative group shadow-sm">
+            <div className="w-full relative z-10" ref={searchContainerRef}>
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input 
+                  type="text"
+                  placeholder="Search vendor..."
+                  className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl py-2.5 pl-9 pr-4 text-xs font-bold outline-none focus:border-[#7C3AED] transition-all"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (!showSearch) setShowSearch(true);
+                  }}
+                  onFocus={() => setShowSearch(true)}
+                />
               </div>
 
               {showSearch && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden">
-                   <div className="p-3 border-b border-[#F0EAF0] dark:border-slate-800 flex items-center gap-2">
-                      <Search size={16} className="text-[#999]" />
-                      <input 
-                        autoFocus
-                        type="text" 
-                        placeholder="Search vendors..."
-                        className="w-full text-sm outline-none bg-transparent"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                   </div>
-                   <div className="max-h-60 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden">
+                   <div className="max-h-48 overflow-y-auto">
                       {loading ? (
-                        <div className="p-4 text-xs text-[#999] font-medium italic">Loading vendors...</div>
+                        <div className="p-4 text-[10px] text-slate-400 font-black uppercase tracking-widest animate-pulse">Loading vendors...</div>
                       ) : filteredVendors.length > 0 ? (
                         filteredVendors.map(v => (
                           <div 
@@ -202,41 +186,42 @@ export default function BillingSection({
                             className="p-3 hover:bg-purple-50 dark:hover:bg-slate-800 cursor-pointer transition-colors flex justify-between items-center"
                           >
                              <div className="flex flex-col text-left">
-                                <span className="text-sm font-bold text-[#1A1A1A] dark:text-white">{v.name}</span>
+                                <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{v.name}</span>
                                 <div className="flex items-center gap-2 mt-0.5">
-                                   <span className="text-[10px] text-[#999]">{v.phone || "No phone"}</span>
-                                   <span className="text-[9px] font-bold text-purple-400 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100 uppercase tracking-tighter">
-                                      {v.suppliedMaterials?.length || 0} Materials
+                                   <span className="text-[9px] font-bold text-slate-400">{v.vendorCode || "V-000"}</span>
+                                   <span className="text-[8px] font-black text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                                      {v.suppliedMaterials?.length || 0} Items
                                    </span>
                                 </div>
                              </div>
-                             {v.advanceBalance > 0 && (
-                               <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">₹{v.advanceBalance} Adv</span>
-                             )}
+                             <div className="text-right">
+                                <span className={clsx(
+                                  "text-[10px] font-black",
+                                  v.balanceDue > 0 ? "text-red-500" : "text-green-600"
+                                )}>₹{v.balanceDue.toLocaleString()}</span>
+                             </div>
                           </div>
                         ))
                       ) : (
-                        <div className="p-4 text-xs text-[#999] font-medium italic text-center">No vendors found</div>
+                        <div className="p-6 text-[10px] text-slate-400 font-black uppercase tracking-widest text-center">No vendors found</div>
                       )}
                    </div>
                 </div>
               )}
             </div>
 
-            <div className="space-y-4">
-               <p className="text-xs font-medium text-[#999]">{secondaryText}</p>
-               <p className="text-[10px] font-bold text-[#CCC] uppercase tracking-widest leading-none">OR</p>
-               <button 
-                  onClick={onAddTarget}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-[#7C3AED] text-white rounded-lg font-bold text-sm shadow-lg shadow-purple-200/50 transition-all active:scale-95 mx-auto"
-                >
-                  <Plus size={16} /> {buttonText}
-               </button>
-            </div>
+            <button 
+              onClick={onAddTarget}
+              className="text-[10px] font-black text-[#7C3AED] uppercase tracking-widest hover:underline flex items-center gap-2 mt-4"
+            >
+              <Plus size={14} /> Add New Vendor
+            </button>
+            
+            {/* Background pattern */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(#7C3AED_1px,transparent_1px)] [background-size:10px_10px]" />
           </div>
         )}
       </div>
     </div>
   );
 }
-

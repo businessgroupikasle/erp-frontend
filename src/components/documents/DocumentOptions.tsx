@@ -94,6 +94,7 @@ export default function DocumentOptions({ type }: DocumentOptionsProps) {
          </div>
 
          <button 
+           id="final-submit-btn"
            onClick={handleCreatePO}
            disabled={!isValid || isSubmitting}
            className={`w-full md:w-auto px-12 py-4 rounded-2xl font-black text-sm tracking-widest shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 ${
