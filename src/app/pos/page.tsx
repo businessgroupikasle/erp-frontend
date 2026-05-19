@@ -242,7 +242,7 @@ export default function POSPage() {
         ...newAccForm,
         franchiseId: user?.franchiseId || "root",
         isActive: true
-      });
+      } as any);
       toast.success("Account created!");
       setShowAddAccount(false);
       setNewAccForm({ name: "", type: "CASH", balance: 0 });

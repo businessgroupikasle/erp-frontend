@@ -688,7 +688,7 @@ export default function ExpensesPage() {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{viewingHistory.expenseNumber}</p>
                 </div>
               </div>
-              <button onClick={() => setViewingHistory(null)} className="p-2 hover:bg-slate-200 rounded-xl transition-colors"><X size={20} /></button>
+              <button onClick={() => setViewingHistory(null)} className="p-2 hover:bg-slate-200 rounded-xl transition-colors"><XIcon size={20} /></button>
             </div>
 
             <div className="p-8">

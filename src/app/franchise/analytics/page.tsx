@@ -114,12 +114,17 @@ export default function FranchiseAnalyticsPage() {
       {/* ── Revenue Intelligence Chart ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 min-h-[480px]">
-          <RevenueIntelligence 
-            data={summary?.historicalSales ?? []} 
-            title="Revenue Intelligence" 
-            trend={summary?.stats?.revenueChangePct ?? "0.0"} 
-            period={period} 
-            setPeriod={setPeriod} 
+          <RevenueIntelligence
+            data={(summary?.historicalSales ?? []).map((s: any) => ({
+              ...s,
+              sales: s.sales || 0,
+              purchase: s.purchase || 0,
+              profit: (s.sales || 0) - (s.purchase || 0),
+            }))}
+            title="Revenue Intelligence"
+            trend={summary?.stats?.revenueChangePct ?? "0.0"}
+            period={period}
+            setPeriod={setPeriod}
           />
         </div>
 

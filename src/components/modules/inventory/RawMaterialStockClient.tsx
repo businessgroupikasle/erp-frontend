@@ -13,11 +13,80 @@ import { rawMaterialsApi, inventoryApi } from "@/lib/api";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 
+const WEIGHT_VOLUME_UNITS = new Set(['KG', 'G', 'GM', 'KGS', 'L', 'LTR', 'LITER', 'LITRE', 'ML']);
+
+const getMeasurementType = (unit: string): "weight" | "volume" | "piece" => {
+  const u = unit.toUpperCase();
+  if (['KG', 'G', 'GM', 'KGS'].includes(u)) return "weight";
+  if (['L', 'LTR', 'LITER', 'LITRE', 'ML'].includes(u)) return "volume";
+  return "piece";
+};
+
 const WASTE_REASONS = [
   { value: "EXPIRED", label: "Expired", icon: Flame, color: "text-red-600", bg: "bg-red-50 dark:bg-red-500/10", border: "border-red-200" },
   { value: "DAMAGED", label: "Damaged", icon: Wrench, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-500/10", border: "border-amber-200" },
   { value: "SCRAPPED", label: "Scrapped", icon: Recycle, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-500/10", border: "border-orange-200" },
 ];
+
+const formatStock = (stock: number, unit: string, sku: string, category?: string) => {
+  // Raw materials: tracked directly in weight/volume units (KG, G, L, ML)
+  if (!sku || category !== 'FINISHED_GOOD') {
+    const upperUnit = unit.toUpperCase();
+    const displayUnit = WEIGHT_VOLUME_UNITS.has(upperUnit)
+      ? upperUnit
+      : (upperUnit.endsWith('S') ? upperUnit : `${upperUnit}s`);
+
+    if ((upperUnit === 'G' || upperUnit === 'GM') && stock >= 1000) {
+      return { qty: stock.toFixed(0), unit: displayUnit, total: `${(stock / 1000).toFixed(2)} KG` };
+    }
+    if (upperUnit === 'ML' && stock >= 1000) {
+      return { qty: stock.toFixed(0), unit: displayUnit, total: `${(stock / 1000).toFixed(2)} L` };
+    }
+    return { qty: stock.toFixed(2), unit: displayUnit };
+  }
+
+  // Finished goods: tracked as unit count (1, 2, 3...), show weight as secondary info
+  const countStr = Number.isInteger(stock) ? `${stock}` : stock.toFixed(1);
+  const parts = sku.split('-');
+  const sizePart = parts.length >= 2 ? parts[parts.length - 1] : "";
+  const match = sizePart.match(/^(\d+(?:\.\d+)?)\s*([A-Z]+)$/i);
+  if (!match) return { qty: countStr, unit: "Units" };
+
+  const weightVal = parseFloat(match[1]);
+  const weightUnit = match[2].toUpperCase();
+  const totalVal = stock * weightVal;
+
+  let totalStr = "";
+  if (weightUnit === "G" || weightUnit === "GM") {
+    totalStr = totalVal >= 1000 ? `${(totalVal / 1000).toFixed(2)} KG` : `${totalVal.toFixed(0)} G`;
+  } else if (weightUnit === "ML") {
+    totalStr = totalVal >= 1000 ? `${(totalVal / 1000).toFixed(2)} L` : `${totalVal.toFixed(0)} ML`;
+  } else {
+    totalStr = `${totalVal % 1 === 0 ? totalVal.toFixed(0) : totalVal.toFixed(2)} ${weightUnit}`;
+  }
+
+  return { qty: countStr, unit: "Units", total: totalStr };
+};
+
+const getStockInPhysicalUnit = (stock: number, sku: string, category?: string): number => {
+  // Finished goods minimumStock is stored in units — compare directly
+  if (!sku || category !== 'FINISHED_GOOD') return stock;
+  return stock;
+};
+
+const formatMinStock = (minStockVal: number, unit: string, sku: string, category?: string): string => {
+  // Raw materials: show in weight/volume unit
+  if (category !== 'FINISHED_GOOD' || !sku) {
+    const upperUnit = unit.toUpperCase();
+    const displayUnit = WEIGHT_VOLUME_UNITS.has(upperUnit)
+      ? upperUnit
+      : (upperUnit.endsWith('S') ? upperUnit : `${upperUnit}s`);
+    return `${minStockVal} ${displayUnit}`;
+  }
+  // Finished goods: min stock is unit count
+  return `${minStockVal} Units`;
+};
+
 
 export default function RawMaterialStockClient() {
   const [items, setItems] = useState<any[]>([]);
@@ -109,7 +178,8 @@ export default function RawMaterialStockClient() {
   const downloadCSV = () => {
     const headers = ["SKU", "Item Name", "Category", "Current Stock", "Unit", "Min Stock", "Cost Price", "Sale Price", "Stock Value", "Status"];
     const rows = filtered.map(item => {
-      const status = getStockStatus(item.currentStock, item.minimumStock);
+      const physicalStock = getStockInPhysicalUnit(item.currentStock || 0, item.sku, item.category);
+      const status = getStockStatus(physicalStock, item.minimumStock);
       return [
         item.sku || "",
         item.name || "",
@@ -213,7 +283,7 @@ export default function RawMaterialStockClient() {
         {[
           { label: "Inventory Valuation", value: `₹${(totalValue / 1000).toFixed(1)}K`, sub: "Live Asset Value", icon: Calculator, color: "text-orange-500", bg: "bg-orange-500/10" },
           { label: "Finished Products", value: items.filter(i => i.category?.includes('FINISHED')).length, sub: "Market Ready SKUs", icon: Package, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-          { label: "Low Stock Alerts", value: items.filter(i => (i.currentStock || 0) < (i.minimumStock || 0)).length, sub: "Reorder Required", icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
+          { label: "Low Stock Alerts", value: items.filter(i => getStockInPhysicalUnit(i.currentStock || 0, i.sku, i.category) <= (i.minimumStock || 0)).length, sub: "Reorder Required", icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
           { label: "Raw Materials", value: items.filter(i => i.category?.includes('RAW')).length, sub: "Production Inputs", icon: Layers, color: "text-blue-500", bg: "bg-blue-500/10" },
         ].map((stat, i) => (
           <div key={i} className="bg-white dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm hover:shadow-md hover:border-slate-200 dark:hover:border-white/10 transition-all duration-200 flex items-center justify-between">
@@ -271,11 +341,11 @@ export default function RawMaterialStockClient() {
           <table className="w-full text-left table-fixed">
             <thead className="bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5">
               <tr className="text-slate-400">
-                <th className="w-[25%] px-8 py-4 text-[9px] font-black uppercase tracking-widest">Item Specification</th>
+                <th className="w-[24%] px-8 py-4 text-[9px] font-black uppercase tracking-widest">Item Specification</th>
                 <th className="w-[10%] px-6 py-4 text-[9px] font-black uppercase tracking-widest text-center">Movement</th>
-                <th className="w-[13%] px-6 py-4 text-[9px] font-black uppercase tracking-widest">Stock Balance</th>
-                <th className="w-[10%] px-6 py-4 text-[9px] font-black uppercase tracking-widest">Avg. Cost</th>
-                <th className="w-[10%] px-6 py-4 text-[9px] font-black uppercase tracking-widest">Sale Price</th>
+                <th className="w-[16%] px-6 py-4 text-[9px] font-black uppercase tracking-widest">Stock Balance</th>
+                <th className="w-[9%] px-6 py-4 text-[9px] font-black uppercase tracking-widest">Avg. Cost</th>
+                <th className="w-[9%] px-6 py-4 text-[9px] font-black uppercase tracking-widest">Sale Price</th>
                 <th className="w-[10%] px-6 py-4 text-[9px] font-black uppercase tracking-widest text-right">Valuation</th>
                 <th className="w-[10%] px-6 py-4 text-[9px] font-black uppercase tracking-widest text-center">Status</th>
                 <th className="w-[12%] px-8 py-4"></th>
@@ -283,9 +353,13 @@ export default function RawMaterialStockClient() {
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-white/5">
               {filtered.map((item) => {
-                const status = getStockStatus(item.currentStock, item.minimumStock);
-                const isFinished = item.category?.includes('FINISHED');
+                const physicalStock = getStockInPhysicalUnit(item.currentStock || 0, item.sku, item.category);
+                const status = getStockStatus(physicalStock, item.minimumStock);
+                const isRaw = !item.category?.includes('FINISHED');
                 const stockVal = (item.currentStock || 0) * (item.costPrice || 0);
+                const measureType = getMeasurementType(item.unit || 'KG');
+                const balance = formatStock(item.currentStock || 0, item.unit || "KG", item.sku, item.category);
+                const minStock = formatMinStock(item.minimumStock || 0, item.unit || "KG", item.sku, item.category);
 
                 return (
                   <tr key={item.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all">
@@ -298,9 +372,19 @@ export default function RawMaterialStockClient() {
                         </div>
                         <div className="min-w-0">
                           <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-[12px] truncate leading-none mb-1">{item.name}</p>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">{item.sku}</span>
                             <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">• {item.category?.replace(/_/g, " ")}</span>
+                            {isRaw && (
+                              <span className={clsx(
+                                "text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide",
+                                measureType === "weight" ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400" :
+                                measureType === "volume" ? "bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400" :
+                                "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                              )}>
+                                {(item.unit || "KG").toUpperCase()}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -312,15 +396,45 @@ export default function RawMaterialStockClient() {
                       </div>
                     </td>
                     <td className="px-6 py-3">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className={clsx("text-[13px] font-black tracking-tight", status.label !== "SAFE" ? "text-orange-600" : "text-slate-900 dark:text-slate-200")}>
-                            {(item.currentStock || 0).toFixed(isFinished ? 0 : 1)}
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={clsx("text-sm font-extrabold tracking-tight", 
+                            status.label === "CRITICAL" ? "text-red-600 dark:text-red-400 animate-pulse" :
+                            status.label === "LOW STOCK" ? "text-orange-600 dark:text-orange-400" :
+                            "text-slate-900 dark:text-slate-200"
+                          )}>
+                            {balance.qty}
                           </span>
-                          <span className="text-[9px] text-slate-400 font-bold uppercase">{item.unit}</span>
+                          <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+                            {balance.unit}
+                          </span>
+
+                          {balance.total && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-orange-50 dark:bg-orange-500/10 text-[10px] font-bold text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-500/20">
+                              ≈ {balance.total}
+                            </span>
+                          )}
                         </div>
-                        <div className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">
-                          Min: {item.minimumStock} {item.unit}
+
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[9px] font-extrabold text-slate-400 dark:text-slate-500 tracking-wider">
+                            <span>MIN STOCK</span>
+                            <span className="font-extrabold text-slate-700 dark:text-slate-300">
+                              {minStock}
+                            </span>
+                          </div>
+                          
+                          <div className="w-full bg-slate-100 dark:bg-slate-800/60 rounded-full h-1 overflow-hidden">
+                            <div 
+                              className={clsx(
+                                "h-full rounded-full transition-all duration-500",
+                                status.label === "SAFE" ? "bg-emerald-500" :
+                                status.label === "REORDER" ? "bg-amber-500" :
+                                "bg-red-500"
+                              )}
+                              style={{ width: `${Math.min(100, Math.max(0, ((physicalStock || 0) / (item.minimumStock || 1)) * 100))}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -387,10 +501,17 @@ export default function RawMaterialStockClient() {
               </button>
             </div>
 
-            <div className="p-4 bg-red-50 dark:bg-red-500/10 rounded-2xl border border-red-100 dark:border-red-500/20 text-xs font-bold text-red-600 dark:text-red-400">
-              Current Stock: <span className="font-black">{(trashItem.currentStock || 0).toFixed(2)} {trashItem.unit}</span>
-              <span className="ml-3 text-slate-400">• This action reduces inventory permanently</span>
-            </div>
+            {(() => {
+              const trashStock = formatStock(trashItem.currentStock || 0, trashItem.unit || "KG", trashItem.sku);
+              return (
+                <div className="p-4 bg-red-50 dark:bg-red-500/10 rounded-2xl border border-red-100 dark:border-red-500/20 text-xs font-bold text-red-600 dark:text-red-400">
+                  Current Stock: <span className="font-black">
+                    {trashStock.qty} {trashStock.unit} {trashStock.total ? `(${trashStock.total})` : ""}
+                  </span>
+                  <span className="block mt-1 text-[10px] text-slate-400 font-medium">• This action reduces inventory permanently</span>
+                </div>
+              );
+            })()}
 
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reason for Disposal</label>

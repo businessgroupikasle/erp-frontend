@@ -6,6 +6,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number, currency: string = "₹") {
-  return `${currency}${Math.round(amount).toLocaleString("en-IN")}`;
+  const isNegative = amount < 0;
+  const absVal = Math.abs(Math.round(amount));
+  return `${isNegative ? '-' : ''}${currency}${absVal.toLocaleString("en-IN")}`;
 }
 

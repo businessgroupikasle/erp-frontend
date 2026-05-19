@@ -13,7 +13,7 @@ export interface LineItem {
 }
 
 export interface Vendor {
-  [x: string]: string;
+  [x: string]: any;
   id: string;
   name: string;
   phone?: string;

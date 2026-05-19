@@ -27,6 +27,7 @@ interface DispatchedOrder {
   id: string;
   orderNumber: string;
   franchiseId: string;
+  franchise?: any;
   status: string;
   totalAmount: number;
   expectedDispatchDate?: string;
