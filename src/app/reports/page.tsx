@@ -21,7 +21,7 @@ import { accountingApi, reportsApi, posApi, salesApi, procurementApi, franchiseA
 import toast from "react-hot-toast";
 
 // ─── Sub-Components ─────────────────────────────────────────────────────────
-
+//reports
 function SummaryCard({ icon, label, value, color }: { icon: any, label: string, value: string, color: "blue" | "green" | "orange" }) {
   const colorMap = {
     blue: "bg-blue-50 text-blue-500",
