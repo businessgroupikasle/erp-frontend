@@ -186,8 +186,9 @@ export default function VendorFormModal({ isOpen, onClose, onSuccess }: VendorFo
                        <input 
                           placeholder="22AAAAA0000A1Z5"
                           value={form.gstNumber}
+                          maxLength={15}
                           onChange={(e) => {
-                            const val = e.target.value.toUpperCase().trim();
+                            const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
                             setForm({...form, gstNumber: val});
                             if (val.length === 15) {
                               fetchGstDetails(val);
@@ -195,6 +196,7 @@ export default function VendorFormModal({ isOpen, onClose, onSuccess }: VendorFo
                           }}
                           className="w-full pl-4 pr-16 py-3 bg-slate-50 dark:bg-white/5 border border-transparent dark:border-white/10 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-[#7C3AED]/20 focus:bg-white transition-all font-mono tracking-wider"
                        />
+                       <span className="absolute left-4 bottom-[-16px] text-[9px] font-bold text-slate-400">{form.gstNumber.length}/15</span>
                        {form.gstNumber.length === 15 && !fetchingGst && (
                           <button
                              type="button"

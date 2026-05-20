@@ -159,34 +159,35 @@ export default function RecipesPage() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-700 px-4 sm:px-0">
+    <div className="max-w-7xl mx-auto space-y-4 md:space-y-6 animate-in fade-in duration-700 px-3 sm:px-4 md:px-0">
       {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 border-b border-slate-200 dark:border-slate-800">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 md:py-4 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="p-2.5 bg-[#F97316] rounded-xl shadow-lg shadow-orange-600/20 shrink-0">
-              <Layers size={20} className="text-white" />
+            <div className="p-2 md:p-2.5 bg-[#F97316] rounded-lg md:rounded-xl shadow-lg shadow-orange-600/20 shrink-0">
+              <Layers size={18} className="text-white md:hidden" />
+              <Layers size={20} className="text-white hidden md:block" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
+            <h1 className="text-lg md:text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
               Recipe <span className="text-slate-400 font-medium ml-1 tracking-tighter italic hidden sm:inline">Management</span>
             </h1>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 mt-1.5 font-medium ml-12 uppercase tracking-widest text-[9px]">
-            Define formulas, bill of materials & production yields
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium ml-10 md:ml-12 uppercase tracking-widest text-[7px] md:text-[9px]">
+            Define formulas, bill of materials &amp; production yields
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={fetchAll}
-            className="p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-slate-300 transition-all shadow-sm group"
+            className="p-2.5 md:p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg md:rounded-xl hover:border-slate-300 transition-all shadow-sm group shrink-0"
           >
             <RefreshCw size={14} className={clsx("text-slate-400 group-hover:rotate-180 transition-transform duration-500", loading && "animate-spin")} />
           </button>
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 bg-[#F97316] text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:shadow-xl hover:translate-y-[-1px] transition-all active:translate-y-0 shadow-lg shadow-orange-600/10"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#F97316] text-white px-4 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-widest hover:shadow-xl transition-all active:scale-[0.98] shadow-lg shadow-orange-600/10"
           >
-            <Plus size={14} />
+            <Plus size={13} />
             New Recipe
           </button>
         </div>
@@ -205,15 +206,15 @@ export default function RecipesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
         {[
           { label: "Total Recipes", value: recipes.length, color: "text-orange-500" },
           { label: "Total Ingredients", value: recipes.reduce((s, r) => s + (r.recipeItems?.length ?? 0), 0), color: "text-blue-500" },
           { label: "Avg Yield / Recipe", value: recipes.length ? Math.round(recipes.reduce((s, r) => s + (r.yieldQty ?? 0), 0) / recipes.length) : 0, color: "text-emerald-500" },
         ].map(stat => (
-          <div key={stat.label} className="bg-white dark:bg-card/40 rounded-2xl border border-slate-100 dark:border-white/5 p-5">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
-            <p className={clsx("text-3xl font-black tracking-tighter", stat.color)}>{stat.value}</p>
+          <div key={stat.label} className="bg-white dark:bg-card/40 rounded-xl md:rounded-2xl border border-slate-100 dark:border-white/5 p-3 md:p-5">
+            <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
+            <p className={clsx("text-2xl md:text-3xl font-black tracking-tighter", stat.color)}>{stat.value}</p>
           </div>
         ))}
       </div>
@@ -244,33 +245,32 @@ export default function RecipesPage() {
                 key={recipe.id}
                 className="group bg-white dark:bg-card/40 backdrop-blur-md rounded-[24px] border border-slate-100 dark:border-white/5 overflow-hidden hover:shadow-xl transition-all"
               >
-                <div
-                  className="flex items-center justify-between p-5 cursor-pointer"
-                  onClick={() => setExpandedId(isExpanded ? null : recipe.id)}
-                >
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center text-white font-black text-sm shrink-0 shadow-lg shadow-orange-500/20">
-                      {recipe.name.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">{recipe.name}</h3>
-                      <div className="flex items-center gap-3 mt-1 flex-wrap">
-                        {recipe.product?.name && (
-                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                            <Package size={9} className="text-orange-400" /> {recipe.product.name}
-                          </span>
-                        )}
-                        <span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-lg">
-                          Yield: {recipe.yieldQty} units/batch
+              <div className="flex items-center justify-between p-4 md:p-5 cursor-pointer"
+                onClick={() => setExpandedId(isExpanded ? null : recipe.id)}
+              >
+                <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-orange-500 flex items-center justify-center text-white font-black text-xs md:text-sm shrink-0 shadow-lg shadow-orange-500/20">
+                    {recipe.name.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm md:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">{recipe.name}</h3>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {recipe.product?.name && (
+                        <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                          <Package size={9} className="text-orange-400" /> {recipe.product.name}
                         </span>
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">
-                          {recipe.recipeItems?.length ?? 0} ingredients
-                        </span>
-                      </div>
+                      )}
+                      <span className="text-[8px] md:text-[9px] font-black text-emerald-500 uppercase tracking-wider bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-lg">
+                        Yield: {recipe.yieldQty} units
+                      </span>
+                      <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-wider">
+                        {recipe.recipeItems?.length ?? 0} items
+                      </span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex items-center gap-2 shrink-0 ml-4">
+                <div className="flex items-center gap-1.5 md:gap-2 shrink-0 ml-2">
                     <button
                       onClick={e => { e.stopPropagation(); router.push(`/production?recipeId=${recipe.id}`); }}
                       className="p-2 rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-500 hover:bg-orange-100 transition-colors"
@@ -336,44 +336,45 @@ export default function RecipesPage() {
 
       {/* Create / Edit Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in zoom-in duration-300 text-slate-900">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in slide-in-from-bottom sm:zoom-in duration-300 text-slate-900">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setShowForm(false)} />
-          <div className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl border border-slate-100 p-6 md:p-8 max-h-[92vh] overflow-y-auto custom-scrollbar">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 shrink-0">
-                <ChefHat size={20} />
+          <div className="relative bg-white sm:rounded-[2rem] rounded-t-[2rem] shadow-2xl w-full sm:max-w-md border border-slate-100 p-4 sm:p-6 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="flex items-center gap-3 mb-4 sm:mb-6">
+              <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 shrink-0">
+                <ChefHat size={16} className="sm:hidden" />
+                <ChefHat size={20} className="hidden sm:block" />
               </div>
-              <div>
-                <h2 className="text-xl font-black tracking-tight uppercase">{editingId ? "Edit Recipe" : "New Recipe"}</h2>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-xl font-black tracking-tight uppercase leading-tight">{editingId ? "Edit Recipe" : "New Recipe"}</h2>
+                <p className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
                   {editingId ? "Update formula and bill of materials" : "Define formula and bill of materials"}
                 </p>
               </div>
-              <button onClick={() => setShowForm(false)} className="ml-auto p-2 rounded-xl hover:bg-slate-50 text-slate-400">
+              <button onClick={() => setShowForm(false)} className="ml-auto p-1.5 sm:p-2 rounded-xl hover:bg-slate-50 text-slate-400 shrink-0">
                 <X size={16} />
               </button>
             </div>
 
-            <div className="space-y-5">
+            <div className="space-y-3 sm:space-y-5">
               {/* Name */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Recipe Name *</label>
+              <div className="space-y-1">
+                <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Recipe Name *</label>
                 <input
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="e.g. Khakhra Classic Mix"
-                  className="w-full h-11 bg-slate-50 px-4 rounded-xl font-bold text-xs outline-none focus:ring-4 ring-orange-100 border border-slate-100 transition-all"
+                  className="w-full h-9 sm:h-11 bg-slate-50 px-3 sm:px-4 rounded-xl font-bold text-xs outline-none focus:ring-2 sm:focus:ring-4 ring-orange-100 border border-slate-100 transition-all"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 {/* Product */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Linked Product</label>
+                <div className="space-y-1">
+                  <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Linked Product</label>
                   <select
                     value={form.productId}
                     onChange={e => setForm(f => ({ ...f, productId: e.target.value }))}
-                    className="w-full h-11 bg-slate-50 px-4 rounded-xl font-bold text-xs outline-none focus:ring-4 ring-orange-100 border border-slate-100 transition-all appearance-none cursor-pointer"
+                    className="w-full h-9 sm:h-11 bg-slate-50 px-2 sm:px-4 rounded-xl font-bold text-xs outline-none focus:ring-2 ring-orange-100 border border-slate-100 transition-all appearance-none cursor-pointer"
                   >
                     <option value="">None</option>
                     {products.map((p: any) => (
@@ -383,85 +384,87 @@ export default function RecipesPage() {
                 </div>
 
                 {/* Yield */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Yield (units/batch) *</label>
+                <div className="space-y-1">
+                  <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Yield (units/batch) *</label>
                   <input
                     type="number"
                     min={1}
                     value={form.yieldQty}
                     onChange={e => setForm(f => ({ ...f, yieldQty: Math.max(1, parseInt(e.target.value) || 1) }))}
-                    className="w-full h-11 bg-slate-50 px-4 rounded-xl font-bold text-xs outline-none focus:ring-4 ring-orange-100 border border-slate-100 transition-all"
+                    className="w-full h-9 sm:h-11 bg-slate-50 px-3 sm:px-4 rounded-xl font-bold text-xs outline-none focus:ring-2 ring-orange-100 border border-slate-100 transition-all"
                   />
                 </div>
               </div>
 
               {/* Instructions */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Instructions</label>
+              <div className="space-y-1">
+                <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Instructions</label>
                 <textarea
                   value={form.instructions}
                   onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))}
-                  rows={3}
+                  rows={2}
                   placeholder="Step-by-step production instructions..."
-                  className="w-full bg-slate-50 px-4 py-3 rounded-xl font-bold text-xs outline-none focus:ring-4 ring-orange-100 border border-slate-100 transition-all resize-none"
+                  className="w-full bg-slate-50 px-3 sm:px-4 py-2 sm:py-3 rounded-xl font-bold text-xs outline-none focus:ring-2 ring-orange-100 border border-slate-100 transition-all resize-none"
                 />
               </div>
 
               {/* Ingredients */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
                     Ingredients / Bill of Materials *
                   </label>
                   <button
                     onClick={addItem}
-                    className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg transition-colors"
+                    className="flex items-center gap-1 text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-600 bg-orange-50 px-2.5 py-1.5 rounded-lg transition-colors"
                   >
-                    <Plus size={11} /> Add Ingredient
+                    <Plus size={10} /> Add Ingredient
                   </button>
                 </div>
 
                 {form.items.length === 0 && (
-                  <div className="py-8 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                    <ChefHat size={24} className="mx-auto text-slate-300 mb-2" />
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">No ingredients yet</p>
+                  <div className="py-5 sm:py-8 text-center bg-slate-50 rounded-xl sm:rounded-2xl border-2 border-dashed border-slate-200">
+                    <ChefHat size={20} className="mx-auto text-slate-300 mb-1.5" />
+                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">No ingredients yet</p>
                   </div>
                 )}
 
-                <div className="space-y-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+                <div className="space-y-2 max-h-52 sm:max-h-64 overflow-y-auto pr-1 custom-scrollbar">
                   {form.items.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <div key={idx} className="flex flex-wrap sm:flex-nowrap items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
                       <select
                         value={item.inventoryItemId}
                         onChange={e => updateItem(idx, { inventoryItemId: e.target.value })}
-                        className="flex-1 h-9 bg-white border border-slate-200 px-3 rounded-lg font-bold text-[10px] outline-none focus:border-orange-400 cursor-pointer"
+                        className="flex-1 min-w-0 h-9 bg-white border border-slate-200 px-3 rounded-lg font-bold text-[10px] outline-none focus:border-orange-400 cursor-pointer"
                       >
                         <option value="">Select ingredient...</option>
                         {materials.map((m: any) => (
                           <option key={m.id} value={m.id}>{m.name}</option>
                         ))}
                       </select>
-                      <input
-                        type="number"
-                        min={0.001}
-                        step={0.001}
-                        value={item.quantityRequired}
-                        onChange={e => updateItem(idx, { quantityRequired: parseFloat(e.target.value) || 0 })}
-                        className="w-20 h-9 bg-white border border-slate-200 px-3 rounded-lg font-black text-[11px] outline-none focus:border-orange-400 text-center"
-                      />
-                      <select
-                        value={item.unit}
-                        onChange={e => updateItem(idx, { unit: e.target.value })}
-                        className="w-20 h-9 bg-white border border-slate-200 px-2 rounded-lg font-bold text-[10px] outline-none focus:border-orange-400 cursor-pointer"
-                      >
-                        {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                      </select>
-                      <button
-                        onClick={() => removeItem(idx)}
-                        className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
-                      >
-                        <Minus size={13} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={0.001}
+                          step={0.001}
+                          value={item.quantityRequired}
+                          onChange={e => updateItem(idx, { quantityRequired: parseFloat(e.target.value) || 0 })}
+                          className="w-16 sm:w-20 h-9 bg-white border border-slate-200 px-2 rounded-lg font-black text-[11px] outline-none focus:border-orange-400 text-center"
+                        />
+                        <select
+                          value={item.unit}
+                          onChange={e => updateItem(idx, { unit: e.target.value })}
+                          className="w-16 sm:w-20 h-9 bg-white border border-slate-200 px-2 rounded-lg font-bold text-[10px] outline-none focus:border-orange-400 cursor-pointer"
+                        >
+                          {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                        <button
+                          onClick={() => removeItem(idx)}
+                          className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
+                        >
+                          <Minus size={13} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -474,19 +477,19 @@ export default function RecipesPage() {
                 </div>
               )}
 
-              <div className="flex items-center gap-3 pt-2">
+              <div className="flex items-center gap-2 sm:gap-3 pt-1 sm:pt-2">
                 <button
                   onClick={() => setShowForm(false)}
-                  className="flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all"
+                  className="flex-1 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="flex-[2] py-4 bg-orange-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:bg-orange-400 transition-all flex items-center justify-center gap-2"
+                  className="flex-[2] py-3 sm:py-4 bg-orange-500 text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:bg-orange-400 transition-all flex items-center justify-center gap-2"
                 >
-                  {saving ? "Saving..." : <><Check size={14} /> {editingId ? "Update Recipe" : "Create Recipe"}</>}
+                  {saving ? "Saving..." : <><Check size={13} /> {editingId ? "Update Recipe" : "Create Recipe"}</>}
                 </button>
               </div>
             </div>

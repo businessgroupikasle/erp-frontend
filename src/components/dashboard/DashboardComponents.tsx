@@ -40,7 +40,7 @@ export function KPICard({ title, value, trend, icon: Icon, colorClass = "blue", 
 
   return (
     <div className={clsx(
-      "bg-white dark:bg-[#12141c] p-6 rounded-[2rem] border border-slate-200/50 dark:border-white/5 shadow-sm transition-all duration-300 hover:-translate-y-1 group relative overflow-hidden flex flex-col justify-between min-h-[190px]",
+      "bg-white dark:bg-[#12141c] p-5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-200/50 dark:border-white/5 shadow-sm transition-all duration-300 hover:-translate-y-1 group relative overflow-hidden flex flex-col justify-between min-h-[160px] sm:min-h-[190px]",
       hoverGlowMap[colorClass]
     )}>
       {/* Background Soft Glow Gradient */}
@@ -126,7 +126,7 @@ export function RevenueIntelligence({ data, title, trend, period, setPeriod }: a
   };
 
   return (
-    <div className="bg-white dark:bg-[#12141c] p-6 md:p-8 rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 shadow-sm h-full flex flex-col relative overflow-hidden group">
+    <div className="bg-white dark:bg-[#12141c] p-5 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 shadow-sm h-full flex flex-col relative overflow-hidden group">
       {/* Header with Toggles */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8 relative z-10">
         <div>
@@ -138,7 +138,7 @@ export function RevenueIntelligence({ data, title, trend, period, setPeriod }: a
         </div>
 
         {/* Metric selection controls */}
-        <div className="flex flex-wrap items-center gap-2 bg-slate-50/50 dark:bg-white/5 p-1 rounded-2xl border border-slate-100 dark:border-white/5">
+        <div className="flex flex-wrap items-center gap-2 bg-slate-50/50 dark:bg-white/5 p-1 rounded-2xl border border-slate-100 dark:border-white/5 w-full sm:w-auto justify-start">
            {[
              { id: 'sales', label: 'Sales', color: 'bg-orange-500' },
              { id: 'purchase', label: 'Purchase', color: 'bg-rose-500' },
@@ -161,13 +161,13 @@ export function RevenueIntelligence({ data, title, trend, period, setPeriod }: a
         </div>
 
         {/* Period toggle controls */}
-        <div className="flex items-center gap-0.5 bg-slate-50/50 dark:bg-white/5 p-1 rounded-xl border border-slate-100 dark:border-white/5">
+        <div className="flex items-center gap-0.5 bg-slate-50/50 dark:bg-white/5 p-1 rounded-xl border border-slate-100 dark:border-white/5 w-full sm:w-auto justify-between sm:justify-start">
            {['today', 'week', 'month', 'custom'].map((p) => (
              <button 
                key={p}
                onClick={() => setPeriod(p)}
                className={clsx(
-                 "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                 "flex-1 sm:flex-initial text-center px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
                  period === p 
                    ? "bg-white dark:bg-slate-800 text-orange-500 dark:text-orange-400 shadow-sm border border-slate-200/50 dark:border-white/10" 
                    : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
@@ -180,7 +180,7 @@ export function RevenueIntelligence({ data, title, trend, period, setPeriod }: a
       </div>
 
       {/* Chart Area */}
-      <div className="flex-1 min-h-[320px] w-full relative">
+      <div className="flex-1 min-h-[260px] sm:min-h-[320px] w-full relative">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
             <defs>
@@ -223,7 +223,7 @@ export function ReportTableWidget({ title, icon: Icon, headers, data, color = "b
   };
 
   return (
-    <div className="bg-white dark:bg-[#12141c] rounded-[2rem] border border-slate-200/50 dark:border-white/5 shadow-sm h-full flex flex-col overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-slate-300/40 dark:hover:border-white/10 group">
+    <div className="bg-white dark:bg-[#12141c] rounded-2xl sm:rounded-[2rem] border border-slate-200/50 dark:border-white/5 shadow-sm h-full flex flex-col overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-slate-300/40 dark:hover:border-white/10 group">
       <div className="px-6 py-4 border-b border-slate-50 dark:border-white/5 flex items-center gap-3">
         <div className={clsx("p-2 rounded-xl transition-transform duration-300 group-hover:scale-105", colorMap[color])}>
           <Icon size={16} strokeWidth={2.5} />
@@ -237,7 +237,7 @@ export function ReportTableWidget({ title, icon: Icon, headers, data, color = "b
             <p className="text-[9px] font-black uppercase tracking-widest">{emptyMessage}</p>
           </div>
         ) : (
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[500px] text-left border-collapse">
             <thead>
               <tr className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-white/5">
                 {headers.map((h: string, i: number) => (

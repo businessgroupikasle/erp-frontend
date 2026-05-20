@@ -489,7 +489,7 @@ export default function PurchaseOrdersClient() {
                       value={editingProfile.gstin}
                       placeholder="22AAAAA0000A1Z5"
                       maxLength={15}
-                      onChange={(e) => { setEditingProfile({ ...editingProfile, gstin: e.target.value.toUpperCase() }); setProfileErrors({ ...profileErrors, gstin: "" }); }}
+                      onChange={(e) => { setEditingProfile({ ...editingProfile, gstin: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15) }); setProfileErrors({ ...profileErrors, gstin: "" }); }}
                       className={clsx("w-full h-11 bg-slate-50 dark:bg-white/5 px-4 rounded-xl font-bold text-xs border font-mono tracking-widest", profileErrors.gstin ? "border-red-400" : "border-slate-200 dark:border-white/10")}
                     />
                     {profileErrors.gstin && <p className="text-[10px] text-red-500 ml-1 mt-0.5">{profileErrors.gstin}</p>}

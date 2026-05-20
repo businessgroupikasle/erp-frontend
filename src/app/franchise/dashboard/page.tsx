@@ -59,7 +59,7 @@ export default function FranchiseDashboardPage() {
     <div className="max-w-7xl mx-auto space-y-4 py-4 px-4 pb-16 animate-in fade-in duration-300">
       
       {/* ── Top Header ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-indigo-500/10 rounded-lg shrink-0">
@@ -76,20 +76,20 @@ export default function FranchiseDashboardPage() {
         </div>
 
         {/* ── High-Velocity Quick Actions ── */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href={monitorId ? `/franchise/analytics?id=${monitorId}` : "/franchise/analytics"} className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 border border-slate-200 dark:border-white/10">
+        <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
+          <Link href={monitorId ? `/franchise/analytics?id=${monitorId}` : "/franchise/analytics"} className="flex-1 sm:flex-initial justify-center flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 border border-slate-200 dark:border-white/10 whitespace-nowrap">
             <BarChart3 size={13} /> View Analytics
           </Link>
-          <Link href="/pos" className="flex items-center gap-1 bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-indigo-500/10">
+          <Link href="/pos" className="flex-1 sm:flex-initial justify-center flex items-center gap-1 bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-indigo-500/10 whitespace-nowrap">
             <Plus size={13} /> New Invoice
           </Link>
-          <Link href="/purchases/inward" className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-purple-500/10">
+          <Link href="/purchases/inward" className="flex-1 sm:flex-initial justify-center flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-purple-500/10 whitespace-nowrap">
             <Plus size={13} /> Receive Stock
           </Link>
-          <Link href="/accounting/ledgers" className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-blue-500/10">
+          <Link href="/accounting/ledgers" className="flex-1 sm:flex-initial justify-center flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-blue-500/10 whitespace-nowrap">
             <Plus size={13} /> Record Payment
           </Link>
-          <Link href="/franchise/dealers" className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-emerald-500/10">
+          <Link href="/franchise/dealers" className="flex-1 sm:flex-initial justify-center flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shadow-emerald-500/10 whitespace-nowrap">
             <Plus size={13} /> Create Dealer
           </Link>
         </div>
@@ -97,7 +97,7 @@ export default function FranchiseDashboardPage() {
 
       {/* ── Expiry Alert Banner ── */}
       {summary?.stats?.lowStockCount > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 rounded-xl p-3 flex items-center justify-between gap-3 animate-in slide-in-from-top-4">
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in slide-in-from-top-4">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
             <div>
@@ -107,7 +107,7 @@ export default function FranchiseDashboardPage() {
               </p>
             </div>
           </div>
-          <Link href="/franchise/stock" className="px-3 py-1 bg-white dark:bg-white/10 border border-amber-200 dark:border-white/10 text-amber-600 dark:text-amber-300 text-[10px] font-black rounded-lg hover:bg-amber-50 transition-all uppercase tracking-wider">
+          <Link href="/franchise/stock" className="w-full sm:w-auto text-center px-3 py-1.5 bg-white dark:bg-white/10 border border-amber-200 dark:border-white/10 text-amber-600 dark:text-amber-300 text-[10px] font-black rounded-lg hover:bg-amber-50 transition-all uppercase tracking-wider whitespace-nowrap">
             Reorder Stock
           </Link>
         </div>
@@ -145,7 +145,7 @@ export default function FranchiseDashboardPage() {
           </div>
 
           <div className="overflow-x-auto min-h-[220px]">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full min-w-[500px] text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Invoice #</th>
@@ -233,13 +233,13 @@ export default function FranchiseDashboardPage() {
                 Refill Stock
               </Link>
               <Link href="/purchases/new" className="bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/20 px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-colors">
-                Create PO
+                Create Purchase Order
               </Link>
             </div>
           </div>
 
           <div className="overflow-x-auto min-h-[200px]">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full min-w-[500px] text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Product</th>
@@ -289,7 +289,7 @@ export default function FranchiseDashboardPage() {
           </div>
 
           <div className="overflow-x-auto min-h-[200px]">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full min-w-[500px] text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
                   <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Dealer</th>
@@ -340,7 +340,7 @@ export default function FranchiseDashboardPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[500px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
                 <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Dealer</th>

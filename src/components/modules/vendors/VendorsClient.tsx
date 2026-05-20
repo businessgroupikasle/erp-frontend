@@ -782,8 +782,9 @@ export default function VendorsClient() {
                   <input 
                     placeholder="e.g. 29ABCDE1234F1Z5" 
                     value={form.gstNumber} 
+                    maxLength={15}
                     onChange={(e) => {
-                      const val = e.target.value.toUpperCase().trim();
+                      const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
                       setForm({...form, gstNumber: val});
                       if (val.length === 15) {
                         fetchGstDetails(val);
@@ -791,6 +792,7 @@ export default function VendorsClient() {
                     }} 
                     className="w-full pl-4 pr-16 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20 tracking-wider font-mono" 
                   />
+                  <span className="absolute right-2 bottom-[-18px] text-[9px] text-slate-400 font-bold">{form.gstNumber.length}/15</span>
                   {form.gstNumber.length === 15 && !fetchingGst && (
                     <button
                       type="button"

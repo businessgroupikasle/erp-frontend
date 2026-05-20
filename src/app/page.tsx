@@ -111,32 +111,32 @@ export default function Dashboard() {
   }));
 
   return (
-    <div className="min-h-full bg-[#F8FAFC] dark:bg-[#090a0f] p-4 md:p-8 space-y-8 animate-in fade-in duration-1000">
+    <div className="min-h-full bg-[#F8FAFC] dark:bg-[#090a0f] p-4 md:p-8 space-y-6 md:space-y-8 animate-in fade-in duration-1000">
       
       {/* ── HEADER ── */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-slate-100 dark:border-white/5 pb-6">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase transition-colors hover:text-[#F58220]">HQ Control Center</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase transition-colors hover:text-[#F58220]">HQ Control Center</h1>
           <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.3em] mt-1">ADMINISTRATIVE INTERFACE • {new Date().getFullYear()}</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-4 xl:justify-end">
+        <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-4 xl:justify-end w-full xl:w-auto">
           {/* Date range picker & Period filter */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             {period === 'custom' && (
-              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300 w-full sm:w-auto">
                 <input 
                   type="date" 
                   value={customStartDate} 
                   onChange={e => setCustomStartDate(e.target.value)}
-                  className="px-4 py-1.5 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-full text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none shadow-sm focus:border-[#F58220] focus:ring-2 focus:ring-orange-500/20 transition-all"
+                  className="flex-1 sm:flex-initial px-4 py-1.5 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-full text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none shadow-sm focus:border-[#F58220] focus:ring-2 focus:ring-orange-500/20 transition-all"
                 />
                 <span className="text-slate-400 font-bold">-</span>
                 <input 
                   type="date" 
                   value={customEndDate} 
                   onChange={e => setCustomEndDate(e.target.value)}
-                  className="px-4 py-1.5 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-full text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none shadow-sm focus:border-[#F58220] focus:ring-2 focus:ring-orange-500/20 transition-all"
+                  className="flex-1 sm:flex-initial px-4 py-1.5 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-full text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none shadow-sm focus:border-[#F58220] focus:ring-2 focus:ring-orange-500/20 transition-all"
                 />
               </div>
             )}
@@ -153,9 +153,9 @@ export default function Dashboard() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
             <Link href="/purchases/new" className="flex-1 sm:flex-initial justify-center bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3 whitespace-nowrap">
-              <Plus size={16} strokeWidth={3} /> Create PO
+              <Plus size={16} strokeWidth={3} /> Create Purchase Order
             </Link>
             <Link href="/franchise-orders" className="flex-1 sm:flex-initial justify-center bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 hover:scale-105 transition-all active:scale-95 flex items-center gap-3 shadow-xl shadow-blue-500/20 whitespace-nowrap">
               <Send size={16} strokeWidth={3} /> Dispatch

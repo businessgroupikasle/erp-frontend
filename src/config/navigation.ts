@@ -11,6 +11,7 @@ import {
   Building2,
   Send,
   Factory,
+  ChefHat,
   Store,
   UserCheck,
   Layers,
@@ -75,13 +76,13 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     title: "MANUFACTURING",
     items: [
       {
-        icon: Factory,
+        icon: ChefHat,
         label: "Production",
         href: "/production",
         roles: SUPER_ONLY,
       },
       {
-        icon: Factory,
+        icon: ChefHat,
         label: "Production Batches",
         href: "/production/batches",
         roles: SUPER_ONLY,
