@@ -69,8 +69,8 @@ export default function FranchisePaymentsPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-[#FF6B00]/10 rounded-xl">
-              <CreditCard size={24} className="text-[#FF6B00]" />
+            <div className="p-2.5 bg-primary/10 rounded-xl">
+              <CreditCard size={24} className="text-primary" />
             </div>
             <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
               Payments & Ledger
@@ -128,19 +128,19 @@ export default function FranchisePaymentsPage() {
 
       {/* ── Pay Now Alert ── */}
       {(totalUnpaid + totalPartial) > 0 && (
-        <div className="bg-orange-50 border border-orange-100 rounded-3xl p-5 flex items-center justify-between gap-4 animate-in slide-in-from-top-4">
+        <div className="bg-primary/5 border border-primary/10 rounded-3xl p-5 flex items-center justify-between gap-4 animate-in slide-in-from-top-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#FF6B00]/10 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-6 h-6 text-[#FF6B00]" />
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-6 h-6 text-primary" />
             </div>
             <div>
               <p className="text-sm font-black text-slate-900">Outstanding Dues Detected</p>
-              <p className="text-xs text-[#FF6B00] font-medium mt-0.5">
+              <p className="text-xs text-primary font-medium mt-0.5">
                 Please settle the pending amount to ensure uninterrupted supply.
               </p>
             </div>
           </div>
-          <Link href="/franchise-orders" className="px-6 py-2.5 bg-[#FF6B00] text-white text-xs font-black rounded-xl hover:bg-[#e66000] shadow-lg shadow-orange-500/20 transition-all uppercase tracking-widest">
+          <Link href="/franchise-orders" className="px-6 py-2.5 bg-primary text-white text-xs font-black rounded-xl hover:bg-primary/95 shadow-lg shadow-primary/20 transition-all uppercase tracking-widest">
             Settle Ledger
           </Link>
         </div>
@@ -158,7 +158,7 @@ export default function FranchisePaymentsPage() {
                 className={clsx(
                   "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
                   filter === f
-                    ? "bg-white dark:bg-card text-[#FF6B00] shadow-sm"
+                    ? "bg-white dark:bg-card text-primary shadow-sm"
                     : "text-slate-400 hover:text-slate-600"
                 )}
               >
