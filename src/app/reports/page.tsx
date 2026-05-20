@@ -153,24 +153,24 @@ function ReportCategory({ title, items, searchTerm, dateRange }: {
                  <span className="px-1.5 py-0.5 bg-orange-500 text-white text-[8px] font-black uppercase rounded shadow-sm shadow-orange-500/20">NEW</span>
                )}
             </div>
-            <div className="flex items-center gap-3">
-               {item.actions.includes("Open") && (
-                 <button 
-                   onClick={() => handleOpen(item)}
-                   className="flex items-center gap-1 text-[11px] font-bold text-[#999] hover:text-[#7C3AED] transition-colors"
-                 >
-                     <ExternalLinkIcon size={12} /> Open
-                 </button>
-               )}
-               {item.actions.includes("CSV") && (
-                 <button 
-                   onClick={() => handleExport(item)}
-                   className="flex items-center gap-1 text-[11px] font-bold text-[#999] hover:text-[#7C3AED] transition-colors"
-                 >
-                     <DownloadIcon size={12} /> CSV
-                 </button>
-               )}
-            </div>
+             <div className="flex items-center gap-4">
+                {item.actions.includes("Open") && (
+                  <button 
+                    onClick={() => handleOpen(item)}
+                    className="flex items-center gap-1.5 text-xs font-black text-slate-500 dark:text-slate-400 hover:text-[#7C3AED] dark:hover:text-purple-400 transition-colors uppercase tracking-wider"
+                  >
+                      <ExternalLinkIcon size={14} className="stroke-[2.5]" /> Open
+                  </button>
+                )}
+                {item.actions.includes("CSV") && (
+                  <button 
+                    onClick={() => handleExport(item)}
+                    className="flex items-center gap-1.5 text-xs font-black text-slate-500 dark:text-slate-400 hover:text-[#7C3AED] dark:hover:text-purple-400 transition-colors uppercase tracking-wider"
+                  >
+                      <DownloadIcon size={14} className="stroke-[2.5]" /> CSV
+                  </button>
+                )}
+             </div>
           </div>
         ))}
       </div>

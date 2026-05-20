@@ -20,7 +20,7 @@ export default function Dashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [period, setPeriod] = useState("month");
+  const [period, setPeriod] = useState("today");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
 
@@ -114,58 +114,58 @@ export default function Dashboard() {
     <div className="min-h-full bg-[#F8FAFC] dark:bg-[#090a0f] p-4 md:p-8 space-y-8 animate-in fade-in duration-1000">
       
       {/* ── HEADER ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-slate-100 dark:border-white/5 pb-6">
         <div>
-           <div className="flex items-center gap-4 mb-1">
-             <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">HQ Control Center</h1>
-           </div>
-           <div className="flex items-center gap-6">
-              <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.3em] hidden xl:block">ADMINISTRATIVE INTERFACE • {new Date().getFullYear()}</p>
-              
-              <div className="flex items-center gap-2">
-                {period === 'custom' && (
-                  <div className="flex items-center gap-2 mr-2 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <input 
-                      type="date" 
-                      value={customStartDate} 
-                      onChange={e => setCustomStartDate(e.target.value)}
-                      className="px-4 py-1.5 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-full text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    />
-                    <span className="text-slate-400 font-bold">-</span>
-                    <input 
-                      type="date" 
-                      value={customEndDate} 
-                      onChange={e => setCustomEndDate(e.target.value)}
-                      className="px-4 py-1.5 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-full text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    />
-                  </div>
-                )}
-                <PremiumFilter 
-                  options={[
-                    { label: 'Today', value: 'today' },
-                    { label: 'Week', value: 'week' },
-                    { label: 'Month', value: 'month' },
-                    { label: 'All', value: 'all' },
-                    { label: 'Custom', value: 'custom' },
-                  ]}
-                  active={period}
-                  onChange={setPeriod}
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase transition-colors hover:text-[#F58220]">HQ Control Center</h1>
+          <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.3em] mt-1">ADMINISTRATIVE INTERFACE • {new Date().getFullYear()}</p>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-4 xl:justify-end">
+          {/* Date range picker & Period filter */}
+          <div className="flex flex-wrap items-center gap-2">
+            {period === 'custom' && (
+              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
+                <input 
+                  type="date" 
+                  value={customStartDate} 
+                  onChange={e => setCustomStartDate(e.target.value)}
+                  className="px-4 py-1.5 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-full text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none shadow-sm focus:border-[#F58220] focus:ring-2 focus:ring-orange-500/20 transition-all"
+                />
+                <span className="text-slate-400 font-bold">-</span>
+                <input 
+                  type="date" 
+                  value={customEndDate} 
+                  onChange={e => setCustomEndDate(e.target.value)}
+                  className="px-4 py-1.5 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-full text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none shadow-sm focus:border-[#F58220] focus:ring-2 focus:ring-orange-500/20 transition-all"
                 />
               </div>
-           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/purchases/new" className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3">
-            <Plus size={16} strokeWidth={3} /> Create PO
-          </Link>
-          <Link href="/franchise-orders" className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 hover:scale-105 transition-all active:scale-95 flex items-center gap-3 shadow-xl shadow-blue-500/20">
-            <Send size={16} strokeWidth={3} /> Dispatch
-          </Link>
+            )}
+            <PremiumFilter 
+              options={[
+                { label: 'Today', value: 'today' },
+                { label: 'Week', value: 'week' },
+                { label: 'Month', value: 'month' },
+                { label: 'Custom', value: 'custom' },
+              ]}
+              active={period}
+              onChange={setPeriod}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-3">
+            <Link href="/purchases/new" className="flex-1 sm:flex-initial justify-center bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3 whitespace-nowrap">
+              <Plus size={16} strokeWidth={3} /> Create PO
+            </Link>
+            <Link href="/franchise-orders" className="flex-1 sm:flex-initial justify-center bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 hover:scale-105 transition-all active:scale-95 flex items-center gap-3 shadow-xl shadow-blue-500/20 whitespace-nowrap">
+              <Send size={16} strokeWidth={3} /> Dispatch
+            </Link>
+          </div>
         </div>
       </div>
-
+ 
       {/* ── LAYER 1: CEO SUMMARY ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-6">
         {executiveKPIs.map((kpi, i) => (
           <KPICard key={i} {...kpi} />
         ))}
