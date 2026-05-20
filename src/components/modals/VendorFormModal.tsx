@@ -27,8 +27,45 @@ export default function VendorFormModal({ isOpen, onClose, onSuccess }: VendorFo
   const { showToast } = useToast();
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [fetchingGst, setFetchingGst] = useState(false);
 
   if (!isOpen) return null;
+
+  // Auto-fetch GST details from Next.js server-side route
+  const fetchGstDetails = async (gstin: string) => {
+    const cleanGst = gstin.trim().toUpperCase();
+    // Standard 15-character GSTIN regex validation
+    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(cleanGst)) {
+      return;
+    }
+
+    setFetchingGst(true);
+    try {
+      const res = await fetch(`/api/gst-verify/${cleanGst}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to fetch GST details");
+      }
+      
+      const data = await res.json();
+      if (data.success) {
+        setForm((prev) => ({
+          ...prev,
+          name: data.legalName || prev.name,
+          address: data.address || prev.address
+        }));
+        showToast(
+          `Successfully auto-filled details for "${data.legalName}"${data.mocked ? " (Demo Mode)" : ""}`,
+          "success"
+        );
+      }
+    } catch (err: any) {
+      console.error("Auto-fetch GST details failed:", err);
+      showToast(err.message || "Could not auto-fetch GST details. Please enter manually.", "warning");
+    } finally {
+      setFetchingGst(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!form.name || !form.contact) {
@@ -135,15 +172,39 @@ export default function VendorFormModal({ isOpen, onClose, onSuccess }: VendorFo
               {/* Advanced Info */}
               <div className="space-y-6">
                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 ml-1">
-                       <ShieldCheck size={12} /> GST Registration
-                    </label>
-                    <input 
-                       placeholder="22AAAAA0000A1Z5"
-                       value={form.gstNumber}
-                       onChange={(e) => setForm({...form, gstNumber: e.target.value.toUpperCase()})}
-                       className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-transparent dark:border-white/10 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-[#7C3AED]/20 focus:bg-white transition-all"
-                    />
+                    <div className="flex justify-between items-center ml-1">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                          <ShieldCheck size={12} /> GST Registration
+                       </label>
+                       {fetchingGst && (
+                          <span className="text-[9px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                             <Loader2 size={10} className="animate-spin" /> Fetching...
+                          </span>
+                       )}
+                    </div>
+                    <div className="relative">
+                       <input 
+                          placeholder="22AAAAA0000A1Z5"
+                          value={form.gstNumber}
+                          onChange={(e) => {
+                            const val = e.target.value.toUpperCase().trim();
+                            setForm({...form, gstNumber: val});
+                            if (val.length === 15) {
+                              fetchGstDetails(val);
+                            }
+                          }}
+                          className="w-full pl-4 pr-16 py-3 bg-slate-50 dark:bg-white/5 border border-transparent dark:border-white/10 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-[#7C3AED]/20 focus:bg-white transition-all font-mono tracking-wider"
+                       />
+                       {form.gstNumber.length === 15 && !fetchingGst && (
+                          <button
+                             type="button"
+                             onClick={() => fetchGstDetails(form.gstNumber)}
+                             className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-widest text-[#7C3AED] hover:text-[#6D28D9] bg-purple-50 dark:bg-purple-950/40 px-2 py-1 rounded-lg border border-purple-100 dark:border-purple-900 transition-all active:scale-95"
+                          >
+                             Fetch
+                          </button>
+                       )}
+                    </div>
                  </div>
 
                  <div className="space-y-1.5">
