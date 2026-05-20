@@ -5,7 +5,7 @@
 /* ─── Light Mode Design Tokens ─────────────────────────────── */
 :root {
   /* Surfaces */
-  --background:        30 30% 98%;
+  --background:        210 20% 98%;
   --surface:           0 0% 100%;
   --card:              0 0% 100%;
   --card-foreground:   222 47% 11%;
@@ -16,18 +16,18 @@
   --foreground:        222 47% 11%;
   --foreground-muted:  215 16% 47%;
 
-  /* Brand – Orange primary */
-  --primary:           30 91% 54%;
+  /* Brand – Logo Orange (#f58220) */
+  --primary:           27.6 91.4% 54.3%;
   --primary-foreground: 0 0% 100%;
 
-  /* Secondary – Green */
+  /* Secondary – Logo Green (#1e4d2b) */
   --secondary:         137 44% 21%;
   --secondary-foreground: 0 0% 100%;
 
   /* Semantic */
-  --muted:             30 15% 95%;
+  --muted:             30 20% 96%;
   --muted-foreground:  215 16% 47%;
-  --accent:            30 15% 95%;
+  --accent:            30 20% 96%;
   --accent-foreground: 222 47% 11%;
   --destructive:       0 84% 60%;
   --destructive-foreground: 0 0% 100%;
@@ -35,18 +35,18 @@
   --warning:           38 92% 50%;
 
   /* UI Chrome */
-  --border:            30 20% 90%;
-  --input:             30 20% 90%;
-  --ring:              30 91% 54%;
+  --border:            214.3 32% 91%;
+  --input:             214.3 32% 91%;
+  --ring:              27.6 91.4% 54.3%;
 
   /* Sidebar tokens */
   --sidebar-bg:        0 0% 100%;
-  --sidebar-border:    30 20% 91%;
-  --sidebar-active-bg: 30 100% 97%;
-  --sidebar-hover-bg:  30 15% 97%;
+  --sidebar-border:    220 15% 94%;
+  --sidebar-active-bg: 27.6 100% 96%;
+  --sidebar-hover-bg:  27.6 15% 97%;
 
   /* Shape */
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 }
 
 /* ─── Dark Mode Design Tokens ───────────────────────────────── */
@@ -61,7 +61,7 @@
   --foreground:        210 40% 98%;
   --foreground-muted:  215 20% 65%;
 
-  --primary:           30 91% 60%;
+  --primary:           27.6 91.4% 60%;
   --primary-foreground: 0 0% 100%;
 
   --secondary:         137 44% 35%;
@@ -78,18 +78,18 @@
 
   --border:            220 15% 17%;
   --input:             220 15% 17%;
-  --ring:              30 91% 60%;
+  --ring:              27.6 91.4% 60%;
 
   --sidebar-bg:        220 20% 9%;
   --sidebar-border:    220 15% 14%;
-  --sidebar-active-bg: 30 91% 13%;
+  --sidebar-active-bg: 27.6 91.4% 13%;
   --sidebar-hover-bg:  220 15% 12%;
 }
 
 /* ─── Base ──────────────────────────────────────────────────── */
 body {
   @apply bg-background text-foreground transition-colors duration-300;
-  font-family: var(--font-nunito), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   font-feature-settings: "rlig" 1, "calt" 1;
   -webkit-font-smoothing: antialiased;
 }
@@ -114,7 +114,7 @@ body {
 }
 
 .gradient-brand {
-  background: linear-gradient(135deg, hsl(30 91% 54%) 0%, hsl(20 91% 48%) 100%);
+  background: linear-gradient(135deg, #f58220 0%, #d4630a 100%);
 }
 
 .gradient-success {
@@ -122,11 +122,11 @@ body {
 }
 
 .gradient-orange {
-  background: linear-gradient(135deg, #F58220 0%, #e8720f 50%, #d4630a 100%);
+  background: linear-gradient(135deg, #f58220 0%, #e8720f 50%, #d4630a 100%);
 }
 
 .gradient-food-hero {
-  background: linear-gradient(135deg, #F58220 0%, #FF8C42 50%, #1E4D2B 100%);
+  background: linear-gradient(135deg, #f58220 0%, #ff9a3c 40%, #1e4d2b 100%);
 }
 
 /* ─── Sidebar transition ────────────────────────────────────── */

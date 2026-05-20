@@ -88,7 +88,7 @@ function NewPurchaseContent() {
         notes: notes || internalNotes,
         warehouseId: warehouseId,
         purchaseType: purchaseType,
-        expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate).toISOString() : null,
+        expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate).toISOString() : undefined,
         items: items.map(item => ({
           inventoryItemId: item.materialId,
           quantity: item.quantity,
@@ -121,7 +121,7 @@ function NewPurchaseContent() {
         notes: notes || internalNotes || "",
         warehouseId: warehouseId || undefined,
         purchaseType: purchaseType,
-        expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate).toISOString() : null,
+        expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate).toISOString() : undefined,
         status: "DRAFT",
         items: items
           .filter(item => item.materialId)

@@ -86,11 +86,11 @@ export default function Dashboard() {
   // --- LAYER 1: CEO SUMMARY (LIVE DATA) ---
   const executiveKPIs = [
     { title: "Today Revenue", value: formatCurrency(stats?.revenueToday || 0), trend: stats?.revenueChangePct || "0", icon: Zap, colorClass: "emerald", insight: `${stats?.orderCountToday || 0} Orders Today` },
-    { title: "Total Purchase", value: formatCurrency(stats?.totalPurchase || 0), icon: ShoppingCart, colorClass: "amber", subtext: `Expense for this ${period}`, insight: `${stats?.poCountPeriod || 0} Purchase Orders` },
+    { title: "Net Profit", value: formatCurrency((stats?.totalSales || 0) - (stats?.totalPurchase || 0)), icon: TrendingUp, colorClass: "emerald", subtext: `Profit for this ${period}`, insight: `Margin: ${stats?.totalSales > 0 ? (((stats.totalSales - stats.totalPurchase) / stats.totalSales) * 100).toFixed(1) : 0}%` },
     { title: "Vendor Payables", value: formatCurrency(stats?.vendorPayables || 0), icon: CreditCard, colorClass: "rose", subtext: "Dues to Suppliers", insight: `From ${stats?.vendorCountActive || 0} Vendors` },
     { title: "Inventory Value", value: formatCurrency(stats?.inventoryValue || 0), icon: Package, colorClass: "blue", subtext: "Warehouse Asset Net Worth", insight: `${stats?.inventoryItemCount || 0} Active SKUs` },
     { title: "Active Franchise Orders", value: stats?.activeFranchiseOrders || 0, icon: Send, colorClass: "indigo", subtext: "Fulfillment Queue", insight: `${stats?.lowStockCount || 0} Critical Stock Alerts` },
-    { title: "Total Sales", value: formatCurrency(stats?.totalSales || 0), icon: BarChart3, colorClass: "orange", subtext: `Volume for this ${period}`, insight: `${stats?.totalInvoiceCount || 0} Invoices Generated` },
+    { title: "Total Sales", value: stats?.totalSalesCount || 0, icon: BarChart3, colorClass: "orange", subtext: `Volume for this ${period}`, insight: `Revenue: ${formatCurrency(stats?.totalSales || 0)}` },
   ];
 
   // --- LAYER 2: REVENUE SOURCES ---
@@ -104,10 +104,10 @@ export default function Dashboard() {
   // --- ANALYTICS & OPERATIONS ---
   const chartData = (data?.historicalSales || []).map((s: any) => ({
     date: s.date,
-    sales: s.sales,
+    sales: s.sales || 0,
     orders: s.orders,
-    purchase: s.purchase,
-    profit: s.profit
+    purchase: s.purchase || 0,
+    profit: (s.sales || 0) - (s.purchase || 0),
   }));
 
   return (

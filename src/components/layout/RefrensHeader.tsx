@@ -51,7 +51,7 @@ function HBtn({
     <button
       title={title}
       onClick={onClick}
-      className="relative p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:bg-[#FF6B00]/5 dark:hover:bg-white/5 hover:text-[#FF6B00] transition-all duration-150"
+      className="relative p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:bg-primary/5 dark:hover:bg-white/5 hover:text-primary transition-all duration-150"
     >
       {children}
       {badge !== undefined && (
@@ -100,11 +100,11 @@ function SearchModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[200] flex items-start justify-center pt-20 bg-black/30 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="w-full max-w-xl bg-white dark:bg-[#0f1117] rounded-2xl border border-orange-100 dark:border-white/10 shadow-2xl overflow-hidden"
+        className="w-full max-w-xl bg-white dark:bg-[#0f1117] rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-orange-50 dark:border-white/5">
-          <Search size={16} className="text-orange-400 shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-white/5">
+          <Search size={16} className="text-primary shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -137,11 +137,11 @@ function SearchModal({ onClose }: { onClose: () => void }) {
                   className={clsx(
                     "w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left",
                     index === selectedIndex 
-                      ? "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300" 
-                      : "text-gray-700 dark:text-slate-300 hover:bg-orange-50/50 dark:hover:bg-white/5"
+                      ? "bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-foreground" 
+                      : "text-gray-700 dark:text-slate-300 hover:bg-primary/5 dark:hover:bg-white/5"
                   )}
                 >
-                  <Icon size={13} className={clsx("shrink-0", index === selectedIndex ? "text-orange-400 dark:text-orange-300" : "text-gray-300 dark:text-slate-600")} />
+                  <Icon size={13} className={clsx("shrink-0", index === selectedIndex ? "text-primary dark:text-primary-foreground" : "text-gray-300 dark:text-slate-600")} />
                   {item.label}
                 </button>
               );
@@ -223,7 +223,7 @@ export default function RefrensHeader() {
         {/* ── Left: Hamburger + Logo ──────────────────── */}
         <button
           onClick={toggleMobileOpen}
-          className="lg:hidden p-2 -ml-2 rounded-xl text-gray-500 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+          className="lg:hidden p-2 -ml-2 rounded-xl text-gray-500 hover:bg-primary/10 hover:text-primary transition-colors"
           aria-label="Toggle Menu"
         >
           <MenuIcon size={20} />
@@ -231,7 +231,7 @@ export default function RefrensHeader() {
 
         <button
           onClick={toggleCollapsed}
-          className="hidden lg:flex p-2 -ml-2 rounded-xl text-gray-500 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+          className="hidden lg:flex p-2 -ml-2 rounded-xl text-gray-500 hover:bg-primary/10 hover:text-primary transition-colors"
           title="Toggle Sidebar"
         >
           <MenuIcon size={20} />

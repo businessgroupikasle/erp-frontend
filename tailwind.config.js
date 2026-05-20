@@ -15,11 +15,11 @@ module.exports = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#FF6B00", // Enterprise Orange
+          DEFAULT: "#f58220", // Kiddos Logo Orange
           foreground: "#FFFFFF",
         },
         secondary: {
-          DEFAULT: "#1E4D2B", // Kiddos Green
+          DEFAULT: "#1E4D2B", // Kiddos Logo Green
           foreground: "#FFFFFF",
         },
         destructive: {
@@ -39,7 +39,7 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
         },
         brand: {
-          orange: "#FF6B00",
+          orange: "#f58220",
           green: "#1E4D2B",
           dark: "#020617",
         }

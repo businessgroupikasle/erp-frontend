@@ -10,7 +10,7 @@ import {
   CheckCircle2, FileText, Download,
   Phone, Mail, ShieldCheck, Zap, ArrowRight,
   Package, Truck, Receipt, LayoutDashboard, Settings2,
-  AlertTriangle, Star, Calendar, FileCheck
+  AlertTriangle, Star, Calendar, FileCheck, Loader2
 } from "lucide-react";
 import { clsx } from "clsx";
 import api, { vendorsApi, accountsApi } from "@/lib/api";
@@ -46,7 +46,7 @@ export default function VendorsClient() {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<'ALL' | 'OWED' | 'ADVANCE'>('ALL');
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
-  const [selectedTab, setSelectedTab] = useState<'OVERVIEW' | 'ANALYTICS' | 'POS' | 'GRNS' | 'MATERIALS' | 'INVOICES' | 'LEDGER'>('OVERVIEW');
+  const [selectedTab, setSelectedTab] = useState<'OVERVIEW' | 'POS' | 'GRNS' | 'MATERIALS' | 'INVOICES' | 'LEDGER'>('OVERVIEW');
   
   const [selectedVendorDetail, setSelectedVendorDetail] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -60,6 +60,42 @@ export default function VendorsClient() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [fetchingGst, setFetchingGst] = useState(false);
+
+  // Auto-fetch GST details from Next.js server-side route
+  const fetchGstDetails = async (gstin: string) => {
+    const cleanGst = gstin.trim().toUpperCase();
+    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(cleanGst)) {
+      return;
+    }
+
+    setFetchingGst(true);
+    try {
+      const res = await fetch(`/api/gst-verify/${cleanGst}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to fetch GST details");
+      }
+      
+      const data = await res.json();
+      if (data.success) {
+        setForm((prev) => ({
+          ...prev,
+          name: data.legalName || prev.name,
+          address: data.address || prev.address
+        }));
+        showToast(
+          `Successfully auto-filled details for "${data.legalName}"${data.mocked ? " (Demo Mode)" : ""}`,
+          "success"
+        );
+      }
+    } catch (err: any) {
+      console.error("Auto-fetch GST details failed:", err);
+      showToast(err.message || "Could not auto-fetch GST details. Please enter manually.", "warning");
+    } finally {
+      setFetchingGst(false);
+    }
+  };
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ 
     amount: "", 
@@ -334,7 +370,6 @@ export default function VendorsClient() {
             <div className="px-6 flex items-center gap-6 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-transparent">
               {([
                 { id: 'OVERVIEW', label: 'Overview', icon: LayoutDashboard },
-                { id: 'ANALYTICS', label: 'Performance Analytics', icon: TrendingUp },
                 { id: 'POS', label: 'Purchase Orders', icon: Package },
                 { id: 'GRNS', label: 'Receipts (GRN)', icon: Truck },
                 { id: 'MATERIALS', label: 'Materials', icon: Zap },
@@ -361,136 +396,103 @@ export default function VendorsClient() {
                 <div className="space-y-4 overflow-y-auto custom-scrollbar pr-2">
                   <div className="grid grid-cols-4 gap-4">
                     <div className="p-5 rounded-[2rem] border bg-white dark:bg-slate-900/40 border-slate-100 dark:border-white/5 shadow-sm">
-                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5"><AlertCircle size={10} className="text-rose-500" /> Total Payable</p>
-                        <h3 className="text-3xl font-black text-rose-600 dark:text-rose-400 tracking-tighter">₹{Math.round(selectedVendor.due || 0).toLocaleString()}</h3>
-                        <div className="mt-4 flex items-center gap-2">
-                           <span className="px-2 py-0.5 bg-rose-500/10 text-rose-500 rounded-full text-[7px] font-bold uppercase tracking-wider">Outstanding</span>
-                        </div>
+                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5"><AlertCircle size={10} className="text-rose-500" /> Total Payable</p>
+                      <h3 className="text-3xl font-black text-rose-600 dark:text-rose-400 tracking-tighter">₹{Math.round(selectedVendor.due || 0).toLocaleString()}</h3>
+                      <div className="mt-4 flex items-center gap-2">
+                        <span className="px-2 py-0.5 bg-rose-500/10 text-rose-500 rounded-full text-[7px] font-bold uppercase tracking-wider">Outstanding</span>
+                      </div>
                     </div>
                     <div className="p-5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[2.5rem] shadow-sm">
-                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5"><CheckCircle2 size={10} className="text-emerald-500" /> Total Settled</p>
-                        <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">₹{Math.round(selectedVendor.totalPaid || 0).toLocaleString()}</h3>
-                        <p className="mt-2 text-[8px] font-bold text-slate-400 uppercase tracking-widest">Lifetime transaction value</p>
+                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5"><CheckCircle2 size={10} className="text-emerald-500" /> Total Settled</p>
+                      <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">₹{Math.round(selectedVendor.totalPaid || 0).toLocaleString()}</h3>
+                      <p className="mt-2 text-[8px] font-bold text-slate-400 uppercase tracking-widest">Lifetime transaction value</p>
                     </div>
                     <div className="p-5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[2.5rem] shadow-sm">
-                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5"><Wallet size={10} className="text-indigo-500" /> Vendor Balance</p>
-                        <h3 className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">₹{Math.round(selectedVendor.advance || 0).toLocaleString()}</h3>
-                        <div className="mt-4 flex items-center gap-2">
-                           <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-500 rounded-full text-[7px] font-bold uppercase tracking-wider">Available Credit</span>
-                        </div>
+                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5"><Wallet size={10} className="text-indigo-500" /> Vendor Balance</p>
+                      <h3 className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">₹{Math.round(selectedVendor.advance || 0).toLocaleString()}</h3>
+                      <div className="mt-4 flex items-center gap-2">
+                        <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-500 rounded-full text-[7px] font-bold uppercase tracking-wider">Available Credit</span>
+                      </div>
                     </div>
                     <div className="p-5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[2.5rem] shadow-sm flex flex-col">
-                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3">Due Aging Analytics</p>
-                        <div className="flex-1 flex flex-col justify-center">
-                          <div className="h-4 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden flex mb-3 border border-slate-200 dark:border-white/10">
-                            {aging && (
-                              <>
-                                <div style={{ width: `${(aging.current / (selectedVendor.due || 1)) * 100}%` }} className="bg-emerald-500 h-full transition-all duration-1000" />
-                                <div style={{ width: `${(aging.thirtySixty / (selectedVendor.due || 1)) * 100}%` }} className="bg-amber-500 h-full transition-all duration-1000" />
-                                <div style={{ width: `${(aging.sixtyNinety / (selectedVendor.due || 1)) * 100}%` }} className="bg-orange-500 h-full transition-all duration-1000" />
-                                <div style={{ width: `${(aging.overNinety / (selectedVendor.due || 1)) * 100}%` }} className="bg-rose-500 h-full transition-all duration-1000" />
-                              </>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-4 gap-1 text-[6px] font-bold uppercase text-center tracking-[0.1em]">
-                            <div className="text-emerald-500">0-30D</div>
-                            <div className="text-amber-500">31-60D</div>
-                            <div className="text-orange-500">61-90D</div>
-                            <div className="text-rose-500">90D+</div>
-                          </div>
+                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3">Due Aging</p>
+                      <div className="flex-1 flex flex-col justify-center">
+                        <div className="h-4 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden flex mb-3 border border-slate-200 dark:border-white/10">
+                          {aging && (
+                            <>
+                              <div style={{ width: `${(aging.current / (selectedVendor.due || 1)) * 100}%` }} className="bg-emerald-500 h-full transition-all duration-1000" />
+                              <div style={{ width: `${(aging.thirtySixty / (selectedVendor.due || 1)) * 100}%` }} className="bg-amber-500 h-full transition-all duration-1000" />
+                              <div style={{ width: `${(aging.sixtyNinety / (selectedVendor.due || 1)) * 100}%` }} className="bg-orange-500 h-full transition-all duration-1000" />
+                              <div style={{ width: `${(aging.overNinety / (selectedVendor.due || 1)) * 100}%` }} className="bg-rose-500 h-full transition-all duration-1000" />
+                            </>
+                          )}
                         </div>
+                        <div className="grid grid-cols-4 gap-1 text-[6px] font-bold uppercase text-center tracking-[0.1em]">
+                          <div className="text-emerald-500">0-30D</div>
+                          <div className="text-amber-500">31-60D</div>
+                          <div className="text-orange-500">61-90D</div>
+                          <div className="text-rose-500">90D+</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* GST & Operational Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-6 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[2rem] shadow-sm space-y-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white flex items-center gap-2">
+                        <FileText size={14} className="text-orange-500" /> GST & Tax Details
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">GST Registration No.</p>
+                          <p className="text-sm font-black text-slate-900 dark:text-white tracking-wide">
+                            {selectedVendor.gstNumber || <span className="text-slate-400 font-bold text-xs">Not Provided</span>}
+                          </p>
+                        </div>
+                        <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Settlement Cycle</p>
+                          <p className="text-sm font-black text-slate-900 dark:text-white uppercase">{selectedVendor.paymentTerms || "IMMEDIATE"}</p>
+                        </div>
+                        <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Business Category</p>
+                          <p className="text-sm font-black text-slate-900 dark:text-white uppercase">{selectedVendor.category || "General"}</p>
+                        </div>
+                        <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Vendor Status</p>
+                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${VENDOR_STATUS.find(s => s.value === selectedVendor.status)?.color} ${VENDOR_STATUS.find(s => s.value === selectedVendor.status)?.bg}`}>
+                            {selectedVendor.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Registered Address</p>
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-300">{selectedVendor.address || "No address recorded."}</p>
+                      </div>
+                    </div>
+
+                    <div className="p-6 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[2rem] shadow-sm space-y-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white flex items-center gap-2">
+                        <TrendingUp size={14} className="text-blue-500" /> Transaction Summary
+                      </h4>
+                      <div className="space-y-3">
+                        {[
+                          { label: "Total Orders", value: selectedVendorDetail?.orders?.length || 0, suffix: "POs" },
+                          { label: "Total GRNs", value: selectedVendorDetail?.orders?.flatMap((o: any) => o.goodsReceipts || []).length || 0, suffix: "Receipts" },
+                          { label: "Materials Supplied", value: selectedVendorDetail?.suppliedMaterials?.length || 0, suffix: "Items" },
+                          { label: "Vendor Code", value: selectedVendor.vendorCode || "N/A", suffix: "" },
+                        ].map((item, i) => (
+                          <div key={i} className="flex items-center justify-between py-2 border-b border-slate-50 dark:border-white/5">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.label}</span>
+                            <span className="text-sm font-black text-slate-900 dark:text-white">{item.value} <span className="text-[9px] font-bold text-slate-400">{item.suffix}</span></span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {selectedTab === 'ANALYTICS' && (
-                <div className="space-y-6 overflow-y-auto custom-scrollbar pr-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <div className="grid grid-cols-3 gap-6">
-                    {/* Performance Scorecards */}
-                    <div className="col-span-2 p-8 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[3rem] space-y-8">
-                       <div>
-                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-6">Vendor Performance Metrics</h4>
-                          <div className="grid grid-cols-2 gap-6">
-                             <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-[2rem] border border-slate-100 dark:border-white/5 group hover:border-orange-500/20 transition-all">
-                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-2">Avg Lead Time</p>
-                                <div className="flex items-end gap-2">
-                                  <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
-                                    {(() => {
-                                      const orders = selectedVendorDetail?.orders?.filter((o: any) => o.status === 'RECEIVED' && o.goodsReceipts?.length > 0);
-                                      if (!orders || orders.length === 0) return "N/A";
-                                      const totalDays = orders.reduce((sum: number, o: any) => {
-                                        const receivedAt = new Date(o.goodsReceipts[0].createdAt);
-                                        const createdAt = new Date(o.createdAt);
-                                        return sum + (receivedAt.getTime() - createdAt.getTime());
-                                      }, 0);
-                                      const avg = totalDays / orders.length / (1000 * 60 * 60 * 24);
-                                      return `${avg.toFixed(1)}`;
-                                    })()}
-                                  </span>
-                                  <span className="text-[10px] font-black text-slate-400 uppercase mb-2">Days</span>
-                                </div>
-                                <p className="text-[7px] text-slate-500 mt-3">Calculated from {selectedVendorDetail?.orders?.length || 0} order cycles</p>
-                             </div>
-                             <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-[2rem] border border-slate-100 dark:border-white/5 group hover:border-emerald-500/20 transition-all">
-                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-2">QC Pass Rate</p>
-                                <div className="flex items-end gap-1">
-                                  <span className="text-4xl font-black text-emerald-500 tracking-tighter">
-                                    {(() => {
-                                      const items = selectedVendorDetail?.orders?.flatMap((o: any) => o.goodsReceipts || []).flatMap((g: any) => g.items || []);
-                                      if (!items || items.length === 0) return "100.0";
-                                      const accepted = items.reduce((s: number, i: any) => s + (i.acceptedQty || 0), 0);
-                                      const received = items.reduce((s: number, i: any) => s + (i.receivedQty || 1), 0);
-                                      return ((accepted / received) * 100).toFixed(1);
-                                    })()}
-                                  </span>
-                                  <span className="text-xl font-black text-emerald-500/50 mb-1.5">%</span>
-                                </div>
-                                <p className="text-[7px] text-slate-500 mt-3">Based on physical quality inspections</p>
-                             </div>
-                          </div>
-                       </div>
-
-                       <div className="pt-8 border-t border-slate-100 dark:border-white/5">
-                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 italic">Trust & Reliability Score</h4>
-                          <div className="flex items-center gap-1">
-                             {[1,2,3,4,5].map(s => (
-                               <Star key={s} size={18} className={s <= (selectedVendor.rating || 5) ? "text-orange-400 fill-orange-400" : "text-slate-200"} />
-                             ))}
-                             <span className="ml-4 px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest">Verified Supplier</span>
-                          </div>
-                       </div>
-                    </div>
-
-                    {/* Operational Master Data */}
-                    <div className="col-span-1 p-8 bg-slate-900 text-white rounded-[3rem] space-y-8 shadow-2xl shadow-slate-900/20">
-                       <div className="space-y-6">
-                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Operational Master Data</h4>
-                          
-                          <div className="space-y-4">
-                             <div>
-                                <p className="text-[7px] font-black uppercase opacity-40 tracking-[0.1em] mb-1">Tax Registration (GST)</p>
-                                <p className="text-xs font-black tracking-wide">{selectedVendor.gstNumber || "NOT PROVIDED"}</p>
-                             </div>
-                             <div>
-                                <p className="text-[7px] font-black uppercase opacity-40 tracking-[0.1em] mb-1">Settlement Cycle</p>
-                                <p className="text-xs font-black tracking-wide uppercase">{selectedVendor.paymentTerms}</p>
-                             </div>
-                             <div>
-                                <p className="text-[7px] font-black uppercase opacity-40 tracking-[0.1em] mb-1">Business Category</p>
-                                <p className="text-xs font-black tracking-wide uppercase">{selectedVendor.category || "General"}</p>
-                             </div>
-                          </div>
-                       </div>
-
-                       <div className="pt-8 border-t border-white/10">
-                          <p className="text-[7px] font-black uppercase opacity-40 tracking-[0.1em] mb-3">Registered Office Address</p>
-                          <p className="text-[11px] leading-relaxed opacity-80 font-medium">{selectedVendor.address || "No address recorded."}</p>
-                       </div>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {selectedTab === 'POS' && (
                 <div className="flex-1 flex flex-col bg-white dark:bg-slate-900/20 border border-slate-200 dark:border-white/5 rounded-[2rem] overflow-hidden">
@@ -764,9 +766,43 @@ export default function VendorsClient() {
           <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-xl p-8 space-y-6">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-tight">{editing ? "Edit Vendor" : "Add Vendor"}</h2>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1 col-span-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Vendor Name</label><input placeholder="Enter name..." value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" /></div>
+              <div className="space-y-1 col-span-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Vendor Name *</label><input placeholder="Enter name..." value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" /></div>
               <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Contact Number</label><input placeholder="10 digits..." value={form.contact} maxLength={10} onChange={(e) => setForm({...form, contact: e.target.value.replace(/\D/g, "")})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" /></div>
               <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label><input placeholder="optional@gmail.com" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" /></div>
+              <div className="space-y-1">
+                <div className="flex justify-between items-center ml-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">GST Number</label>
+                  {fetchingGst && (
+                    <span className="text-[8px] font-black text-orange-500 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={10} className="animate-spin" /> Fetching...
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <input 
+                    placeholder="e.g. 29ABCDE1234F1Z5" 
+                    value={form.gstNumber} 
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase().trim();
+                      setForm({...form, gstNumber: val});
+                      if (val.length === 15) {
+                        fetchGstDetails(val);
+                      }
+                    }} 
+                    className="w-full pl-4 pr-16 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20 tracking-wider font-mono" 
+                  />
+                  {form.gstNumber.length === 15 && !fetchingGst && (
+                    <button
+                      type="button"
+                      onClick={() => fetchGstDetails(form.gstNumber)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-600 bg-orange-50 dark:bg-orange-950/40 px-2.5 py-1 rounded-lg border border-orange-100 dark:border-orange-900 transition-all active:scale-95"
+                    >
+                      Fetch
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Business Category</label><input placeholder="e.g. Spices, Dairy..." value={form.category} onChange={(e) => setForm({...form, category: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" /></div>
               <div className="space-y-1 col-span-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Address</label><textarea placeholder="Address..." value={form.address} rows={2} onChange={(e) => setForm({...form, address: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20 resize-none" /></div>
             </div>
             <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-white/5">

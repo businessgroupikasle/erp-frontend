@@ -21,7 +21,7 @@ import { useAuth } from "@/context/AuthContext";
 interface Partner {
   id: string;
   name: string;
-  type: 'RETAILER' | 'DISTRIBUTOR';
+  type: 'RETAILER' | 'DISTRIBUTOR' | 'BUSINESS_OWNER';
   email: string;
   phone: string;
   address: string;
@@ -29,7 +29,7 @@ interface Partner {
   createdAt: string;
 }
 
-export default function BusinessPartnersClient({ defaultType }: { defaultType?: 'RETAILER' | 'DISTRIBUTOR' }) {
+export default function BusinessPartnersClient({ defaultType }: { defaultType?: 'RETAILER' | 'DISTRIBUTOR' | 'BUSINESS_OWNER' }) {
   const { user } = useAuth();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);

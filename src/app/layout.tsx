@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Nunito } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
@@ -8,10 +8,10 @@ import { NotificationProvider } from "@/context/NotificationContext";
 import AppShell from "@/components/layout/AppShell";
 import { Toaster } from "react-hot-toast";
 
-const nunito = Nunito({ 
+const inter = Inter({ 
   subsets: ["latin"],
   weight: ['300', '400', '500', '600', '700', '800', '900'],
-  variable: '--font-nunito'
+  variable: '--font-sans'
 });
 
 export const metadata: Metadata = {
@@ -26,8 +26,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={nunito.variable}>
-      <body className={`${nunito.className} antialiased`}>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
+      <body className={`${inter.className} antialiased`}>
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>

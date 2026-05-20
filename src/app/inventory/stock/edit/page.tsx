@@ -46,8 +46,11 @@ function EditItemForm() {
   });
 
   const [size, setSize] = useState("1KG");
-  const [isCustomMode, setIsCustomMode] = useState(false);
-  const [customValue, setCustomValue] = useState("");
+  const [customNumber, setCustomNumber] = useState("1");
+  const [customUnit, setCustomUnit] = useState("KG");
+  const [customUnits, setCustomUnits] = useState<string[]>([]);
+  const [showAddUnit, setShowAddUnit] = useState(false);
+  const [newUnitInput, setNewUnitInput] = useState("");
   const isInitialLoad = useRef(true);
 
   useEffect(() => {
@@ -75,6 +78,13 @@ function EditItemForm() {
         }
         setSize(initialSize);
 
+        if (initialSize) {
+          const matchNum = initialSize.match(/^\d+(\.\d+)?/);
+          const matchUnit = initialSize.match(/[A-Z]+$/i);
+          if (matchNum) setCustomNumber(matchNum[0]);
+          if (matchUnit) setCustomUnit(matchUnit[0].toUpperCase());
+        }
+
         setForm({
           name: m.name,
           sku: m.sku ?? "",
@@ -99,13 +109,44 @@ function EditItemForm() {
     fetchData();
   }, [id]);
 
+  // Prevent scroll change on number inputs
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (document.activeElement && document.activeElement.getAttribute("type") === "number") {
+        (document.activeElement as HTMLInputElement).blur();
+      }
+    };
+    document.addEventListener("wheel", handleWheel, { passive: true });
+    return () => {
+      document.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
+
+  const getUpdatedSku = (currentSku: string, newSize: string) => {
+    if (!newSize) return currentSku;
+    const suffix = `-${newSize.toUpperCase()}`;
+    if (!currentSku) return suffix.replace(/^-/, "");
+    
+    const parts = currentSku.split('-');
+    if (parts.length >= 2) {
+      const lastPart = parts[parts.length - 1];
+      const isSize = lastPart.match(/^\d+(\.\d+)?[A-Z]+$/i);
+      if (isSize) {
+        return parts.slice(0, -1).join('-') + suffix;
+      }
+    }
+    return currentSku + suffix;
+  };
+
   const handleSave = async () => {
     if (!id || !form.name) return;
     setSaving(true);
     try {
       const { currentStock, ...updateData } = form;
+      const finalSku = getUpdatedSku(form.sku, size);
       await rawMaterialsApi.update(id as string, {
         ...updateData,
+        sku: finalSku,
         vendorId: sourceType === "VENDOR" ? form.vendorId : null,
       });
       router.push("/inventory/stock");
@@ -114,6 +155,22 @@ function EditItemForm() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const getPhysicalStock = () => {
+    const stock = form.currentStock || 0;
+    if (!size) return stock;
+    const match = size.match(/^(\d+(?:\.\d+)?)\s*([A-Z]+)$/i);
+    if (!match) return stock;
+
+    const weightVal = parseFloat(match[1]);
+    const weightUnit = match[2].toUpperCase();
+
+    const totalVal = stock * weightVal;
+    if (weightUnit === "G" || weightUnit === "ML") {
+      return totalVal / 1000;
+    }
+    return totalVal;
   };
 
   if (loading) return (
@@ -205,51 +262,37 @@ function EditItemForm() {
                     </div>
                  </div>
                  <div className="space-y-4">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Pack Size Variant</label>
-                    <div className="flex flex-wrap gap-2">
-                       {["1KG", "500G", "250G", "100G"].map(s => (
-                         <button 
-                           key={s} 
-                           onClick={() => {
-                              setSize(s);
-                              setIsCustomMode(false);
-                           }}
-                           className={clsx("px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
-                             size === s && !isCustomMode ? "bg-slate-900 text-white shadow-xl" : "bg-slate-50 dark:bg-white/5 text-slate-400 hover:bg-slate-100"
-                           )}
-                         >
-                           {s}
-                         </button>
-                       ))}
-                       
-                       <div className="flex items-center gap-2">
-                          {isCustomMode ? (
-                            <div className="flex items-center bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden animate-in slide-in-from-right-4">
-                               <input 
-                                 autoFocus
-                                 placeholder="e.g. 2KG" 
-                                 value={customValue}
-                                 onChange={e => {
-                                    const val = e.target.value.toUpperCase();
-                                    setCustomValue(val);
-                                    setSize(val);
-                                 }}
-                                 className="bg-transparent px-6 py-3 text-[10px] font-black uppercase outline-none w-28 dark:text-white"
-                               />
-                               <button onClick={() => setIsCustomMode(false)} className="px-4 py-3 bg-slate-200 dark:bg-slate-800 text-slate-600"><X size={14} /></button>
-                            </div>
-                          ) : (
-                            <button 
-                              type="button" 
-                              onClick={() => setIsCustomMode(true)}
-                              className="px-6 py-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-dashed border-slate-300 dark:border-white/10 text-slate-400 hover:text-slate-900 transition-all"
-                            >
-                               <Plus size={16} />
-                            </button>
-                          )}
-                       </div>
-                    </div>
-                 </div>
+                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Pack Size Variant</label>
+                     <div className="flex items-center bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden w-fit">
+                        <input 
+                          type="number"
+                          placeholder="Qty (e.g. 25)" 
+                          value={customNumber}
+                          onChange={e => {
+                             const num = e.target.value;
+                             setCustomNumber(num);
+                             setSize(num + customUnit);
+                          }}
+                          className="bg-transparent px-6 py-3 text-[10px] font-black uppercase outline-none w-28 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none border-r border-slate-200 dark:border-white/10"
+                        />
+                        <div className="relative">
+                          <select
+                            value={customUnit}
+                            onChange={e => {
+                              const unit = e.target.value;
+                              setCustomUnit(unit);
+                              setSize(customNumber + unit);
+                            }}
+                            className="appearance-none bg-transparent pl-4 pr-8 py-3 text-[10px] font-black uppercase outline-none dark:text-white cursor-pointer"
+                          >
+                            {["KG", "G", "L", "ML", "PCS", "PKT", "BOX"].map(u => (
+                              <option key={u} value={u} className="dark:bg-slate-950">{u}</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+                     </div>
+                  </div>
               </div>
            </div>
          )}
@@ -267,25 +310,69 @@ function EditItemForm() {
                  <div className="space-y-4 md:col-span-2">
                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Inventory Base Unit (UOM)</label>
                     <div className="flex items-center gap-4">
-                       <div className="relative flex-1 max-w-xs">
-                          <select 
-                            className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-8 py-5 text-base font-black focus:ring-4 ring-slate-900/5 outline-none dark:text-white"
-                            value={form.unit}
-                            onChange={e => setForm({...form, unit: e.target.value})}
-                          >
-                            {form.category === "FINISHED_GOOD" ? (
-                              <>
-                                <option value="pkt">PKT (Packet)</option>
-                                <option value="pc">PCS (Piece)</option>
-                                <option value="box">BOX</option>
-                                <option value="kg">KG (Bulk Weight)</option>
-                              </>
-                            ) : (
-                              UNITS.map(u => <option key={u} value={u}>{u.toUpperCase()}</option>)
-                            )}
-                          </select>
-                          <ChevronDown size={20} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                       </div>
+                       {showAddUnit ? (
+                          <div className="flex gap-2 items-center flex-1 max-w-sm">
+                            <input
+                              autoFocus
+                              placeholder="New Unit (e.g. BKT)"
+                              value={newUnitInput}
+                              onChange={e => setNewUnitInput(e.target.value.toUpperCase())}
+                              className="flex-1 bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-base font-black focus:ring-4 ring-orange-500/10 outline-none dark:text-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (newUnitInput.trim()) {
+                                  const val = newUnitInput.trim().toLowerCase();
+                                  setCustomUnits(prev => prev.includes(val) ? prev : [...prev, val]);
+                                  setForm(prev => ({ ...prev, unit: val }));
+                                }
+                                setShowAddUnit(false);
+                                setNewUnitInput("");
+                              }}
+                              className="px-6 py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase hover:bg-orange-600 transition-all whitespace-nowrap"
+                            >
+                              Add
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setShowAddUnit(false); setNewUnitInput(""); }}
+                              className="p-4 bg-slate-100 dark:bg-white/5 rounded-2xl text-slate-400 hover:text-slate-600 transition-all"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 flex-1 max-w-sm">
+                            <div className="relative flex-1">
+                              <select 
+                                className="w-full appearance-none bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-8 py-5 text-base font-black focus:ring-4 ring-slate-900/5 outline-none dark:text-white cursor-pointer"
+                                value={form.unit}
+                                onChange={e => setForm({...form, unit: e.target.value})}
+                              >
+                                {form.category === "FINISHED_GOOD" ? (
+                                  Array.from(new Set(["pkt", "pc", "box", "kg", ...customUnits])).map(u => (
+                                    <option key={u} value={u} className="dark:bg-slate-950">
+                                      {u === "pkt" ? "PKT (Packet)" : u === "pc" ? "PCS (Piece)" : u.toUpperCase()}
+                                    </option>
+                                  ))
+                                ) : (
+                                  Array.from(new Set([...UNITS, ...customUnits])).map(u => (
+                                    <option key={u} value={u} className="dark:bg-slate-950">{u.toUpperCase()}</option>
+                                  ))
+                                )}
+                              </select>
+                              <ChevronDown size={20} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowAddUnit(true)}
+                              className="px-6 py-5 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 rounded-2xl border border-dashed border-slate-350 dark:border-white/10 text-xs font-black text-slate-450 hover:text-orange-500 hover:border-orange-400 transition-all whitespace-nowrap flex items-center gap-1.5"
+                            >
+                              <Plus size={16} /> New
+                            </button>
+                          </div>
+                        )}
                        
                        {form.category === "FINISHED_GOOD" && (
                          <div className="flex-1 p-5 bg-blue-500/5 border border-blue-500/10 rounded-[2rem] animate-in fade-in zoom-in-95">
@@ -319,13 +406,13 @@ function EditItemForm() {
                                onChange={e => setForm({...form, minimumStock: Number(e.target.value)})}
                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                              />
-                             <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 uppercase">{form.unit}</span>
+                             <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 uppercase">{form.category === 'FINISHED_GOOD' ? customUnit : form.unit}</span>
                           </div>
                        </div>
                        <div className="p-4 bg-orange-50 dark:bg-orange-500/5 rounded-2xl border border-orange-100 dark:border-orange-500/10">
                           <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest mb-1">Stock Status</p>
-                          <p className={clsx("text-xs font-black uppercase tracking-widest", (form.currentStock || 0) < (form.minimumStock || 0) ? "text-red-500" : "text-emerald-500")}>
-                             {(form.currentStock || 0) < (form.minimumStock || 0) ? "Low Stock" : "Healthy"}
+                          <p className={clsx("text-xs font-black uppercase tracking-widest", (form.category === 'FINISHED_GOOD' ? getPhysicalStock() : (form.currentStock || 0)) <= (form.minimumStock || 0) ? "text-red-500" : "text-emerald-500")}>
+                             {(form.category === 'FINISHED_GOOD' ? getPhysicalStock() : (form.currentStock || 0)) <= (form.minimumStock || 0) ? "Low Stock" : "Healthy"}
                           </p>
                        </div>
                     </div>
@@ -336,7 +423,7 @@ function EditItemForm() {
 
          {activeTab === "FINANCE" && (
            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className={clsx("grid gap-10", form.category === "FINISHED_GOOD" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 max-w-lg")}>
                  <div className="space-y-4">
                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Reference Cost (Avg.)</label>
                     <div className="relative">
@@ -350,19 +437,21 @@ function EditItemForm() {
                        />
                     </div>
                  </div>
-                 <div className="space-y-4">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Standard Selling Price</label>
-                    <div className="relative">
-                       <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 font-bold">₹</span>
-                       <input 
-                         className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-12 py-5 text-xl font-black focus:ring-4 ring-blue-500/10 outline-none dark:text-white transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                         type="number"
-                         value={form.basePrice}
-                         onChange={e => setForm({...form, basePrice: Number(e.target.value)})}
-                         onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                       />
-                    </div>
-                 </div>
+                 {form.category === "FINISHED_GOOD" && (
+                   <div className="space-y-4 animate-in fade-in duration-300">
+                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Customer Retail Price</label>
+                      <div className="relative">
+                         <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 font-bold">₹</span>
+                         <input 
+                           className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-12 py-5 text-xl font-black focus:ring-4 ring-blue-500/10 outline-none dark:text-white transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                           type="number"
+                           value={form.basePrice}
+                           onChange={e => setForm({...form, basePrice: Number(e.target.value)})}
+                           onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                         />
+                      </div>
+                   </div>
+                 )}
               </div>
 
               <div className="pt-10 border-t border-slate-50 dark:border-white/5 grid grid-cols-1 md:grid-cols-3 gap-10">

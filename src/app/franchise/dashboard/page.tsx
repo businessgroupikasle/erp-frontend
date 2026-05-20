@@ -114,18 +114,16 @@ export default function FranchiseDashboardPage() {
       )}
 
       {/* ── Operational KPI Cards Grid ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {kpis.map((stat, i) => (
-          <div key={i} className="bg-white dark:bg-card rounded-xl border border-slate-200/60 dark:border-white/5 p-3.5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">{stat.label}</span>
-              <div className={clsx("p-1 rounded-md", stat.bg)}>
-                <stat.icon size={12} className={stat.color} />
-              </div>
+          <div key={i} className="bg-white dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm hover:shadow-md hover:border-slate-200 dark:hover:border-white/10 transition-all duration-200 flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">{stat.label}</span>
+              <p className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{stat.val}</p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{stat.sub}</p>
             </div>
-            <div>
-              <p className="text-lg font-black text-slate-900 dark:text-white leading-none tracking-tight">{stat.val}</p>
-              <p className="text-[9px] text-slate-400 font-semibold mt-1 leading-none">{stat.sub}</p>
+            <div className={clsx("p-2.5 rounded-xl shrink-0 flex items-center justify-center", stat.bg)}>
+              <stat.icon size={16} className={clsx(stat.color, "stroke-[2px]")} />
             </div>
           </div>
         ))}

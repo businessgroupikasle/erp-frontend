@@ -10,13 +10,11 @@ import {
   ClipboardList,
   Building2,
   Send,
-  ArrowRightLeft,
   Factory,
   Store,
   UserCheck,
   Layers,
   Landmark,
-  ChefHat,
   Truck,
   TrendingUp,
   PackageCheck,
@@ -24,7 +22,9 @@ import {
   Undo2,
   Clock,
   User,
-  Activity,
+  Calculator,
+  Receipt,
+  FileClock,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -75,9 +75,9 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     title: "MANUFACTURING",
     items: [
       {
-        icon: ChefHat,
-        label: "Recipes (Master)",
-        href: "/recipes",
+        icon: Factory,
+        label: "Production",
+        href: "/production",
         roles: SUPER_ONLY,
       },
       {
@@ -85,6 +85,43 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         label: "Production Batches",
         href: "/production/batches",
         roles: SUPER_ONLY,
+      },
+    ],
+  },
+  {
+    title: "RECIPE MANAGEMENT",
+    items: [
+      {
+        icon: Layers,
+        label: "Recipes",
+        href: "/production/recipes",
+        roles: SUPER_ONLY,
+      },
+    ],
+  },
+  {
+    title: "SALES",
+    items: [
+      {
+        icon: Calculator,
+        label: "Estimation",
+        href: "/sales/estimation",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: Receipt,
+        label: "Invoices",
+        href: "/sales/invoices",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: FileClock,
+        label: "Delivery Challan",
+        href: "/sales/delivery-challan",
+        roles: SUPER_ONLY,
+        isNew: true,
       },
     ],
   },

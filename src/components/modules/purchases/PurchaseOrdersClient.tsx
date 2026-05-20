@@ -410,7 +410,7 @@ export default function PurchaseOrdersClient() {
                         >
                           <Download size={14} />
                         </button>
-                        <button type="button" onClick={() => { setPayingPO(po); setPaymentAmount(balance); setShowPaymentModal(true); }} className="p-2 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-lg text-orange-500 transition-colors" title="Pay">
+                        <button type="button" onClick={() => { setPayingPO(po); setShowPaymentModal(true); }} className="p-2 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-lg text-orange-500 transition-colors" title="Pay">
                           <Wallet size={14} />
                         </button>
                       </div>

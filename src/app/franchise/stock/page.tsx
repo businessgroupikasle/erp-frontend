@@ -80,8 +80,8 @@ export default function FranchiseStockPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-[#FF6B00]/10 rounded-xl">
-              <Package size={24} className="text-[#FF6B00]" />
+            <div className="p-2.5 bg-primary/10 rounded-xl">
+              <Package size={24} className="text-primary" />
             </div>
             <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
               Branch Stock Registry
@@ -100,7 +100,7 @@ export default function FranchiseStockPage() {
           </button>
           <Link 
             href="/franchise-orders" 
-            className="flex items-center gap-2 bg-[#FF6B00] hover:bg-[#e66000] text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-orange-500/20 transition-all active:scale-95"
+            className="flex items-center gap-2 bg-primary hover:bg-primary/95 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-primary/20 transition-all active:scale-95"
           >
             <ShoppingCart size={18} /> New Stock Order
           </Link>
@@ -156,7 +156,7 @@ export default function FranchiseStockPage() {
               className={clsx(
                 "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
                 expiryFilter === t.key
-                  ? "bg-white dark:bg-card text-[#FF6B00] shadow-sm"
+                  ? "bg-white dark:bg-card text-primary shadow-sm"
                   : "text-slate-400 hover:text-slate-600"
               )}
             >
@@ -173,7 +173,7 @@ export default function FranchiseStockPage() {
         <div className="py-20 text-center bg-white dark:bg-card rounded-[2.5rem] border-2 border-dashed border-slate-100 dark:border-white/5">
           <Package size={48} strokeWidth={1} className="mx-auto text-slate-200 mb-4" />
           <p className="text-slate-500 font-bold">No product batches match your current filters.</p>
-          <button onClick={() => { setExpiryFilter("ALL"); setSearchTerm(""); setProductFilter(""); fetchData(); }} className="mt-4 text-[#FF6B00] font-black text-xs uppercase underline tracking-widest">Reset All Filters</button>
+          <button onClick={() => { setExpiryFilter("ALL"); setSearchTerm(""); setProductFilter(""); fetchData(); }} className="mt-4 text-primary font-black text-xs uppercase underline tracking-widest">Reset All Filters</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -188,7 +188,7 @@ export default function FranchiseStockPage() {
             return (
               <div key={batch.id} className="group bg-white dark:bg-card border border-slate-100 dark:border-white/5 rounded-[2.5rem] p-8 shadow-sm hover:shadow-md transition-all">
                 <div className="flex items-start justify-between mb-8">
-                  <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/10 flex items-center justify-center text-slate-400 group-hover:text-[#FF6B00] transition-colors shadow-sm">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/10 flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors shadow-sm">
                     <Package size={28} />
                   </div>
                   <div className={clsx(
@@ -232,7 +232,7 @@ export default function FranchiseStockPage() {
                 <div className="flex gap-2 pt-6 border-t border-slate-100 dark:border-white/5">
                   <Link
                     href="/franchise-orders"
-                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-50 dark:bg-white/5 hover:bg-[#FF6B00] hover:text-white text-[#FF6B00] text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm group-hover:shadow-md"
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-50 dark:bg-white/5 hover:bg-primary hover:text-white text-primary text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm group-hover:shadow-md"
                   >
                     <ShoppingCart size={14} /> Restock Item
                   </Link>
