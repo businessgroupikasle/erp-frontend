@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
@@ -559,7 +559,7 @@ export default function EstimationsPage() {
                 onClick={() => setShowCustomerDrop(v => !v)}
               >
                 <div className="flex-1">
-                  <div className="text-[10px] text-blue-600 font-semibold leading-none mb-1">Party *</div>
+                  <div className="text-[10px] text-[#f58220] font-semibold leading-none mb-1">Party *</div>
                   <input
                     className="w-full text-sm text-gray-800 outline-none bg-transparent placeholder-gray-400 font-medium"
                     placeholder=""
@@ -585,7 +585,7 @@ export default function EstimationsPage() {
                       <div className="p-4 space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="col-span-1">
-                            <label className="text-[10px] text-blue-600 font-semibold absolute ml-2 mt-[-6px] bg-white px-1">Party Name *</label>
+                            <label className="text-[10px] text-[#f58220] font-semibold absolute ml-2 mt-[-6px] bg-white px-1">Party Name *</label>
                             <input
                               type="text"
                               value={newParty.name}
@@ -604,7 +604,7 @@ export default function EstimationsPage() {
 
                         {/* Tabs simulation */}
                         <div className="flex border-b border-gray-200">
-                          <div className="px-4 py-2 border-b-2 border-blue-500 text-sm font-bold text-blue-600">GST & Address</div>
+                          <div className="px-4 py-2 border-b-2 border-[#f58220] text-sm font-bold text-[#f58220]">GST & Address</div>
                           <div className="px-4 py-2 text-sm font-semibold text-gray-400 flex items-center gap-2">Credit & Balance <span className="bg-[#ff4d4f] text-white text-[9px] px-1.5 py-0.5 rounded">New</span></div>
                           <div className="px-4 py-2 text-sm font-semibold text-gray-400">Additional Fields</div>
                         </div>
@@ -612,7 +612,7 @@ export default function EstimationsPage() {
                         <div className="grid grid-cols-2 gap-6 pt-2">
                           <div className="space-y-3">
                             <div className="border border-gray-300 rounded-md p-2 relative">
-                              <label className="text-[10px] text-blue-600 font-semibold absolute top-[-7px] left-2 bg-white px-1">GST Type</label>
+                              <label className="text-[10px] text-[#f58220] font-semibold absolute top-[-7px] left-2 bg-white px-1">GST Type</label>
                               <select className="w-full text-sm outline-none bg-transparent appearance-none font-medium text-gray-800 pt-1">
                                 <option>Unregistered/Consumer</option>
                                 <option>Registered Business - Regular</option>
@@ -630,11 +630,11 @@ export default function EstimationsPage() {
                             <span className="text-xs font-semibold text-gray-700 mb-1 block">Billing Address</span>
                             <textarea placeholder="Billing Address" rows={3} className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none resize-none bg-white" />
                             <div className="text-right mt-1">
-                              <button className="text-xs text-blue-600 font-medium">Show Detailed Address</button>
+                              <button className="text-xs text-[#f58220] font-medium">Show Detailed Address</button>
                             </div>
                             <div className="mt-3">
                               <span className="text-xs font-semibold text-gray-700 mb-1 block">Shipping Address</span>
-                              <button className="text-xs text-blue-600 font-medium">+ Enable Shipping Address</button>
+                              <button className="text-xs text-[#f58220] font-medium">+ Enable Shipping Address</button>
                             </div>
                           </div>
                         </div>
@@ -663,7 +663,7 @@ export default function EstimationsPage() {
                               setSavingParty(false);
                             }
                           }}
-                          className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-600 shadow-md"
+                          className="px-6 py-2 bg-[#f58220] text-white rounded-md text-sm font-semibold hover:bg-[#e8740e] shadow-md"
                         >
                           {savingParty ? "Saving..." : "Save"}
                         </button>
@@ -682,7 +682,7 @@ export default function EstimationsPage() {
                         setShowAddParty(true);
                       }}
                     >
-                      <span className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-base leading-none">+</span>
+                      <span className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-[#f58220] font-bold text-base leading-none">+</span>
                       Add New Party
                     </button>
                   )}
@@ -1018,7 +1018,7 @@ export default function EstimationsPage() {
                      />
                   </div>
                   <div className="px-4 py-3 bg-gray-50 flex justify-end">
-                     <button onClick={() => { setShowTerms(false); setShowDesc(false); }} className="bg-blue-600 text-white px-6 py-1.5 rounded text-sm font-semibold">Done</button>
+                     <button onClick={() => { setShowTerms(false); setShowDesc(false); }} className="bg-[#f58220] text-white px-6 py-1.5 rounded text-sm font-semibold">Done</button>
                   </div>
                </div>
             </div>
@@ -1039,7 +1039,7 @@ export default function EstimationsPage() {
              <div className="relative" ref={shareDropRef}>
                 <button
                   onClick={() => setShowShareDrop(v => !v)}
-                  className="flex items-center justify-center gap-1.5 px-6 py-2 text-sm font-bold text-blue-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+                  className="flex items-center justify-center gap-1.5 px-6 py-2 text-sm font-bold text-[#f58220] bg-white border border-gray-200 rounded-md hover:bg-gray-50"
                 >
                   <Share2 size={16} /> Share <ChevronDown size={14} />
                 </button>
@@ -1054,7 +1054,7 @@ export default function EstimationsPage() {
              <button
                onClick={() => handleSave(false)}
                disabled={saving}
-               className="flex items-center justify-center px-8 py-2 text-sm font-bold text-white bg-blue-600 rounded-md hover:bg-blue-600 shadow-md"
+               className="flex items-center justify-center px-8 py-2 text-sm font-bold text-white bg-[#f58220] rounded-md hover:bg-[#e8740e] shadow-md"
              >
                {saving ? "Saving..." : "Save"}
              </button>
@@ -1112,7 +1112,7 @@ export default function EstimationsPage() {
         </button>
         <button
           onClick={openCreate}
-          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-1.5 rounded shadow-sm"
+          className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-xs font-semibold px-4 py-1.5 rounded shadow-sm"
         >
           <Plus size={13} strokeWidth={2.5} />
           Add Estimate
@@ -1122,7 +1122,7 @@ export default function EstimationsPage() {
       {/* ── Summary card ── */}
       <div className="px-4 py-3 border-b border-gray-100 bg-[#fafafa]">
         <div className="inline-flex flex-col bg-white border border-gray-200 rounded-lg px-4 py-2.5 min-w-[200px] shadow-sm">
-          <span className="text-[11px] text-blue-600 font-semibold">Total Estimations Amount</span>
+          <span className="text-[11px] text-[#f58220] font-semibold">Total Estimations Amount</span>
           <span className="text-xl font-bold text-gray-900 mt-0.5">₹ {totalQuotations.toLocaleString("en-IN")}</span>
           <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
             <span>Converted <span className="font-semibold text-gray-700">₹ {totalConverted.toLocaleString("en-IN")}</span></span>

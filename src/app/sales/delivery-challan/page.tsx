@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Truck, Plus, Search, RefreshCw, X, FileText,
-  User, Check, Package, Printer, Calendar,
-  MapPin, Hash, ArrowRight, ClipboardList,
-  ChevronDown, Trash2, Share2, MoreVertical,
-  ArrowLeft, FileSpreadsheet, Percent, Calculator
+  User, Check, Package, Calendar,
+  MapPin, Hash, ArrowRight,
+  ChevronDown, Trash2, MoreVertical,
+  ArrowLeft
 } from "lucide-react";
 import { clsx } from "clsx";
 import { customersApi, productsFullApi } from "@/lib/api";
@@ -572,12 +572,12 @@ export default function DeliveryChallanPage() {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <Truck className="h-5 w-5 text-indigo-600" />
+              <Truck className="h-5 w-5 text-[#f58220]" />
               {view === "create" ? "Add Delivery Challan" : `Edit Challan #${challanNo}`}
             </h2>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500 font-mono">Challan No: <strong className="text-indigo-600 font-bold">{challanNo}</strong></span>
+            <span className="text-xs text-slate-500 font-mono">Challan No: <strong className="text-[#f58220] font-bold">{challanNo}</strong></span>
           </div>
         </div>
 
@@ -591,12 +591,12 @@ export default function DeliveryChallanPage() {
                 <div
                   className={clsx(
                     "flex items-center gap-1 bg-white border rounded-xl px-4 py-3 cursor-pointer transition-all",
-                    showCustomerDrop ? "border-indigo-600 ring-2 ring-indigo-500/10" : "border-slate-300"
+                    showCustomerDrop ? "border-[#f58220] ring-2 ring-[#f58220]/10" : "border-slate-300"
                   )}
                   onClick={() => setShowCustomerDrop(v => !v)}
                 >
                   <div className="flex-1">
-                    <div className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider leading-none mb-1">Party *</div>
+                    <div className="text-[10px] text-[#f58220] font-bold uppercase tracking-wider leading-none mb-1">Party *</div>
                     <input
                       className="w-full text-sm text-slate-700 outline-none bg-transparent placeholder-slate-400"
                       placeholder="Select / Search Party"
@@ -618,7 +618,7 @@ export default function DeliveryChallanPage() {
                           <button
                             key={c.id}
                             type="button"
-                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-indigo-50 border-b border-slate-50 last:border-0 transition-colors"
+                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-orange-50 border-b border-slate-50 last:border-0 transition-colors"
                             onClick={() => selectCustomer(c)}
                           >
                             <div className="text-left">
@@ -692,7 +692,7 @@ export default function DeliveryChallanPage() {
                 <button
                   type="button"
                   onClick={() => setPriceMode(priceMode === "without_tax" ? "with_tax" : "without_tax")}
-                  className="px-3 py-1 bg-white border border-slate-200 hover:border-indigo-300 text-xs font-semibold rounded-lg text-indigo-600 transition-colors shadow-sm"
+                  className="px-3 py-1 bg-white border border-slate-200 hover:border-[#f58220]/50 text-xs font-semibold rounded-lg text-[#f58220] transition-colors shadow-sm"
                 >
                   {priceMode === "without_tax" ? "Tax Excluded" : "Tax Included"}
                 </button>
@@ -729,7 +729,7 @@ export default function DeliveryChallanPage() {
                           }}
                           onFocus={() => setOpenItemDrop(it.id)}
                           placeholder="Search product or enter name..."
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#f58220]"
                         />
                         {isItemDropOpen && (
                           <div className="absolute left-4 right-4 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
@@ -740,14 +740,14 @@ export default function DeliveryChallanPage() {
                                 <button
                                   key={p.id}
                                   type="button"
-                                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-indigo-50 text-left border-b border-slate-50 last:border-0 transition-colors text-xs"
+                                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-orange-50 text-left border-b border-slate-50 last:border-0 transition-colors text-xs"
                                   onClick={() => selectProduct(idx, p)}
                                 >
                                   <div>
                                     <strong className="text-slate-800 font-semibold">{p.name}</strong>
                                     <div className="text-[10px] text-slate-400">SKU: {p.sku || "—"}</div>
                                   </div>
-                                  <div className="text-indigo-600 font-bold">₹{p.basePrice || p.price || 0}</div>
+                                  <div className="text-[#f58220] font-bold">₹{p.basePrice || p.price || 0}</div>
                                 </button>
                               ))
                             )}
@@ -766,14 +766,14 @@ export default function DeliveryChallanPage() {
                           min={1}
                           value={it.qty}
                           onChange={e => updateItem(idx, "qty", Number(e.target.value) || 0)}
-                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm text-center outline-none focus:border-indigo-500"
+                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm text-center outline-none focus:border-[#f58220]"
                         />
                       </td>
                       <td className="px-4 py-3">
                         <select
                           value={it.unit}
                           onChange={e => updateItem(idx, "unit", e.target.value)}
-                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:border-indigo-500"
+                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:border-[#f58220]"
                         >
                           {UNITS.map(u => <option key={u.code} value={u.code}>{u.short}</option>)}
                         </select>
@@ -786,7 +786,7 @@ export default function DeliveryChallanPage() {
                             min={0}
                             value={it.rate || ""}
                             onChange={e => updateItem(idx, "rate", Number(e.target.value) || 0)}
-                            className="w-full pl-6 pr-2 py-2 border border-slate-200 rounded-lg text-sm text-right outline-none focus:border-indigo-500"
+                            className="w-full pl-6 pr-2 py-2 border border-slate-200 rounded-lg text-sm text-right outline-none focus:border-[#f58220]"
                             placeholder="0.00"
                           />
                         </div>
@@ -800,7 +800,7 @@ export default function DeliveryChallanPage() {
                             updateItem(idx, "taxPct", val);
                             updateItem(idx, "taxLabel", opt?.label || "NONE");
                           }}
-                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:border-indigo-500"
+                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:border-[#f58220]"
                         >
                           {TAX_OPTIONS.map(t => <option key={t.label} value={t.value}>{t.label}</option>)}
                         </select>
@@ -829,7 +829,7 @@ export default function DeliveryChallanPage() {
               <button
                 type="button"
                 onClick={addRow}
-                className="flex items-center gap-1.5 px-4 py-2 border border-indigo-200 hover:border-indigo-600 hover:bg-indigo-50 rounded-xl text-xs font-semibold text-indigo-600 transition-all shadow-sm"
+                className="flex items-center gap-1.5 px-4 py-2 border border-[#f58220]/30 hover:border-[#f58220] hover:bg-orange-50 rounded-xl text-xs font-semibold text-[#f58220] transition-all shadow-sm"
               >
                 <Plus className="h-4 w-4" /> Add Row
               </button>
@@ -851,7 +851,7 @@ export default function DeliveryChallanPage() {
                   onClick={() => setShowTerms(v => !v)}
                   className={clsx(
                     "flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-semibold transition-all",
-                    showTerms ? "border-indigo-600 bg-indigo-50 text-indigo-600" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    showTerms ? "border-[#f58220] bg-orange-50 text-[#f58220]" : "border-slate-200 text-slate-600 hover:bg-slate-50"
                   )}
                 >
                   <FileText className="h-4 w-4" /> Terms & Conditions
@@ -861,7 +861,7 @@ export default function DeliveryChallanPage() {
                   onClick={() => setShowDesc(v => !v)}
                   className={clsx(
                     "flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-semibold transition-all",
-                    showDesc ? "border-indigo-600 bg-indigo-50 text-indigo-600" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    showDesc ? "border-[#f58220] bg-orange-50 text-[#f58220]" : "border-slate-200 text-slate-600 hover:bg-slate-50"
                   )}
                 >
                   <ClipboardList className="h-4 w-4" /> Add Note/Description
@@ -876,7 +876,7 @@ export default function DeliveryChallanPage() {
                     value={termsText}
                     onChange={e => setTermsText(e.target.value)}
                     placeholder="Enter customer terms here..."
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none resize-none focus:border-indigo-500"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none resize-none focus:border-[#f58220]"
                   />
                 </div>
               )}
@@ -889,7 +889,7 @@ export default function DeliveryChallanPage() {
                     value={description}
                     onChange={e => setDescription(e.target.value)}
                     placeholder="Enter dispatch notes, packaging details, vehicle specs..."
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none resize-none focus:border-indigo-500"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none resize-none focus:border-[#f58220]"
                   />
                 </div>
               )}
@@ -909,7 +909,7 @@ export default function DeliveryChallanPage() {
                     id="roundoff"
                     checked={roundOffEnabled}
                     onChange={e => setRoundOffEnabled(e.target.checked)}
-                    className="h-4 w-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                    className="h-4 w-4 text-[#f58220] border-slate-300 rounded focus:ring-[#f58220]"
                   />
                   <label htmlFor="roundoff" className="text-sm font-semibold text-slate-500 cursor-pointer">Round Off</label>
                 </div>
@@ -920,7 +920,7 @@ export default function DeliveryChallanPage() {
 
               <div className="flex items-center justify-between pt-2">
                 <span className="text-base font-bold text-slate-800">Total Amount</span>
-                <span className="text-xl font-bold font-mono text-indigo-600">₹{finalTotal.toFixed(2)}</span>
+                <span className="text-xl font-bold font-mono text-[#f58220]">₹{finalTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -952,7 +952,7 @@ export default function DeliveryChallanPage() {
               type="button"
               onClick={() => handleSave("OPEN")}
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-100 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] text-white rounded-xl shadow-lg shadow-orange-100 transition-all disabled:opacity-50"
             >
               <Check className="h-4 w-4" /> {saving ? "Saving..." : "Save Challan"}
             </button>
@@ -963,298 +963,190 @@ export default function DeliveryChallanPage() {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // 2. TRANSACTION LIST & EMPTY STATES (Screen 1 & Screen 3 Layout)
+  // 2. LIST VIEW
   // ════════════════════════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800">
-      
-      {/* Top filter bar (Vyapar-Style) */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={dateFilter}
-            onChange={e => setDateFilter(e.target.value)}
-            className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-600 bg-white outline-none cursor-pointer hover:border-indigo-300"
-          >
-            <option value="THIS_MONTH">This Month</option>
-            <option value="TODAY">Today</option>
-            <option value="CUSTOM">Custom Range</option>
-          </select>
+    <div className="min-h-screen bg-gray-50 text-gray-800">
 
-          {dateFilter === "CUSTOM" && (
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
-              <span>Between</span>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={e => setDateFrom(e.target.value)}
-                className="bg-transparent outline-none text-slate-700 font-bold border-b border-slate-200 pb-0.5 focus:border-indigo-500"
-              />
-              <span>To</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={e => setDateTo(e.target.value)}
-                className="bg-transparent outline-none text-slate-700 font-bold border-b border-slate-200 pb-0.5 focus:border-indigo-500"
-              />
-            </div>
-          )}
-
-          <select
-            value={firmFilter}
-            onChange={e => setFirmFilter(e.target.value)}
-            className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-600 bg-white outline-none cursor-pointer hover:border-indigo-300"
-          >
-            <option value="ALL">ALL FIRMS</option>
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              showToast("Excel Report generated successfully!", "success");
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 border border-slate-200 rounded-xl transition-all shadow-sm"
-          >
-            <FileSpreadsheet className="h-4 w-4" /> Excel Report
-          </button>
-          <button
-            onClick={() => {
-              if (filteredChallans.length === 0) {
-                showToast("No data to print", "warning");
-                return;
-              }
-              window.print();
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 border border-slate-200 rounded-xl transition-all shadow-sm"
-          >
-            <Printer className="h-4 w-4" /> Print
-          </button>
-          <button
-            onClick={fetchData}
-            className="p-2 border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-        </div>
+      {/* ── Page Header ── */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <h1 className="text-base font-bold text-gray-800 flex items-center gap-2">
+          <Truck className="h-5 w-5 text-[#f58220]" />
+          Delivery Challan
+        </h1>
+        <button
+          onClick={() => { resetForm(); setView("create"); }}
+          className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors"
+        >
+          <Plus className="h-4 w-4" /> New Challan
+        </button>
       </div>
 
-      {/* Main content body */}
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        
-        {/* Statistics Widgets */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="max-w-6xl mx-auto px-6 py-5 space-y-5">
+
+        {/* ── Summary Strip ── */}
+        <div className="grid grid-cols-4 gap-4">
           {[
-            { label: "Total Challans", value: stats.total, icon: ClipboardList, color: "text-slate-600", bg: "bg-slate-100" },
-            { label: "Open Challans",   value: stats.open,  icon: Truck,          color: "text-blue-600",  bg: "bg-blue-50" },
-            { label: "Closed/Delivered",value: stats.closed,icon: Check,          color: "text-emerald-600", bg: "bg-emerald-50" },
-            { label: "Drafts",          value: stats.draft, icon: FileText,       color: "text-amber-600", bg: "bg-amber-50" },
+            { label: "Total",    value: stats.total,  color: "text-gray-700",    dot: "bg-gray-400" },
+            { label: "Open",     value: stats.open,   color: "text-blue-600",    dot: "bg-blue-500" },
+            { label: "Delivered",value: stats.closed,  color: "text-emerald-600", dot: "bg-emerald-500" },
+            { label: "Drafts",   value: stats.draft,  color: "text-amber-600",   dot: "bg-amber-500" },
           ].map(s => (
-            <div key={s.label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
-              <div className={clsx("p-3 rounded-xl", s.bg)}>
-                <s.icon className={clsx("h-5 w-5", s.color)} />
-              </div>
+            <div key={s.label} className="bg-white rounded-lg border border-gray-200 px-4 py-3 flex items-center gap-3">
+              <div className={clsx("w-2.5 h-2.5 rounded-full", s.dot)} />
               <div>
-                <p className="text-xs text-slate-400 font-semibold tracking-wide uppercase">{s.label}</p>
-                <p className="text-2xl font-bold text-slate-800 mt-0.5">{s.value}</p>
+                <p className="text-xs text-gray-500">{s.label}</p>
+                <p className={clsx("text-lg font-bold", s.color)}>{s.value}</p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Empty State View (Screen 1 Design) */}
+        {/* ── Filters Row ── */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search challan or party..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#f58220] bg-white"
+            />
+          </div>
+          <select
+            value={dateFilter}
+            onChange={e => setDateFilter(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm text-gray-700 outline-none"
+          >
+            <option value="THIS_MONTH">This Month</option>
+            <option value="TODAY">Today</option>
+            <option value="CUSTOM">Custom Range</option>
+          </select>
+          {dateFilter === "CUSTOM" && (
+            <>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm outline-none" />
+              <span className="text-gray-400 text-sm">to</span>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm outline-none" />
+            </>
+          )}
+          <div className="flex-1" />
+          <button onClick={fetchData} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Refresh">
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* ── Empty State ── */}
         {filteredChallans.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-16 flex flex-col items-center justify-center text-center space-y-6 min-h-[400px]">
-            <h1 className="text-slate-400 font-bold tracking-widest text-sm uppercase">DELIVERY CHALLAN</h1>
-            
-            {/* Custom Illustration wrapper */}
-            <div className="relative flex items-center justify-center">
-              <div className="absolute w-40 h-40 bg-indigo-50 rounded-full scale-110 opacity-70 animate-pulse"></div>
-              <div className="relative bg-white p-5 rounded-2xl border border-slate-100 shadow-lg flex items-center justify-center">
-                <Truck className="h-16 w-16 text-emerald-500" />
-                <div className="absolute -top-3 -right-3 bg-indigo-500 p-2 rounded-xl text-white shadow">
-                  <Check className="h-5 w-5" />
-                </div>
-              </div>
+          <div className="bg-white border border-gray-200 rounded-lg py-20 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center">
+              <Truck className="h-8 w-8 text-[#f58220]" />
             </div>
-
-            <p className="text-slate-500 font-medium max-w-sm">
-              Make & share delivery challan with your customers & convert it to sale whenever you want.
-            </p>
-
+            <div>
+              <p className="text-gray-800 font-semibold">No Delivery Challans</p>
+              <p className="text-gray-500 text-sm mt-1">Create your first delivery challan to get started.</p>
+            </div>
             <button
-              onClick={() => {
-                resetForm();
-                setView("create");
-              }}
-              className="px-6 py-3 bg-[#FF9800] hover:bg-[#F57C00] hover:scale-102 active:scale-98 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-orange-100"
+              onClick={() => { resetForm(); setView("create"); }}
+              className="px-5 py-2.5 bg-[#f58220] hover:bg-[#e8740e] text-white font-semibold text-sm rounded-lg transition-colors"
             >
-              Add Your First Delivery Challan
+              Create Challan
             </button>
           </div>
         ) : (
-          // Transactions list view (Screen 3 Design)
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            
-            {/* Transactions Header */}
-            <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <span className="text-sm font-bold text-slate-800 tracking-wider uppercase">Transactions</span>
-              
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-                {/* Search box */}
-                <div className="relative flex-1 sm:w-72">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <input
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    placeholder="Search by challan no or party..."
-                    className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs bg-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      showToast("Bulk conversion completed for selected Open challans!", "success");
-                    }}
-                    className="px-4 py-2 border border-rose-200 hover:bg-rose-50 text-rose-500 font-bold text-xs rounded-xl transition-colors shadow-sm whitespace-nowrap"
-                  >
-                    Bulk Convert To Sale
-                  </button>
-                  <button
-                    onClick={() => {
-                      resetForm();
-                      setView("create");
-                    }}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all whitespace-nowrap"
-                  >
-                    <Plus className="h-4 w-4" /> Add Delivery Challan
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* List Table */}
+          /* ── Table ── */
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 font-semibold text-xs border-b border-slate-100 uppercase tracking-wider">
-                  <th className="text-left px-6 py-3.5">Date</th>
-                  <th className="text-left px-6 py-3.5">Party</th>
-                  <th className="text-left px-6 py-3.5">Challan No.</th>
-                  <th className="text-left px-6 py-3.5">Due Date</th>
-                  <th className="text-right px-6 py-3.5">Total Amount</th>
-                  <th className="text-center px-6 py-3.5">Status</th>
-                  <th className="text-center px-6 py-3.5 w-44">Action</th>
-                  <th className="w-12"></th>
+                <tr className="bg-gray-50 text-gray-500 text-xs font-medium border-b border-gray-200 uppercase">
+                  <th className="text-left px-4 py-3">Date</th>
+                  <th className="text-left px-4 py-3">Party</th>
+                  <th className="text-left px-4 py-3">Challan No.</th>
+                  <th className="text-left px-4 py-3">Due Date</th>
+                  <th className="text-right px-4 py-3">Amount</th>
+                  <th className="text-center px-4 py-3">Status</th>
+                  <th className="text-right px-4 py-3">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
+              <tbody className="divide-y divide-gray-100">
                 {filteredChallans.map(dc => {
                   const style = STATUS_STYLES[dc.status] || STATUS_STYLES.DRAFT;
-                  const isDraft = dc.status === "DRAFT";
-                  
                   return (
-                    <tr
-                      key={dc.id}
-                      className={clsx(
-                        "hover:bg-slate-50/50 transition-colors",
-                        isDraft && "bg-slate-50/20 font-medium"
-                      )}
-                    >
-                      <td className="px-6 py-4 text-xs font-semibold text-slate-500">
-                        {new Date(dc.invoiceDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    <tr key={dc.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {new Date(dc.invoiceDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                            <User className="h-3.5 w-3.5" />
-                          </div>
-                          <div>
-                            <div className="font-semibold text-slate-800 text-xs">{dc.customerName}</div>
-                            <div className="text-[10px] text-slate-400">{dc.customerPhone || "—"}</div>
-                          </div>
-                        </div>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-800 text-sm">{dc.customerName}</div>
+                        {dc.customerPhone && <div className="text-xs text-gray-400">{dc.customerPhone}</div>}
                       </td>
-                      <td className="px-6 py-4 text-xs font-mono font-bold text-indigo-600">
+                      <td className="px-4 py-3 font-mono font-semibold text-[#f58220] text-xs">
                         #{dc.challanNo}
                       </td>
-                      <td className="px-6 py-4 text-xs">
-                        <div className="font-medium text-slate-600">
-                          {new Date(dc.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                        </div>
-                        {dc.status === "OPEN" && (
-                          <div className="text-[10px] text-rose-500 font-bold mt-0.5">Due: Today</div>
-                        )}
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {new Date(dc.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
-                      <td className="px-6 py-4 text-right font-mono font-bold text-slate-800 text-xs">
+                      <td className="px-4 py-3 text-right font-semibold text-gray-800 text-sm">
                         ₹{Number(dc.finalAmount).toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={clsx("inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border", style.color, style.bg, style.border)}>
+                      <td className="px-4 py-3 text-center">
+                        <span className={clsx("inline-block px-2 py-0.5 rounded text-[11px] font-semibold border", style.color, style.bg, style.border)}>
                           {style.label}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        {dc.status === "OPEN" ? (
-                          <button
-                            onClick={() => convertToSale(dc)}
-                            className="px-3 py-1.5 border border-slate-200 hover:border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-bold text-[10px] rounded-xl transition-all whitespace-nowrap shadow-sm"
-                          >
-                            CONVERT TO SALE
-                          </button>
-                        ) : dc.status === "CLOSED" ? (
-                          <span className="text-[10px] font-bold text-emerald-600 flex items-center justify-center gap-1">
-                            <Check className="h-3.5 w-3.5" /> Converted
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => handleEdit(dc)}
-                            className="px-3 py-1.5 border border-slate-200 hover:border-slate-400 text-slate-600 hover:bg-slate-50 font-semibold text-[10px] rounded-xl transition-all"
-                          >
-                            Resume Draft
-                          </button>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center relative">
-                        <button
-                          onClick={() => {
-                            setShowRowMenu(showRowMenu === dc.id ? null : dc.id);
-                          }}
-                          className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
-                        {showRowMenu === dc.id && (
-                          <div className="absolute right-6 top-12 z-50 w-36 bg-white border border-slate-200 rounded-xl shadow-xl py-1 text-left">
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {dc.status === "DRAFT" && (
                             <button
-                              onClick={() => {
-                                handleEdit(dc);
-                                setShowRowMenu(null);
-                              }}
-                              className="w-full px-4 py-2 hover:bg-indigo-50 text-xs font-semibold text-slate-700 flex items-center gap-2 transition-colors"
+                              onClick={() => handleEdit(dc)}
+                              className="px-2.5 py-1 text-xs font-medium text-[#f58220] hover:bg-orange-50 rounded transition-colors"
                             >
-                              Edit Challan
+                              Resume
                             </button>
+                          )}
+                          {dc.status === "OPEN" && (
                             <button
-                              onClick={() => {
-                                handlePrint(dc);
-                                setShowRowMenu(null);
-                              }}
-                              className="w-full px-4 py-2 hover:bg-indigo-50 text-xs font-semibold text-slate-700 flex items-center gap-2 transition-colors"
+                              onClick={() => convertToSale(dc)}
+                              className="px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
                             >
-                              Print / PDF
+                              Convert
                             </button>
+                          )}
+                          {dc.status === "CLOSED" && (
+                            <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                              <Check className="h-3 w-3" /> Done
+                            </span>
+                          )}
+                          <div className="relative">
                             <button
-                              onClick={() => {
-                                handleDelete(dc.id);
-                                setShowRowMenu(null);
-                              }}
-                              className="w-full px-4 py-2 hover:bg-rose-50 text-xs font-semibold text-rose-600 flex items-center gap-2 transition-colors border-t border-slate-50"
+                              onClick={() => setShowRowMenu(showRowMenu === dc.id ? null : dc.id)}
+                              className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-colors"
                             >
-                              Delete
+                              <MoreVertical className="h-4 w-4" />
                             </button>
+                            {showRowMenu === dc.id && (
+                              <div className="absolute right-0 top-8 z-50 w-32 bg-white border border-gray-200 rounded-lg shadow-lg py-1 text-left">
+                                <button
+                                  onClick={() => { handleEdit(dc); setShowRowMenu(null); }}
+                                  className="w-full px-3 py-2 hover:bg-gray-50 text-xs text-gray-700 text-left"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => { handlePrint(dc); setShowRowMenu(null); }}
+                                  className="w-full px-3 py-2 hover:bg-gray-50 text-xs text-gray-700 text-left"
+                                >
+                                  Print
+                                </button>
+                                <button
+                                  onClick={() => { handleDelete(dc.id); setShowRowMenu(null); }}
+                                  className="w-full px-3 py-2 hover:bg-red-50 text-xs text-red-600 text-left border-t border-gray-100"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   );

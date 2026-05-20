@@ -9,7 +9,7 @@ import {
 import { clsx } from "clsx";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { customersApi, productsFullApi } from "@/lib/api";
+import { customersApi, productsFullApi, draftsApi } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import api from "@/lib/api/base";
 
@@ -370,26 +370,37 @@ export default function SalesInvoicesPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [iRes, cRes, pRes] = await Promise.allSettled([
+      const [iRes, cRes, pRes, dRes] = await Promise.allSettled([
         api.get("/api/finance/invoices").catch(() => ({ data: [] })),
         customersApi.getAll(),
         productsFullApi.getAll(),
+        draftsApi.getDrafts("invoice").catch(() => ({ data: [] })),
       ]);
       
       let apiInvoices = iRes.status === "fulfilled" ? (iRes.value as any).data || [] : [];
+      let drafts = dRes.status === "fulfilled" ? (dRes.value as any).data || [] : [];
       
-      // Merge local drafts
-      try {
-        const draftsStr = localStorage.getItem("sale_invoices_drafts");
-        if (draftsStr) {
-          const drafts = JSON.parse(draftsStr);
-          apiInvoices = [...drafts, ...apiInvoices];
-        }
-      } catch (e) {
-        console.error("Error loading drafts", e);
-      }
+      // Format drafts to match invoice structure
+      const formattedDrafts = drafts.map((d: any) => ({
+        id: d.id,
+        status: "DRAFT",
+        createdAt: d.createdAt,
+        finalAmount: d.data.finalTotal || 0,
+        order: {
+          invoiceNum: "DRAFT",
+          customer: d.data._rawState?.selectedCustomer || { name: "Unknown Customer" },
+          orderItems: d.data._rawState?.items?.map((i: any) => ({
+            product: { name: i.itemSearch },
+            quantity: i.qty,
+            price: i.rate,
+            taxAmount: (i.qty * i.rate * ((i.taxPct || 0) / 100)),
+            totalAmount: (i.qty * i.rate) + (i.qty * i.rate * ((i.taxPct || 0) / 100)),
+          })) || []
+        },
+        _rawState: d.data._rawState
+      }));
       
-      setInvoices(apiInvoices);
+      setInvoices([...formattedDrafts, ...apiInvoices]);
       if (cRes.status === "fulfilled") setCustomers((cRes.value as any).data || []);
       if (pRes.status === "fulfilled") setProducts((pRes.value as any).data || []);
     } finally {
@@ -505,23 +516,8 @@ export default function SalesInvoicesPage() {
        return;
     }
 
-    const draftPayload = {
-      id: draftId || `draft_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      status: "DRAFT",
-      createdAt: new Date().toISOString(),
-      order: {
-        invoiceNum: "DRAFT",
-        customer: selectedCustomer || { name: "Unknown Customer" },
-        orderItems: validItems.map(i => ({
-          product: { name: i.itemSearch },
-          quantity: i.qty,
-          price: i.rate,
-          taxAmount: (i.qty * i.rate * (i.taxPct / 100)),
-          totalAmount: (i.qty * i.rate) + (i.qty * i.rate * (i.taxPct / 100)),
-        }))
-      },
-      finalAmount: finalTotal,
-      // Store raw state to restore later
+    const draftData = {
+      finalTotal,
       _rawState: {
         selectedCustomer,
         customerSearch,
@@ -538,19 +534,20 @@ export default function SalesInvoicesPage() {
     };
 
     if (isDraft) {
+      setSaving(true);
       try {
-        const draftsStr = localStorage.getItem("sale_invoices_drafts");
-        let drafts = draftsStr ? JSON.parse(draftsStr) : [];
-        if (draftId) {
-          drafts = drafts.filter((d: any) => d.id !== draftId);
-        }
-        drafts.unshift(draftPayload);
-        localStorage.setItem("sale_invoices_drafts", JSON.stringify(drafts));
-        showToast("Draft saved locally", "success");
+        await draftsApi.saveDraft({
+          id: draftId || undefined,
+          type: "invoice",
+          data: draftData
+        });
+        showToast("Draft saved successfully", "success");
         fetchData();
         setView("list");
       } catch (e) {
-        console.error("Failed to save draft locally", e);
+        showToast("Failed to save draft", "error");
+      } finally {
+        setSaving(false);
       }
       return;
     }
@@ -584,12 +581,7 @@ export default function SalesInvoicesPage() {
       // If we saved an invoice that was previously a draft, remove the draft
       if (draftId) {
         try {
-          const draftsStr = localStorage.getItem("sale_invoices_drafts");
-          if (draftsStr) {
-            const drafts = JSON.parse(draftsStr);
-            const newDrafts = drafts.filter((d: any) => d.id !== draftId);
-            localStorage.setItem("sale_invoices_drafts", JSON.stringify(newDrafts));
-          }
+          await draftsApi.deleteDraft(draftId);
         } catch (e) {}
       }
 
@@ -600,6 +592,17 @@ export default function SalesInvoicesPage() {
       showToast(e?.response?.data?.error || "Failed to save invoice", "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteDraft = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this draft?")) return;
+    try {
+      await draftsApi.deleteDraft(id);
+      showToast("Draft deleted", "success");
+      fetchData();
+    } catch (e) {
+      showToast("Failed to delete draft", "error");
     }
   };
 
@@ -1173,13 +1176,13 @@ export default function SalesInvoicesPage() {
             <div className="flex">
               <button
                 onClick={() => showToast("Share feature coming soon", "info")}
-                className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-l border-r border-blue-500"
+                className="px-4 py-1.5 text-sm font-medium text-white bg-[#f58220] hover:bg-[#e8740e] rounded-l border-r border-[#e8740e]"
               >
                 Share
               </button>
               <button
                 onClick={() => setShowShareDrop(v => !v)}
-                className="px-2 py-1.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-r"
+                className="px-2 py-1.5 text-sm text-white bg-[#f58220] hover:bg-[#e8740e] rounded-r"
               >
                 <ChevronDown size={14} />
               </button>
@@ -1206,7 +1209,7 @@ export default function SalesInvoicesPage() {
           <button
             onClick={() => handleSave(false)}
             disabled={saving}
-            className="px-6 py-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-60"
+            className="px-6 py-1.5 text-sm font-semibold text-white bg-[#f58220] hover:bg-[#e8740e] rounded disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save"}
           </button>
@@ -1234,7 +1237,7 @@ export default function SalesInvoicesPage() {
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
                   <div className="relative">
-                    <label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-semibold text-blue-600">Party Name *</label>
+                    <label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-semibold text-[#f58220]">Party Name *</label>
                     <input
                       type="text"
                       value={newParty.name}
@@ -1290,7 +1293,7 @@ export default function SalesInvoicesPage() {
                   onClick={() => setPartyTab("GST")}
                   className={clsx(
                     "flex-1 text-center py-2 text-sm font-bold border-b-2 transition-colors",
-                    partyTab === "GST" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-400 hover:text-gray-600"
+                    partyTab === "GST" ? "border-[#f58220] text-[#f58220]" : "border-transparent text-gray-400 hover:text-gray-600"
                   )}
                 >
                   GST &amp; Address
@@ -1299,7 +1302,7 @@ export default function SalesInvoicesPage() {
                   onClick={() => setPartyTab("CREDIT")}
                   className={clsx(
                     "flex-1 text-center py-2 text-sm font-bold border-b-2 transition-colors",
-                    partyTab === "CREDIT" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-400 hover:text-gray-600"
+                    partyTab === "CREDIT" ? "border-[#f58220] text-[#f58220]" : "border-transparent text-gray-400 hover:text-gray-600"
                   )}
                 >
                   Credit &amp; Balance
@@ -1311,7 +1314,7 @@ export default function SalesInvoicesPage() {
                 <div className="flex gap-6">
                   <div className="flex-1 space-y-4">
                     <div className="relative">
-                      <label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-semibold text-blue-600">GST Type</label>
+                      <label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-semibold text-[#f58220]">GST Type</label>
                       <select
                         value={newParty.gstType}
                         onChange={e => setNewParty(p => ({ ...p, gstType: e.target.value }))}
@@ -1396,7 +1399,7 @@ export default function SalesInvoicesPage() {
             <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-end gap-3 bg-white">
               <button
                 disabled={!newParty.name.trim() || savingParty}
-                className="px-8 py-2 bg-blue-500 text-white rounded-lg font-bold text-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
+                className="px-8 py-2 bg-[#f58220] text-white rounded-lg font-bold text-sm hover:bg-[#e8740e] transition-colors disabled:opacity-50"
                 onClick={async () => {
                   setSavingParty(true);
                   try {
@@ -1405,41 +1408,10 @@ export default function SalesInvoicesPage() {
                       phone: newParty.phone.trim() || undefined,
                       email: newParty.email.trim() || undefined,
                       // Future-proofing payload
-                      gstin: newParty.gstin.trim() || undefined,
-                      gstType: newParty.gstType,
-                      state: newParty.state || undefined,
-                      city: newParty.city || undefined,
-                      pincode: newParty.pincode || undefined,
-                      billingAddress: newParty.billingAddress.trim() || undefined
-                    });
-                    const created = (res as any).data;
-                    setCustomers(prev => [created, ...prev]);
-                    selectCustomer(created);
-                    setShowAddParty(false);
-                    setNewParty({ name: "", phone: "", email: "", gstin: "", gstType: "Unregistered/Consumer", state: "", city: "", pincode: "", billingAddress: "", shippingAddress: "", openingBalance: "", creditLimit: "" });
-                    showToast("Party added successfully", "success");
-                  } catch {
-                    showToast("Failed to add party", "error");
-                  } finally {
-                    setSavingParty(false);
-                  }
-                }}
-              >
-                {savingParty ? "Saving..." : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      </div>
-    );
-  }
-
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // LIST VIEW — Vyapar-style
-  // ══════════════════════════════════════════════════════════════════════════
-  const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
+                      gstin: new  // ════════════════════════════════════════════════════════════════════════════
+  // LIST VIEW — Simplified Clean UI
+  // ════════════════════════════════════════════════════════════════════════════
+  const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 
   const nonDraft     = filtered.filter(i => i.status !== "DRAFT");
   const totalAmt     = nonDraft.reduce((s, i) => s + (i.finalAmount || 0), 0);
@@ -1447,198 +1419,201 @@ export default function SalesInvoicesPage() {
   const balanceAmt   = totalAmt - receivedAmt;
 
   return (
-<<<<<<< HEAD
-    <div className="max-w-7xl mx-auto space-y-6 p-4 md:p-6 animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-white/5 pb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-500/20 transition-transform duration-300 hover:scale-105">
-            <Receipt size={22} className="text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Sales Invoices</h1>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">GST-compliant tax invoices for customers</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button onClick={fetchData} className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl hover:border-slate-300 dark:hover:border-white/20 transition-all shadow-sm">
-            <RefreshCw size={16} className={clsx("text-slate-400", loading && "animate-spin")} />
-          </button>
-          <button onClick={() => setShowForm(true)} className="flex-1 sm:flex-initial justify-center flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all">
-            <Plus size={16} strokeWidth={3} /> New Invoice
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50 text-gray-800">
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Total Revenue", value: `₹${(totalRevenue / 1000).toFixed(1)}K`, color: "text-slate-700 dark:text-slate-200" },
-          { label: "Collected", value: `₹${(totalPaid / 1000).toFixed(1)}K`, color: "text-emerald-600 dark:text-emerald-400" },
-          { label: "Outstanding", value: `₹${(totalOutstanding / 1000).toFixed(1)}K`, color: "text-rose-600 dark:text-rose-400" },
-          { label: "Total Invoices", value: invoices.length, color: "text-blue-600 dark:text-blue-400" },
-        ].map(s => (
-          <div key={s.label} className="bg-white dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
-            <p className={clsx("text-2xl font-black mt-1 tracking-tight", s.color)}>{s.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters & Table */}
-      <div className="bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-100 dark:border-white/5 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-slate-50 dark:border-white/5 flex flex-col lg:flex-row items-start lg:items-center gap-4">
-          <div className="relative flex-1 w-full max-w-sm">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search invoices..." className="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl outline-none focus:border-emerald-500 transition-colors" />
-          </div>
-          <div className="flex flex-wrap gap-1 p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
-            {["ALL", "SENT", "PAID", "PARTIAL", "OVERDUE"].map(s => (
-              <button key={s} onClick={() => setStatusFilter(s)} className={clsx("px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", statusFilter === s ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200/20 dark:border-white/5" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-350")}>
-=======
-    <div className="flex flex-col bg-white min-h-screen" style={{ fontSize: 13 }}>
-
-      {/* ── Top toolbar ── */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-200 bg-white">
-        <span className="font-semibold text-gray-800 text-sm mr-1">Sale Invoices</span>
-
-        <div className="flex items-center gap-2 ml-4 text-[13px] text-gray-500">
-          <span>Filter by:</span>
-          <div className="border border-gray-300 rounded px-2.5 py-1.5 bg-white text-gray-700 font-medium">This Month</div>
-        </div>
-
-        <div className="flex items-center gap-2 border border-gray-300 rounded px-2 py-1 bg-white text-[13px] text-gray-700 relative">
-          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setShowFromCal(v => !v)}>
-            <Calendar size={13} className="text-gray-400" />
-            <span className="font-medium text-gray-600">{fmt(dateFrom)}</span>
-          </div>
-          {showFromCal && (
-            <div className="absolute top-full left-0 mt-1 z-50" ref={fromCalRef}>
-              <MiniCalendar value={dateFrom} onChange={setDateFrom} onClose={() => setShowFromCal(false)} />
-            </div>
-          )}
-
-          <span className="text-gray-400 text-xs px-1">To</span>
-
-          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setShowToCal(v => !v)}>
-            <span className="font-medium text-gray-600">{fmt(dateTo)}</span>
-            <Calendar size={13} className="text-gray-400" />
-          </div>
-          {showToCal && (
-            <div className="absolute top-full right-0 mt-1 z-50" ref={toCalRef}>
-              <MiniCalendar value={dateTo} onChange={setDateTo} onClose={() => setShowToCal(false)} />
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1" />
-
-        <button onClick={fetchData} className="p-1.5 text-gray-400 hover:text-gray-600 rounded border border-gray-200">
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-        </button>
+      {/* ── Page Header ── */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <h1 className="text-base font-bold text-gray-800 flex items-center gap-2">
+          <Receipt className="h-5 w-5 text-[#f58220]" />
+          Sale Invoices
+        </h1>
         <button
           onClick={openCreate}
-          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-1.5 rounded shadow-sm"
+          className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors"
         >
-          <Plus size={13} strokeWidth={2.5} />
-          Add Sale
+          <Plus className="h-4 w-4" /> New Invoice
         </button>
       </div>
 
-      {/* ── Summary card ── */}
-      <div className="px-4 py-3 border-b border-gray-100 bg-[#fafafa]">
-        <div className="inline-flex flex-col bg-white border border-gray-200 rounded-lg px-4 py-2.5 min-w-[200px] shadow-sm">
-          <span className="text-[11px] text-blue-600 font-semibold">Total Sales Amount</span>
-          <span className="text-xl font-bold text-gray-900 mt-0.5">₹ {totalAmt.toLocaleString("en-IN")}</span>
-          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-            <span>Received <span className="font-semibold text-gray-700">₹ {receivedAmt.toLocaleString("en-IN")}</span></span>
-            <span className="text-gray-300">|</span>
-            <span>Balance <span className="font-semibold text-gray-700">₹ {balanceAmt.toLocaleString("en-IN")}</span></span>
-          </div>
-        </div>
-      </div>
+      <div className="max-w-6xl mx-auto px-6 py-5 space-y-5">
 
-      {/* ── Transactions table ── */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100">
-        <div className="flex items-center gap-4">
-          <span className="font-semibold text-gray-800 text-sm">Transactions</span>
-          <div className="flex gap-1 p-0.5 bg-gray-100 rounded border border-gray-200">
-            {["ALL", "SENT", "PAID", "DRAFT"].map(s => (
-              <button 
-                key={s} 
-                onClick={() => setStatusFilter(s)} 
-                className={clsx(
-                  "px-3 py-1 rounded text-[11px] font-semibold transition-colors",
-                  statusFilter === s ? "bg-white text-gray-800 shadow-sm" : "text-gray-500 hover:text-gray-700"
-                )}
-              >
->>>>>>> 1c1b0137d66a2a3dc947c0b63445f67f61eb8b82
-                {s}
-              </button>
-            ))}
-          </div>
+        {/* ── Summary Strip ── */}
+        <div className="grid grid-cols-4 gap-4">
+          {[
+            { label: "Total Sales",   value: `₹${totalAmt.toLocaleString("en-IN")}`,     color: "text-gray-700",    dot: "bg-gray-400" },
+            { label: "Received",      value: `₹${receivedAmt.toLocaleString("en-IN")}`,  color: "text-emerald-600", dot: "bg-emerald-500" },
+            { label: "Balance Due",   value: `₹${balanceAmt.toLocaleString("en-IN")}`,   color: "text-rose-600",    dot: "bg-rose-500" },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-lg border border-gray-200 px-4 py-3 flex items-center gap-3">
+              <div className={clsx("w-2.5 h-2.5 rounded-full", s.dot)} />
+              <div>
+                <p className="text-xs text-gray-500">{s.label}</p>
+                <p className={clsx("text-lg font-bold", s.color)}>{s.value}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+
+        {/* ── Filters Row ── */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search..."
-              className="pl-7 pr-3 py-1 text-xs border border-gray-200 rounded outline-none bg-white w-40"
+              placeholder="Search invoice or customer..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#f58220] bg-white"
             />
           </div>
-        </div>
-      </div>
 
-      <div className="flex-1 overflow-auto">
+          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
+            {["ALL", "SENT", "PAID", "DRAFT"].map(s => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={clsx(
+                  "px-3 py-2 text-xs font-medium transition-colors",
+                  statusFilter === s ? "bg-[#f58220] text-white" : "text-gray-600 hover:bg-gray-50"
+                )}
+              >
+                {s === "ALL" ? "All" : s}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm text-gray-700 relative">
+            <div className="flex items-center gap-1.5 cursor-pointer hover:text-gray-900" onClick={() => setShowFromCal(v => !v)}>
+              <Calendar className="h-4 w-4 text-gray-400" />
+              <span className="font-medium">{fmt(dateFrom)}</span>
+            </div>
+            {showFromCal && (
+              <div className="absolute top-full left-0 mt-1 z-50" ref={fromCalRef}>
+                <MiniCalendar value={dateFrom} onChange={setDateFrom} onClose={() => setShowFromCal(false)} />
+              </div>
+            )}
+            <span className="text-gray-300 px-1">to</span>
+            <div className="flex items-center gap-1.5 cursor-pointer hover:text-gray-900" onClick={() => setShowToCal(v => !v)}>
+              <span className="font-medium">{fmt(dateTo)}</span>
+              <Calendar className="h-4 w-4 text-gray-400" />
+            </div>
+            {showToCal && (
+              <div className="absolute top-full right-0 mt-1 z-50" ref={toCalRef}>
+                <MiniCalendar value={dateTo} onChange={setDateTo} onClose={() => setShowToCal(false)} />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1" />
+          <button onClick={fetchData} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Refresh">
+            <RefreshCw className={clsx("h-4 w-4", loading && "animate-spin")} />
+          </button>
+        </div>
+
+        {/* ── Empty State ── */}
         {loading ? (
-          <div className="py-16 text-center"><RefreshCw size={24} className="mx-auto text-orange-400 animate-spin opacity-40" /></div>
+          <div className="py-20 flex justify-center"><RefreshCw className="h-8 w-8 animate-spin text-orange-400 opacity-50" /></div>
         ) : filtered.length === 0 ? (
-<<<<<<< HEAD
-          <div className="py-20 text-center">
-            <Receipt size={44} strokeWidth={1} className="mx-auto text-slate-200 dark:text-white/10 mb-3" />
-            <p className="text-sm font-black text-slate-400">No invoices found.</p>
+          <div className="bg-white border border-gray-200 rounded-lg py-20 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center">
+              <Receipt className="h-8 w-8 text-[#f58220]" />
+            </div>
+            <div>
+              <p className="text-gray-800 font-semibold">No Invoices Found</p>
+              <p className="text-gray-500 text-sm mt-1">Create an invoice to start billing your customers.</p>
+            </div>
+            <button
+              onClick={openCreate}
+              className="px-5 py-2.5 bg-[#f58220] hover:bg-[#e8740e] text-white font-semibold text-sm rounded-lg transition-colors"
+            >
+              Create Invoice
+            </button>
           </div>
         ) : (
-          <div className="w-full overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left min-w-[850px]">
-              <thead className="bg-slate-50/50 dark:bg-white/[0.02] text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-white/5">
-                <tr>
-                  <th className="px-6 py-4">Invoice No.</th>
-                  <th className="px-6 py-4">Customer</th>
-                  <th className="px-6 py-4">Date</th>
-                  <th className="px-6 py-4">Due Date</th>
-                  <th className="px-6 py-4 text-right">Amount</th>
-                  <th className="px-6 py-4 text-center">Status</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+          /* ── Table ── */
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-gray-500 text-xs font-medium border-b border-gray-200 uppercase">
+                  <th className="text-left px-4 py-3">Date</th>
+                  <th className="text-left px-4 py-3">Invoice No</th>
+                  <th className="text-left px-4 py-3">Party Name</th>
+                  <th className="text-left px-4 py-3">Pay Type</th>
+                  <th className="text-right px-4 py-3">Amount</th>
+                  <th className="text-right px-4 py-3">Balance</th>
+                  <th className="text-center px-4 py-3">Status</th>
+                  <th className="text-right px-4 py-3">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                {filtered.map(inv => {
-                  const st = STATUS_STYLES[inv.status] || STATUS_STYLES.DRAFT;
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((inv) => {
+                  const isPaid   = inv.status === "PAID";
+                  const isDraft  = inv.status === "DRAFT";
+                  const balance  = isPaid || isDraft ? 0 : (inv.finalAmount || 0);
+                  const style = STATUS_STYLES[inv.status] || STATUS_STYLES.DRAFT;
                   return (
-                    <tr key={inv.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-all">
-                      <td className="px-6 py-4 font-black text-emerald-600 dark:text-emerald-400 text-sm">{inv.invoiceNumber || inv.id?.substring(0,8).toUpperCase()}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400"><User size={12} /></div>
-                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{inv.customer?.name || "—"}</span>
-                        </div>
+                    <tr 
+                      key={inv.id} 
+                      className={clsx(
+                        "transition-colors",
+                        isDraft ? "hover:bg-orange-50/50 cursor-pointer bg-orange-50/30" : "hover:bg-gray-50"
+                      )}
+                      onClick={() => {
+                        if (isDraft) loadDraft(inv);
+                      }}
+                    >
+                      <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
+                        {new Date(inv.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
-                      <td className="px-6 py-4 text-sm font-bold text-slate-500 dark:text-slate-400">{inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString() : new Date(inv.createdAt).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-sm font-bold text-slate-500 dark:text-slate-400">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "Immediate"}</td>
-                      <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white">₹{(inv.grandTotal || 0).toLocaleString()}</td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={clsx("px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-wider border", st.color, st.bg, st.border)}>
-                          {st.label}
+                      <td className="px-4 py-3 font-mono font-semibold text-gray-800 text-xs">
+                        {inv.order?.invoiceNum || "Lite Sale"}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="font-medium text-gray-800">
+                          {inv.order?.customer?.name || "Walk-In Customer"}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button onClick={() => handlePrint(inv)} className="p-2 bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg border border-slate-100 dark:border-white/5 transition-all" title="Print Invoice">
-                            <Printer size={12} />
-                          </button>
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {inv.paymentMode === "CASH" || inv.order?.paymentType === "CASH" ? "Cash" : "Credit"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-800">
+                        ₹ {(inv.finalAmount || 0).toLocaleString("en-IN")}
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-rose-600">
+                        {balance > 0 ? `₹ ${balance.toLocaleString("en-IN")}` : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={clsx("inline-block px-2 py-0.5 rounded text-[11px] font-semibold border", style.color, style.bg, style.border)}>
+                          {style.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {isDraft ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteDraft(inv.id); }}
+                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Delete Draft"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handlePrint(inv); }}
+                                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                title="Print"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); }}
+                                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                title="Share"
+                              >
+                                <Share2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1647,89 +1622,7 @@ export default function SalesInvoicesPage() {
               </tbody>
             </table>
           </div>
-=======
-          <div className="py-16 text-center">
-            <Receipt size={36} strokeWidth={1} className="mx-auto text-gray-200 mb-2" />
-            <p className="text-sm text-gray-400">No invoices found.</p>
-          </div>
-        ) : (
-          <table className="w-full text-left" style={{ borderCollapse: "collapse" }}>
-            <thead>
-              <tr className="bg-[#f5f5f5] border-y border-gray-200">
-                {["Date","Invoice No","Party Name","Transaction","Payment Type","Amount","Balance","Actions"].map(h => (
-                  <th key={h} className="px-4 py-2 text-[11px] font-semibold text-gray-500 whitespace-nowrap">
-                    <span className="flex items-center gap-1">{h}</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((inv, idx) => {
-                const isPaid   = inv.status === "PAID";
-                const isDraft  = inv.status === "DRAFT";
-                const balance  = isPaid || isDraft ? 0 : (inv.finalAmount || 0);
-                const received = isPaid ? (inv.finalAmount || 0) : 0;
-                return (
-                  <tr 
-                    key={inv.id} 
-                    className={clsx(
-                      "border-b border-gray-100 transition-colors",
-                      isDraft ? "hover:bg-yellow-50/50 cursor-pointer" : "hover:bg-orange-50/30"
-                    )}
-                    onClick={() => {
-                      if (isDraft) loadDraft(inv);
-                    }}
-                  >
-                    <td className="px-4 py-2 text-xs text-gray-600 whitespace-nowrap">
-                      {new Date(inv.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-gray-500">
-                      {idx + 1}
-                      {inv.status === "DRAFT" && (
-                        <span className="ml-2 px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[9px] font-bold">DRAFT</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-xs">
-                      <span className="text-blue-600 font-medium cursor-pointer hover:underline">
-                        {inv.order?.customer?.name || "Walk-In Customer"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-xs text-gray-600">
-                      {inv.order?.invoiceNum || "Lite Sale"}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-gray-600">
-                      {inv.paymentMode === "CASH" || inv.order?.paymentType === "CASH" ? "Cash" : "Credit"}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-right font-medium text-gray-800">
-                      ₹ {(inv.finalAmount || 0).toLocaleString("en-IN")}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-right font-medium text-gray-800">
-                      ₹ {balance.toLocaleString("en-IN")}
-                    </td>
-                    <td className="px-4 py-2">
-                      {!isDraft && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handlePrint(inv); }}
-                            className="p-1 text-gray-400 hover:text-gray-700 rounded"
-                            title="Print"
-                          ><Printer size={13} /></button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); }}
-                            className="p-1 text-gray-400 hover:text-gray-700 rounded"
-                            title="Share"
-                          ><Share2 size={13} /></button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
->>>>>>> 1c1b0137d66a2a3dc947c0b63445f67f61eb8b82
         )}
       </div>
     </div>
-  );
 }

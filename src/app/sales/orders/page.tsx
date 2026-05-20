@@ -612,7 +612,7 @@ export default function SalesOrdersPage() {
                           <button
                             key={c.id}
                             type="button"
-                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-blue-50 border-b border-slate-50 last:border-0 transition-colors"
+                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-orange-50 border-b border-slate-50 last:border-0 transition-colors"
                             onClick={() => selectCustomer(c)}
                           >
                             <div className="text-left">
@@ -718,7 +718,7 @@ export default function SalesOrdersPage() {
                           }}
                           onFocus={() => setOpenItemDrop(it.id)}
                           placeholder="Type product name or search SKU..."
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#f58220]"
                         />
                         {isItemDropOpen && (
                           <div className="absolute left-4 right-4 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
@@ -729,14 +729,14 @@ export default function SalesOrdersPage() {
                                 <button
                                   key={p.id}
                                   type="button"
-                                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-blue-50 text-left border-b border-slate-50 last:border-0 transition-colors text-xs"
+                                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-orange-50 text-left border-b border-slate-50 last:border-0 transition-colors text-xs"
                                   onClick={() => selectProduct(idx, p)}
                                 >
                                   <div>
                                     <strong className="text-slate-800 font-semibold">{p.name}</strong>
                                     <div className="text-[10px] text-slate-400">SKU: {p.sku || "—"}</div>
                                   </div>
-                                  <div className="text-blue-600 font-bold font-mono">₹{p.basePrice || p.price || 0}</div>
+                                  <div className="text-[#f58220] font-bold font-mono">₹{p.basePrice || p.price || 0}</div>
                                 </button>
                               ))
                             )}
@@ -755,14 +755,14 @@ export default function SalesOrdersPage() {
                           min={1}
                           value={it.qty}
                           onChange={e => updateItem(idx, "qty", Number(e.target.value) || 0)}
-                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm text-center outline-none focus:border-blue-500"
+                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm text-center outline-none focus:border-[#f58220]"
                         />
                       </td>
                       <td className="px-4 py-3">
                         <select
                           value={it.unit}
                           onChange={e => updateItem(idx, "unit", e.target.value)}
-                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:border-blue-500"
+                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:border-[#f58220]"
                         >
                           {UNITS.map(u => <option key={u.code} value={u.code}>{u.short}</option>)}
                         </select>
@@ -775,7 +775,7 @@ export default function SalesOrdersPage() {
                             min={0}
                             value={it.rate || ""}
                             onChange={e => updateItem(idx, "rate", Number(e.target.value) || 0)}
-                            className="w-full pl-6 pr-2 py-2 border border-slate-200 rounded-lg text-sm text-right outline-none focus:border-blue-500"
+                            className="w-full pl-6 pr-2 py-2 border border-slate-200 rounded-lg text-sm text-right outline-none focus:border-[#f58220]"
                             placeholder="0.00"
                           />
                         </div>
@@ -789,7 +789,7 @@ export default function SalesOrdersPage() {
                             updateItem(idx, "taxPct", val);
                             updateItem(idx, "taxLabel", opt?.label || "NONE");
                           }}
-                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:border-blue-500"
+                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:border-[#f58220]"
                         >
                           {TAX_OPTIONS.map(t => <option key={t.label} value={t.value}>{t.label}</option>)}
                         </select>
@@ -818,7 +818,7 @@ export default function SalesOrdersPage() {
               <button
                 type="button"
                 onClick={addRow}
-                className="flex items-center gap-1.5 px-4 py-2 border border-blue-200 hover:border-blue-600 hover:bg-blue-50 rounded-xl text-xs font-semibold text-blue-600 transition-all shadow-sm"
+                className="flex items-center gap-1.5 px-4 py-2 border border-blue-200 hover:border-blue-600 hover:bg-orange-50 rounded-xl text-xs font-semibold text-blue-600 transition-all shadow-sm"
               >
                 <Plus className="h-4 w-4" /> Add Row
               </button>
@@ -906,7 +906,7 @@ export default function SalesOrdersPage() {
                     value={termsText}
                     onChange={e => setTermsText(e.target.value)}
                     placeholder="Enter sales terms, delivery instructions..."
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none resize-none focus:border-blue-500"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none resize-none focus:border-[#f58220]"
                   />
                 </div>
               )}
@@ -919,7 +919,7 @@ export default function SalesOrdersPage() {
                     value={description}
                     onChange={e => setDescription(e.target.value)}
                     placeholder="Internal remarks or packaging specific instructions..."
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none resize-none focus:border-blue-500"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none resize-none focus:border-[#f58220]"
                   />
                 </div>
               )}
@@ -988,7 +988,7 @@ export default function SalesOrdersPage() {
                 onClick={() => {
                   showToast("Share links generated! Ready for PDF dispatch.", "success");
                 }}
-                className="px-4 py-2.5 text-sm font-bold border border-blue-200 hover:bg-blue-50 rounded-l-xl text-blue-600 transition-colors shadow-sm"
+                className="px-4 py-2.5 text-sm font-bold border border-blue-200 hover:bg-orange-50 rounded-l-xl text-blue-600 transition-colors shadow-sm"
               >
                 Share
               </button>
@@ -1008,265 +1008,194 @@ export default function SalesOrdersPage() {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // 2. TRANSACTION HISTORY & TABS (List view)
+  // 2. LIST VIEW
   // ════════════════════════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800">
-      
-      {/* Top tabs */}
-      <div className="bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 shadow-sm">
-        <div className="flex">
-          <button className="px-6 py-4 border-b-2 border-blue-600 text-blue-600 font-bold text-xs uppercase tracking-wider">
-            Sale Orders
-          </button>
-          <button
-            onClick={() => showToast("Online sales sync is disabled by operational preferences.", "info")}
-            className="px-6 py-4 border-b-2 border-transparent text-slate-400 font-bold text-xs uppercase tracking-wider hover:text-slate-600 transition-colors"
-          >
-            Online Orders
-          </button>
+    <div className="min-h-screen bg-gray-50 text-gray-800">
+
+      {/* ── Page Header ── */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <h1 className="text-base font-bold text-gray-800 flex items-center gap-2">
+          <ShoppingBag className="h-5 w-5 text-blue-600" />
+          Sales Orders
+        </h1>
+        <button
+          onClick={() => { resetForm(); setView("create"); }}
+          className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors"
+        >
+          <Plus className="h-4 w-4" /> New Order
+        </button>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-6 py-5 space-y-5">
+
+        {/* ── Summary Strip ── */}
+        <div className="grid grid-cols-4 gap-4">
+          {[
+            { label: "Total",    value: stats.total,   color: "text-gray-700",    dot: "bg-gray-400" },
+            { label: "Open",     value: stats.open,    color: "text-blue-600",    dot: "bg-blue-500" },
+            { label: "Overdue",  value: stats.overdue,  color: "text-orange-600",  dot: "bg-orange-500" },
+            { label: "Closed",   value: stats.closed,  color: "text-emerald-600", dot: "bg-emerald-500" },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-lg border border-gray-200 px-4 py-3 flex items-center gap-3">
+              <div className={clsx("w-2.5 h-2.5 rounded-full", s.dot)} />
+              <div>
+                <p className="text-xs text-gray-500">{s.label}</p>
+                <p className={clsx("text-lg font-bold", s.color)}>{s.value}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        
-        {/* Print / Excel controls */}
-        <div className="flex items-center gap-3 py-2">
-          <button
-            onClick={() => showToast("Excel report compiled successfully!", "success")}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 border border-slate-200 rounded-xl transition-all shadow-sm"
+
+        {/* ── Filters Row ── */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search order or party..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 bg-white"
+            />
+          </div>
+          <select
+            value={dateFilter}
+            onChange={e => setDateFilter(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm text-gray-700 outline-none"
           >
-            <FileSpreadsheet className="h-4 w-4" /> Excel Report
-          </button>
-          <button
-            onClick={() => {
-              if (filteredOrders.length === 0) {
-                showToast("No order data to print.", "warning");
-                return;
-              }
-              window.print();
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-slate-200 rounded-xl transition-all shadow-sm"
-          >
-            <Printer className="h-4 w-4" /> Print
-          </button>
-          <button
-            onClick={fetchAllData}
-            className="p-2 border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
-          >
+            <option value="THIS_MONTH">This Month</option>
+            <option value="TODAY">Today</option>
+            <option value="CUSTOM">Custom Range</option>
+          </select>
+          {dateFilter === "CUSTOM" && (
+            <>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm outline-none" />
+              <span className="text-gray-400 text-sm">to</span>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm outline-none" />
+            </>
+          )}
+          <div className="flex-1" />
+          <button onClick={fetchAllData} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Refresh">
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        
-        {/* Statistics cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: "Total Orders",   value: stats.total,   icon: ClipboardList, color: "text-slate-600",   bg: "bg-slate-100" },
-            { label: "Open Orders",    value: stats.open,    icon: Clock,         color: "text-blue-600",    bg: "bg-blue-50" },
-            { label: "Orders Overdue", value: stats.overdue, icon: AlertTriangle,  color: "text-orange-600",  bg: "bg-orange-50" },
-            { label: "Closed/Delivered",value: stats.closed, icon: Check,          color: "text-emerald-600", bg: "bg-emerald-50" },
-          ].map(s => {
-            const AlertTriangle = s.icon; // alias fallback
-            return (
-              <div key={s.label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
-                <div className={clsx("p-3 rounded-xl", s.bg)}>
-                  <s.icon className={clsx("h-5 w-5", s.color)} />
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 font-semibold tracking-wide uppercase">{s.label}</p>
-                  <p className="text-2xl font-bold text-slate-800 mt-0.5">{s.value}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Empty state illustration */}
+        {/* ── Empty State ── */}
         {filteredOrders.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-16 flex flex-col items-center justify-center text-center space-y-6 min-h-[400px]">
-            <h1 className="text-slate-400 font-bold tracking-widest text-sm uppercase">SALE ORDER</h1>
-            
-            <div className="relative flex items-center justify-center">
-              <div className="absolute w-40 h-40 bg-blue-50 rounded-full scale-110 opacity-70 animate-pulse"></div>
-              <div className="relative bg-white p-5 rounded-2xl border border-slate-100 shadow-lg flex items-center justify-center">
-                <ClipboardList className="h-16 w-16 text-blue-500" />
-                <div className="absolute -top-3 -right-3 bg-emerald-500 p-2 rounded-xl text-white shadow">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-              </div>
+          <div className="bg-white border border-gray-200 rounded-lg py-20 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center">
+              <ShoppingBag className="h-8 w-8 text-blue-600" />
             </div>
-
-            <p className="text-slate-500 font-medium max-w-sm">
-              Record sales bookings from customers, lock rates and units, and easily convert them to invoices upon dispatch.
-            </p>
-
+            <div>
+              <p className="text-gray-800 font-semibold">No Sales Orders</p>
+              <p className="text-gray-500 text-sm mt-1">Record sales bookings and convert them to invoices.</p>
+            </div>
             <button
-              onClick={() => {
-                resetForm();
-                setView("create");
-              }}
-              className="px-6 py-3 bg-[#FF9800] hover:bg-[#F57C00] hover:scale-102 active:scale-98 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-orange-100"
+              onClick={() => { resetForm(); setView("create"); }}
+              className="px-5 py-2.5 bg-[#f58220] hover:bg-[#e8740e] text-white font-semibold text-sm rounded-lg transition-colors"
             >
-              Add Your First Sale Order
+              Create Order
             </button>
           </div>
         ) : (
-          // Active List Dashboard
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            
-            {/* Header controls */}
-            <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <span className="text-sm font-bold text-slate-800 tracking-wider uppercase">Transactions</span>
-              
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-72">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <input
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    placeholder="Search by order no or party..."
-                    className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs bg-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      showToast("Bulk conversion completed for all Open Sales Orders!", "success");
-                    }}
-                    className="px-4 py-2 border border-rose-200 hover:bg-rose-50 text-rose-500 font-bold text-xs rounded-xl transition-colors shadow-sm whitespace-nowrap"
-                  >
-                    Bulk Convert To Sale
-                  </button>
-                  <button
-                    onClick={() => {
-                      resetForm();
-                      setView("create");
-                    }}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all whitespace-nowrap"
-                  >
-                    <Plus className="h-4 w-4" /> Add Sale Order
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* List Table */}
+          /* ── Table ── */
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 font-semibold text-xs border-b border-slate-100 uppercase tracking-wider">
-                  <th className="text-left px-6 py-3.5">Party</th>
-                  <th className="text-left px-6 py-3.5">No.</th>
-                  <th className="text-left px-6 py-3.5">Date</th>
-                  <th className="text-left px-6 py-3.5">Due Date</th>
-                  <th className="text-right px-6 py-3.5">Total Amount</th>
-                  <th className="text-right px-6 py-3.5">Balance</th>
-                  <th className="text-center px-6 py-3.5">Type</th>
-                  <th className="text-center px-6 py-3.5">Status</th>
-                  <th className="text-center px-6 py-3.5 w-44">Action</th>
-                  <th className="w-12"></th>
+                <tr className="bg-gray-50 text-gray-500 text-xs font-medium border-b border-gray-200 uppercase">
+                  <th className="text-left px-4 py-3">Party</th>
+                  <th className="text-left px-4 py-3">Order No.</th>
+                  <th className="text-left px-4 py-3">Date</th>
+                  <th className="text-left px-4 py-3">Due Date</th>
+                  <th className="text-right px-4 py-3">Amount</th>
+                  <th className="text-right px-4 py-3">Balance</th>
+                  <th className="text-center px-4 py-3">Status</th>
+                  <th className="text-right px-4 py-3">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
+              <tbody className="divide-y divide-gray-100">
                 {filteredOrders.map(o => {
                   const style = STATUS_STYLES[o.status] || STATUS_STYLES.DRAFT;
-                  const isOverdue = o.status === "OVERDUE";
-                  
                   return (
-                    <tr key={o.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                            <User className="h-3.5 w-3.5" />
-                          </div>
-                          <div>
-                            <div className="font-semibold text-slate-800 text-xs">{o.customerName}</div>
-                            <div className="text-[10px] text-slate-400">{o.customerPhone || "—"}</div>
-                          </div>
-                        </div>
+                    <tr key={o.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-800 text-sm">{o.customerName}</div>
+                        {o.customerPhone && <div className="text-xs text-gray-400">{o.customerPhone}</div>}
                       </td>
-                      <td className="px-6 py-4 text-xs font-mono font-bold text-slate-600">
+                      <td className="px-4 py-3 font-mono font-semibold text-gray-600 text-xs">
                         {o.orderNo}
                       </td>
-                      <td className="px-6 py-4 text-xs font-semibold text-slate-500">
-                        {new Date(o.invoiceDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {new Date(o.invoiceDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
-                      <td className="px-6 py-4 text-xs font-semibold text-slate-500">
-                        {new Date(o.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {new Date(o.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
-                      <td className="px-6 py-4 text-right font-mono font-bold text-slate-800 text-xs">
+                      <td className="px-4 py-3 text-right font-semibold text-gray-800 text-sm">
                         ₹{Number(o.finalAmount).toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 text-right font-mono font-bold text-red-600 text-xs">
+                      <td className="px-4 py-3 text-right font-semibold text-red-600 text-sm">
                         ₹{Number(o.balance).toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 text-center text-xs font-bold text-slate-500">
-                        Sale Order
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={clsx("inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border", style.color, style.bg, style.border)}>
+                      <td className="px-4 py-3 text-center">
+                        <span className={clsx("inline-block px-2 py-0.5 rounded text-[11px] font-semibold border", style.color, style.bg, style.border)}>
                           {style.label}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        {o.status === "OPEN" || o.status === "OVERDUE" ? (
-                          <button
-                            onClick={() => convertToSale(o)}
-                            className="px-3 py-1.5 border border-slate-200 hover:border-blue-600 text-blue-600 hover:bg-blue-50 font-bold text-[10px] rounded-xl transition-all whitespace-nowrap shadow-sm"
-                          >
-                            CONVERT TO SALE
-                          </button>
-                        ) : o.status === "CLOSED" ? (
-                          <span className="text-[10px] font-bold text-emerald-600 flex items-center justify-center gap-1">
-                            <Check className="h-3.5 w-3.5" /> Converted
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => handleEdit(o)}
-                            className="px-3 py-1.5 border border-slate-200 hover:border-slate-400 text-slate-600 hover:bg-slate-50 font-semibold text-[10px] rounded-xl transition-all"
-                          >
-                            Resume Draft
-                          </button>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center relative">
-                        <button
-                          onClick={() => setShowRowMenu(showRowMenu === o.id ? null : o.id)}
-                          className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                          <ChevronRight className="h-4 w-4 rotate-90" />
-                        </button>
-                        {showRowMenu === o.id && (
-                          <div className="absolute right-6 top-12 z-50 w-36 bg-white border border-slate-200 rounded-xl shadow-xl py-1 text-left">
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {o.status === "DRAFT" && (
                             <button
-                              onClick={() => {
-                                handleEdit(o);
-                                setShowRowMenu(null);
-                              }}
-                              className="w-full px-4 py-2 hover:bg-blue-50 text-xs font-semibold text-slate-700 flex items-center gap-2 transition-colors"
+                              onClick={() => handleEdit(o)}
+                              className="px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
                             >
-                              Edit Order
+                              Resume
                             </button>
+                          )}
+                          {(o.status === "OPEN" || o.status === "OVERDUE") && (
                             <button
-                              onClick={() => {
-                                handlePrint(o);
-                                setShowRowMenu(null);
-                              }}
-                              className="w-full px-4 py-2 hover:bg-blue-50 text-xs font-semibold text-slate-700 flex items-center gap-2 transition-colors"
+                              onClick={() => convertToSale(o)}
+                              className="px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
                             >
-                              Print / PDF
+                              Convert
                             </button>
+                          )}
+                          {o.status === "CLOSED" && (
+                            <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                              <Check className="h-3 w-3" /> Done
+                            </span>
+                          )}
+                          <div className="relative">
                             <button
-                              onClick={() => {
-                                handleDelete(o.id);
-                                setShowRowMenu(null);
-                              }}
-                              className="w-full px-4 py-2 hover:bg-rose-50 text-xs font-semibold text-rose-600 flex items-center gap-2 transition-colors border-t border-slate-50"
+                              onClick={() => setShowRowMenu(showRowMenu === o.id ? null : o.id)}
+                              className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-colors"
                             >
-                              Delete
+                              <ChevronRight className="h-4 w-4 rotate-90" />
                             </button>
+                            {showRowMenu === o.id && (
+                              <div className="absolute right-0 top-8 z-50 w-32 bg-white border border-gray-200 rounded-lg shadow-lg py-1 text-left">
+                                <button
+                                  onClick={() => { handleEdit(o); setShowRowMenu(null); }}
+                                  className="w-full px-3 py-2 hover:bg-gray-50 text-xs text-gray-700 text-left"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => { handlePrint(o); setShowRowMenu(null); }}
+                                  className="w-full px-3 py-2 hover:bg-gray-50 text-xs text-gray-700 text-left"
+                                >
+                                  Print
+                                </button>
+                                <button
+                                  onClick={() => { handleDelete(o.id); setShowRowMenu(null); }}
+                                  className="w-full px-3 py-2 hover:bg-red-50 text-xs text-red-600 text-left border-t border-gray-100"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1279,3 +1208,4 @@ export default function SalesOrdersPage() {
     </div>
   );
 }
+

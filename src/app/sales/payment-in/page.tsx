@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
@@ -56,13 +56,13 @@ function getPeriodDates(period: string): { start: string; end: string } {
 function EmptyIllustration() {
   return (
     <div className="w-28 h-28 mx-auto mb-4 relative">
-      <div className="absolute inset-0 rounded-full bg-blue-50 flex items-center justify-center">
+      <div className="absolute inset-0 rounded-full bg-orange-50 flex items-center justify-center">
         <div className="w-20 h-16 rounded-lg bg-white border-2 border-blue-100 flex flex-col gap-1.5 items-start justify-center px-3 shadow-sm">
-          <div className="w-10 h-1.5 rounded bg-blue-200" />
-          <div className="w-6 h-1.5 rounded bg-blue-100" />
-          <div className="w-8 h-1.5 rounded bg-blue-100" />
+          <div className="w-10 h-1.5 rounded bg-orange-200" />
+          <div className="w-6 h-1.5 rounded bg-orange-100" />
+          <div className="w-8 h-1.5 rounded bg-orange-100" />
         </div>
-        <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-blue-100 border-2 border-blue-200 flex items-center justify-center">
+        <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-orange-100 border-2 border-orange-200 flex items-center justify-center">
           <Wallet size={12} className="text-blue-400" />
         </div>
       </div>
@@ -304,7 +304,7 @@ export default function PaymentInPage() {
                 onClick={() => setShowCustomerDrop(v => !v)}
               >
                 <div className="flex-1">
-                  <div className="text-[10px] text-blue-600 font-medium leading-none mb-0.5">Party *</div>
+                  <div className="text-[10px] text-[#f58220] font-medium leading-none mb-0.5">Party *</div>
                   <input
                     className="w-full text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400"
                     placeholder="Search by Name/Phone"
@@ -319,7 +319,7 @@ export default function PaymentInPage() {
               {showCustomerDrop && (
                 <div className="absolute top-full left-0 z-50 mt-1 w-72 bg-white border border-gray-200 rounded shadow-lg max-h-56 overflow-y-auto">
                   <button
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#f58220] hover:bg-orange-50 border-b border-gray-100"
                     onClick={() => setShowCustomerDrop(false)}
                   >
                     <Plus size={14} /> Add Party
@@ -434,7 +434,7 @@ export default function PaymentInPage() {
 
           {/* Total display */}
           {amount && Number(amount) > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-5 py-3 flex items-center justify-between">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg px-5 py-3 flex items-center justify-between">
               <span className="text-sm font-semibold text-blue-700">Amount to be Received</span>
               <span className="text-lg font-bold text-blue-800">₹{Number(amount).toFixed(2)}</span>
             </div>
@@ -452,11 +452,11 @@ export default function PaymentInPage() {
             <div className="flex">
               <button
                 onClick={() => showToast("Share feature coming soon", "info")}
-                className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-l border-r border-blue-500"
+                className="px-4 py-1.5 text-sm font-medium text-white bg-[#f58220] hover:bg-[#e8740e] rounded-l border-r border-[#e8740e]"
               >
                 Share
               </button>
-              <button onClick={() => setShowShareDrop(v => !v)} className="px-2 py-1.5 text-white bg-blue-600 hover:bg-blue-700 rounded-r">
+              <button onClick={() => setShowShareDrop(v => !v)} className="px-2 py-1.5 text-white bg-[#f58220] hover:bg-[#e8740e] rounded-r">
                 <ChevronDown size={14} />
               </button>
             </div>
@@ -485,7 +485,7 @@ export default function PaymentInPage() {
           <button
             onClick={() => handleSave(false)}
             disabled={saving}
-            className="px-6 py-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-60"
+            className="px-6 py-1.5 text-sm font-semibold text-white bg-[#f58220] hover:bg-[#e8740e] rounded disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save"}
           </button>
@@ -506,7 +506,7 @@ export default function PaymentInPage() {
         </div>
         <button
           onClick={() => setView("create")}
-          className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-4 py-2 rounded-full transition-colors"
+          className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-sm font-semibold px-4 py-2 rounded transition-colors"
         >
           <Plus size={15} strokeWidth={2.5} />
           Add Payment-In
@@ -532,7 +532,7 @@ export default function PaymentInPage() {
                 <button
                   key={o.value}
                   onClick={() => handlePeriodSelect(o.value)}
-                  className={clsx("w-full px-4 py-2 text-left hover:bg-gray-50", period === o.value && "text-blue-600 font-medium")}
+                  className={clsx("w-full px-4 py-2 text-left hover:bg-gray-50", period === o.value && "text-[#f58220] font-medium")}
                 >
                   {o.label}
                 </button>
@@ -576,7 +576,7 @@ export default function PaymentInPage() {
       {/* Content */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <RefreshCw size={24} className="text-blue-400 animate-spin" />
+          <RefreshCw size={24} className="text-[#f58220] animate-spin" />
         </div>
       ) : payments.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center pb-16">
@@ -585,7 +585,7 @@ export default function PaymentInPage() {
           <p className="text-sm text-gray-400 mb-5">You haven&apos;t added any transactions yet.</p>
           <button
             onClick={() => setView("create")}
-            className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-6 py-2.5 rounded-full transition-colors"
+            className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-sm font-semibold px-6 py-2.5 rounded transition-colors"
           >
             <Plus size={15} strokeWidth={2.5} />
             Add Payment-In
@@ -626,7 +626,7 @@ export default function PaymentInPage() {
                         </span>
                       )}
                     </td>
-                    <td className="py-3 text-blue-600">{p.paymentNumber || "—"}</td>
+                    <td className="py-3 text-[#f58220]">{p.paymentNumber || "—"}</td>
                     <td className="py-3 text-gray-500">{p.paymentMode || "—"}</td>
                     <td className="py-3 text-right font-semibold text-gray-800">₹{(p.paidAmount || 0).toFixed(2)}</td>
                   </tr>

@@ -31,6 +31,13 @@ export const salesApi = {
   getAnalytics: (params?: any) => api.get('/api/sales/analytics', { params }),
 };
 
+// --- Drafts Management ---
+export const draftsApi = {
+  getDrafts: (type: string) => api.get('/api/drafts', { params: { type } }),
+  saveDraft: (data: any) => api.post('/api/drafts', data),
+  deleteDraft: (id: string) => api.delete(`/api/drafts/${id}`),
+};
+
 // --- Customer Management ---
 export const customersApi = {
   getAll: (params: any = {}) => api.get('/api/customers', { params }),

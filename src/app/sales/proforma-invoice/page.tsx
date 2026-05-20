@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
@@ -99,14 +99,14 @@ function computeRow(item: LineItem) {
 function EmptyIllustration() {
   return (
     <div className="w-28 h-28 mx-auto mb-4 relative">
-      <div className="absolute inset-0 rounded-full bg-blue-50 flex items-center justify-center">
+      <div className="absolute inset-0 rounded-full bg-orange-50 flex items-center justify-center">
         <div className="w-20 h-16 rounded-lg bg-white border-2 border-blue-100 flex flex-col gap-1.5 items-start justify-center px-3 shadow-sm">
-          <div className="w-10 h-1.5 rounded bg-blue-200" />
-          <div className="w-6 h-1.5 rounded bg-blue-100" />
-          <div className="w-8 h-1.5 rounded bg-blue-100" />
+          <div className="w-10 h-1.5 rounded bg-orange-200" />
+          <div className="w-6 h-1.5 rounded bg-orange-100" />
+          <div className="w-8 h-1.5 rounded bg-orange-100" />
         </div>
-        <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-blue-100 border-2 border-blue-200 flex items-center justify-center">
-          <FilePlus2 size={12} className="text-blue-400" />
+        <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-orange-100 border-2 border-orange-200 flex items-center justify-center">
+          <FilePlus2 size={12} className="text-[#f58220]" />
         </div>
       </div>
     </div>
@@ -365,7 +365,7 @@ export default function ProformaInvoicePage() {
                 onClick={() => setShowCustomerDrop(v => !v)}
               >
                 <div className="flex-1">
-                  <div className="text-[10px] text-blue-600 font-medium leading-none mb-0.5">Customer *</div>
+                  <div className="text-[10px] text-[#f58220] font-medium leading-none mb-0.5">Customer *</div>
                   <input
                     className="w-full text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400"
                     placeholder="Search by Name/Phone"
@@ -378,7 +378,7 @@ export default function ProformaInvoicePage() {
               </div>
               {showCustomerDrop && (
                 <div className="absolute top-full left-0 z-50 mt-1 w-72 bg-white border border-gray-200 rounded shadow-lg max-h-64 overflow-y-auto">
-                  <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100" onClick={() => setShowCustomerDrop(false)}>
+                  <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#f58220] hover:bg-orange-50 border-b border-gray-100" onClick={() => setShowCustomerDrop(false)}>
                     <Plus size={14} /> Add Party
                   </button>
                   {filteredCustomers.length === 0 ? (
@@ -550,15 +550,15 @@ export default function ProformaInvoicePage() {
                 <tr className="border-t border-gray-200 bg-[#f9f9f9] text-xs font-semibold text-gray-600">
                   <td className="px-2 py-2 border-r border-gray-200" />
                   <td className="px-3 py-2 border-r border-gray-200">
-                    <button onClick={() => setItems(prev => [...prev, makeItem()])} className="text-blue-600 hover:text-blue-800 font-semibold border border-blue-300 px-2 py-0.5 rounded text-xs">ADD ROW</button>
+                    <button onClick={() => setItems(prev => [...prev, makeItem()])} className="text-[#f58220] hover:text-[#e8740e] font-semibold border border-[#f58220]/40 px-2 py-0.5 rounded text-xs">ADD ROW</button>
                     <span className="ml-6 text-gray-400 uppercase tracking-wide">TOTAL</span>
                   </td>
-                  <td className="px-2 py-2 border-r border-gray-200 text-center text-blue-600">{totalQty}</td>
+                  <td className="px-2 py-2 border-r border-gray-200 text-center text-[#f58220]">{totalQty}</td>
                   <td className="border-r border-gray-200" /><td className="border-r border-gray-200" /><td className="border-r border-gray-200" />
-                  <td className="px-2 py-2 border-r border-gray-200 text-right text-blue-600">{totalDisc > 0 ? totalDisc.toFixed(2) : 0}</td>
+                  <td className="px-2 py-2 border-r border-gray-200 text-right text-[#f58220]">{totalDisc > 0 ? totalDisc.toFixed(2) : 0}</td>
                   <td className="border-r border-gray-200" />
-                  <td className="px-2 py-2 border-r border-gray-200 text-right text-blue-600">{totalTax > 0 ? totalTax.toFixed(2) : 0}</td>
-                  <td className="px-2 py-2 border-r border-gray-200 text-right text-blue-600">{totalAmount > 0 ? totalAmount.toFixed(2) : 0}</td>
+                  <td className="px-2 py-2 border-r border-gray-200 text-right text-[#f58220]">{totalTax > 0 ? totalTax.toFixed(2) : 0}</td>
+                  <td className="px-2 py-2 border-r border-gray-200 text-right text-[#f58220]">{totalAmount > 0 ? totalAmount.toFixed(2) : 0}</td>
                   <td />
                 </tr>
               </tfoot>
@@ -614,8 +614,8 @@ export default function ProformaInvoicePage() {
           <button onClick={() => setView("list")} className="px-4 py-1.5 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
           <div className="relative" ref={shareDropRef}>
             <div className="flex">
-              <button onClick={() => showToast("Share feature coming soon", "info")} className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-l border-r border-blue-500">Share</button>
-              <button onClick={() => setShowShareDrop(v => !v)} className="px-2 py-1.5 text-white bg-blue-600 hover:bg-blue-700 rounded-r"><ChevronDown size={14} /></button>
+              <button onClick={() => showToast("Share feature coming soon", "info")} className="px-4 py-1.5 text-sm font-medium text-white bg-[#f58220] hover:bg-[#e8740e] rounded-l border-r border-[#e8740e]">Share</button>
+              <button onClick={() => setShowShareDrop(v => !v)} className="px-2 py-1.5 text-white bg-[#f58220] hover:bg-[#e8740e] rounded-r"><ChevronDown size={14} /></button>
             </div>
             {showShareDrop && (
               <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-200 rounded shadow-lg text-sm min-w-[160px] z-50">
@@ -625,7 +625,7 @@ export default function ProformaInvoicePage() {
               </div>
             )}
           </div>
-          <button onClick={() => handleSave(false)} disabled={saving} className="px-6 py-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-60">
+          <button onClick={() => handleSave(false)} disabled={saving} className="px-6 py-1.5 text-sm font-semibold text-white bg-[#f58220] hover:bg-[#e8740e] rounded disabled:opacity-60">
             {saving ? "Saving..." : "Save"}
           </button>
         </div>
@@ -645,7 +645,7 @@ export default function ProformaInvoicePage() {
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-4 py-2 rounded-full transition-colors"
+          className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-sm font-semibold px-4 py-2 rounded transition-colors"
         >
           <Plus size={15} strokeWidth={2.5} />
           Add Proforma
@@ -663,7 +663,7 @@ export default function ProformaInvoicePage() {
             <div className="absolute top-full left-0 z-50 mt-1 bg-white border border-gray-200 rounded shadow-lg min-w-[140px] text-sm">
               {PERIOD_OPTIONS.map(o => (
                 <button key={o.value} onClick={() => { setPeriod(o.value); setDateRange(getPeriodDates(o.value)); setShowPeriodDrop(false); }}
-                  className={clsx("w-full px-4 py-2 text-left hover:bg-gray-50", period === o.value && "text-blue-600 font-medium")}>
+                  className={clsx("w-full px-4 py-2 text-left hover:bg-gray-50", period === o.value && "text-[#f58220] font-medium")}>
                   {o.label}
                 </button>
               ))}
@@ -705,7 +705,7 @@ export default function ProformaInvoicePage() {
       {/* Content */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <RefreshCw size={24} className="text-blue-400 animate-spin" />
+          <RefreshCw size={24} className="text-[#f58220] animate-spin" />
         </div>
       ) : proformas.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center pb-16">
@@ -714,7 +714,7 @@ export default function ProformaInvoicePage() {
           <p className="text-sm text-gray-400 mb-5">You haven&apos;t added any transactions yet.</p>
           <button
             onClick={openCreate}
-            className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-6 py-2.5 rounded-full transition-colors"
+            className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-sm font-semibold px-6 py-2.5 rounded transition-colors"
           >
             <Plus size={15} strokeWidth={2.5} />
             Add Proforma
@@ -747,12 +747,12 @@ export default function ProformaInvoicePage() {
                     }}
                   >
                     <td className="py-3 text-gray-500">{p.quotationDate ? new Date(p.quotationDate).toLocaleDateString() : "—"}</td>
-                    <td className="py-3 text-blue-600 font-medium">{p.quotationNumber || p.id?.substring(0, 8).toUpperCase()}</td>
+                    <td className="py-3 text-[#f58220] font-medium">{p.quotationNumber || p.id?.substring(0, 8).toUpperCase()}</td>
                     <td className="py-3 font-medium text-gray-800">{p.customer?.name || "—"}</td>
                     <td className="py-3">
                       <span className={clsx("px-2 py-0.5 rounded text-xs font-semibold border",
                         p.status === "CONVERTED" ? "bg-green-100 text-green-700 border-green-200" :
-                        p.status === "DRAFT" ? "bg-yellow-50 text-yellow-700 border-yellow-200" : "bg-blue-100 text-blue-700 border-blue-200"
+                        p.status === "DRAFT" ? "bg-yellow-50 text-yellow-700 border-yellow-200" : "bg-orange-100 text-[#f58220] border-orange-200"
                       )}>
                         {p.status === "CONVERTED" ? "Converted" : p.status === "DRAFT" ? "Draft" : "Open"}
                       </span>
