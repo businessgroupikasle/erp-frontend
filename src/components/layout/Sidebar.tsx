@@ -120,7 +120,7 @@ export default function Sidebar() {
               <p className="text-[15px] font-black text-gray-900 dark:text-white truncate tracking-tight leading-tight">
                 Kiddos Food
               </p>
-              <p className="text-[9px] text-orange-500 font-black leading-tight mt-0.5 uppercase tracking-[0.2em]">
+              <p className="text-[9px] text-primary font-black leading-tight mt-0.5 uppercase tracking-[0.2em]">
                 Control Center
               </p>
             </div>
@@ -171,7 +171,7 @@ export default function Sidebar() {
                       >
                         <p className={clsx(
                           "text-[10px] font-bold uppercase tracking-[0.2em] transition-colors",
-                          "text-slate-400 dark:text-slate-500 group-hover/section:text-orange-500"
+                          "text-slate-400 dark:text-slate-500 group-hover/section:text-primary"
                         )}>
                           {section.title}
                         </p>
@@ -223,7 +223,7 @@ export default function Sidebar() {
                               "my-0.5 rounded-xl",
                               isComingSoon ? "opacity-50 cursor-not-allowed grayscale" : "cursor-pointer",
                               isActive
-                                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20 font-bold scale-[1.01]"
+                                ? "bg-primary/10 text-primary font-bold scale-[1.01]"
                                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.03] hover:text-slate-900 dark:hover:text-slate-200"
                             )}
                           >
@@ -235,8 +235,8 @@ export default function Sidebar() {
                                   ? "w-10 h-10" 
                                   : "w-5 h-5 rounded-lg",
                                 isActive 
-                                  ? "text-white" 
-                                  : "text-slate-400 group-hover/item:text-orange-500 dark:group-hover/item:text-orange-400"
+                                  ? "text-primary" 
+                                  : "text-slate-400 group-hover/item:text-primary dark:group-hover/item:text-primary"
                               )}>
                                 <IconComponent size={isCollapsed ? 20 : 18} strokeWidth={isActive ? 2.5 : 2} />
                               </div>
@@ -279,8 +279,8 @@ export default function Sidebar() {
                                     size={12}
                                     strokeWidth={2.5}
                                     className={clsx(
-                                      "shrink-0 text-slate-400 dark:text-slate-500 group-hover/item:text-orange-500 transition-transform duration-200",
-                                      isExpanded && "rotate-90 text-white"
+                                      "shrink-0 text-slate-400 dark:text-slate-500 group-hover/item:text-primary transition-transform duration-200",
+                                      isExpanded && (isActive ? "rotate-90 text-primary" : "rotate-90")
                                     )}
                                   />
                                 )}
@@ -294,7 +294,7 @@ export default function Sidebar() {
                               <div className="bg-gray-900 dark:bg-slate-700 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
                                 {item.label}
                                 {item.isNew && (
-                                  <span className="ml-1.5 text-orange-400 text-[9px] font-bold">NEW</span>
+                                  <span className="ml-1.5 text-primary text-[9px] font-bold">NEW</span>
                                 )}
                                 <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900 dark:border-r-slate-700" />
                               </div>
@@ -315,13 +315,13 @@ export default function Sidebar() {
                                   className={clsx(
                                     "flex items-center justify-between px-3 py-2 rounded-lg text-[12px] font-medium transition-all relative",
                                     pathname === child.href
-                                      ? "text-orange-500 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-500/5 font-semibold"
+                                      ? "text-primary dark:text-primary-foreground bg-primary/10 dark:bg-primary/20 font-semibold"
                                       : "text-slate-500 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 hover:bg-slate-50/50 dark:hover:bg-white/[0.02]"
                                   )}
                                 >
                                   <span className="truncate">{child.label}</span>
                                   {child.isNew && (
-                                    <span className="text-[8px] font-black bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ml-2">
+                                    <span className="text-[8px] font-black bg-primary/10 dark:bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ml-2">
                                       New
                                     </span>
                                   )}

@@ -18,7 +18,7 @@ function fmt(n: number) {
   return "₹" + Math.round(n).toLocaleString("en-IN");
 }
 
-const COLORS = ["#FF6B00", "#8B5CF6", "#10B981", "#3B82F6", "#EC4899"];
+const COLORS = ["#f58220", "#1E4D2B", "#8B5CF6", "#3B82F6", "#EC4899"];
 
 export default function FranchiseAnalyticsPage() {
   const { user } = useAuth();
@@ -186,7 +186,7 @@ export default function FranchiseAnalyticsPage() {
               {(summary?.topSellers ?? []).map((prod: any, idx: number) => (
                 <div key={idx} className="flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-[#FF6B00] font-black text-xs">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs">
                       #{idx + 1}
                     </div>
                     <div>
