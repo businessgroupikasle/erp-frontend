@@ -167,7 +167,7 @@ export default function DeliveryChallanPage() {
         }
       }
 
-      showToast(status === "DRAFT" ? "Challan saved as draft" : "Challan dispatched", "success");
+      showToast((status as string) === "DRAFT" ? "Challan saved as draft" : "Challan dispatched", "success");
       setShowForm(false);
       resetForm();
       fetchData();

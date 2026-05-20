@@ -48,6 +48,7 @@ export default function LoginPage() {
         <div className="text-center space-y-6">
           <div className="flex justify-center flex-col items-center">
             <div className="relative w-48 h-20 mb-4 transform hover:scale-105 transition-transform duration-300">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo.png"
                 alt="Kiddos Foods Logo"

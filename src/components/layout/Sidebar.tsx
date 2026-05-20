@@ -109,6 +109,7 @@ export default function Sidebar() {
             "relative rounded-xl overflow-hidden shrink-0 shadow-lg transition-all duration-500",
             isCollapsed ? "w-10 h-10" : "w-9 h-9"
           )}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo.png"
               alt="Logo"

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Receipt, Plus, Search, RefreshCw, X, User,
   Printer, ChevronDown, Trash2, Check, Share2, Calendar,
-  AlignLeft, Image, FileText, ArrowLeft
+  AlignLeft, Image as ImageIcon, FileText, ArrowLeft
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useRouter } from "next/navigation";
@@ -1109,7 +1109,7 @@ export default function SalesInvoicesPage() {
                 />
               )}
               <button className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 w-40">
-                <Image size={13} />
+                <ImageIcon size={13} />
                 ADD IMAGE
               </button>
               <button className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 w-40">

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Calculator, Plus, Search, RefreshCw, X, User,
   Printer, ChevronDown, Trash2, Check, Share2, Calendar,
-  AlignLeft, Image, FileText, ArrowLeft, ArrowRight, FileClock
+  AlignLeft, Image as ImageIcon, FileText, ArrowLeft, ArrowRight, FileClock
 } from "lucide-react";
 import { clsx } from "clsx";
 import { customersApi, productsFullApi } from "@/lib/api";
@@ -972,7 +972,7 @@ export default function EstimationsPage() {
                  ADD DESCRIPTION
                </button>
                <button className="flex items-center justify-center gap-2 w-48 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded px-4 py-2 hover:bg-gray-50">
-                 <Image size={14} className="text-gray-400" />
+                 <ImageIcon size={14} className="text-gray-400" />
                  ADD IMAGE
                </button>
                <button className="flex items-center justify-center gap-2 w-48 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded px-4 py-2 hover:bg-gray-50">

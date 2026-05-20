@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   FilePlus2, Plus, RefreshCw, ChevronDown, X, Calendar,
-  Check, Printer, Share2, Trash2, AlignLeft, FileText, Image
+  Check, Printer, Share2, Trash2, AlignLeft, FileText, Image as ImageIcon
 } from "lucide-react";
 import { clsx } from "clsx";
 import { customersApi, productsFullApi } from "@/lib/api";
@@ -582,7 +582,7 @@ export default function ProformaInvoicePage() {
                 <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} placeholder="Description" className="w-48 text-xs text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 outline-none resize-none" />
               )}
               <button className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 w-40">
-                <Image size={13} /> ADD IMAGE
+                <ImageIcon size={13} /> ADD IMAGE
               </button>
               <button className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 w-40">
                 <FileText size={13} /> ADD DOCUMENT
