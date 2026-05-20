@@ -77,19 +77,19 @@ export default function LineItemsTable() {
 
   return (
     <div className="w-full">
-      <div className="overflow-x-auto pb-64">
-        <table className="w-full text-left border-collapse table-fixed min-w-[1000px]">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse table-auto">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-900/50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
-              <th className="px-6 py-3 w-12 text-center">#</th>
-              <th className="px-4 py-3 min-w-[280px]">Material / Item Detail</th>
-              <th className="px-4 py-3 w-28">SKU</th>
-              <th className="px-4 py-3 w-24">Qty</th>
-              <th className="px-4 py-3 w-24">Unit</th>
-              <th className="px-4 py-3 w-32">Unit Price</th>
-              <th className="px-4 py-3 w-20 text-center">GST %</th>
-              <th className="px-4 py-3 w-32 text-right">Line Total</th>
-              <th className="px-6 py-3 w-16 text-center"></th>
+              <th className="px-4 py-3 w-10 text-center">#</th>
+              <th className="px-4 py-3">Material / Item Detail</th>
+              <th className="px-4 py-3 w-24 hidden md:table-cell">SKU</th>
+              <th className="px-4 py-3 w-20">Qty</th>
+              <th className="px-4 py-3 w-20 hidden sm:table-cell">Unit</th>
+              <th className="px-4 py-3 w-28">Unit Price</th>
+              <th className="px-4 py-3 w-16 text-center hidden sm:table-cell">GST %</th>
+              <th className="px-4 py-3 w-28 text-right">Line Total</th>
+              <th className="px-4 py-3 w-12 text-center"></th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-50 dark:divide-slate-800">
@@ -249,7 +249,7 @@ export default function LineItemsTable() {
                     )}
                     </div>
                   </td>
-                  <td className="px-4 py-4 align-top">
+                  <td className="px-4 py-4 align-top hidden md:table-cell">
                      <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-1 rounded dark:bg-slate-800">
                         {material?.sku || "---"}
                      </span>
@@ -263,7 +263,7 @@ export default function LineItemsTable() {
                       onKeyDown={(e) => handleKeyDown(e, item.id)}
                     />
                   </td>
-                  <td className="px-4 py-4 align-top">
+                  <td className="px-4 py-4 align-top hidden sm:table-cell">
                     <div className="p-2 text-[10px] font-black text-slate-400 text-center uppercase tracking-widest bg-slate-50/30 rounded-lg border border-slate-100">
                        {item.unit}
                     </div>
@@ -293,7 +293,7 @@ export default function LineItemsTable() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-4 align-top text-center">
+                  <td className="px-4 py-4 align-top text-center hidden sm:table-cell">
                     <span className="text-xs font-black text-purple-600">
                       {item.gstRate}%
                     </span>

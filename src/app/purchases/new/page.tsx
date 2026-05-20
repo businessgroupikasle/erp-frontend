@@ -46,7 +46,7 @@ function NewPurchaseContent() {
   
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<"items" | "notes" | "attachments">("items");
+  const [activeTab, setActiveTab] = useState<"items" | "notes">("items");
   const [showVendorModal, setShowVendorModal] = useState(false);
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([]);
@@ -327,8 +327,8 @@ function NewPurchaseContent() {
           />
 
           {/* Section 3: Material Table & Accordions */}
-          <div className="bg-white dark:bg-[#0A0D14] rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-             <div className="flex bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+          <div className="bg-white dark:bg-[#0A0D14] rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+             <div className="flex gap-6 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
                 <button 
                   onClick={() => setActiveTab("items")}
                   className={clsx(
@@ -346,15 +346,6 @@ function NewPurchaseContent() {
                   )}
                 >
                   Notes & Terms
-                </button>
-                <button 
-                  onClick={() => setActiveTab("attachments")}
-                  className={clsx(
-                    "px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2",
-                    activeTab === "attachments" ? "border-[#7C3AED] text-[#7C3AED]" : "border-transparent text-slate-400 hover:text-slate-600"
-                  )}
-                >
-                  Attachments
                 </button>
              </div>
 
@@ -384,17 +375,6 @@ function NewPurchaseContent() {
                      </div>
                   </div>
                 )}
-                {activeTab === "attachments" && (
-                   <div className="p-20 text-center flex flex-col items-center gap-6">
-                      <div className="w-20 h-20 rounded-[2rem] bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-300">
-                         <Plus size={40} />
-                      </div>
-                      <div className="space-y-2">
-                        <h4 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">Upload Documents</h4>
-                        <p className="text-xs text-slate-400 font-medium">Click to upload or drag & drop Supplier Quotations, Invoices, or Specs</p>
-                      </div>
-                   </div>
-                )}
              </div>
           </div>
         </div>
@@ -405,7 +385,7 @@ function NewPurchaseContent() {
              <DocumentSummary />
              
              {/* Dynamic Helper Card */}
-             <div className="bg-slate-900 dark:bg-[#0F172A] rounded-[2.5rem] p-8 text-white shadow-2xl shadow-slate-200 dark:shadow-none relative overflow-hidden">
+             {/* <div className="bg-slate-900 dark:bg-[#0F172A] rounded-[2.5rem] p-8 text-white shadow-2xl shadow-slate-200 dark:shadow-none relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-3xl rounded-full -mr-16 -mt-16" />
                 <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-400 mb-6 flex items-center gap-2">
                    <ShieldCheck size={12} /> Lifecycle Status
@@ -429,7 +409,7 @@ function NewPurchaseContent() {
                 <div className="mt-8 pt-6 border-t border-white/10 text-center">
                    <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em]">Accounting Ready v2.0</p>
                 </div>
-             </div>
+             </div> */}
           </div>
         </div>
       {showPreview && (

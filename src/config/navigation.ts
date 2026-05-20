@@ -179,7 +179,7 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         roles: SUPER_ONLY,
         children: [
           { label: "View All Orders", href: "/purchases/orders" },
-          { label: "Create New PO", href: "/purchases/new" },
+          { label: "Create New Purchase Order", href: "/purchases/new" },
         ]
       },
       {
