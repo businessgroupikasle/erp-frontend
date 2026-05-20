@@ -16,6 +16,7 @@ import { ITEM_CATEGORIES, UNITS } from "@/lib/constants";
 import { clsx } from "clsx";
 import { useAuth } from "@/context/AuthContext";
 import Fuse from "fuse.js";
+import { toast } from "react-hot-toast";
 
 export default function AddItemPage() {
   const router = useRouter();
@@ -316,6 +317,12 @@ export default function AddItemPage() {
   const handleSave = async () => {
     if (!name) {
       setError("Please provide an Item Name.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    if (category === "FINISHED_GOOD" && (!prices.customerPrice || prices.customerPrice <= 0)) {
+      toast.error("Please configure a valid Customer Retail selling price before launching the item master.");
+      setError("Please configure a valid Customer Retail selling price before launching the item master.");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }

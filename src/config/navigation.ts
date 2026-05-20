@@ -25,6 +25,8 @@ import {
   Calculator,
   Receipt,
   FileClock,
+  Wallet,
+  FilePlus2,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -123,6 +125,20 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         roles: SUPER_ONLY,
         isNew: true,
       },
+      {
+        icon: Wallet,
+        label: "Payment-In",
+        href: "/sales/payment-in",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: FilePlus2,
+        label: "Proforma Invoice",
+        href: "/sales/proforma-invoice",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
     ],
   },
   {
@@ -155,12 +171,6 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
   {
     title: "INVENTORY",
     items: [
-      {
-        icon: Package,
-        label: "Global Products",
-        href: "/products",
-        roles: SUPER_ONLY,
-      },
       {
         icon: Building2,
         label: "Warehouses Hub",

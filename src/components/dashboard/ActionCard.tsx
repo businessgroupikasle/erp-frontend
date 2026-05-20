@@ -34,6 +34,7 @@ export default function ActionCard({
       </div>
 
       <div className="relative aspect-[16/10] bg-[#F9F7F9] dark:bg-slate-900 rounded-xl overflow-hidden border border-[#F0EAF0] dark:border-slate-800 mb-6 group-hover:scale-[1.02] transition-transform">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img 
           src={image} 
           alt={title} 

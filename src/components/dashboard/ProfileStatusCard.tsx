@@ -31,6 +31,7 @@ export default function ProfileStatusCard() {
       </div>
 
       <div className="w-full md:w-80 aspect-[4/3] relative rounded-2xl overflow-hidden border border-[#F0EAF0] dark:border-slate-800 shadow-2xl shadow-purple-200/20">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img 
           src="/Complete Your Profile.webp" 
           alt="Profile Preview" 

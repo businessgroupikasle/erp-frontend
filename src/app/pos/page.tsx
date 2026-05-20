@@ -93,21 +93,29 @@ export default function POSPage() {
     productsApi.getAll({ take: 200, franchiseId })
       .then((res) => {
         const data = res.data?.data || res.data || [];
-        const mapped = data.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          price: p.basePrice || p.price || 0,
-          emoji: p.emoji || "🍽️",
-          category: p.category || p.categoryName || "Other",
-          stock: p.currentStock !== undefined ? p.currentStock : (p.stock ?? null),
-          inventoryFranchiseId: p.inventoryFranchiseId,
-          taxPercent:
-            typeof p.taxPercent === "number" ? p.taxPercent
-              : typeof p.gstRate === "number" ? p.gstRate
-                : typeof p.tax === "number" ? p.tax
-                  : typeof p.gst === "number" ? p.gst
-                    : 0,
-        }));
+        const mapped = data.map((p: any) => {
+          const sellingPrice = (typeof p.inventoryBasePrice === "number")
+            ? p.inventoryBasePrice
+            : p.basePrice || p.price || 0;
+          
+          return {
+            id: p.id,
+            name: p.name,
+            price: sellingPrice,
+            costPrice: p.inventoryCostPrice || 0,
+            hasNoSellingPrice: sellingPrice <= 0,
+            emoji: p.emoji || "🍽️",
+            category: p.category || p.categoryName || "Other",
+            stock: p.currentStock !== undefined ? p.currentStock : (p.stock ?? null),
+            inventoryFranchiseId: p.inventoryFranchiseId,
+            taxPercent:
+              typeof p.taxPercent === "number" ? p.taxPercent
+                : typeof p.gstRate === "number" ? p.gstRate
+                  : typeof p.tax === "number" ? p.tax
+                    : typeof p.gst === "number" ? p.gst
+                      : 0,
+          };
+        });
         setProducts(mapped);
         const cats = Array.from(new Set(mapped.map((p: any) => p.category).filter(Boolean))) as string[];
         setCategories(["All", ...cats]);
@@ -195,6 +203,11 @@ export default function POSPage() {
   useEffect(() => { cartEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [cart]);
 
   const addToCart = (item: any) => {
+    if (item.hasNoSellingPrice) {
+      toast.error(`"${item.name}" does not have a valid selling price. Please update Customer Retail price in inventory.`);
+      return;
+    }
+
     const existing = cart.find(i => i.id === item.id);
     const currentQty = existing?.quantity || 0;
 
@@ -771,10 +784,19 @@ export default function POSPage() {
                 const qtyInCart = cart.find(i => i.id === item.id)?.quantity || 0;
                 const isOutOfStock = item.stock !== null && item.stock <= 0;
                 return (
-                  <div key={item.id} onClick={() => !isOutOfStock && addToCart(item)}
+                  <div key={item.id} 
+                    onClick={() => {
+                      if (isOutOfStock) return;
+                      if (item.hasNoSellingPrice) {
+                        toast.error(`"${item.name}" does not have a valid selling price. Please update it in Inventory.`);
+                        return;
+                      }
+                      addToCart(item);
+                    }}
                     className={clsx("group relative bg-white dark:bg-[#12141c] rounded-2xl p-3 sm:p-4 border transition-all duration-200 cursor-pointer select-none flex flex-col justify-between min-h-[140px]",
                       qtyInCart > 0 ? "border-orange-500 shadow-lg shadow-orange-500/10 ring-1 ring-orange-500 pb-14 sm:pb-16"
-                        : "border-slate-200/60 dark:border-white/5 hover:border-orange-300 dark:hover:border-orange-500/30 hover:shadow-md",
+                        : item.hasNoSellingPrice ? "border-rose-200/60 dark:border-rose-950/20 bg-rose-50/10 dark:bg-rose-950/5 hover:border-rose-300 dark:hover:border-rose-900/30"
+                          : "border-slate-200/60 dark:border-white/5 hover:border-orange-300 dark:hover:border-orange-500/30 hover:shadow-md",
                       isOutOfStock && "opacity-50 grayscale cursor-not-allowed")}>
                     
                     {/* Header Row: Emoji & Status Badge (Non-Absolute to prevent overlap) */}
@@ -789,11 +811,18 @@ export default function POSPage() {
                         </span>
                       </div>
                     </div>
-
+ 
                     {/* Product Information */}
                     <div className="space-y-1 flex-1">
                       <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-tight line-clamp-2 group-hover:text-orange-500 transition-colors">{item.name}</h4>
-                      <p className="text-sm font-black text-orange-500">₹{item.price.toLocaleString()}</p>
+                      {item.hasNoSellingPrice ? (
+                        <div className="mt-1 flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 w-fit">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                          <span className="text-[9px] font-black uppercase text-rose-600 dark:text-rose-400 tracking-tight">Update Selling Price</span>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-black text-orange-500">₹{item.price.toLocaleString()}</p>
+                      )}
                       {item.taxPercent > 0 && (
                         <p className="text-[9px] font-bold text-slate-400 uppercase">GST {item.taxPercent}%</p>
                       )}

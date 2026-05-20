@@ -10,7 +10,7 @@ import {
   CheckCircle2, FileText, Download,
   Phone, Mail, ShieldCheck, Zap, ArrowRight,
   Package, Truck, Receipt, LayoutDashboard, Settings2,
-  AlertTriangle, Star, Calendar, FileCheck
+  AlertTriangle, Star, Calendar, FileCheck, Loader2
 } from "lucide-react";
 import { clsx } from "clsx";
 import api, { vendorsApi, accountsApi } from "@/lib/api";
@@ -60,6 +60,42 @@ export default function VendorsClient() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [fetchingGst, setFetchingGst] = useState(false);
+
+  // Auto-fetch GST details from Next.js server-side route
+  const fetchGstDetails = async (gstin: string) => {
+    const cleanGst = gstin.trim().toUpperCase();
+    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(cleanGst)) {
+      return;
+    }
+
+    setFetchingGst(true);
+    try {
+      const res = await fetch(`/api/gst-verify/${cleanGst}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to fetch GST details");
+      }
+      
+      const data = await res.json();
+      if (data.success) {
+        setForm((prev) => ({
+          ...prev,
+          name: data.legalName || prev.name,
+          address: data.address || prev.address
+        }));
+        showToast(
+          `Successfully auto-filled details for "${data.legalName}"${data.mocked ? " (Demo Mode)" : ""}`,
+          "success"
+        );
+      }
+    } catch (err: any) {
+      console.error("Auto-fetch GST details failed:", err);
+      showToast(err.message || "Could not auto-fetch GST details. Please enter manually.", "warning");
+    } finally {
+      setFetchingGst(false);
+    }
+  };
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ 
     amount: "", 
@@ -733,7 +769,39 @@ export default function VendorsClient() {
               <div className="space-y-1 col-span-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Vendor Name *</label><input placeholder="Enter name..." value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" /></div>
               <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Contact Number</label><input placeholder="10 digits..." value={form.contact} maxLength={10} onChange={(e) => setForm({...form, contact: e.target.value.replace(/\D/g, "")})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" /></div>
               <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label><input placeholder="optional@gmail.com" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">GST Number</label><input placeholder="e.g. 29ABCDE1234F1Z5" value={form.gstNumber} onChange={(e) => setForm({...form, gstNumber: e.target.value.toUpperCase()})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20 tracking-wider" /></div>
+              <div className="space-y-1">
+                <div className="flex justify-between items-center ml-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">GST Number</label>
+                  {fetchingGst && (
+                    <span className="text-[8px] font-black text-orange-500 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Loader2 size={10} className="animate-spin" /> Fetching...
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <input 
+                    placeholder="e.g. 29ABCDE1234F1Z5" 
+                    value={form.gstNumber} 
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase().trim();
+                      setForm({...form, gstNumber: val});
+                      if (val.length === 15) {
+                        fetchGstDetails(val);
+                      }
+                    }} 
+                    className="w-full pl-4 pr-16 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20 tracking-wider font-mono" 
+                  />
+                  {form.gstNumber.length === 15 && !fetchingGst && (
+                    <button
+                      type="button"
+                      onClick={() => fetchGstDetails(form.gstNumber)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-600 bg-orange-50 dark:bg-orange-950/40 px-2.5 py-1 rounded-lg border border-orange-100 dark:border-orange-900 transition-all active:scale-95"
+                    >
+                      Fetch
+                    </button>
+                  )}
+                </div>
+              </div>
               <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Business Category</label><input placeholder="e.g. Spices, Dairy..." value={form.category} onChange={(e) => setForm({...form, category: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" /></div>
               <div className="space-y-1 col-span-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Address</label><textarea placeholder="Address..." value={form.address} rows={2} onChange={(e) => setForm({...form, address: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20 resize-none" /></div>
             </div>
