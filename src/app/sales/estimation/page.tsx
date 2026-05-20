@@ -663,7 +663,7 @@ export default function EstimationsPage() {
                               setSavingParty(false);
                             }
                           }}
-                          className="px-6 py-2 bg-[#2196f3] text-white rounded-md text-sm font-semibold hover:bg-blue-600 shadow-md"
+                          className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-600 shadow-md"
                         >
                           {savingParty ? "Saving..." : "Save"}
                         </button>
@@ -718,7 +718,7 @@ export default function EstimationsPage() {
                 <span className="text-gray-800 font-semibold w-32 text-left">Auto</span>
               </div>
               <div className="flex items-center justify-end gap-4">
-                <span className="text-gray-500 w-24 text-right">Invoice Date</span>
+                <span className="text-gray-500 w-24 text-right">Valid Until</span>
                 <div className="relative w-32" ref={calendarRef}>
                   <button
                     onClick={() => setShowCalendar(v => !v)}
@@ -1018,7 +1018,7 @@ export default function EstimationsPage() {
                      />
                   </div>
                   <div className="px-4 py-3 bg-gray-50 flex justify-end">
-                     <button onClick={() => { setShowTerms(false); setShowDesc(false); }} className="bg-[#2196f3] text-white px-6 py-1.5 rounded text-sm font-semibold">Done</button>
+                     <button onClick={() => { setShowTerms(false); setShowDesc(false); }} className="bg-blue-600 text-white px-6 py-1.5 rounded text-sm font-semibold">Done</button>
                   </div>
                </div>
             </div>
@@ -1027,8 +1027,7 @@ export default function EstimationsPage() {
         </div>
 
         {/* ── Fixed Bottom Actions ── */}
-        <div className="fixed bottom-0 right-0 left-64 bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
-          <div className="text-[10px] text-gray-400 font-medium">Activate Windows<br/>Go to Settings to activate Windows.</div>
+        <div className="fixed bottom-0 right-0 left-64 bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-end shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
           <div className="flex gap-3">
              <button
                onClick={() => handleSave(true)}
@@ -1040,7 +1039,7 @@ export default function EstimationsPage() {
              <div className="relative" ref={shareDropRef}>
                 <button
                   onClick={() => setShowShareDrop(v => !v)}
-                  className="flex items-center justify-center gap-1.5 px-6 py-2 text-sm font-bold text-[#2196f3] bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+                  className="flex items-center justify-center gap-1.5 px-6 py-2 text-sm font-bold text-blue-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
                 >
                   <Share2 size={16} /> Share <ChevronDown size={14} />
                 </button>
@@ -1055,7 +1054,7 @@ export default function EstimationsPage() {
              <button
                onClick={() => handleSave(false)}
                disabled={saving}
-               className="flex items-center justify-center px-8 py-2 text-sm font-bold text-white bg-[#2196f3] rounded-md hover:bg-blue-600 shadow-md"
+               className="flex items-center justify-center px-8 py-2 text-sm font-bold text-white bg-blue-600 rounded-md hover:bg-blue-600 shadow-md"
              >
                {saving ? "Saving..." : "Save"}
              </button>
@@ -1113,7 +1112,7 @@ export default function EstimationsPage() {
         </button>
         <button
           onClick={openCreate}
-          className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-4 py-1.5 rounded shadow-sm"
+          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-1.5 rounded shadow-sm"
         >
           <Plus size={13} strokeWidth={2.5} />
           Add Estimate
@@ -1123,7 +1122,7 @@ export default function EstimationsPage() {
       {/* ── Summary card ── */}
       <div className="px-4 py-3 border-b border-gray-100 bg-[#fafafa]">
         <div className="inline-flex flex-col bg-white border border-gray-200 rounded-lg px-4 py-2.5 min-w-[200px] shadow-sm">
-          <span className="text-[11px] text-orange-500 font-semibold">Total Estimations Amount</span>
+          <span className="text-[11px] text-blue-600 font-semibold">Total Estimations Amount</span>
           <span className="text-xl font-bold text-gray-900 mt-0.5">₹ {totalQuotations.toLocaleString("en-IN")}</span>
           <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
             <span>Converted <span className="font-semibold text-gray-700">₹ {totalConverted.toLocaleString("en-IN")}</span></span>
@@ -1224,11 +1223,6 @@ export default function EstimationsPage() {
         )}
       </div>
       
-      {/* Absolute Bottom Right Watermark */}
-      <div className="absolute bottom-4 right-6 text-right">
-         <div className="text-[14px] text-gray-400 font-semibold mb-0.5">Activate Windows</div>
-         <div className="text-[10px] text-gray-400 font-medium">Go to Settings to activate Windows.</div>
-      </div>
     </div>
   );
 }

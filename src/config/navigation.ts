@@ -126,6 +126,13 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         isNew: true,
       },
       {
+        icon: ClipboardList,
+        label: "Sales Order",
+        href: "/sales/orders",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
         icon: Wallet,
         label: "Payment-In",
         href: "/sales/payment-in",
@@ -136,6 +143,20 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         icon: FilePlus2,
         label: "Proforma Invoice",
         href: "/sales/proforma-invoice",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: Undo2,
+        label: "Sales Return / Credit Note",
+        href: "/sales/returns",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: ShoppingCart,
+        label: "HQ POS",
+        href: "/pos",
         roles: SUPER_ONLY,
         isNew: true,
       },
@@ -250,23 +271,7 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       },
     ],
   },
-  {
-    title: "POS",
-    items: [
-      {
-        icon: ShoppingCart,
-        label: "HQ POS",
-        href: "/pos",
-        roles: SUPER_ONLY,
-      },
-      {
-        icon: FileText,
-        label: "EOD Settlement",
-        href: "/pos/settlement",
-        roles: SUPER_ONLY,
-      },
-    ],
-  },
+
   {
     title: "SYSTEM",
     items: [

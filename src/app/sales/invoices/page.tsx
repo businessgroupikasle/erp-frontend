@@ -1173,13 +1173,13 @@ export default function SalesInvoicesPage() {
             <div className="flex">
               <button
                 onClick={() => showToast("Share feature coming soon", "info")}
-                className="px-4 py-1.5 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-l border-r border-orange-400"
+                className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-l border-r border-blue-500"
               >
                 Share
               </button>
               <button
                 onClick={() => setShowShareDrop(v => !v)}
-                className="px-2 py-1.5 text-sm text-white bg-orange-500 hover:bg-orange-600 rounded-r"
+                className="px-2 py-1.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-r"
               >
                 <ChevronDown size={14} />
               </button>
@@ -1206,7 +1206,7 @@ export default function SalesInvoicesPage() {
           <button
             onClick={() => handleSave(false)}
             disabled={saving}
-            className="px-6 py-1.5 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded disabled:opacity-60"
+            className="px-6 py-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save"}
           </button>
@@ -1489,7 +1489,7 @@ export default function SalesInvoicesPage() {
         </button>
         <button
           onClick={openCreate}
-          className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-4 py-1.5 rounded shadow-sm"
+          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-1.5 rounded shadow-sm"
         >
           <Plus size={13} strokeWidth={2.5} />
           Add Sale
@@ -1499,7 +1499,7 @@ export default function SalesInvoicesPage() {
       {/* ── Summary card ── */}
       <div className="px-4 py-3 border-b border-gray-100 bg-[#fafafa]">
         <div className="inline-flex flex-col bg-white border border-gray-200 rounded-lg px-4 py-2.5 min-w-[200px] shadow-sm">
-          <span className="text-[11px] text-orange-500 font-semibold">Total Sales Amount</span>
+          <span className="text-[11px] text-blue-600 font-semibold">Total Sales Amount</span>
           <span className="text-xl font-bold text-gray-900 mt-0.5">₹ {totalAmt.toLocaleString("en-IN")}</span>
           <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
             <span>Received <span className="font-semibold text-gray-700">₹ {receivedAmt.toLocaleString("en-IN")}</span></span>

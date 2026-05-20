@@ -252,7 +252,7 @@ export default function ProformaInvoicePage() {
 
   const handleSave = async (andNew = false, isDraft = false) => {
     if (!selectedCustomer && !isDraft) { showToast("Please select a party", "error"); return; }
-    const validItems = items.filter(i => i.productId && i.qty > 0 && i.rate > 0);
+    const validItems = items.filter(i => (i.productId || i.itemSearch.trim()) && i.qty > 0 && i.rate > 0);
     if (validItems.length === 0 && !isDraft) { showToast("Add at least one item with price", "error"); return; }
     
     if (isDraft && !selectedCustomer && validItems.length === 0) {
@@ -304,15 +304,18 @@ export default function ProformaInvoicePage() {
     try {
       await api.post("/api/sales/quotations", {
         customerId: selectedCustomer.id,
-        quotationDate: proformaDate,
-        stateOfSupply: stateOfSupply || undefined,
-        type: "PROFORMA",
+        customerName: selectedCustomer.name,
+        validUntil: proformaDate,
+        termsConditions: termsText || undefined,
+        notes: description || undefined,
         items: validItems.map(i => ({
-          productId: i.productId, qty: i.qty, unit: i.unit, rate: i.rate, gst: i.taxPct, discount: i.discountPct
+          productId: i.productId || undefined,
+          productName: i.itemSearch,
+          quantity: i.qty,
+          unit: i.unit,
+          rate: i.rate,
+          taxPercent: i.taxPct,
         })),
-        termsAndConditions: termsText || undefined,
-        description: description || undefined,
-        totalAmount: finalTotal,
       });
 
       // If we saved a proforma that was previously a draft, remove the draft
