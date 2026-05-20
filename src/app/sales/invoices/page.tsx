@@ -7,6 +7,8 @@ import {
   AlignLeft, Image, FileText, ArrowLeft
 } from "lucide-react";
 import { clsx } from "clsx";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { customersApi, productsFullApi } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import api from "@/lib/api/base";
@@ -188,6 +190,9 @@ function MiniCalendar({ value, onChange, onClose }: {
 
 export default function SalesInvoicesPage() {
   const { showToast } = useToast();
+  const router = useRouter();
+  const { user } = useAuth();
+  const isFranchiseUser = user?.role?.toUpperCase() === "FRANCHISE_ADMIN";
 
   // shared
   const [view, setView] = useState<"list" | "create">("list");
@@ -244,12 +249,21 @@ export default function SalesInvoicesPage() {
 
   // Add Party modal state
   const [showAddParty, setShowAddParty] = useState(false);
-  const [partyTab, setPartyTab] = useState<"GST" | "CREDIT" | "ADDITIONAL">("GST");
+  const [partyTab, setPartyTab] = useState<"GST" | "CREDIT">("GST");
   const [newParty, setNewParty] = useState({
     name: "", phone: "", email: "", gstin: "", gstType: "Unregistered/Consumer",
-    state: "", billingAddress: "", shippingAddress: "", openingBalance: "", creditLimit: ""
+    state: "", city: "", pincode: "", billingAddress: "", shippingAddress: "", openingBalance: "", creditLimit: ""
   });
   const [savingParty, setSavingParty] = useState(false);
+  const [fetchingGst, setFetchingGst] = useState(false);
+
+  // Add Item modal state
+  const [showAddItem, setShowAddItem] = useState(false);
+  const [addingItemIdx, setAddingItemIdx] = useState<number | null>(null);
+  const [newItem, setNewItem] = useState({
+    name: "", sku: "", basePrice: "", taxPercent: 5, description: ""
+  });
+  const [savingItem, setSavingItem] = useState(false);
 
   // Item dropdown fixed position
   const [itemDropRect, setItemDropRect] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -261,6 +275,85 @@ export default function SalesInvoicesPage() {
   const customerDropRef = useRef<HTMLDivElement>(null);
   const shareDropRef = useRef<HTMLDivElement>(null);
   const priceDropRef = useRef<HTMLDivElement>(null);
+
+  const fetchGstDetails = async (gstin: string) => {
+    const cleanGst = gstin.trim().toUpperCase();
+    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(cleanGst)) {
+      return;
+    }
+
+    setFetchingGst(true);
+    try {
+      const res = await fetch(`/api/gst-verify/${cleanGst}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to fetch GST details");
+      }
+      
+      const data = await res.json();
+      if (data.success) {
+        setNewParty((prev) => ({
+          ...prev,
+          name: data.legalName || prev.name,
+          billingAddress: data.address || prev.billingAddress,
+          state: data.state || prev.state,
+          city: data.city || prev.city,
+          pincode: data.pinCode || prev.pincode
+        }));
+        showToast(
+          `Successfully auto-filled details for "${data.legalName}"${data.mocked ? " (Demo Mode)" : ""}`,
+          "success"
+        );
+      }
+    } catch (err: any) {
+      console.error("Auto-fetch GST details failed:", err);
+      showToast(err.message || "Could not auto-fetch GST details. Please enter manually.", "warning");
+    } finally {
+      setFetchingGst(false);
+    }
+  };
+
+  const handleSaveItem = async () => {
+    if (!newItem.name.trim()) {
+      showToast("Item Name is required", "error");
+      return;
+    }
+    const priceNum = Number(newItem.basePrice);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      showToast("Please enter a valid Price/Unit", "error");
+      return;
+    }
+
+    setSavingItem(true);
+    try {
+      const res = await productsFullApi.create({
+        name: newItem.name.trim(),
+        sku: newItem.sku.trim() || undefined,
+        basePrice: priceNum,
+        taxPercent: newItem.taxPercent,
+        description: newItem.description.trim() || undefined,
+      });
+      const createdProd = (res as any).data;
+      showToast("Item created successfully", "success");
+
+      // Update local products list
+      setProducts(prev => [...prev, createdProd].sort((a, b) => a.name.localeCompare(b.name)));
+
+      // If we are currently editing a row, auto-select it!
+      if (addingItemIdx !== null) {
+        selectProduct(addingItemIdx, createdProd);
+      }
+
+      // Close modal & reset
+      setShowAddItem(false);
+      setNewItem({ name: "", sku: "", basePrice: "", taxPercent: 5, description: "" });
+      setAddingItemIdx(null);
+    } catch (e: any) {
+      showToast(e?.response?.data?.error || "Failed to create item", "error");
+    } finally {
+      setSavingItem(false);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -787,23 +880,38 @@ export default function SalesInvoicesPage() {
                             setItemDropRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: 320 });
                           }}
                         />
-                        {openItemDrop === item.id && filtProd.length > 0 && itemDropRect && (
+                        {openItemDrop === item.id && itemDropRect && (
                           <div
-                            className="bg-white border border-gray-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto"
+                            className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden flex flex-col"
                             style={{ position: "fixed", top: itemDropRect.top + 4, left: itemDropRect.left, width: itemDropRect.width, zIndex: 9999 }}
                           >
-                            {filtProd.map(p => (
-                              <button
-                                key={p.id}
-                                className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-orange-50 text-left border-b border-gray-50 last:border-0"
-                                onMouseDown={() => selectProduct(idx, p)}
-                              >
-                                <div>
-                                  <div className="text-sm font-medium text-gray-800">{p.name}</div>
-                                  <div className="text-xs text-gray-400">₹{p.basePrice || p.price || 0}</div>
-                                </div>
-                              </button>
-                            ))}
+                            <button
+                              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100 font-semibold text-left transition-colors"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                router.push("/inventory/stock/add");
+                              }}
+                            >
+                              <Plus size={16} /> Add Item
+                            </button>
+                            <div className="max-h-48 overflow-y-auto">
+                              {filtProd.length === 0 ? (
+                                <div className="px-3 py-4 text-xs text-gray-400 text-center">No matching products</div>
+                              ) : (
+                                filtProd.map(p => (
+                                  <button
+                                    key={p.id}
+                                    className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-orange-50 text-left border-b border-gray-50 last:border-0"
+                                    onMouseDown={() => selectProduct(idx, p)}
+                                  >
+                                    <div>
+                                      <div className="text-sm font-medium text-gray-800">{p.name}</div>
+                                      <div className="text-xs text-gray-400">₹{p.basePrice || p.price || 0}</div>
+                                    </div>
+                                  </button>
+                                ))
+                              )}
+                            </div>
                           </div>
                         )}
                       </td>
@@ -1087,11 +1195,17 @@ export default function SalesInvoicesPage() {
       {/* ── Add Party Modal ── */}
       {showAddParty && (
         <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-[480px] overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-[650px] h-[530px] overflow-hidden flex flex-col max-h-[90vh]">
             {/* Header */}
             <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-[#f8fafc]">
               <h2 className="text-[17px] font-bold text-[#1e3a8a]">Add Party</h2>
-              <button onClick={() => setShowAddParty(false)} className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={() => {
+                  setShowAddParty(false);
+                  setNewParty({ name: "", phone: "", email: "", gstin: "", gstType: "Unregistered/Consumer", state: "", city: "", pincode: "", billingAddress: "", shippingAddress: "", openingBalance: "", creditLimit: "" });
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -1112,13 +1226,33 @@ export default function SalesInvoicesPage() {
                   </div>
                 </div>
                 <div>
-                  <input
-                    type="text"
-                    placeholder="GSTIN"
-                    value={newParty.gstin}
-                    onChange={e => setNewParty(p => ({ ...p, gstin: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-gray-400 bg-white placeholder-gray-400"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="GSTIN"
+                      value={newParty.gstin}
+                      onChange={e => {
+                        const val = e.target.value.toUpperCase().trim();
+                        setNewParty(p => ({ ...p, gstin: val }));
+                        if (val.length === 15) fetchGstDetails(val);
+                      }}
+                      className="w-full pl-3 pr-16 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:border-gray-400 bg-white placeholder-gray-400 font-mono"
+                    />
+                    {newParty.gstin.length === 15 && !fetchingGst && (
+                      <button
+                        type="button"
+                        onClick={() => fetchGstDetails(newParty.gstin)}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200 hover:bg-orange-100 transition-colors"
+                      >
+                        FETCH
+                      </button>
+                    )}
+                    {fetchingGst && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-orange-600 animate-pulse">
+                        Fetching...
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <input
@@ -1151,16 +1285,6 @@ export default function SalesInvoicesPage() {
                 >
                   Credit &amp; Balance
                 </button>
-                <button
-                  onClick={() => setPartyTab("ADDITIONAL")}
-                  className={clsx(
-                    "flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-bold border-b-2 transition-colors",
-                    partyTab === "ADDITIONAL" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-400 hover:text-gray-600"
-                  )}
-                >
-                  <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded leading-none">New</span>
-                  Additional Fields
-                </button>
               </div>
 
               {/* Tab Content */}
@@ -1187,6 +1311,22 @@ export default function SalesInvoicesPage() {
                       <option value="">State</option>
                       {INDIAN_STATES.map(st => <option key={st} value={st}>{st}</option>)}
                     </select>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="City"
+                        value={newParty.city}
+                        onChange={e => setNewParty(p => ({ ...p, city: e.target.value }))}
+                        className="w-1/2 border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-gray-400 bg-white placeholder-gray-400"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Pincode"
+                        value={newParty.pincode}
+                        onChange={e => setNewParty(p => ({ ...p, pincode: e.target.value }))}
+                        className="w-1/2 border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-gray-400 bg-white placeholder-gray-400"
+                      />
+                    </div>
                     <input
                       type="email"
                       placeholder="Email ID"
@@ -1201,15 +1341,8 @@ export default function SalesInvoicesPage() {
                       placeholder="Billing Address"
                       value={newParty.billingAddress}
                       onChange={e => setNewParty(p => ({ ...p, billingAddress: e.target.value }))}
-                      className="w-full h-24 border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-gray-400 bg-white placeholder-gray-400 resize-none"
+                      className="w-full h-36 border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-gray-400 bg-white placeholder-gray-400 resize-none"
                     />
-                    <div className="text-right">
-                      <button className="text-blue-500 text-[11px] font-semibold hover:underline">Show Detailed Address</button>
-                    </div>
-                    <div className="mt-2">
-                      <label className="text-[11px] font-bold text-gray-700 block mb-1">Shipping Address</label>
-                      <button className="text-blue-500 text-[11px] font-semibold hover:underline">+ Enable Shipping Address</button>
-                    </div>
                   </div>
                 </div>
               )}
@@ -1238,25 +1371,10 @@ export default function SalesInvoicesPage() {
                   </div>
                 </div>
               )}
-
-              {partyTab === "ADDITIONAL" && (
-                <div className="text-sm text-gray-500 italic py-4 text-center">
-                  Additional custom fields will appear here.
-                </div>
-              )}
             </div>
 
             {/* Footer Buttons */}
             <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-end gap-3 bg-white">
-              <button
-                className="px-6 py-2 border-2 border-blue-500 text-blue-600 rounded-lg font-bold text-sm hover:bg-blue-50 transition-colors"
-                onClick={() => {
-                  // If we need to "Save & New", we can call API and leave modal open.
-                  // For now, simple behavior:
-                }}
-              >
-                Save &amp; New
-              </button>
               <button
                 disabled={!newParty.name.trim() || savingParty}
                 className="px-8 py-2 bg-blue-500 text-white rounded-lg font-bold text-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
@@ -1271,13 +1389,15 @@ export default function SalesInvoicesPage() {
                       gstin: newParty.gstin.trim() || undefined,
                       gstType: newParty.gstType,
                       state: newParty.state || undefined,
+                      city: newParty.city || undefined,
+                      pincode: newParty.pincode || undefined,
                       billingAddress: newParty.billingAddress.trim() || undefined
                     });
                     const created = (res as any).data;
                     setCustomers(prev => [created, ...prev]);
                     selectCustomer(created);
                     setShowAddParty(false);
-                    setNewParty({ name: "", phone: "", email: "", gstin: "", gstType: "Unregistered/Consumer", state: "", billingAddress: "", shippingAddress: "", openingBalance: "", creditLimit: "" });
+                    setNewParty({ name: "", phone: "", email: "", gstin: "", gstType: "Unregistered/Consumer", state: "", city: "", pincode: "", billingAddress: "", shippingAddress: "", openingBalance: "", creditLimit: "" });
                     showToast("Party added successfully", "success");
                   } catch {
                     showToast("Failed to add party", "error");

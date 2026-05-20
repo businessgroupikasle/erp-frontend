@@ -544,7 +544,6 @@ export default function EstimationsPage() {
                       </div>
                       
                       <div className="border-t border-gray-100 p-4 flex justify-end gap-3 bg-white">
-                        <button className="px-4 py-2 border border-blue-500 text-blue-600 rounded-md text-sm font-semibold hover:bg-blue-50">Save & New</button>
                         <button 
                           disabled={!newParty.name.trim() || savingParty}
                           onClick={async () => {
