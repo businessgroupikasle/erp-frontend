@@ -36,11 +36,21 @@ const UNITS = [
 ];
 
 const TAX_OPTIONS = [
-  { label: "None (0%)", value: 0 },
-  { label: "GST @ 5%", value: 5 },
-  { label: "GST @ 12%", value: 12 },
-  { label: "GST @ 18%", value: 18 },
-  { label: "GST @ 28%", value: 28 },
+  { label: "NONE", value: 0 },
+  { label: "IGST@0%", value: 0 },
+  { label: "GST@0%", value: 0 },
+  { label: "IGST@0.25%", value: 0.25 },
+  { label: "GST@0.25%", value: 0.25 },
+  { label: "IGST@3%", value: 3 },
+  { label: "GST@3%", value: 3 },
+  { label: "IGST@5%", value: 5 },
+  { label: "GST@5%", value: 5 },
+  { label: "IGST@12%", value: 12 },
+  { label: "GST@12%", value: 12 },
+  { label: "IGST@18%", value: 18 },
+  { label: "GST@18%", value: 18 },
+  { label: "IGST@28%", value: 28 },
+  { label: "GST@28%", value: 28 },
 ];
 
 const INDIAN_STATES = [
@@ -71,6 +81,7 @@ interface LineItem {
   rate: number;
   discountPct: number;
   taxPct: number;
+  taxLabel?: string;
 }
 
 function makeItem(): LineItem {
@@ -83,6 +94,7 @@ function makeItem(): LineItem {
     rate: 0,
     discountPct: 0,
     taxPct: 0,
+    taxLabel: "NONE",
   };
 }
 
@@ -235,6 +247,7 @@ export default function EstimationsPage() {
   const [showShareDrop, setShowShareDrop] = useState(false);
   const [saving, setSaving] = useState(false);
   const [converting, setConverting] = useState<string | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(null);
 
   // Add Party inline form
   const [showAddParty, setShowAddParty] = useState(false);
@@ -260,7 +273,21 @@ export default function EstimationsPage() {
         customersApi.getAll(),
         productsFullApi.getAll(),
       ]);
-      if (eRes.status === "fulfilled") setEstimations((eRes.value as any).data || []);
+      
+      let apiEstimations = eRes.status === "fulfilled" ? (eRes.value as any).data || [] : [];
+      
+      // Merge local drafts
+      try {
+        const draftsStr = localStorage.getItem("sale_estimations_drafts");
+        if (draftsStr) {
+          const drafts = JSON.parse(draftsStr);
+          apiEstimations = [...drafts, ...apiEstimations];
+        }
+      } catch (e) {
+        console.error("Error loading drafts", e);
+      }
+      
+      setEstimations(apiEstimations);
       if (cRes.status === "fulfilled") setCustomers((cRes.value as any).data || []);
       if (pRes.status === "fulfilled") setProducts((pRes.value as any).data || []);
     } finally {
@@ -297,6 +324,7 @@ export default function EstimationsPage() {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const openCreate = () => {
+    setDraftId(null);
     setSelectedCustomer(null);
     setCustomerSearch("");
     setCustomerPhone("");
@@ -309,6 +337,24 @@ export default function EstimationsPage() {
     setDescription("");
     setShowDesc(false);
     setRoundOffEnabled(true);
+    setView("create");
+  };
+
+  const loadDraft = (draft: any) => {
+    setDraftId(draft.id);
+    const raw = draft._rawState || {};
+    setSelectedCustomer(raw.selectedCustomer || null);
+    setCustomerSearch(raw.customerSearch || "");
+    setCustomerPhone(raw.customerPhone || "");
+    setInvoiceDate(raw.invoiceDate || new Date().toISOString().split("T")[0]);
+    setStateOfSupply(raw.stateOfSupply || "");
+    setItems(raw.items && raw.items.length > 0 ? raw.items : [makeItem(), makeItem()]);
+    setPriceMode(raw.priceMode || "without_tax");
+    setTermsText(raw.termsText || "");
+    setShowTerms(raw.showTerms || !!raw.termsText);
+    setDescription(raw.description || "");
+    setShowDesc(raw.showDesc || !!raw.description);
+    setRoundOffEnabled(raw.roundOffEnabled ?? true);
     setView("create");
   };
 
@@ -328,6 +374,7 @@ export default function EstimationsPage() {
         rate: p.basePrice || p.price || 0,
         unit: p.unit || "NONE",
         taxPct: p.taxPercent || 0,
+        taxLabel: TAX_OPTIONS.find(o => o.value === (p.taxPercent || 0))?.label || "NONE",
       } : it
     ));
     setOpenItemDrop(null);
@@ -353,6 +400,45 @@ export default function EstimationsPage() {
        return;
     }
 
+    const draftPayload = {
+      id: draftId || `draft_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      status: "DRAFT",
+      createdAt: new Date().toISOString(),
+      quotationNumber: "DRAFT",
+      customerName: selectedCustomer?.name || "Unknown Customer",
+      totalAmount: finalTotal,
+      _rawState: {
+        selectedCustomer,
+        customerSearch,
+        customerPhone,
+        invoiceDate,
+        stateOfSupply,
+        items,
+        priceMode,
+        termsText,
+        description,
+        roundOffEnabled
+      }
+    };
+
+    if (isDraft) {
+      try {
+        const draftsStr = localStorage.getItem("sale_estimations_drafts");
+        let drafts = draftsStr ? JSON.parse(draftsStr) : [];
+        if (draftId) {
+          drafts = drafts.filter((d: any) => d.id !== draftId);
+        }
+        drafts.unshift(draftPayload);
+        localStorage.setItem("sale_estimations_drafts", JSON.stringify(drafts));
+        showToast("Draft saved locally", "success");
+        fetchData();
+        setView("list");
+      } catch (e) {
+        console.error("Failed to save draft locally", e);
+      }
+      return;
+    }
+
     setSaving(true);
     try {
       const payload: any = {
@@ -360,7 +446,7 @@ export default function EstimationsPage() {
         customerName: selectedCustomer ? undefined : customerSearch,
         customerPhone,
         validUntil: invoiceDate,
-        status: isDraft ? "DRAFT" : "SENT",
+        status: "SENT",
         items: validItems.map(i => ({
           productId: i.productId || undefined,
           productName: i.itemSearch,
@@ -375,15 +461,26 @@ export default function EstimationsPage() {
       };
 
       await api.post("/api/sales/quotations", payload);
-      showToast(isDraft ? "Draft saved" : "Estimation saved successfully", "success");
+      
+      // If we saved an estimation that was previously a draft, remove the draft
+      if (draftId) {
+        try {
+          const draftsStr = localStorage.getItem("sale_estimations_drafts");
+          if (draftsStr) {
+            const drafts = JSON.parse(draftsStr);
+            const newDrafts = drafts.filter((d: any) => d.id !== draftId);
+            localStorage.setItem("sale_estimations_drafts", JSON.stringify(newDrafts));
+          }
+        } catch (e) {
+          console.error("Failed to clear draft", e);
+        }
+      }
+
+      showToast("Estimation saved successfully", "success");
       fetchData();
       setView("list");
     } catch (e: any) {
-      if (isDraft) {
-        setView("list");
-      } else {
-        showToast(e?.response?.data?.error || "Failed to save estimation", "error");
-      }
+      showToast(e?.response?.data?.error || "Failed to save estimation", "error");
     } finally {
       setSaving(false);
     }
@@ -791,12 +888,19 @@ export default function EstimationsPage() {
                         <div className="flex h-full">
                           <div className="flex-1 border-r border-gray-100 p-1 relative">
                             <select
-                              value={item.taxPct}
-                              onChange={e => updateItem(idx, "taxPct", Number(e.target.value))}
+                              value={item.taxLabel || "NONE"}
+                              onChange={e => {
+                                const label = e.target.value;
+                                const option = TAX_OPTIONS.find(o => o.label === label);
+                                const val = option ? option.value : 0;
+                                updateItem(idx, "taxLabel", label);
+                                updateItem(idx, "taxPct", val);
+                              }}
                               className="w-full text-xs font-semibold text-gray-800 outline-none bg-transparent appearance-none h-full pl-1"
                             >
-                              <option value="0">Select</option>
-                              {TAX_OPTIONS.filter(o=>o.value > 0).map(o => <option key={o.value} value={o.value}>{o.value}</option>)}
+                              {TAX_OPTIONS.map((o, index) => (
+                                <option key={index} value={o.label}>{o.label}</option>
+                              ))}
                             </select>
                             <ChevronDown size={10} className="text-gray-800 pointer-events-none absolute right-1 top-2.5" />
                           </div>
@@ -926,6 +1030,13 @@ export default function EstimationsPage() {
         <div className="fixed bottom-0 right-0 left-64 bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
           <div className="text-[10px] text-gray-400 font-medium">Activate Windows<br/>Go to Settings to activate Windows.</div>
           <div className="flex gap-3">
+             <button
+               onClick={() => handleSave(true)}
+               disabled={saving}
+               className="px-6 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-md border border-gray-200"
+             >
+               Save Draft
+             </button>
              <div className="relative" ref={shareDropRef}>
                 <button
                   onClick={() => setShowShareDrop(v => !v)}
@@ -1061,7 +1172,16 @@ export default function EstimationsPage() {
               {filtered.map((est) => {
                 const st = STATUS_STYLES[est.status] || STATUS_STYLES.DRAFT;
                 return (
-                  <tr key={est.id} className="border-b border-gray-100 hover:bg-orange-50/30 transition-colors">
+                  <tr 
+                    key={est.id} 
+                    className={clsx(
+                      "border-b border-gray-100 transition-colors",
+                      est.status === "DRAFT" ? "hover:bg-yellow-50/50 cursor-pointer font-medium" : "hover:bg-orange-50/30"
+                    )}
+                    onClick={() => {
+                      if (est.status === "DRAFT") loadDraft(est);
+                    }}
+                  >
                     <td className="px-4 py-2 text-xs text-gray-600 whitespace-nowrap">
                       {new Date(est.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
                     </td>

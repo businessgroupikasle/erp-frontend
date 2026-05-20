@@ -37,6 +37,7 @@ export default function DeliveryChallanPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     customerId: "",
@@ -59,9 +60,23 @@ export default function DeliveryChallanPage() {
         productsFullApi.getAll(),
         api.get("/api/sales/delivery-challans").catch(() => ({ data: [] })),
       ]);
+      
+      let apiChallans = dcRes.status === "fulfilled" ? (dcRes.value as any).data || [] : [];
+      
+      // Merge local drafts
+      try {
+        const draftsStr = localStorage.getItem("sale_delivery_challans_drafts");
+        if (draftsStr) {
+          const drafts = JSON.parse(draftsStr);
+          apiChallans = [...drafts, ...apiChallans];
+        }
+      } catch (e) {
+        console.error("Error loading drafts", e);
+      }
+      
       if (cRes.status === "fulfilled") setCustomers((cRes.value as any).data || []);
       if (pRes.status === "fulfilled") setProducts((pRes.value as any).data || []);
-      if (dcRes.status === "fulfilled") setChallans((dcRes.value as any).data || []);
+      setChallans(apiChallans);
     } finally { setLoading(false); }
   }, []);
 
@@ -75,9 +90,55 @@ export default function DeliveryChallanPage() {
   };
 
   const handleSave = async (status: "DRAFT" | "DISPATCHED") => {
-    if (!form.customerId || items.some(i => !i.description || i.qty <= 0)) {
-      showToast("Fill customer and all line items", "error"); return;
+    const isLocalDraft = status === "DRAFT";
+    if (!form.customerId && !isLocalDraft) {
+      showToast("Please select customer", "error"); return;
     }
+    const validItems = items.filter(it => it.description && it.qty > 0);
+    if (validItems.length === 0 && !isLocalDraft) {
+      showToast("Add at least one line item", "error"); return;
+    }
+
+    if (isLocalDraft && !form.customerId && validItems.length === 0) {
+      setShowForm(false);
+      resetForm();
+      return;
+    }
+
+    const draftPayload = {
+      id: draftId || `draft_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      status: "DRAFT",
+      createdAt: new Date().toISOString(),
+      challanNo: "DRAFT",
+      customerId: form.customerId,
+      dispatchDate: form.dispatchDate,
+      vehicleNo: form.vehicleNo,
+      items: validItems,
+      _rawState: {
+        form,
+        items
+      }
+    };
+
+    if (isLocalDraft) {
+      try {
+        const draftsStr = localStorage.getItem("sale_delivery_challans_drafts");
+        let drafts = draftsStr ? JSON.parse(draftsStr) : [];
+        if (draftId) {
+          drafts = drafts.filter((d: any) => d.id !== draftId);
+        }
+        drafts.unshift(draftPayload);
+        localStorage.setItem("sale_delivery_challans_drafts", JSON.stringify(drafts));
+        showToast("Draft saved locally", "success");
+        fetchData();
+        setShowForm(false);
+        resetForm();
+      } catch (e) {
+        console.error("Failed to save draft locally", e);
+      }
+      return;
+    }
+
     setSaving(true);
     try {
       await api.post("/api/sales/delivery-challans", {
@@ -91,6 +152,21 @@ export default function DeliveryChallanPage() {
           remarks: it.remarks,
         })),
       });
+
+      // If we saved a challan that was previously a draft, remove the draft
+      if (draftId) {
+        try {
+          const draftsStr = localStorage.getItem("sale_delivery_challans_drafts");
+          if (draftsStr) {
+            const drafts = JSON.parse(draftsStr);
+            const newDrafts = drafts.filter((d: any) => d.id !== draftId);
+            localStorage.setItem("sale_delivery_challans_drafts", JSON.stringify(newDrafts));
+          }
+        } catch (e) {
+          console.error("Failed to clear draft", e);
+        }
+      }
+
       showToast(status === "DRAFT" ? "Challan saved as draft" : "Challan dispatched", "success");
       setShowForm(false);
       resetForm();
@@ -101,6 +177,7 @@ export default function DeliveryChallanPage() {
   };
 
   const resetForm = () => {
+    setDraftId(null);
     setForm({
       customerId: "",
       deliveryAddress: "",
@@ -113,6 +190,24 @@ export default function DeliveryChallanPage() {
       notes: "",
     });
     setItems([{ ...EMPTY_ITEM }]);
+  };
+
+  const loadDraft = (draft: any) => {
+    setDraftId(draft.id);
+    const raw = draft._rawState || {};
+    setForm(raw.form || {
+      customerId: "",
+      deliveryAddress: "",
+      dispatchDate: new Date().toISOString().split("T")[0],
+      expectedDelivery: "",
+      vehicleNo: "",
+      driverName: "",
+      transportMode: "ROAD",
+      linkedInvoiceNo: "",
+      notes: "",
+    });
+    setItems(raw.items && raw.items.length > 0 ? raw.items : [{ ...EMPTY_ITEM }]);
+    setShowForm(true);
   };
 
   const handlePrint = (dc: any) => {
@@ -300,8 +395,18 @@ export default function DeliveryChallanPage() {
                 {filtered.map(dc => {
                   const customer = customers.find(c => c.id === dc.customerId);
                   const st = STATUS_STYLES[dc.status] || STATUS_STYLES.DRAFT;
+                  const isDraft = dc.status === "DRAFT";
                   return (
-                    <tr key={dc.id} className="hover:bg-slate-50/60 transition-colors">
+                    <tr 
+                      key={dc.id} 
+                      className={clsx(
+                        "hover:bg-slate-50/60 transition-colors",
+                        isDraft ? "hover:bg-yellow-50/50 cursor-pointer font-medium" : ""
+                      )}
+                      onClick={() => {
+                        if (isDraft) loadDraft(dc);
+                      }}
+                    >
                       <td className="px-4 py-3 font-mono text-xs text-slate-600">
                         {dc.challanNo || dc.id?.slice(0, 8).toUpperCase()}
                       </td>

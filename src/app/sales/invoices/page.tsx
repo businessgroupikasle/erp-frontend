@@ -38,11 +38,21 @@ const UNITS = [
 ];
 
 const TAX_OPTIONS = [
-  { label: "None (0%)", value: 0 },
-  { label: "GST @ 5%", value: 5 },
-  { label: "GST @ 12%", value: 12 },
-  { label: "GST @ 18%", value: 18 },
-  { label: "GST @ 28%", value: 28 },
+  { label: "NONE", value: 0 },
+  { label: "IGST@0%", value: 0 },
+  { label: "GST@0%", value: 0 },
+  { label: "IGST@0.25%", value: 0.25 },
+  { label: "GST@0.25%", value: 0.25 },
+  { label: "IGST@3%", value: 3 },
+  { label: "GST@3%", value: 3 },
+  { label: "IGST@5%", value: 5 },
+  { label: "GST@5%", value: 5 },
+  { label: "IGST@12%", value: 12 },
+  { label: "GST@12%", value: 12 },
+  { label: "IGST@18%", value: 18 },
+  { label: "GST@18%", value: 18 },
+  { label: "IGST@28%", value: 28 },
+  { label: "GST@28%", value: 28 },
 ];
 
 const INDIAN_STATES = [
@@ -74,6 +84,7 @@ interface LineItem {
   rate: number;
   discountPct: number;
   taxPct: number;
+  taxLabel?: string;
 }
 
 function makeItem(): LineItem {
@@ -86,6 +97,7 @@ function makeItem(): LineItem {
     rate: 0,
     discountPct: 0,
     taxPct: 0,
+    taxLabel: "NONE",
   };
 }
 
@@ -466,6 +478,7 @@ export default function SalesInvoicesPage() {
         rate: p.basePrice || p.price || 0,
         unit: p.unit || "NONE",
         taxPct: p.taxPercent || 0,
+        taxLabel: TAX_OPTIONS.find(o => o.value === (p.taxPercent || 0))?.label || "NONE",
       } : it
     ));
     setOpenItemDrop(null);
@@ -608,12 +621,12 @@ export default function SalesInvoicesPage() {
     th{background:#f8fafc;padding:10px;font-size:11px;text-align:left;border-bottom:1px solid #e2e8f0}
     td{padding:10px;border-bottom:1px solid #f1f5f9;font-size:13px}
     @media print{button{display:none}}</style></head>
-    <body><h2>Tax Invoice — ${inv.order?.invoiceNum || ""}</h2>
-    <p>Customer: ${inv.order?.customer?.name || ""}</p>
+    <body><h2>Tax Invoice — ${inv.order?.invoiceNum || "Lite Sale"}</h2>
+    <p>Customer: ${inv.order?.customer?.name || "Walk-In Customer"}</p>
     <p>Date: ${new Date(inv.createdAt).toLocaleDateString()}</p>
     <table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Tax</th><th>Amount</th></tr></thead>
     <tbody>${(inv.order?.orderItems || []).map((it: any) =>
-      `<tr><td>${it.product?.name || ""}</td><td>${it.quantity}</td><td>₹${it.price}</td><td>₹${(it.taxAmount || 0).toFixed(2)}</td><td>₹${(it.totalAmount || 0).toFixed(2)}</td></tr>`
+      `<tr><td>${it.product?.name || "Unknown Item"}</td><td>${it.quantity}</td><td>₹${it.price}</td><td>₹${(it.taxAmount || 0).toFixed(2)}</td><td>₹${(it.totalAmount || 0).toFixed(2)}</td></tr>`
     ).join("")}</tbody></table>
     <div style="text-align:right;margin-top:20px">
       <strong>Total: ₹${(inv.finalAmount || 0).toFixed(2)}</strong>
@@ -669,7 +682,7 @@ export default function SalesInvoicesPage() {
             <div className="relative" ref={customerDropRef}>
               <div
                 className={clsx(
-                  "flex items-center gap-1 min-w-[220px] bg-white border rounded px-2 py-1.5 cursor-pointer",
+                  "flex items-center gap-1 min-w-[320px] bg-white border rounded px-2 py-1.5 cursor-pointer",
                   showCustomerDrop ? "border-orange-500" : "border-gray-300"
                 )}
                 onClick={() => setShowCustomerDrop(v => !v)}
@@ -688,7 +701,7 @@ export default function SalesInvoicesPage() {
               </div>
 
               {showCustomerDrop && (
-                <div className="absolute top-full left-0 z-50 mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+                <div className="absolute top-full left-0 z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
                   <button
                     className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100 font-medium"
                     onClick={() => {
@@ -995,11 +1008,17 @@ export default function SalesInvoicesPage() {
                       {/* TAX % */}
                       <td className="px-1 py-1.5 border-r border-gray-100 w-24">
                         <select
-                          value={item.taxPct}
-                          onChange={e => updateItem(idx, "taxPct", Number(e.target.value))}
+                          value={item.taxLabel || "NONE"}
+                          onChange={e => {
+                            const label = e.target.value;
+                            const option = TAX_OPTIONS.find(o => o.label === label);
+                            const val = option ? option.value : 0;
+                            updateItem(idx, "taxLabel", label);
+                            updateItem(idx, "taxPct", val);
+                          }}
                           className="w-full text-xs text-gray-700 outline-none bg-transparent cursor-pointer"
                         >
-                          {TAX_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                          {TAX_OPTIONS.map((t, index) => <option key={index} value={t.label}>{t.label}</option>)}
                         </select>
                       </td>
 

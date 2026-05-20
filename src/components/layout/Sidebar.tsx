@@ -228,17 +228,15 @@ export default function Sidebar() {
                             )}
                           >
                             {/* Prefix Icon */}
-                            {IconComponent && (
+                            {IconComponent && isCollapsed && (
                               <div className={clsx(
                                 "flex items-center justify-center shrink-0 transition-all duration-300",
-                                isCollapsed 
-                                  ? "w-10 h-10" 
-                                  : "w-5 h-5 rounded-lg",
+                                "w-10 h-10",
                                 isActive 
                                   ? "text-primary" 
                                   : "text-slate-400 group-hover/item:text-primary dark:group-hover/item:text-primary"
                               )}>
-                                <IconComponent size={isCollapsed ? 20 : 18} strokeWidth={isActive ? 2.5 : 2} />
+                                <IconComponent size={20} strokeWidth={isActive ? 2.5 : 2} />
                               </div>
                             )}
 
@@ -265,9 +263,7 @@ export default function Sidebar() {
                                   )
                                 )}
 
-                                {item.isNew && (
-                                  <span className="badge-new shrink-0">New</span>
-                                )}
+
                                 {item.isComingSoon && (
                                   <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0">Soon</span>
                                 )}
@@ -320,11 +316,7 @@ export default function Sidebar() {
                                   )}
                                 >
                                   <span className="truncate">{child.label}</span>
-                                  {child.isNew && (
-                                    <span className="text-[8px] font-black bg-primary/10 dark:bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ml-2">
-                                      New
-                                    </span>
-                                  )}
+
                                 </Link>
                               ))}
                             </div>
