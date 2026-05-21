@@ -100,7 +100,7 @@ function NewPurchaseContent() {
       toast.success("Purchase Order created successfully!");
       router.push("/purchases/orders");
     } catch (error) {
-      console.error("Failed to create PO", error);
+      console.error("Failed to Create Purchase Order", error);
       toast.error("Failed to create Purchase Order. Please check your inputs.");
     } finally {
       setIsSubmitting(false);
@@ -208,7 +208,7 @@ function NewPurchaseContent() {
              disabled={!isValid || isSubmitting}
              className="px-8 py-3 bg-[#7C3AED] text-white text-xs font-black rounded-2xl shadow-lg shadow-purple-200 hover:bg-purple-700 disabled:opacity-50 transition-all flex items-center gap-2 uppercase tracking-widest active:scale-95"
            >
-              <CheckCircle2 size={16} /> {isSubmitting ? "Creating..." : "Create PO"}
+              <CheckCircle2 size={16} /> {isSubmitting ? "Creating..." : "Create Purchase Order"}
            </button>
         </div>
       </div>

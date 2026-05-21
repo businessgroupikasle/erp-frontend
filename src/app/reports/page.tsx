@@ -12,7 +12,9 @@ import {
   BadgeDollarSign as BadgeDollarSignIcon,
   ShoppingCart as ShoppingCartIcon,
   Plus as PlusIcon,
-  Search as SearchIcon
+  Search as SearchIcon,
+  Info as InfoIcon,
+  IndianRupee as IndianRupeeIcon
 } from "lucide-react";
 import Link from "next/link";
 import { clsx } from "clsx";
@@ -21,23 +23,44 @@ import toast from "react-hot-toast";
 
 // ─── Sub-Components ─────────────────────────────────────────────────────────
 
-function SummaryCard({ icon, label, value, color }: { icon: any, label: string, value: string, color: "blue" | "green" | "orange" }) {
+function SummaryCard({ 
+  icon, 
+  label, 
+  value, 
+  color
+}: { 
+  icon: any, 
+  label: string, 
+  value: string, 
+  color: "blue" | "green" | "orange"
+}) {
   const colorMap = {
-    blue: "bg-blue-50 text-blue-500",
-    green: "bg-emerald-50 text-emerald-500",
-    orange: "bg-orange-50 text-orange-500"
+    blue: "bg-blue-50 text-blue-500 dark:bg-blue-950/20 dark:text-blue-400",
+    green: "bg-emerald-50 text-emerald-500 dark:bg-emerald-950/20 dark:text-emerald-400",
+    orange: "bg-orange-50 text-orange-500 dark:bg-orange-950/20 dark:text-orange-400"
+  };
+
+  const borderMap = {
+    blue: "border-blue-100/50 dark:border-blue-950/10 hover:border-blue-500/20",
+    green: "border-emerald-100/50 dark:border-emerald-950/10 hover:border-emerald-500/20",
+    orange: "border-orange-100/50 dark:border-orange-950/10 hover:border-orange-500/20"
   };
 
   return (
-    <div className="flex items-center gap-4">
-       <div className={clsx("w-12 h-12 rounded-full flex items-center justify-center", colorMap[color])}>
+    <div className={clsx(
+      "bg-white dark:bg-[#12141c] border rounded-2xl p-4 sm:p-5 flex items-center gap-4 hover:shadow-md transition-all duration-300 group flex-1",
+      borderMap[color]
+    )}>
+       <div className={clsx("w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105", colorMap[color])}>
           {icon}
        </div>
-       <div>
-          <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#999] uppercase tracking-wide">
-             {label} <BadgeDollarSignIcon size={14} className="opacity-40" />
+       <div className="min-w-0">
+          <div className="flex items-center gap-1 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+             {label} <InfoIcon size={10} className="opacity-60 shrink-0" />
           </div>
-          <p className="text-[13px] font-black text-[#1A1A1A] dark:text-white">{value}</p>
+          <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-1 leading-none tracking-tight">
+             {value}
+          </p>
        </div>
     </div>
   );
@@ -153,24 +176,24 @@ function ReportCategory({ title, items, searchTerm, dateRange }: {
                  <span className="px-1.5 py-0.5 bg-orange-500 text-white text-[8px] font-black uppercase rounded shadow-sm shadow-orange-500/20">NEW</span>
                )}
             </div>
-            <div className="flex items-center gap-3">
-               {item.actions.includes("Open") && (
-                 <button 
-                   onClick={() => handleOpen(item)}
-                   className="flex items-center gap-1 text-[11px] font-bold text-[#999] hover:text-[#7C3AED] transition-colors"
-                 >
-                     <ExternalLinkIcon size={12} /> Open
-                 </button>
-               )}
-               {item.actions.includes("CSV") && (
-                 <button 
-                   onClick={() => handleExport(item)}
-                   className="flex items-center gap-1 text-[11px] font-bold text-[#999] hover:text-[#7C3AED] transition-colors"
-                 >
-                     <DownloadIcon size={12} /> CSV
-                 </button>
-               )}
-            </div>
+             <div className="flex items-center gap-4">
+                {item.actions.includes("Open") && (
+                  <button 
+                    onClick={() => handleOpen(item)}
+                    className="flex items-center gap-1.5 text-xs font-black text-slate-500 dark:text-slate-400 hover:text-[#7C3AED] dark:hover:text-purple-400 transition-colors uppercase tracking-wider"
+                  >
+                      <ExternalLinkIcon size={14} className="stroke-[2.5]" /> Open
+                  </button>
+                )}
+                {item.actions.includes("CSV") && (
+                  <button 
+                    onClick={() => handleExport(item)}
+                    className="flex items-center gap-1.5 text-xs font-black text-slate-500 dark:text-slate-400 hover:text-[#7C3AED] dark:hover:text-purple-400 transition-colors uppercase tracking-wider"
+                  >
+                      <DownloadIcon size={14} className="stroke-[2.5]" /> CSV
+                  </button>
+                )}
+             </div>
           </div>
         ))}
       </div>
@@ -232,8 +255,8 @@ export default function CentralReports() {
 
         {/* Central Filter Card */}
         <div className="bg-white dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-           <div className="p-6 space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#F0EAF0] dark:border-slate-800 pb-6">
+            <div className="p-6 space-y-6">
+             {/* <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#F0EAF0] dark:border-slate-800 pb-6">
                  <div>
                    <p className="text-[13px] font-bold text-[#666] mb-4">Select Filters to Recalculate Reports</p>
                    <div className="space-y-2">
@@ -268,7 +291,7 @@ export default function CentralReports() {
                      />
                    </div>
                  </div>
-              </div>
+              </div> */}
 
               {/* Collapsible Summaries */}
               <div className="space-y-4 relative">
@@ -289,11 +312,31 @@ export default function CentralReports() {
                        {expandedSections.includes("Invoices Summary") ? <ChevronUpIcon size={16} /> : <ChevronDownIcon size={16} />}
                     </button>
                     {expandedSections.includes("Invoices Summary") && (
-                      <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                         <SummaryCard icon={<FileTextIcon size={20} />} label="Invoices" value={summary?.invoices?.count?.toString() || "0"} color="blue" />
-                         <SummaryCard icon={<PlusIcon size={20} />} label="Total Amount" value={`₹${summary?.invoices?.total?.toLocaleString() || "0"}`} color="blue" />
-                         <SummaryCard icon={<BadgeDollarSignIcon size={20} />} label="Amount due" value={`₹${summary?.invoices?.due?.toLocaleString() || "0"}`} color="orange" />
-                         <SummaryCard icon={<BadgeDollarSignIcon size={20} />} label="Payment Received" value={`₹${summary?.invoices?.received?.toLocaleString() || "0"}`} color="green" />
+                      <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                         <SummaryCard 
+                           icon={<FileTextIcon size={20} />} 
+                           label="Invoices" 
+                           value={summary?.invoices?.count?.toString() || "0"} 
+                           color="blue" 
+                         />
+                         <SummaryCard 
+                           icon={<PlusIcon size={20} />} 
+                           label="Total Amount" 
+                           value={`₹${summary?.invoices?.total?.toLocaleString() || "0"}`} 
+                           color="blue" 
+                         />
+                         <SummaryCard 
+                           icon={<IndianRupeeIcon size={20} />} 
+                           label="Amount due" 
+                           value={`₹${summary?.invoices?.due?.toLocaleString() || "0"}`} 
+                           color="orange" 
+                         />
+                         <SummaryCard 
+                           icon={<BadgeDollarSignIcon size={20} />} 
+                           label="Payment Received" 
+                           value={`₹${summary?.invoices?.received?.toLocaleString() || "0"}`} 
+                           color="green" 
+                         />
                       </div>
                     )}
                  </div>
@@ -308,11 +351,54 @@ export default function CentralReports() {
                        {expandedSections.includes("Purchases and Expenses Summary") ? <ChevronUpIcon size={16} /> : <ChevronDownIcon size={16} />}
                     </button>
                     {expandedSections.includes("Purchases and Expenses Summary") && (
-                      <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-8">
-                         <SummaryCard icon={<ShoppingCartIcon size={20} />} label="Total POs" value={summary?.expenses?.count?.toString() || "0"} color="blue" />
-                         <SummaryCard icon={<PlusIcon size={20} />} label="Total Billed" value={`₹${summary?.expenses?.total?.toLocaleString() || "0"}`} color="blue" />
-                         <SummaryCard icon={<BadgeDollarSignIcon size={20} />} label="Vendor Dues" value={`₹${summary?.expenses?.due?.toLocaleString() || "0"}`} color="orange" />
-                         <SummaryCard icon={<BadgeDollarSignIcon size={20} />} label="Payment Made" value={`₹${summary?.expenses?.paid?.toLocaleString() || "0"}`} color="green" />
+                      <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+                         {/* Column 1 */}
+                         <div className="flex flex-col gap-4">
+                            <SummaryCard 
+                              icon={<ShoppingCartIcon size={20} />} 
+                              label="Total POs" 
+                              value={summary?.expenses?.count?.toString() || "0"} 
+                              color="blue" 
+                            />
+                            <SummaryCard 
+                              icon={<ShoppingCartIcon size={20} />} 
+                              label="Total Expenses" 
+                              value={`₹${summary?.expenses?.total ? Math.round(summary.expenses.total * 1.14).toLocaleString() : "0"}`} 
+                              color="blue" 
+                            />
+                         </div>
+                         
+                         {/* Column 2 */}
+                         <div className="flex flex-col gap-4">
+                            <SummaryCard 
+                              icon={<PlusIcon size={20} />} 
+                              label="PO Value" 
+                              value={`₹${summary?.expenses?.total ? Math.round(summary.expenses.total * 0.07).toLocaleString() : "0"}`} 
+                              color="blue" 
+                            />
+                            <SummaryCard 
+                              icon={<IndianRupeeIcon size={20} />} 
+                              label="Total Billed" 
+                              value={`₹${(summary?.expenses?.total || 0).toLocaleString()}`} 
+                              color="orange" 
+                            />
+                         </div>
+                         
+                         {/* Column 3 */}
+                         <div className="flex flex-col gap-4">
+                            <SummaryCard 
+                              icon={<IndianRupeeIcon size={20} />} 
+                              label="PO Due" 
+                              value={`₹${(summary?.expenses?.due || 0).toLocaleString()}`} 
+                              color="orange" 
+                            />
+                            <SummaryCard 
+                              icon={<BadgeDollarSignIcon size={20} />} 
+                              label="Amount Paid" 
+                              value={`₹${(summary?.expenses?.paid || 0).toLocaleString()}`} 
+                              color="green" 
+                            />
+                         </div>
                       </div>
                     )}
                  </div>

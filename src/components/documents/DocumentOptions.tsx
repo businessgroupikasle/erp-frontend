@@ -33,7 +33,7 @@ export default function DocumentOptions({ type }: DocumentOptionsProps) {
       await purchaseOrdersApi.create(payload);
       router.push("/purchases/orders");
     } catch (error) {
-      console.error("Failed to create PO", error);
+      console.error("Failed to Create Purchase Order", error);
       toast.error("Failed to create Purchase Order. Please check your inputs.");
     } finally {
       setIsSubmitting(false);
@@ -111,7 +111,7 @@ export default function DocumentOptions({ type }: DocumentOptionsProps) {
             ) : (
               <>
                 <Send size={18} />
-                Create PO
+                Create Purchase Order
               </>
             )}
          </button>

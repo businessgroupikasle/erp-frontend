@@ -19,6 +19,7 @@ import {
   CheckSquare as CheckSquareIcon,
   IndianRupee as IndianRupeeIcon,
   TrendingDown as TrendingDownIcon,
+  ChefHat,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { productionApi, recipesApi, franchiseApi, inventoryApi, rawMaterialsApi } from "@/lib/api";
@@ -211,8 +212,8 @@ function ProductionContent() {
         <div>
           <div className="flex items-center gap-2.5">
             <div className="p-2 md:p-2.5 bg-[#F97316] rounded-lg md:rounded-xl shadow-lg shadow-orange-600/20 shrink-0">
-              <FactoryIcon size={18} className="text-white md:hidden" />
-              <FactoryIcon size={20} className="text-white hidden md:block" />
+              <ChefHatIcon size={18} className="text-white md:hidden" />
+              <ChefHatIcon size={20} className="text-white hidden md:block" />
             </div>
             <h1 className="text-xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase transition-all">
               Production <span className="text-slate-400 font-medium ml-1 tracking-tighter italic hidden sm:inline">Control</span>
@@ -261,7 +262,7 @@ function ProductionContent() {
           ) : history.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 bg-white dark:bg-slate-900 rounded-[40px] border-2 border-dashed border-slate-100 dark:border-slate-800/50">
               <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-3xl flex items-center justify-center text-slate-300 dark:text-slate-700 mb-6">
-                <FactoryIcon size={28} className="md:w-8 md:h-8" />
+                <ChefHat size={28} className="md:w-8 md:h-8" />
               </div>
               <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">System Ready</p>
               <p className="text-[10px] text-slate-500 mt-1">Initialize your first batch to begin tracking yield.</p>

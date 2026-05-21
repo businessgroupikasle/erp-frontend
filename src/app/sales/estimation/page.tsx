@@ -340,6 +340,21 @@ export default function EstimationsPage() {
     setView("create");
   };
 
+  const handleDeleteDraft = (id: string) => {
+    try {
+      const draftsStr = localStorage.getItem("sale_estimations_drafts");
+      if (draftsStr) {
+        const drafts = JSON.parse(draftsStr);
+        const newDrafts = drafts.filter((d: any) => d.id !== id);
+        localStorage.setItem("sale_estimations_drafts", JSON.stringify(newDrafts));
+        showToast("Draft deleted", "success");
+        fetchData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const loadDraft = (draft: any) => {
     setDraftId(draft.id);
     const raw = draft._rawState || {};
@@ -531,35 +546,36 @@ export default function EstimationsPage() {
   // ══════════════════════════════════════════════════════════════════════════
   if (view === "create") {
     return (
-      <div className="flex flex-col bg-[#f0f0f0] overflow-hidden" style={{ height: 'calc(100vh - 56px)' }}>
+      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: 'calc(100vh - 104px)' }}>
 
         {/* ── Top bar ── */}
-        <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between shrink-0">
+        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
           <div className="flex items-center gap-3">
-            <button onClick={handleBack} className="p-1 hover:bg-gray-100 rounded text-gray-600 transition-colors">
+            <button onClick={handleBack} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
               <ArrowLeft size={18} />
             </button>
-            <span className="text-base font-semibold text-gray-800">Estimate/Quotation</span>
+            <h2 className="text-lg font-bold text-slate-800">Estimate / Quotation</h2>
           </div>
+          <span className="text-xs text-slate-500 font-mono">Ref No: <strong className="text-[#f58220] font-bold">Auto</strong></span>
         </div>
 
         {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto min-h-0 pb-16">
+        <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6">
 
           {/* ── Customer + Meta info row ── */}
-          <div className="bg-[#f0f0f0] px-6 py-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-5 flex flex-wrap items-start justify-between gap-4">
 
             {/* Customer dropdown */}
             <div className="relative" ref={customerDropRef}>
               <div
                 className={clsx(
                   "flex items-center gap-1 min-w-[300px] bg-white border rounded-md px-3 py-1.5 cursor-pointer",
-                  showCustomerDrop ? "border-blue-500" : "border-gray-300"
+                  showCustomerDrop ? "border-[#f58220]" : "border-slate-300"
                 )}
                 onClick={() => setShowCustomerDrop(v => !v)}
               >
                 <div className="flex-1">
-                  <div className="text-[10px] text-blue-600 font-semibold leading-none mb-1">Party *</div>
+                  <div className="text-[10px] text-[#f58220] font-semibold leading-none mb-1">Party *</div>
                   <input
                     className="w-full text-sm text-gray-800 outline-none bg-transparent placeholder-gray-400 font-medium"
                     placeholder=""
@@ -585,7 +601,7 @@ export default function EstimationsPage() {
                       <div className="p-4 space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="col-span-1">
-                            <label className="text-[10px] text-blue-600 font-semibold absolute ml-2 mt-[-6px] bg-white px-1">Party Name *</label>
+                            <label className="text-[10px] text-[#f58220] font-semibold absolute ml-2 mt-[-6px] bg-white px-1">Party Name *</label>
                             <input
                               type="text"
                               value={newParty.name}
@@ -604,7 +620,7 @@ export default function EstimationsPage() {
 
                         {/* Tabs simulation */}
                         <div className="flex border-b border-gray-200">
-                          <div className="px-4 py-2 border-b-2 border-blue-500 text-sm font-bold text-blue-600">GST & Address</div>
+                          <div className="px-4 py-2 border-b-2 border-[#f58220] text-sm font-bold text-[#f58220]">GST & Address</div>
                           <div className="px-4 py-2 text-sm font-semibold text-gray-400 flex items-center gap-2">Credit & Balance <span className="bg-[#ff4d4f] text-white text-[9px] px-1.5 py-0.5 rounded">New</span></div>
                           <div className="px-4 py-2 text-sm font-semibold text-gray-400">Additional Fields</div>
                         </div>
@@ -612,7 +628,7 @@ export default function EstimationsPage() {
                         <div className="grid grid-cols-2 gap-6 pt-2">
                           <div className="space-y-3">
                             <div className="border border-gray-300 rounded-md p-2 relative">
-                              <label className="text-[10px] text-blue-600 font-semibold absolute top-[-7px] left-2 bg-white px-1">GST Type</label>
+                              <label className="text-[10px] text-[#f58220] font-semibold absolute top-[-7px] left-2 bg-white px-1">GST Type</label>
                               <select className="w-full text-sm outline-none bg-transparent appearance-none font-medium text-gray-800 pt-1">
                                 <option>Unregistered/Consumer</option>
                                 <option>Registered Business - Regular</option>
@@ -630,11 +646,11 @@ export default function EstimationsPage() {
                             <span className="text-xs font-semibold text-gray-700 mb-1 block">Billing Address</span>
                             <textarea placeholder="Billing Address" rows={3} className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none resize-none bg-white" />
                             <div className="text-right mt-1">
-                              <button className="text-xs text-blue-600 font-medium">Show Detailed Address</button>
+                              <button className="text-xs text-[#f58220] font-medium">Show Detailed Address</button>
                             </div>
                             <div className="mt-3">
                               <span className="text-xs font-semibold text-gray-700 mb-1 block">Shipping Address</span>
-                              <button className="text-xs text-blue-600 font-medium">+ Enable Shipping Address</button>
+                              <button className="text-xs text-[#f58220] font-medium">+ Enable Shipping Address</button>
                             </div>
                           </div>
                         </div>
@@ -663,7 +679,7 @@ export default function EstimationsPage() {
                               setSavingParty(false);
                             }
                           }}
-                          className="px-6 py-2 bg-[#2196f3] text-white rounded-md text-sm font-semibold hover:bg-blue-600 shadow-md"
+                          className="px-6 py-2 bg-[#f58220] text-white rounded-md text-sm font-semibold hover:bg-[#e8740e] shadow-md"
                         >
                           {savingParty ? "Saving..." : "Save"}
                         </button>
@@ -682,7 +698,7 @@ export default function EstimationsPage() {
                         setShowAddParty(true);
                       }}
                     >
-                      <span className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-base leading-none">+</span>
+                      <span className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-[#f58220] font-bold text-base leading-none">+</span>
                       Add New Party
                     </button>
                   )}
@@ -711,21 +727,32 @@ export default function EstimationsPage() {
               )}
             </div>
 
+            {/* Phone No */}
+            <div className="bg-white border border-slate-300 rounded-xl px-3 py-2 min-w-[160px]">
+              <div className="text-[10px] text-slate-400 font-medium leading-none mb-0.5">Phone No</div>
+              <input
+                className="text-sm text-slate-700 outline-none bg-transparent placeholder-slate-400 w-full"
+                placeholder="Phone Number"
+                value={customerPhone}
+                onChange={e => setCustomerPhone(e.target.value)}
+              />
+            </div>
+
             {/* Invoice metadata */}
-            <div className="flex flex-col gap-3 text-xs">
+            <div className="ml-auto flex flex-col gap-3 text-xs">
               <div className="flex items-center justify-end gap-4">
                 <span className="text-gray-500 w-24 text-right">Ref No</span>
                 <span className="text-gray-800 font-semibold w-32 text-left">Auto</span>
               </div>
               <div className="flex items-center justify-end gap-4">
-                <span className="text-gray-500 w-24 text-right">Invoice Date</span>
+                <span className="text-gray-500 w-24 text-right">Valid Until</span>
                 <div className="relative w-32" ref={calendarRef}>
                   <button
                     onClick={() => setShowCalendar(v => !v)}
                     className="flex items-center justify-between w-full text-xs text-gray-800 font-semibold bg-transparent transition-colors text-left"
                   >
                     {invoiceDate ? new Date(invoiceDate + "T00:00:00").toLocaleDateString("en-GB") : "Pick date"}
-                    <Calendar size={13} className="text-blue-500" />
+                    <Calendar size={13} className="text-[#f58220]" />
                   </button>
                   {showCalendar && (
                     <div className="absolute right-0 top-full mt-1 z-[200]">
@@ -756,7 +783,7 @@ export default function EstimationsPage() {
           </div>
 
           {/* ── Items Table ── */}
-          <div className="px-0">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <table className="w-full text-sm border-collapse bg-white border-y border-gray-200">
               <thead>
                 {/* Row 1 — main column headers */}
@@ -951,7 +978,7 @@ export default function EstimationsPage() {
           </div>
 
           {/* ── Footer notes & totals ── */}
-          <div className="flex gap-4 p-6 bg-[#f0f0f0]">
+          <div className="flex gap-4 p-6 bg-gray-50">
             {/* Left actions */}
             <div className="flex flex-col gap-4">
                <button
@@ -1018,7 +1045,7 @@ export default function EstimationsPage() {
                      />
                   </div>
                   <div className="px-4 py-3 bg-gray-50 flex justify-end">
-                     <button onClick={() => { setShowTerms(false); setShowDesc(false); }} className="bg-[#2196f3] text-white px-6 py-1.5 rounded text-sm font-semibold">Done</button>
+                     <button onClick={() => { setShowTerms(false); setShowDesc(false); }} className="bg-[#f58220] text-white px-6 py-1.5 rounded text-sm font-semibold">Done</button>
                   </div>
                </div>
             </div>
@@ -1027,8 +1054,7 @@ export default function EstimationsPage() {
         </div>
 
         {/* ── Fixed Bottom Actions ── */}
-        <div className="fixed bottom-0 right-0 left-64 bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
-          <div className="text-[10px] text-gray-400 font-medium">Activate Windows<br/>Go to Settings to activate Windows.</div>
+        <div className="fixed bottom-0 right-0 left-64 bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-end shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
           <div className="flex gap-3">
              <button
                onClick={() => handleSave(true)}
@@ -1040,7 +1066,7 @@ export default function EstimationsPage() {
              <div className="relative" ref={shareDropRef}>
                 <button
                   onClick={() => setShowShareDrop(v => !v)}
-                  className="flex items-center justify-center gap-1.5 px-6 py-2 text-sm font-bold text-[#2196f3] bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+                  className="flex items-center justify-center gap-1.5 px-6 py-2 text-sm font-bold text-[#f58220] bg-white border border-gray-200 rounded-md hover:bg-gray-50"
                 >
                   <Share2 size={16} /> Share <ChevronDown size={14} />
                 </button>
@@ -1055,7 +1081,7 @@ export default function EstimationsPage() {
              <button
                onClick={() => handleSave(false)}
                disabled={saving}
-               className="flex items-center justify-center px-8 py-2 text-sm font-bold text-white bg-[#2196f3] rounded-md hover:bg-blue-600 shadow-md"
+               className="flex items-center justify-center px-8 py-2 text-sm font-bold text-white bg-[#f58220] rounded-md hover:bg-[#e8740e] shadow-md"
              >
                {saving ? "Saving..." : "Save"}
              </button>
@@ -1066,168 +1092,214 @@ export default function EstimationsPage() {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // LIST VIEW — Vyapar-style (matching invoice UI)
+  // LIST VIEW — Simplified Clean UI
   // ══════════════════════════════════════════════════════════════════════════
-  const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 
   return (
-    <div className="flex flex-col bg-white min-h-screen" style={{ fontSize: 13 }}>
+    <div className="min-h-screen bg-gray-50 text-gray-800">
 
-      {/* ── Top toolbar ── */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-200 bg-white">
-        <span className="font-semibold text-gray-800 text-sm mr-1">Estimations</span>
-
-        <div className="flex items-center gap-2 ml-4 text-[13px] text-gray-500">
-          <span>Filter by:</span>
-          <div className="border border-gray-300 rounded px-2.5 py-1.5 bg-white text-gray-700 font-medium">This Month</div>
-        </div>
-
-        <div className="flex items-center gap-2 border border-gray-300 rounded px-2 py-1 bg-white text-[13px] text-gray-700 relative">
-          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setShowFromCal(v => !v)}>
-            <Calendar size={13} className="text-gray-400" />
-            <span className="font-medium text-gray-600">{fmt(dateFrom)}</span>
-          </div>
-          {showFromCal && (
-            <div className="absolute top-full left-0 mt-1 z-50" ref={fromCalRef}>
-              <MiniCalendar value={dateFrom} onChange={setDateFrom} onClose={() => setShowFromCal(false)} />
-            </div>
-          )}
-
-          <span className="text-gray-400 text-xs px-1">To</span>
-
-          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setShowToCal(v => !v)}>
-            <span className="font-medium text-gray-600">{fmt(dateTo)}</span>
-            <Calendar size={13} className="text-gray-400" />
-          </div>
-          {showToCal && (
-            <div className="absolute top-full right-0 mt-1 z-50" ref={toCalRef}>
-              <MiniCalendar value={dateTo} onChange={setDateTo} onClose={() => setShowToCal(false)} />
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1" />
-
-        <button onClick={fetchData} className="p-1.5 text-gray-400 hover:text-gray-600 rounded border border-gray-200">
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-        </button>
+      {/* ── Page Header ── */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <h1 className="text-base font-bold text-gray-800 flex items-center gap-2">
+          <Calculator className="h-5 w-5 text-[#f58220]" />
+          Estimations
+        </h1>
         <button
           onClick={openCreate}
-          className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-4 py-1.5 rounded shadow-sm"
+          className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors"
         >
-          <Plus size={13} strokeWidth={2.5} />
-          Add Estimate
+          <Plus className="h-4 w-4" /> New Estimate
         </button>
       </div>
 
-      {/* ── Summary card ── */}
-      <div className="px-4 py-3 border-b border-gray-100 bg-[#fafafa]">
-        <div className="inline-flex flex-col bg-white border border-gray-200 rounded-lg px-4 py-2.5 min-w-[200px] shadow-sm">
-          <span className="text-[11px] text-orange-500 font-semibold">Total Estimations Amount</span>
-          <span className="text-xl font-bold text-gray-900 mt-0.5">₹ {totalQuotations.toLocaleString("en-IN")}</span>
-          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-            <span>Converted <span className="font-semibold text-gray-700">₹ {totalConverted.toLocaleString("en-IN")}</span></span>
-            <span className="text-gray-300">|</span>
-            <span>Open <span className="font-semibold text-gray-700">₹ {totalOpen.toLocaleString("en-IN")}</span></span>
-          </div>
-        </div>
-      </div>
+      <div className="max-w-6xl mx-auto px-6 py-5 space-y-5">
 
-      {/* ── Transactions table ── */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100">
-        <span className="font-semibold text-gray-800 text-sm">Transactions</span>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+        {/* ── Summary Strip ── */}
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { label: "Total Estimations", value: `₹${totalQuotations.toLocaleString("en-IN")}`, color: "text-gray-700", dot: "bg-gray-400" },
+            { label: "Converted",         value: `₹${totalConverted.toLocaleString("en-IN")}`,  color: "text-emerald-600", dot: "bg-emerald-500" },
+            { label: "Open",              value: `₹${totalOpen.toLocaleString("en-IN")}`,       color: "text-[#f58220]",   dot: "bg-[#f58220]" },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-lg border border-gray-200 px-4 py-3 flex items-center gap-3">
+              <div className={clsx("w-2.5 h-2.5 rounded-full", s.dot)} />
+              <div>
+                <p className="text-xs text-gray-500">{s.label}</p>
+                <p className={clsx("text-lg font-bold", s.color)}>{s.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Filters Row ── */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search..."
-              className="pl-7 pr-3 py-1 text-xs border border-gray-200 rounded outline-none bg-white w-40"
+              placeholder="Search estimate or customer..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#f58220] bg-white"
             />
           </div>
-        </div>
-      </div>
 
-      <div className="flex-1 overflow-auto">
+          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
+            {["ALL", "SENT", "CONVERTED", "DRAFT"].map(s => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={clsx(
+                  "px-3 py-2 text-xs font-medium transition-colors",
+                  statusFilter === s ? "bg-[#f58220] text-white" : "text-gray-600 hover:bg-gray-50"
+                )}
+              >
+                {s === "ALL" ? "All" : s}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm text-gray-700 relative">
+            <div className="flex items-center gap-1.5 cursor-pointer hover:text-gray-900" onClick={() => setShowFromCal(v => !v)}>
+              <Calendar className="h-4 w-4 text-gray-400" />
+              <span className="font-medium">{fmt(dateFrom)}</span>
+            </div>
+            {showFromCal && (
+              <div className="absolute top-full left-0 mt-1 z-50" ref={fromCalRef}>
+                <MiniCalendar value={dateFrom} onChange={setDateFrom} onClose={() => setShowFromCal(false)} />
+              </div>
+            )}
+            <span className="text-gray-300 px-1">to</span>
+            <div className="flex items-center gap-1.5 cursor-pointer hover:text-gray-900" onClick={() => setShowToCal(v => !v)}>
+              <span className="font-medium">{fmt(dateTo)}</span>
+              <Calendar className="h-4 w-4 text-gray-400" />
+            </div>
+            {showToCal && (
+              <div className="absolute top-full right-0 mt-1 z-50" ref={toCalRef}>
+                <MiniCalendar value={dateTo} onChange={setDateTo} onClose={() => setShowToCal(false)} />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1" />
+          <button onClick={fetchData} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Refresh">
+            <RefreshCw className={clsx("h-4 w-4", loading && "animate-spin")} />
+          </button>
+        </div>
+
+        {/* ── Empty State ── */}
         {loading ? (
-          <div className="py-16 text-center"><RefreshCw size={24} className="mx-auto text-orange-400 animate-spin opacity-40" /></div>
+          <div className="py-20 flex justify-center"><RefreshCw className="h-8 w-8 animate-spin text-orange-400 opacity-50" /></div>
         ) : filtered.length === 0 ? (
-          <div className="py-16 text-center">
-            <Calculator size={36} strokeWidth={1} className="mx-auto text-gray-200 mb-2" />
-            <p className="text-sm text-gray-400">No estimations found.</p>
+          <div className="bg-white border border-gray-200 rounded-lg py-20 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center">
+              <Calculator className="h-8 w-8 text-[#f58220]" />
+            </div>
+            <div>
+              <p className="text-gray-800 font-semibold">No Estimations Found</p>
+              <p className="text-gray-500 text-sm mt-1">Create an estimate to share with your customers.</p>
+            </div>
+            <button
+              onClick={openCreate}
+              className="px-5 py-2.5 bg-[#f58220] hover:bg-[#e8740e] text-white font-semibold text-sm rounded-lg transition-colors"
+            >
+              Create Estimate
+            </button>
           </div>
         ) : (
-          <table className="w-full text-left" style={{ borderCollapse: "collapse" }}>
-            <thead>
-              <tr className="bg-[#f5f5f5] border-y border-gray-200">
-                {["Date","Est No","Party Name","Status","Amount","Actions"].map(h => (
-                  <th key={h} className="px-4 py-2 text-[11px] font-semibold text-gray-500 whitespace-nowrap">
-                    <span className="flex items-center gap-1">{h}</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((est) => {
-                const st = STATUS_STYLES[est.status] || STATUS_STYLES.DRAFT;
-                return (
-                  <tr 
-                    key={est.id} 
-                    className={clsx(
-                      "border-b border-gray-100 transition-colors",
-                      est.status === "DRAFT" ? "hover:bg-yellow-50/50 cursor-pointer font-medium" : "hover:bg-orange-50/30"
-                    )}
-                    onClick={() => {
-                      if (est.status === "DRAFT") loadDraft(est);
-                    }}
-                  >
-                    <td className="px-4 py-2 text-xs text-gray-600 whitespace-nowrap">
-                      {new Date(est.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-gray-600">
-                      {est.quotationNumber}
-                    </td>
-                    <td className="px-4 py-2 text-xs">
-                      <span className="text-blue-600 font-medium cursor-pointer hover:underline">
-                        {est.customerName || "—"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-xs">
-                      <span className={clsx("px-2 py-0.5 rounded text-[10px] font-bold border", st.color, st.bg, st.border)}>
-                        {st.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-xs font-medium text-gray-800">
-                      ₹ {(est.totalAmount || 0).toLocaleString("en-IN")}
-                    </td>
-                    <td className="px-4 py-2">
-                      <div className="flex items-center gap-2">
-                         {est.status !== "CONVERTED" && (
-                            <button
-                               onClick={() => handleConvertToOrder(est.id)}
+          /* ── Table ── */
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-gray-500 text-xs font-medium border-b border-gray-200 uppercase">
+                  <th className="text-left px-4 py-3">Date</th>
+                  <th className="text-left px-4 py-3">Est No</th>
+                  <th className="text-left px-4 py-3">Party Name</th>
+                  <th className="text-right px-4 py-3">Amount</th>
+                  <th className="text-center px-4 py-3">Status</th>
+                  <th className="text-right px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((est) => {
+                  const style = STATUS_STYLES[est.status] || STATUS_STYLES.DRAFT;
+                  const isDraft = est.status === "DRAFT";
+                  return (
+                    <tr 
+                      key={est.id} 
+                      className={clsx(
+                        "transition-colors",
+                        isDraft ? "hover:bg-orange-50/50 cursor-pointer bg-orange-50/30" : "hover:bg-gray-50"
+                      )}
+                      onClick={() => {
+                        if (isDraft) loadDraft(est);
+                      }}
+                    >
+                      <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
+                        {new Date(est.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                      </td>
+                      <td className="px-4 py-3 font-mono font-semibold text-gray-800 text-xs">
+                        {est.quotationNumber}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="font-medium text-gray-800">
+                          {est.customerName || "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-800">
+                        ₹ {(est.totalAmount || 0).toLocaleString("en-IN")}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={clsx("inline-block px-2 py-0.5 rounded text-[11px] font-semibold border", style.color, style.bg, style.border)}>
+                          {style.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {est.status !== "CONVERTED" && !isDraft && (
+                             <button
+                               onClick={(e) => { e.stopPropagation(); handleConvertToOrder(est.id); }}
                                disabled={!!converting}
-                               className="px-2 py-1 bg-green-50 text-green-600 border border-green-200 rounded text-[10px] font-bold hover:bg-green-100 transition-colors"
-                            >
+                               className="px-2 py-1 bg-green-50 text-green-600 border border-green-200 rounded text-xs font-bold hover:bg-green-100 transition-colors mr-2"
+                             >
                                {converting === est.id ? "..." : "Convert"}
+                             </button>
+                          )}
+                          {isDraft ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteDraft(est.id); }}
+                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Delete Draft"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </button>
-                         )}
-                        <button className="p-1 text-gray-400 hover:text-gray-700 rounded" title="Print"><Printer size={13} /></button>
-                        <button className="p-1 text-gray-400 hover:text-gray-700 rounded" title="Share"><Share2 size={13} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                          ) : (
+                            <>
+                              <button
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                title="Print"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                title="Share"
+                              >
+                                <Share2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
-      </div>
-      
-      {/* Absolute Bottom Right Watermark */}
-      <div className="absolute bottom-4 right-6 text-right">
-         <div className="text-[14px] text-gray-400 font-semibold mb-0.5">Activate Windows</div>
-         <div className="text-[10px] text-gray-400 font-medium">Go to Settings to activate Windows.</div>
       </div>
     </div>
   );

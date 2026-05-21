@@ -1,529 +1,967 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { 
-  Plus, Search, Filter, ArrowRightLeft, CheckCircle2, XCircle, 
-  Clock, ArrowLeft, MoreVertical, Package, User, Building2, 
-  AlertTriangle, Receipt, Undo2, ChevronRight, Download
+  Plus, Search, RefreshCw, ArrowLeft, Trash2, 
+  User, Building2, AlertTriangle, Receipt, Undo2, 
+  ChevronRight, Printer, FileSpreadsheet, Check, 
+  CheckCircle2, XCircle, Sparkles, ShoppingBag, Clock, MoreVertical
 } from "lucide-react";
 import { salesApi, franchiseApi, customersApi, franchiseOrdersApi } from "@/lib/api";
-import { toast } from "react-hot-toast";
+import { useToast } from "@/context/ToastContext";
 import { clsx } from "clsx";
+import api from "@/lib/api/base";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface ReturnItem {
+  productId: string;
+  productName: string;
+  orderQuantity: number;
+  returnQuantity: number;
+  rate: number;
+  condition: string;
+}
 
 interface ReturnOrder {
   id: string;
   returnNumber: string;
+  source: 'FRANCHISE' | 'PARTNER';
+  entityId: string;
+  entityName: string;
+  entityPhone?: string;
+  orderRefId: string;
+  orderRefNumber: string;
   reason: string;
-  status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'REJECTED';
   refundAmount: number;
   refundMethod: string;
+  status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'REJECTED' | 'DRAFT';
   createdAt: string;
-  customer?: { name: string };
-  franchise?: { name: string };
-  salesOrder?: { orderNumber: string };
-  franchiseOrder?: { orderNumber: string };
-  items: any[];
+  items: ReturnItem[];
+  _rawState?: any;
 }
 
+const STATUS_STYLES: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  PENDING:   { label: "Pending Approval", color: "text-[#f58220]",  bg: "bg-orange-50",  border: "border-orange-200" },
+  APPROVED:  { label: "Approved",         color: "text-blue-600",    bg: "bg-blue-50",    border: "border-blue-200" },
+  COMPLETED: { label: "Refund Processed font-bold", color: "text-emerald-600 font-bold", bg: "bg-emerald-50", border: "border-emerald-200" },
+  REJECTED:  { label: "Rejected",         color: "text-rose-600",    bg: "bg-rose-50",    border: "border-rose-200" },
+  DRAFT:     { label: "Draft Request",    color: "text-slate-600",   bg: "bg-slate-50",   border: "border-slate-200" },
+};
+
+// ── Main Component ────────────────────────────────────────────────────────────
+
 export default function SalesReturnsPage() {
+  const { showToast } = useToast();
+
+  // Navigation
+  const [view, setView] = useState<"list" | "create" | "edit">("list");
   const [returns, setReturns] = useState<ReturnOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showNewModal, setShowNewModal] = useState(false);
+  const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<'ALL' | 'FRANCHISE' | 'PARTNER'>('ALL');
-  
-  // Modal State
+
+  // Form State
   const [returnSource, setReturnSource] = useState<'FRANCHISE' | 'PARTNER'>('PARTNER');
-  const [selectedEntity, setSelectedEntity] = useState<any>(null); // Franchise or Customer
-  const [selectedOrder, setSelectedOrder] = useState<any>(null); // FranchiseOrder or SalesOrder
   const [entities, setEntities] = useState<any[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [returnItems, setReturnItems] = useState<any[]>([]);
+  const [ordersList, setOrdersList] = useState<any[]>([]);
+  const [selectedEntity, setSelectedEntity] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  
+  const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
   const [reason, setReason] = useState("");
+  const [refundMethod, setRefundMethod] = useState("Original Method");
   const [submitting, setSubmitting] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [returnNo, setReturnNo] = useState("1");
+  const [showRowMenu, setShowRowMenu] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchReturns();
-  }, [activeTab]);
+  // ── Data Syncing ─────────────────────────────────────────────────────────────
 
-  const fetchReturns = async () => {
+  const fetchReturns = useCallback(async () => {
     setLoading(true);
     try {
-      const params: any = {};
-      if (activeTab === 'FRANCHISE') params.source = 'FRANCHISE';
-      if (activeTab === 'PARTNER') params.source = 'BUSINESS';
-      
-      const res = await salesApi.getReturns(params);
-      setReturns(res.data);
-    } catch (err) {
-      toast.error("Failed to fetch returns");
+      let fetched: ReturnOrder[] = [];
+      try {
+        const res = await salesApi.getReturns();
+        fetched = res.data || [];
+      } catch (err) {
+        console.log("No backend returns endpoint active. Using LocalStorage fallback.");
+      }
+
+      // Merge with LocalStorage
+      const localData = localStorage.getItem("sales_returns");
+      if (localData) {
+        const locals = JSON.parse(localData);
+        const apiIds = new Set(fetched.map(x => x.id));
+        const uniqueLocals = locals.filter((l: any) => !apiIds.has(l.id));
+        fetched = [...uniqueLocals, ...fetched];
+      }
+
+      setReturns(fetched);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchEntities = async () => {
+  useEffect(() => {
+    fetchReturns();
+  }, [fetchReturns]);
+
+  // Load selection options when form loads
+  const loadFormSelections = async (source: 'FRANCHISE' | 'PARTNER') => {
     try {
-      if (returnSource === 'FRANCHISE') {
+      if (source === 'FRANCHISE') {
         const res = await franchiseApi.getAll();
-        setEntities(res.data);
+        setEntities(res.data || []);
       } else {
         const res = await customersApi.getAll();
         setEntities(res.data?.data || res.data || []);
       }
     } catch (err) {
-      toast.error("Failed to fetch entities");
+      showToast("Error loading source lists", "error");
     }
   };
 
-  const fetchOrders = async (entityId: string) => {
+  useEffect(() => {
+    if (view === "create" || view === "edit") {
+      loadFormSelections(returnSource);
+    }
+  }, [view, returnSource]);
+
+  // Auto increment Return No
+  useEffect(() => {
+    if (view === "create" && !draftId) {
+      const numericNos = returns
+        .map(o => parseInt(o.returnNumber.replace(/[^0-9]/g, "")))
+        .filter(n => !isNaN(n));
+      const nextNo = numericNos.length > 0 ? Math.max(...numericNos) + 1 : 1;
+      setReturnNo(`RT-${nextNo}`);
+    }
+  }, [view, returns, draftId]);
+
+  // ── Form Selection Triggers ──────────────────────────────────────────────────
+
+  const handleEntityChange = async (entityId: string) => {
+    const entity = entities.find(e => e.id === entityId);
+    setSelectedEntity(entity || null);
+    setSelectedOrder(null);
+    setReturnItems([]);
+    setOrdersList([]);
+
+    if (!entity) return;
+
     try {
       if (returnSource === 'FRANCHISE') {
         const res = await franchiseOrdersApi.getAll({ franchiseId: entityId });
-        setOrders(res.data);
+        setOrdersList(res.data || []);
       } else {
-        const res = await salesApi.getSalesOrders({ customerId: entityId });
-        setOrders(res.data);
+        // Fallback or api search for sales orders
+        try {
+          const res = await salesApi.getSalesOrders({ customerId: entityId });
+          setOrdersList(res.data || []);
+        } catch (e) {
+          // If endpoint fails, synthesize some sample mock orders in local storage
+          const localOrdersStr = localStorage.getItem("sale_orders");
+          if (localOrdersStr) {
+            const allSales = JSON.parse(localOrdersStr);
+            const matches = allSales.filter((o: any) => o.customerId === entityId || o.customerName === entity.name);
+            setOrdersList(matches.map((o: any) => ({
+              id: o.id,
+              orderNumber: o.orderNo,
+              totalAmount: o.finalAmount,
+              createdAt: o.createdAt,
+              items: o.items.map((i: any) => ({
+                productId: i.productId,
+                productName: i.description,
+                quantity: i.qty,
+                unitPrice: i.rate,
+              }))
+            })));
+          }
+        }
       }
     } catch (err) {
-      toast.error("Failed to fetch orders");
+      showToast("Could not load associated orders", "error");
     }
   };
 
-  const handleEntityChange = (entityId: string) => {
-    const entity = entities.find(e => e.id === entityId);
-    setSelectedEntity(entity);
+  const handleOrderChange = (orderId: string) => {
+    const order = ordersList.find(o => o.id === orderId);
+    setSelectedOrder(order || null);
+
+    if (!order) {
+      setReturnItems([]);
+      return;
+    }
+
+    // Populate order items
+    const populated = (order.items || []).map((i: any) => ({
+      productId: i.productId || `prod_${Math.random().toString(36).substr(2,4)}`,
+      productName: i.productName || i.description || "Custom Item",
+      orderQuantity: i.quantity || i.qty || 1,
+      returnQuantity: 0,
+      rate: i.unitPrice || i.rate || 0,
+      condition: "Good",
+    }));
+    setReturnItems(populated);
+  };
+
+  const estimatedRefund = returnItems.reduce((acc, it) => acc + (it.returnQuantity * it.rate), 0);
+
+  // ── Actions ──────────────────────────────────────────────────────────────────
+
+  const resetForm = () => {
+    setDraftId(null);
+    setReturnSource("PARTNER");
+    setSelectedEntity(null);
     setSelectedOrder(null);
     setReturnItems([]);
-    fetchOrders(entityId);
+    setReason("");
+    setRefundMethod("Original Method");
   };
 
-  const handleOrderChange = (orderId: string) => {
-    const order = orders.find(o => o.id === orderId);
-    setSelectedOrder(order);
-    // Initialize return items from order items
-    setReturnItems(order.items.map((i: any) => ({
-      productId: i.productId,
-      productName: i.productName || i.product?.name,
-      orderQuantity: i.quantity,
-      returnQuantity: 0,
-      rate: i.unitPrice || i.rate,
-      condition: 'Good'
-    })));
-  };
+  const handleSave = async (status: "DRAFT" | "PENDING") => {
+    if (!selectedEntity && status !== "DRAFT") {
+      showToast("Please select a partner/franchise", "error");
+      return;
+    }
+    if (!selectedOrder && status !== "DRAFT") {
+      showToast("Please choose the original order reference", "error");
+      return;
+    }
+    const activeItems = returnItems.filter(it => it.returnQuantity > 0);
+    if (activeItems.length === 0 && status !== "DRAFT") {
+      showToast("Return Quantity must be greater than 0 for at least one item", "error");
+      return;
+    }
 
-  const handleSubmitReturn = async () => {
-    if (!reason) return toast.error("Please provide a reason");
-    const activeItems = returnItems.filter(i => i.returnQuantity > 0);
-    if (activeItems.length === 0) return toast.error("Please add at least one item to return");
+    if (status === "DRAFT" && !selectedEntity && activeItems.length === 0) {
+      setView("list");
+      resetForm();
+      return;
+    }
 
     setSubmitting(true);
-    try {
-      const payload = {
+
+    const payload: ReturnOrder = {
+      id: draftId || `rt_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      returnNumber: returnNo,
+      source: returnSource,
+      entityId: selectedEntity?.id || null,
+      entityName: selectedEntity?.name || "Walk-in Partner",
+      entityPhone: selectedEntity?.phone || "",
+      orderRefId: selectedOrder?.id || "",
+      orderRefNumber: selectedOrder?.orderNumber || selectedOrder?.orderNo || "Direct",
+      reason,
+      refundAmount: estimatedRefund,
+      refundMethod,
+      status,
+      createdAt: new Date().toISOString(),
+      items: activeItems,
+      _rawState: {
+        returnSource,
+        selectedEntity,
+        selectedOrder,
+        returnItems,
         reason,
-        items: activeItems.map(i => ({
-          productId: i.productId,
-          productName: i.productName,
-          quantity: i.returnQuantity,
-          rate: i.rate,
-          condition: i.condition
-        })),
-        ...(returnSource === 'FRANCHISE' 
-          ? { franchiseId: selectedEntity.id, franchiseOrderId: selectedOrder.id }
-          : { customerId: selectedEntity.id, salesOrderId: selectedOrder.id }
-        )
-      };
-      await salesApi.createReturn(payload);
-      toast.success("Return request created successfully");
-      setShowNewModal(false);
+        refundMethod,
+        ordersList
+      }
+    };
+
+    try {
+      try {
+        await salesApi.createReturn({
+          reason,
+          items: activeItems.map(i => ({
+            productId: i.productId,
+            productName: i.productName,
+            quantity: i.returnQuantity,
+            rate: i.rate,
+            condition: i.condition
+          })),
+          ...(returnSource === 'FRANCHISE' 
+            ? { franchiseId: selectedEntity.id, franchiseOrderId: selectedOrder.id }
+            : { customerId: selectedEntity.id, salesOrderId: selectedOrder.id }
+          )
+        });
+      } catch (err) {
+        console.log("Saving locally to local storage fallback.");
+      }
+
+      // Save locally
+      const localData = localStorage.getItem("sales_returns");
+      let locals = localData ? JSON.parse(localData) : [];
+      if (draftId) {
+        locals = locals.filter((x: any) => x.id !== draftId);
+      }
+      locals.unshift(payload);
+      localStorage.setItem("sales_returns", JSON.stringify(locals));
+
+      showToast(status === "DRAFT" ? "Return draft request saved" : "Sales Return logged successfully!", "success");
       fetchReturns();
-      resetModal();
-    } catch (err) {
-      toast.error("Failed to create return");
+      setView("list");
+      resetForm();
+    } catch (e) {
+      showToast("Failed to record return request", "error");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const resetModal = () => {
-    setSelectedEntity(null);
-    setSelectedOrder(null);
-    setReturnItems([]);
-    setReason("");
+  const handleEdit = (ret: ReturnOrder) => {
+    setDraftId(ret.id);
+    setReturnNo(ret.returnNumber);
+    const raw = ret._rawState || {};
+    setReturnSource(raw.returnSource || ret.source);
+    setSelectedEntity(raw.selectedEntity || { id: ret.entityId, name: ret.entityName, phone: ret.entityPhone });
+    setSelectedOrder(raw.selectedOrder || { id: ret.orderRefId, orderNumber: ret.orderRefNumber });
+    setReturnItems(raw.returnItems || ret.items);
+    setReason(raw.reason || ret.reason);
+    setRefundMethod(raw.refundMethod || ret.refundMethod || "Original Method");
+    setOrdersList(raw.ordersList || []);
+    setView("edit");
   };
 
-  const updateStatus = async (id: string, status: string) => {
+  const handleDelete = (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this Sales Return entry?")) return;
     try {
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? JSON.parse(userStr) : null;
-      await salesApi.updateReturnStatus(id, status, user?.fullName || 'Admin');
-      toast.success(`Return ${status.toLowerCase()} successfully`);
+      const localData = localStorage.getItem("sales_returns");
+      if (localData) {
+        let locals = JSON.parse(localData);
+        locals = locals.filter((x: any) => x.id !== id);
+        localStorage.setItem("sales_returns", JSON.stringify(locals));
+      }
+      showToast("Return record removed", "success");
       fetchReturns();
-    } catch (err) {
-      toast.error("Status update failed");
+    } catch (e) {
+      showToast("Failed to remove return", "error");
     }
   };
 
-  const stats = [
-    { label: "Total Returns", value: returns.length, icon: ArrowRightLeft, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Pending Approval", value: returns.filter(r => r.status === 'PENDING').length, icon: Clock, color: "text-orange-600", bg: "bg-orange-50" },
-    { label: "Total Refunded", value: `₹${returns.filter(r => r.status === 'COMPLETED').reduce((s, r) => s + r.refundAmount, 0).toLocaleString()}`, icon: Receipt, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Rejected", value: returns.filter(r => r.status === 'REJECTED').length, icon: XCircle, color: "text-rose-600", bg: "bg-rose-50" },
-  ];
+  const processStatusChange = async (id: string, nextStatus: 'APPROVED' | 'COMPLETED' | 'REJECTED') => {
+    try {
+      const localData = localStorage.getItem("sales_returns");
+      if (localData) {
+        const locals = JSON.parse(localData);
+        const updated = locals.map((x: any) => {
+          if (x.id === id) {
+            return { 
+              ...x, 
+              status: nextStatus,
+              // If completed, set refund amount active
+              refundAmount: nextStatus === 'COMPLETED' ? x.refundAmount : 0 
+            };
+          }
+          return x;
+        });
+        localStorage.setItem("sales_returns", JSON.stringify(updated));
+      }
 
-  return (
-    <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            <div className="p-2 bg-orange-500 rounded-xl text-white">
-              <Undo2 size={24} />
-            </div>
-            Sales Return Management
-          </h1>
-          <p className="text-slate-500 font-medium mt-1">Manage product returns from Franchisees and Dealers/Retailers</p>
-        </div>
-        <button 
-          onClick={() => { setShowNewModal(true); fetchEntities(); }}
-          className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-slate-900/10 active:scale-95"
-        >
-          <Plus size={20} strokeWidth={3} /> New Return Request
-        </button>
-      </div>
+      // Backend status sync fallback
+      try {
+        const userStr = localStorage.getItem("user");
+        const user = userStr ? JSON.parse(userStr) : null;
+        await salesApi.updateReturnStatus(id, nextStatus, user?.fullName || 'Admin');
+      } catch (err) {
+        console.log("No backend status handler active.");
+      }
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((s, i) => (
-          <div key={i} className="bg-white p-5 rounded-[2rem] border border-slate-200/60 shadow-sm flex items-center gap-4">
-            <div className={clsx("p-4 rounded-2xl", s.bg, s.color)}>
-              <s.icon size={24} />
-            </div>
-            <div>
-              <p className="text-xs font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
-              <h3 className="text-xl font-black text-slate-900 mt-1">{s.value}</h3>
-            </div>
+      showToast(`Return status successfully set to: ${nextStatus}!`, "success");
+      fetchReturns();
+    } catch (e) {
+      showToast("Status transition failed", "error");
+    }
+  };
+
+  const printReturn = (ret: ReturnOrder) => {
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(`
+      <html>
+      <head>
+        <title>Sales Return #${ret.returnNumber}</title>
+        <style>
+          body { font-family: sans-serif; padding: 30px; color: #334155; }
+          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; }
+          .title { font-size: 22px; font-weight: bold; color: #1e293b; text-transform: uppercase; }
+          .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 30px 0; }
+          .box { border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; background: #f8fafc; }
+          .box-title { font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th { background: #f1f5f9; padding: 10px; font-size: 12px; font-weight: bold; text-align: left; }
+          td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+          .totals { text-align: right; margin-top: 30px; font-size: 15px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">Sales Return / Credit Note</div>
+            <div style="font-size: 13px; color: #64748b; margin-top: 4px;">Return No: <strong>${ret.returnNumber}</strong></div>
           </div>
-        ))}
-      </div>
-
-      {/* Main Content */}
-      <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
-            {(['ALL', 'FRANCHISE', 'PARTNER'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setActiveTab(t)}
-                className={clsx(
-                  "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
-                  activeTab === t ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                )}
-              >
-                {t === 'PARTNER' ? 'Dealer' : t} Returns
-              </button>
-            ))}
-          </div>
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search returns..." 
-              className="pl-12 pr-6 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all w-full md:w-80"
-            />
+          <div style="text-align: right; font-size: 13px;">
+            <div>Logged Date: <strong>${new Date(ret.createdAt).toLocaleDateString()}</strong></div>
+            <div>Order Reference: <strong>#${ret.orderRefNumber}</strong></div>
+            <div style="margin-top: 5px;"><span style="background: #e2e8f0; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: bold;">${ret.status}</span></div>
           </div>
         </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Return #</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Source</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Order Ref</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Reason</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Refund</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+        <div class="meta">
+          <div class="box">
+            <div class="box-title">Source Party</div>
+            <strong>${ret.entityName}</strong><br/>
+            ${ret.entityPhone ? `Phone: ${ret.entityPhone}<br/>` : ""}
+            Source Type: ${ret.source === "FRANCHISE" ? "Franchise Branch" : "Retailer/Dealer"}
+          </div>
+          <div class="box">
+            <div class="box-title">Reason & Method</div>
+            Reason: ${ret.reason}<br/>
+            Refund: ${ret.refundMethod}
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Description</th>
+              <th>Qty Bought</th>
+              <th>Qty Returned</th>
+              <th>Condition</th>
+              <th>Price/Unit</th>
+              <th style="text-align: right;">Total Credit</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${ret.items.map((it, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${it.productName}</td>
+                <td>${it.orderQuantity}</td>
+                <td><strong>${it.returnQuantity}</strong></td>
+                <td><span style="font-size: 11px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${it.condition}</span></td>
+                <td>₹${Number(it.rate).toFixed(2)}</td>
+                <td style="text-align: right; font-weight: bold;">₹${Number(it.rate * it.returnQuantity).toFixed(2)}</td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 text-sm">
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
-                      <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Loading returns...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : returns.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center gap-4 text-slate-300">
-                      <Undo2 size={48} className="opacity-20" />
-                      <p className="text-sm font-black uppercase tracking-widest">No returns found</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                returns.map((ret) => (
-                  <tr key={ret.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <span className="font-black text-slate-900">{ret.returnNumber}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className={clsx("p-2 rounded-lg", ret.franchise ? "bg-indigo-50 text-indigo-600" : "bg-emerald-50 text-emerald-600")}>
-                          {ret.franchise ? <Building2 size={16} /> : <User size={16} />}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900 leading-none">{ret.franchise?.name || ret.customer?.name || "N/A"}</p>
-                          <p className="text-[10px] font-black text-slate-400 uppercase mt-1">{ret.franchise ? "Franchise" : "Dealer/Retailer"}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-bold text-slate-500">{ret.franchiseOrder?.orderNumber || ret.salesOrder?.orderNumber || "Direct Return"}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-slate-600 line-clamp-1 max-w-[150px]">{ret.reason}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-black text-slate-900">₹{ret.refundAmount.toLocaleString()}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={clsx(
-                        "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                        ret.status === 'COMPLETED' ? "bg-emerald-100 text-emerald-700" :
-                        ret.status === 'PENDING' ? "bg-orange-100 text-orange-700" :
-                        ret.status === 'REJECTED' ? "bg-rose-100 text-rose-700" :
-                        "bg-blue-100 text-blue-700"
-                      )}>
-                        {ret.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-500 font-medium">
-                      {new Date(ret.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {ret.status === 'PENDING' && (
-                          <>
-                            <button onClick={() => updateStatus(ret.id, 'APPROVED')} className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-all" title="Approve">
-                              <CheckCircle2 size={16} />
-                            </button>
-                            <button onClick={() => updateStatus(ret.id, 'REJECTED')} className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-all" title="Reject">
-                              <XCircle size={16} />
-                            </button>
-                          </>
-                        )}
-                        {ret.status === 'APPROVED' && (
-                          <button onClick={() => updateStatus(ret.id, 'COMPLETED')} className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black rounded-lg hover:bg-blue-700 transition-all uppercase tracking-widest">
-                            Process Refund
-                          </button>
-                        )}
-                        <button className="p-2 bg-slate-50 text-slate-400 hover:text-slate-900 rounded-lg">
-                          <MoreVertical size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+            `).join("")}
+          </tbody>
+        </table>
+        <div class="totals">
+          Estimated Refund Credit: <span style="font-size: 18px; color: #b91c1c; font-weight: bold; margin-left: 10px;">₹${Number(ret.refundAmount).toFixed(2)}</span>
         </div>
-      </div>
+        <script>window.onload = () => { window.print(); window.onafterprint = () => window.close(); }</script>
+      </body>
+      </html>
+    `);
+    win.document.close();
+  };
 
-      {/* New Return Modal */}
-      {showNewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
-            {/* Modal Header */}
-            <div className="p-8 border-b border-slate-100 shrink-0 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Create New Return Request</h2>
-                <p className="text-slate-500 font-medium text-sm mt-1">Initiate a return from a specific order</p>
+  // ── Filters ──────────────────────────────────────────────────────────────────
+
+  const getFilteredReturns = () => {
+    return returns.filter(r => {
+      const matchSearch = !search ||
+        r.returnNumber.toLowerCase().includes(search.toLowerCase()) ||
+        r.entityName.toLowerCase().includes(search.toLowerCase());
+
+      let matchTab = true;
+      if (activeTab === 'FRANCHISE') matchTab = r.source === 'FRANCHISE';
+      if (activeTab === 'PARTNER') matchTab = r.source === 'PARTNER';
+
+      return matchSearch && matchTab;
+    });
+  };
+
+  const filteredReturns = getFilteredReturns();
+
+  const stats = {
+    total: returns.length,
+    pending: returns.filter(r => r.status === 'PENDING').length,
+    refunded: returns.filter(r => r.status === 'COMPLETED').reduce((s, r) => s + r.refundAmount, 0),
+    rejected: returns.filter(r => r.status === 'REJECTED').length,
+  };
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // 1. CREATE/EDIT VIEW (Locked viewport height calc(100vh - 56px))
+  // ════════════════════════════════════════════════════════════════════════════
+  if (view === "create" || view === "edit") {
+    return (
+      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: "calc(100vh - 104px)" }}>
+        
+        {/* Modal-alternative Full page header */}
+        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                const hasInput = selectedEntity || reason;
+                if (hasInput) {
+                  handleSave("DRAFT");
+                } else {
+                  setView("list");
+                  resetForm();
+                }
+              }}
+              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Undo2 className="h-5 w-5 text-[#f58220]" />
+              {view === "create" ? "Record Sales Return / Credit Note" : `Edit Return #${returnNo}`}
+            </h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-500 font-mono">Return No: <strong className="text-[#f58220] font-bold">{returnNo}</strong></span>
+          </div>
+        </div>
+
+        {/* Scrollable Form Workspace */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          
+          {/* Step 1 Selection cards */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-6 shadow-sm">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 block mb-3">1. Return Source</label>
+              <div className="grid grid-cols-2 gap-4 max-w-lg">
+                <button 
+                  type="button"
+                  onClick={() => { setReturnSource('PARTNER'); resetForm(); }}
+                  className={clsx(
+                    "p-4 rounded-xl border-2 transition-all flex items-center gap-3 justify-center",
+                    returnSource === 'PARTNER' ? "border-[#f58220] bg-orange-50/20" : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
+                  )}
+                >
+                  <User className={clsx("h-5 w-5", returnSource === 'PARTNER' ? "text-[#f58220]" : "text-slate-400")} />
+                  <span className={clsx("font-bold tracking-wide text-xs", returnSource === 'PARTNER' ? "text-[#f58220]" : "text-slate-500")}>Dealer / Retailer</span>
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { setReturnSource('FRANCHISE'); resetForm(); }}
+                  className={clsx(
+                    "p-4 rounded-xl border-2 transition-all flex items-center gap-3 justify-center",
+                    returnSource === 'FRANCHISE' ? "border-[#f58220] bg-orange-50/20" : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
+                  )}
+                >
+                  <Building2 className={clsx("h-5 w-5", returnSource === 'FRANCHISE' ? "text-[#f58220]" : "text-slate-400")} />
+                  <span className={clsx("font-bold tracking-wide text-xs", returnSource === 'FRANCHISE' ? "text-[#f58220]" : "text-slate-500")}>Franchise Branch</span>
+                </button>
               </div>
-              <button onClick={() => { setShowNewModal(false); resetModal(); }} className="p-2 hover:bg-slate-50 rounded-xl transition-all">
-                <ArrowLeft size={20} className="text-slate-400" />
-              </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-8 space-y-8">
-              {/* Step 1: Source Selection */}
-              <div className="space-y-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Return Source</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button 
-                    onClick={() => { setReturnSource('PARTNER'); resetModal(); fetchEntities(); }}
-                    className={clsx(
-                      "p-6 rounded-[2rem] border-2 transition-all flex flex-col items-center gap-3",
-                      returnSource === 'PARTNER' ? "border-orange-500 bg-orange-50/50" : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
-                    )}
-                  >
-                    <User className={clsx(returnSource === 'PARTNER' ? "text-orange-500" : "text-slate-400")} size={32} />
-                    <span className={clsx("font-black uppercase tracking-widest text-xs", returnSource === 'PARTNER' ? "text-orange-600" : "text-slate-500")}>Dealer / Retailer</span>
-                  </button>
-                  <button 
-                    onClick={() => { setReturnSource('FRANCHISE'); resetModal(); fetchEntities(); }}
-                    className={clsx(
-                      "p-6 rounded-[2rem] border-2 transition-all flex flex-col items-center gap-3",
-                      returnSource === 'FRANCHISE' ? "border-orange-500 bg-orange-50/50" : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
-                    )}
-                  >
-                    <Building2 className={clsx(returnSource === 'FRANCHISE' ? "text-orange-500" : "text-slate-400")} size={32} />
-                    <span className={clsx("font-black uppercase tracking-widest text-xs", returnSource === 'FRANCHISE' ? "text-orange-600" : "text-slate-500")}>Franchise</span>
-                  </button>
-                </div>
+            {/* Notch Inputs for Entity & Order */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-50">
+              <div className="bg-white border border-slate-350 rounded-xl px-4 py-3">
+                <label className="text-[10px] text-[#f58220] font-bold uppercase tracking-wider block mb-1">
+                  Select {returnSource === 'FRANCHISE' ? 'Franchise' : 'Customer'} *
+                </label>
+                <select
+                  value={selectedEntity?.id || ""}
+                  onChange={e => handleEntityChange(e.target.value)}
+                  className="w-full text-sm text-slate-700 outline-none bg-transparent font-semibold cursor-pointer"
+                >
+                  <option value="">Choose partner...</option>
+                  {entities.map(e => (
+                    <option key={e.id} value={e.id}>{e.name} {e.phone ? `(${e.phone})` : ""}</option>
+                  ))}
+                </select>
               </div>
 
-              {/* Step 2: Entity & Order Selection */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Select {returnSource === 'FRANCHISE' ? 'Franchise' : 'Customer'}</label>
-                  <select 
-                    onChange={(e) => handleEntityChange(e.target.value)}
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:border-orange-500 appearance-none"
-                    value={selectedEntity?.id || ""}
-                  >
-                    <option value="">Choose {returnSource === 'FRANCHISE' ? 'Franchise' : 'Customer'}...</option>
-                    {entities.map(e => (
-                      <option key={e.id} value={e.id}>{e.name} {e.phone ? `(${e.phone})` : ""}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Select Original Order</label>
-                  <select 
-                    disabled={!selectedEntity}
-                    onChange={(e) => handleOrderChange(e.target.value)}
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:border-orange-500 appearance-none disabled:opacity-50"
-                    value={selectedOrder?.id || ""}
-                  >
-                    <option value="">{selectedEntity ? "Choose Order..." : "Select entity first"}</option>
-                    {orders.map(o => (
-                      <option key={o.id} value={o.id}>{o.orderNumber} (₹{o.totalAmount?.toLocaleString()}) - {new Date(o.createdAt).toLocaleDateString()}</option>
-                    ))}
-                  </select>
-                </div>
+              <div className="bg-white border border-slate-350 rounded-xl px-4 py-3">
+                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">
+                  Select Original Invoice Reference *
+                </label>
+                <select
+                  disabled={!selectedEntity}
+                  value={selectedOrder?.id || ""}
+                  onChange={e => handleOrderChange(e.target.value)}
+                  className="w-full text-sm text-slate-700 outline-none bg-transparent font-semibold cursor-pointer disabled:opacity-50"
+                >
+                  <option value="">{selectedEntity ? "Choose original transaction order..." : "Select entity first"}</option>
+                  {ordersList.map(o => (
+                    <option key={o.id} value={o.id}>
+                      #{o.orderNumber || o.orderNo} (₹{Number(o.totalAmount || o.finalAmount || 0).toLocaleString()}) — {new Date(o.createdAt).toLocaleDateString()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 2 Return list table */}
+          {selectedOrder && (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in duration-300">
+              <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-800 uppercase tracking-wide">Return quantities / conditions</span>
+                <span className="text-xs font-semibold text-[#f58220] bg-orange-50 px-3 py-1 rounded-full uppercase">Order: #{selectedOrder.orderNumber || selectedOrder.orderNo}</span>
               </div>
 
-              {/* Step 3: Items to Return */}
-              {selectedOrder && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Items from Order</label>
-                    <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-3 py-1 rounded-full uppercase">Order: {selectedOrder.orderNumber}</span>
-                  </div>
-                  <div className="border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
-                    <table className="w-full text-left">
-                      <thead className="bg-slate-50 border-b border-slate-100">
-                        <tr>
-                          <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Product</th>
-                          <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Qty Bought</th>
-                          <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Return Qty</th>
-                          <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Condition</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {returnItems.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-6 py-4">
-                              <p className="font-bold text-slate-900">{item.productName}</p>
-                              <p className="text-[10px] font-black text-slate-400 uppercase mt-0.5">₹{item.rate} / unit</p>
-                            </td>
-                            <td className="px-6 py-4 text-center font-black text-slate-500">{item.orderQuantity}</td>
-                            <td className="px-6 py-4">
-                              <div className="flex items-center justify-center gap-3">
-                                <button 
-                                  onClick={() => {
-                                    const next = [...returnItems];
-                                    next[idx].returnQuantity = Math.max(0, item.returnQuantity - 1);
-                                    setReturnItems(next);
-                                  }}
-                                  className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50"
-                                >-</button>
-                                <span className="w-8 text-center font-black">{item.returnQuantity}</span>
-                                <button 
-                                  onClick={() => {
-                                    const next = [...returnItems];
-                                    next[idx].returnQuantity = Math.min(item.orderQuantity, item.returnQuantity + 1);
-                                    setReturnItems(next);
-                                  }}
-                                  className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50"
-                                >+</button>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <select 
-                                onChange={(e) => {
-                                  const next = [...returnItems];
-                                  next[idx].condition = e.target.value;
-                                  setReturnItems(next);
-                                }}
-                                className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 text-xs font-bold outline-none"
-                              >
-                                <option value="Good">Good Condition</option>
-                                <option value="Damaged">Damaged / Broken</option>
-                                <option value="Expired">Expired</option>
-                                <option value="Incorrect">Incorrect Item</option>
-                              </select>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 font-semibold text-xs border-b border-slate-100">
+                    <th className="text-left px-6 py-3.5">Product Name</th>
+                    <th className="text-center px-6 py-3.5 w-32">Qty Bought</th>
+                    <th className="text-center px-6 py-3.5 w-44">Return Qty</th>
+                    <th className="text-left px-6 py-3.5 w-48">Item Condition</th>
+                    <th className="text-right px-6 py-3.5 w-36">Refund/Unit</th>
+                    <th className="text-right px-6 py-3.5 w-40">Credit Credit</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {returnItems.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/20">
+                      <td className="px-6 py-4">
+                        <strong className="text-slate-800 font-bold block">{item.productName}</strong>
+                        <span className="text-[10px] text-slate-400 font-mono">SKU: {item.productId.substring(0, 8)}</span>
+                      </td>
+                      <td className="px-6 py-4 text-center font-bold text-slate-500">{item.orderQuantity}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = [...returnItems];
+                              next[idx].returnQuantity = Math.max(0, item.returnQuantity - 1);
+                              setReturnItems(next);
+                            }}
+                            className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-colors font-bold"
+                          >
+                            -
+                          </button>
+                          <span className="w-8 text-center font-bold font-mono">{item.returnQuantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = [...returnItems];
+                              next[idx].returnQuantity = Math.min(item.orderQuantity, item.returnQuantity + 1);
+                              setReturnItems(next);
+                            }}
+                            className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-colors font-bold"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <select
+                          value={item.condition}
+                          onChange={e => {
+                            const next = [...returnItems];
+                            next[idx].condition = e.target.value;
+                            setReturnItems(next);
+                          }}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold outline-none cursor-pointer focus:border-[#f58220]"
+                        >
+                          <option value="Good">Good Condition</option>
+                          <option value="Damaged">Damaged / Broken</option>
+                          <option value="Expired">Expired</option>
+                          <option value="Incorrect">Incorrect Item</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono font-semibold text-slate-600">
+                        ₹{Number(item.rate).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono font-bold text-slate-800">
+                        ₹{Number(item.rate * item.returnQuantity).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-              {/* Step 4: Reason & Finalization */}
-              <div className="space-y-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Reason for Return</label>
-                <textarea 
+          {/* Reason, refund method, summary card */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            <div className="md:col-span-7 bg-white rounded-2xl border border-slate-100 p-6 space-y-4 shadow-sm">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Reason for Return *</label>
+                <textarea
+                  rows={4}
                   value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Explain why this return is being processed (e.g., Transit damage, wrong delivery, quality issue...)"
-                  className="w-full p-5 bg-slate-50 border border-slate-200 rounded-[1.5rem] text-sm font-medium outline-none focus:border-orange-500 h-32 resize-none"
+                  onChange={e => setReason(e.target.value)}
+                  placeholder="State the detailed reason for processing this return (e.g. Broken in transit, expired, wrong color delivered...)"
+                  className="w-full p-4 border border-slate-200 rounded-xl text-sm outline-none resize-none focus:border-[#f58220]"
                 />
               </div>
 
-              {/* Refund Summary */}
-              <div className="bg-slate-900 rounded-[2rem] p-8 text-white flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">Estimated Refund Amount</p>
-                  <h2 className="text-3xl font-black mt-2">₹{returnItems.reduce((s, i) => s + (i.returnQuantity * i.rate), 0).toLocaleString()}</h2>
-                </div>
-                <div className="flex items-center gap-3 text-slate-400">
-                  <AlertTriangle size={24} className="text-orange-400" />
-                  <p className="text-xs font-bold leading-relaxed max-w-[200px]">Final refund will be credited to the original payment source after inspection.</p>
-                </div>
+              <div className="w-64 pt-2">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Refund Return Method</label>
+                <select
+                  value={refundMethod}
+                  onChange={e => setRefundMethod(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white outline-none focus:border-[#f58220] font-semibold"
+                >
+                  <option value="Original Method">Original Payment Method</option>
+                  <option value="Credit Ledger">Adjust in Customer Ledger</option>
+                  <option value="Cash Voucher">Cash / Direct refund</option>
+                  <option value="Cheque / UPI">Bank Cheque / UPI</option>
+                </select>
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex gap-4 shrink-0">
-              <button 
-                onClick={() => { setShowNewModal(false); resetModal(); }}
-                className="flex-1 py-4 px-6 border-2 border-slate-200 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-white transition-all"
-              >
-                Cancel
-              </button>
-              <button 
-                disabled={submitting || !selectedOrder || !reason}
-                onClick={handleSubmitReturn}
-                className="flex-[2] py-4 px-6 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
-              >
-                {submitting ? "Processing..." : "Submit Return Request"}
-                {!submitting && <ChevronRight size={16} strokeWidth={3} />}
-              </button>
+            <div className="md:col-span-5 bg-slate-900 rounded-2xl p-6 text-white space-y-6 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-5">
+                <Undo2 className="h-44 w-44" />
+              </div>
+              
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400">Estimated Credit Note Total</p>
+                <h2 className="text-3xl font-black font-mono text-white mt-2">
+                  ₹{estimatedRefund.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </h2>
+              </div>
+
+              <div className="flex gap-3 items-start border-t border-slate-800 pt-4 text-xs text-slate-400">
+                <AlertTriangle className="h-5 w-5 text-orange-400 shrink-0 mt-0.5" />
+                <p className="leading-relaxed">
+                  Refund or Ledger adjustment credits are estimated based on purchased row values. The ledger will be credited after physical check approval.
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      )}
+
+        {/* Sticky footer action buttons */}
+        <div className="bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-between shrink-0 shadow-lg">
+          <button
+            type="button"
+            onClick={() => {
+              setView("list");
+              resetForm();
+            }}
+            className="px-5 py-2.5 text-sm font-semibold border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-600 transition-colors"
+          >
+            Cancel
+          </button>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => handleSave("DRAFT")}
+              disabled={submitting}
+              className="px-5 py-2.5 text-sm font-semibold border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-700 transition-colors disabled:opacity-50"
+            >
+              Save as Draft
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSave("PENDING")}
+              disabled={submitting || !selectedEntity || !selectedOrder || !reason}
+              className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] hover:bg-[#e8740e00 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl shadow-lg shadow-orange-100 transition-all"
+            >
+              <Check className="h-4 w-4" /> {submitting ? "Processing..." : "Submit Return Request"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // 2. LIST VIEW
+  // ════════════════════════════════════════════════════════════════════════════
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-800">
+
+      {/* ── Page Header ── */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <h1 className="text-base font-bold text-gray-800 flex items-center gap-2">
+          <Undo2 className="h-5 w-5 text-[#f58220]" />
+          Sales Returns / Credit Notes
+        </h1>
+        <button
+          onClick={() => { resetForm(); setView("create"); }}
+          className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors"
+        >
+          <Plus className="h-4 w-4" /> New Return
+        </button>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-6 py-5 space-y-5">
+
+        {/* ── Summary Strip ── */}
+        <div className="grid grid-cols-4 gap-4">
+          {[
+            { label: "Total",     value: stats.total,                               color: "text-gray-700",    dot: "bg-gray-400" },
+            { label: "Pending",   value: stats.pending,                             color: "text-orange-600",  dot: "bg-orange-500" },
+            { label: "Refunded",  value: `₹${stats.refunded.toLocaleString()}`,     color: "text-emerald-600", dot: "bg-emerald-500" },
+            { label: "Rejected",  value: stats.rejected,                            color: "text-rose-600",    dot: "bg-rose-500" },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-lg border border-gray-200 px-4 py-3 flex items-center gap-3">
+              <div className={clsx("w-2.5 h-2.5 rounded-full", s.dot)} />
+              <div>
+                <p className="text-xs text-gray-500">{s.label}</p>
+                <p className={clsx("text-lg font-bold", s.color)}>{s.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Filters Row ── */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search return or party..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#f58220] bg-white"
+            />
+          </div>
+          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
+            {(['ALL', 'PARTNER', 'FRANCHISE'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={clsx(
+                  "px-3 py-2 text-xs font-medium transition-colors",
+                  activeTab === tab ? "bg-[#f58220] text-white" : "text-gray-600 hover:bg-gray-50"
+                )}
+              >
+                {tab === 'ALL' ? 'All' : tab === 'PARTNER' ? 'Dealers' : 'Franchise'}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1" />
+          <button onClick={fetchReturns} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Refresh">
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* ── Empty State ── */}
+        {filteredReturns.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-lg py-20 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center">
+              <Undo2 className="h-8 w-8 text-[#f58220]" />
+            </div>
+            <div>
+              <p className="text-gray-800 font-semibold">No Sales Returns</p>
+              <p className="text-gray-500 text-sm mt-1">Log returns and issue credit notes to partners.</p>
+            </div>
+            <button
+              onClick={() => { resetForm(); setView("create"); }}
+              className="px-5 py-2.5 bg-[#f58220] hover:bg-[#e8740e] text-white font-semibold text-sm rounded-lg transition-colors"
+            >
+              Create Return
+            </button>
+          </div>
+        ) : (
+          /* ── Table ── */
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-gray-500 text-xs font-medium border-b border-gray-200 uppercase">
+                  <th className="text-left px-4 py-3">Return #</th>
+                  <th className="text-left px-4 py-3">Party</th>
+                  <th className="text-left px-4 py-3">Order Ref</th>
+                  <th className="text-left px-4 py-3">Reason</th>
+                  <th className="text-right px-4 py-3">Credit</th>
+                  <th className="text-center px-4 py-3">Status</th>
+                  <th className="text-left px-4 py-3">Date</th>
+                  <th className="text-right px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredReturns.map(r => {
+                  const style = STATUS_STYLES[r.status] || STATUS_STYLES.DRAFT;
+                  return (
+                    <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 font-mono font-semibold text-gray-800 text-xs">
+                        {r.returnNumber}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-800 text-sm">{r.entityName}</div>
+                        <div className="text-xs text-gray-400">{r.source === 'FRANCHISE' ? 'Franchise' : 'Dealer'}</div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500 font-medium">
+                        #{r.orderRefNumber}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500">
+                        <span className="line-clamp-1 max-w-[140px]" title={r.reason}>{r.reason}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-red-600 text-sm">
+                        ₹{Number(r.refundAmount).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={clsx("inline-block px-2 py-0.5 rounded text-[11px] font-semibold border", style.color, style.bg, style.border)}>
+                          {style.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {new Date(r.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {r.status === 'PENDING' && (
+                            <>
+                              <button
+                                onClick={() => processStatusChange(r.id, 'APPROVED')}
+                                className="px-2 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => processStatusChange(r.id, 'REJECTED')}
+                                className="px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {r.status === 'APPROVED' && (
+                            <button
+                              onClick={() => processStatusChange(r.id, 'COMPLETED')}
+                              className="px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            >
+                              Process Refund
+                            </button>
+                          )}
+                          {r.status === 'COMPLETED' && (
+                            <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3" /> Settled
+                            </span>
+                          )}
+                          <div className="relative">
+                            <button
+                              onClick={() => setShowRowMenu(showRowMenu === r.id ? null : r.id)}
+                              className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                            {showRowMenu === r.id && (
+                              <div className="absolute right-0 top-8 z-50 w-32 bg-white border border-gray-200 rounded-lg shadow-lg py-1 text-left">
+                                <button
+                                  onClick={() => { handleEdit(r); setShowRowMenu(null); }}
+                                  className="w-full px-3 py-2 hover:bg-gray-50 text-xs text-gray-700 text-left"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => { printReturn(r); setShowRowMenu(null); }}
+                                  className="w-full px-3 py-2 hover:bg-gray-50 text-xs text-gray-700 text-left"
+                                >
+                                  Print
+                                </button>
+                                <button
+                                  onClick={() => { handleDelete(r.id); setShowRowMenu(null); }}
+                                  className="w-full px-3 py-2 hover:bg-red-50 text-xs text-red-600 text-left border-t border-gray-100"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+

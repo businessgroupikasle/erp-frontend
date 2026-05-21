@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Wallet, Plus, RefreshCw, ChevronDown, X, Search,
+  Share2, Trash2, ArrowLeft, ArrowRight,
   Calendar, Check, Printer
 } from "lucide-react";
 import { clsx } from "clsx";
@@ -56,15 +57,94 @@ function getPeriodDates(period: string): { start: string; end: string } {
 function EmptyIllustration() {
   return (
     <div className="w-28 h-28 mx-auto mb-4 relative">
-      <div className="absolute inset-0 rounded-full bg-blue-50 flex items-center justify-center">
+      <div className="absolute inset-0 rounded-full bg-orange-50 flex items-center justify-center">
         <div className="w-20 h-16 rounded-lg bg-white border-2 border-blue-100 flex flex-col gap-1.5 items-start justify-center px-3 shadow-sm">
-          <div className="w-10 h-1.5 rounded bg-blue-200" />
-          <div className="w-6 h-1.5 rounded bg-blue-100" />
-          <div className="w-8 h-1.5 rounded bg-blue-100" />
+          <div className="w-10 h-1.5 rounded bg-orange-200" />
+          <div className="w-6 h-1.5 rounded bg-orange-100" />
+          <div className="w-8 h-1.5 rounded bg-orange-100" />
         </div>
-        <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-blue-100 border-2 border-blue-200 flex items-center justify-center">
+        <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-orange-100 border-2 border-orange-200 flex items-center justify-center">
           <Wallet size={12} className="text-blue-400" />
         </div>
+      </div>
+    </div>
+  );
+}
+
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const DAY_NAMES = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+function MiniCalendar({ value, onChange, onClose }: {
+  value: string;
+  onChange: (v: string) => void;
+  onClose: () => void;
+}) {
+  const today = new Date();
+  const selected = value ? new Date(value + "T00:00:00") : today;
+  const [viewYear, setViewYear] = useState(selected.getFullYear());
+  const [viewMonth, setViewMonth] = useState(selected.getMonth());
+
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const cells: (number | null)[] = [
+    ...Array(firstDay).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); };
+  const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); };
+  const isSelected = (d: number) => selected.getFullYear() === viewYear && selected.getMonth() === viewMonth && selected.getDate() === d;
+  const isToday = (d: number) => today.getFullYear() === viewYear && today.getMonth() === viewMonth && today.getDate() === d;
+
+  return (
+    <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-3 w-64 select-none">
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500">
+          <ChevronDown size={14} className="rotate-90" />
+        </button>
+        <span className="text-sm font-semibold text-gray-800">{MONTH_NAMES[viewMonth]} {viewYear}</span>
+        <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500">
+          <ChevronDown size={14} className="-rotate-90" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 mb-1">
+        {DAY_NAMES.map(d => (
+          <div key={d} className="text-center text-[10px] font-semibold text-gray-400 py-0.5">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-y-0.5">
+        {cells.map((d, i) => d === null ? (
+          <div key={i} />
+        ) : (
+          <button
+            key={i}
+            onClick={() => {
+              const iso = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+              onChange(iso);
+              onClose();
+            }}
+            className={clsx(
+              "w-full aspect-square flex items-center justify-center text-xs rounded-lg font-medium transition-colors",
+              isSelected(d) && "bg-[#ff4d4f] text-white",
+              !isSelected(d) && isToday(d) && "bg-red-50 text-[#ff4d4f]",
+              !isSelected(d) && !isToday(d) && "text-gray-700 hover:bg-gray-100"
+            )}
+          >{d}</button>
+        ))}
+      </div>
+      <div className="mt-2 flex justify-between items-center border-t border-gray-100 pt-2">
+        <button
+          onClick={() => {
+            const t = new Date();
+            const iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+            onChange(iso);
+            onClose();
+          }}
+          className="text-[11px] font-semibold text-[#ff4d4f] hover:text-red-700"
+        >Today</button>
+        <button onClick={onClose} className="text-[11px] text-gray-400 hover:text-gray-600">Close</button>
       </div>
     </div>
   );
@@ -74,6 +154,16 @@ function EmptyIllustration() {
 
 export default function PaymentInPage() {
   const { showToast } = useToast();
+
+  // filters state
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [dateFrom, setDateFrom] = useState(getPeriodDates("this_month").start);
+  const [dateTo, setDateTo] = useState(getPeriodDates("this_month").end);
+  const [showFromCal, setShowFromCal] = useState(false);
+  const [showToCal, setShowToCal] = useState(false);
+  const fromCalRef = useRef<HTMLDivElement>(null);
+  const toCalRef = useRef<HTMLDivElement>(null);
 
   // list state
   const [payments, setPayments] = useState<any[]>([]);
@@ -105,7 +195,7 @@ export default function PaymentInPage() {
     setLoading(true);
     try {
       const res = await api.get("/api/accounting/payments", {
-        params: { type: "INFLOW", startDate: dateRange.start, endDate: dateRange.end }
+        params: { type: "INFLOW", startDate: dateFrom, endDate: dateTo }
       }).catch(() => ({ data: [] }));
       
       let apiPayments = (res as any).data?.payments || (res as any).data || [];
@@ -125,7 +215,7 @@ export default function PaymentInPage() {
     } finally {
       setLoading(false);
     }
-  }, [dateRange]);
+  }, [dateFrom, dateTo]);
 
   const fetchCustomers = useCallback(async () => {
     try {
@@ -143,6 +233,12 @@ export default function PaymentInPage() {
       if (customerDropRef.current && !customerDropRef.current.contains(e.target as Node))
         setShowCustomerDrop(false);
       if (shareDropRef.current && !shareDropRef.current.contains(e.target as Node))
+        setShowShareDrop(false);
+      if (fromCalRef.current && !fromCalRef.current.contains(e.target as Node))
+        setShowFromCal(false);
+      if (toCalRef.current && !toCalRef.current.contains(e.target as Node))
+        setShowToCal(false);
+      if (false)
         setShowShareDrop(false);
     };
     document.addEventListener("mousedown", handler);
@@ -253,6 +349,22 @@ export default function PaymentInPage() {
     setReceiptDate(new Date().toISOString().split("T")[0]);
   };
 
+
+  const handleDeleteDraft = (id: string) => {
+    try {
+      const draftsStr = localStorage.getItem("sale_payments_in_drafts");
+      if (draftsStr) {
+        const drafts = JSON.parse(draftsStr);
+        const newDrafts = drafts.filter((d: any) => d.id !== id);
+        localStorage.setItem("sale_payments_in_drafts", JSON.stringify(newDrafts));
+        showToast("Draft deleted", "success");
+        fetchPayments();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const loadDraft = (draft: any) => {
     setDraftId(draft.id);
     const raw = draft._rawState || {};
@@ -272,8 +384,23 @@ export default function PaymentInPage() {
     c.phone?.includes(customerSearch)
   );
 
-  const totalAmount = payments.reduce((s: number, p: any) => s + (p.paidAmount || 0), 0);
-  const totalReceived = payments.filter((p: any) => p.status === "PAID" || p.status === "SUCCESS")
+
+  const filtered = payments.filter(p => {
+    if (statusFilter !== "ALL") {
+      if (statusFilter === "DRAFT" && p.status !== "DRAFT") return false;
+      if (statusFilter === "SUCCESS" && p.status === "DRAFT") return false; 
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      const entityName = (p.entity?.name || "").toLowerCase();
+      const num = (p.paymentNumber || "").toLowerCase();
+      if (!entityName.includes(q) && !num.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const totalAmount = filtered.reduce((s: number, p: any) => s + (p.paidAmount || 0), 0);
+  const totalReceived = filtered.filter((p: any) => p.status === "PAID" || p.status === "SUCCESS")
     .reduce((s: number, p: any) => s + (p.paidAmount || 0), 0);
 
   const periodLabel = PERIOD_OPTIONS.find(o => o.value === period)?.label || "This Month";
@@ -281,30 +408,33 @@ export default function PaymentInPage() {
   // ── CREATE VIEW ────────────────────────────────────────────────────────────
   if (view === "create") {
     return (
-      <div className="flex flex-col h-screen bg-[#f0f0f0] overflow-hidden">
+      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: 'calc(100vh - 104px)' }}>
 
         {/* Top bar */}
-        <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-4 shrink-0">
-          <span className="text-base font-semibold text-gray-800">Payment-In</span>
+        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold text-slate-800">Payment-In</h2>
+          </div>
+          <span className="text-xs text-slate-500 font-mono">Receipt No: <strong className="text-[#f58220] font-bold">Auto</strong></span>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
           {/* Party + Date row */}
-          <div className="flex flex-wrap gap-4 items-start">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-5 flex flex-wrap gap-4 items-start">
 
             {/* Party dropdown */}
             <div className="relative" ref={customerDropRef}>
               <div
                 className={clsx(
                   "flex items-center gap-1 min-w-[220px] bg-white border rounded px-3 py-2 cursor-pointer",
-                  showCustomerDrop ? "border-blue-500" : "border-gray-300"
+                  showCustomerDrop ? "border-[#f58220]" : "border-slate-300"
                 )}
                 onClick={() => setShowCustomerDrop(v => !v)}
               >
                 <div className="flex-1">
-                  <div className="text-[10px] text-blue-600 font-medium leading-none mb-0.5">Party *</div>
+                  <div className="text-[10px] text-[#f58220] font-medium leading-none mb-0.5">Party *</div>
                   <input
                     className="w-full text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400"
                     placeholder="Search by Name/Phone"
@@ -319,7 +449,7 @@ export default function PaymentInPage() {
               {showCustomerDrop && (
                 <div className="absolute top-full left-0 z-50 mt-1 w-72 bg-white border border-gray-200 rounded shadow-lg max-h-56 overflow-y-auto">
                   <button
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#f58220] hover:bg-orange-50 border-b border-gray-100"
                     onClick={() => setShowCustomerDrop(false)}
                   >
                     <Plus size={14} /> Add Party
@@ -366,20 +496,20 @@ export default function PaymentInPage() {
                   onChange={e => setReceiptDate(e.target.value)}
                   className="text-sm text-gray-700 outline-none bg-transparent"
                 />
-                <Calendar size={13} className="text-blue-500 shrink-0" />
+                <Calendar size={13} className="text-[#f58220] shrink-0" />
               </div>
             </div>
           </div>
 
           {/* Amount + Mode */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
             <div className="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-2">Payment Details</div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Amount */}
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Amount Received (₹) *</label>
-                <div className="flex items-center border border-gray-300 rounded bg-white overflow-hidden focus-within:border-blue-500">
+                <div className="flex items-center border border-gray-300 rounded bg-white overflow-hidden focus-within:border-[#f58220]">
                   <span className="px-3 py-2 text-gray-400 text-sm border-r border-gray-200 bg-gray-50">₹</span>
                   <input
                     type="number"
@@ -398,7 +528,7 @@ export default function PaymentInPage() {
                 <select
                   value={paymentMode}
                   onChange={e => setPaymentMode(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none bg-white focus:border-blue-500"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none bg-white focus:border-[#f58220]"
                 >
                   {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
@@ -413,7 +543,7 @@ export default function PaymentInPage() {
                     placeholder="Enter cheque number"
                     value={chequeNo}
                     onChange={e => setChequeNo(e.target.value)}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#f58220]"
                   />
                 </div>
               )}
@@ -426,7 +556,7 @@ export default function PaymentInPage() {
                   placeholder="Optional note..."
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#f58220]"
                 />
               </div>
             </div>
@@ -434,15 +564,15 @@ export default function PaymentInPage() {
 
           {/* Total display */}
           {amount && Number(amount) > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-5 py-3 flex items-center justify-between">
-              <span className="text-sm font-semibold text-blue-700">Amount to be Received</span>
-              <span className="text-lg font-bold text-blue-800">₹{Number(amount).toFixed(2)}</span>
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-4 flex items-center justify-between">
+              <span className="text-sm font-semibold text-slate-600">Amount to be Received</span>
+              <span className="text-lg font-bold text-[#f58220]">₹{Number(amount).toFixed(2)}</span>
             </div>
           )}
         </div>
 
         {/* Bottom action bar */}
-        <div className="bg-white border-t border-gray-200 px-6 py-2.5 flex items-center justify-end gap-3 shrink-0">
+        <div className="bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-end gap-3 shrink-0 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]">
           <button onClick={() => { resetForm(); setView("list"); }} className="px-4 py-1.5 text-sm text-gray-500 hover:text-gray-700">
             Cancel
           </button>
@@ -452,11 +582,11 @@ export default function PaymentInPage() {
             <div className="flex">
               <button
                 onClick={() => showToast("Share feature coming soon", "info")}
-                className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-l border-r border-blue-500"
+                className="px-4 py-1.5 text-sm font-medium text-white bg-[#f58220] hover:bg-[#e8740e] rounded-l border-r border-[#e8740e]"
               >
                 Share
               </button>
-              <button onClick={() => setShowShareDrop(v => !v)} className="px-2 py-1.5 text-white bg-blue-600 hover:bg-blue-700 rounded-r">
+              <button onClick={() => setShowShareDrop(v => !v)} className="px-2 py-1.5 text-white bg-[#f58220] hover:bg-[#e8740e] rounded-r">
                 <ChevronDown size={14} />
               </button>
             </div>
@@ -485,7 +615,7 @@ export default function PaymentInPage() {
           <button
             onClick={() => handleSave(false)}
             disabled={saving}
-            className="px-6 py-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-60"
+            className="px-6 py-1.5 text-sm font-semibold text-white bg-[#f58220] hover:bg-[#e8740e] rounded disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save"}
           </button>
@@ -495,147 +625,210 @@ export default function PaymentInPage() {
   }
 
   // ── LIST VIEW ──────────────────────────────────────────────────────────────
-  return (
-    <div className="flex flex-col min-h-screen bg-white">
+  const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <span className="text-base font-semibold text-gray-800">Payment-In</span>
-          <ChevronDown size={16} className="text-gray-400" />
-        </div>
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-800">
+
+      {/* ── Page Header ── */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <h1 className="text-base font-bold text-gray-800 flex items-center gap-2">
+          <Wallet className="h-5 w-5 text-[#f58220]" />
+          Payment-In
+        </h1>
         <button
           onClick={() => setView("create")}
-          className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-4 py-2 rounded-full transition-colors"
+          className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors"
         >
-          <Plus size={15} strokeWidth={2.5} />
-          Add Payment-In
+          <Plus className="h-4 w-4" /> Add Payment-In
         </button>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 flex-wrap">
-        <span className="text-sm text-gray-500">Filter by :</span>
+      <div className="max-w-6xl mx-auto px-6 py-5 space-y-5">
 
-        {/* Period picker */}
-        <div className="relative" ref={periodDropRef}>
-          <button
-            onClick={() => setShowPeriodDrop(v => !v)}
-            className="flex items-center gap-1.5 text-sm text-gray-700 border border-gray-300 rounded px-3 py-1.5 bg-white hover:border-gray-400"
-          >
-            {periodLabel}
-            <ChevronDown size={13} />
-          </button>
-          {showPeriodDrop && (
-            <div className="absolute top-full left-0 z-50 mt-1 bg-white border border-gray-200 rounded shadow-lg min-w-[140px] text-sm">
-              {PERIOD_OPTIONS.map(o => (
-                <button
-                  key={o.value}
-                  onClick={() => handlePeriodSelect(o.value)}
-                  className={clsx("w-full px-4 py-2 text-left hover:bg-gray-50", period === o.value && "text-blue-600 font-medium")}
-                >
-                  {o.label}
-                </button>
-              ))}
+        {/* ── Summary Strip ── */}
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            { label: "Total Amount Received", value: `₹${totalAmount.toLocaleString("en-IN")}`, color: "text-gray-700", dot: "bg-gray-400" },
+            { label: "Confirmed Payments",    value: `₹${totalReceived.toLocaleString("en-IN")}`,  color: "text-emerald-600", dot: "bg-emerald-500" },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-lg border border-gray-200 px-4 py-3 flex items-center gap-3">
+              <div className={clsx("w-2.5 h-2.5 rounded-full", s.dot)} />
+              <div>
+                <p className="text-xs text-gray-500">{s.label}</p>
+                <p className={clsx("text-lg font-bold", s.color)}>{s.value}</p>
+              </div>
             </div>
-          )}
+          ))}
         </div>
 
-        {/* Date range */}
-        <div className="flex items-center gap-1.5 border border-gray-300 rounded px-3 py-1.5 bg-white text-sm text-gray-700">
-          <Calendar size={13} className="text-gray-400" />
-          <span>{formatDate(dateRange.start)}</span>
-          <span className="text-gray-400">To</span>
-          <span>{formatDate(dateRange.end)}</span>
-        </div>
-
-        {/* All Firms */}
-        <button className="flex items-center gap-1.5 text-sm text-gray-700 border border-gray-300 rounded px-3 py-1.5 bg-white hover:border-gray-400">
-          All Firms <ChevronDown size={13} />
-        </button>
-
-        <div className="ml-auto">
-          <button onClick={fetchPayments} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400">
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          </button>
-        </div>
-      </div>
-
-      {/* Stats card */}
-      <div className="px-5 py-4">
-        <div className="border border-gray-200 rounded-lg p-4 w-64 bg-white shadow-sm">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-sm text-gray-500">Total Amount</span>
-            <span className="text-xs text-gray-400 flex items-center gap-0.5">0% ↗ <span className="text-[10px]">vs last month</span></span>
+        {/* ── Filters Row ── */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search payment or customer..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#f58220] bg-white"
+            />
           </div>
-          <div className="text-2xl font-bold text-gray-800 mb-1">₹{totalAmount.toFixed(2)}</div>
-          <div className="text-xs text-gray-500">Received: ₹{totalReceived.toFixed(2)}</div>
-        </div>
-      </div>
 
-      {/* Content */}
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <RefreshCw size={24} className="text-blue-400 animate-spin" />
-        </div>
-      ) : payments.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center pb-16">
-          <EmptyIllustration />
-          <p className="text-base font-semibold text-gray-700 mb-1">No Transactions to show</p>
-          <p className="text-sm text-gray-400 mb-5">You haven&apos;t added any transactions yet.</p>
-          <button
-            onClick={() => setView("create")}
-            className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-6 py-2.5 rounded-full transition-colors"
-          >
-            <Plus size={15} strokeWidth={2.5} />
-            Add Payment-In
+          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
+            {["ALL", "SUCCESS", "DRAFT"].map(s => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={clsx(
+                  "px-3 py-2 text-xs font-medium transition-colors",
+                  statusFilter === s ? "bg-[#f58220] text-white" : "text-gray-600 hover:bg-gray-50"
+                )}
+              >
+                {s === "ALL" ? "All" : s}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm text-gray-700 relative">
+            <div className="flex items-center gap-1.5 cursor-pointer hover:text-gray-900" onClick={() => setShowFromCal(v => !v)}>
+              <Calendar className="h-4 w-4 text-gray-400" />
+              <span className="font-medium">{fmt(dateFrom)}</span>
+            </div>
+            {showFromCal && (
+              <div className="absolute top-full left-0 mt-1 z-50" ref={fromCalRef}>
+                <MiniCalendar value={dateFrom} onChange={setDateFrom} onClose={() => setShowFromCal(false)} />
+              </div>
+            )}
+            <span className="text-gray-300 px-1">to</span>
+            <div className="flex items-center gap-1.5 cursor-pointer hover:text-gray-900" onClick={() => setShowToCal(v => !v)}>
+              <span className="font-medium">{fmt(dateTo)}</span>
+              <Calendar className="h-4 w-4 text-gray-400" />
+            </div>
+            {showToCal && (
+              <div className="absolute top-full right-0 mt-1 z-50" ref={toCalRef}>
+                <MiniCalendar value={dateTo} onChange={setDateTo} onClose={() => setShowToCal(false)} />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1" />
+          <button onClick={fetchPayments} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Refresh">
+            <RefreshCw className={clsx("h-4 w-4", loading && "animate-spin")} />
           </button>
         </div>
-      ) : (
-        <div className="flex-1 overflow-auto px-5">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase">
-                <th className="py-3 text-left">Date</th>
-                <th className="py-3 text-left">Party</th>
-                <th className="py-3 text-left">Receipt No.</th>
-                <th className="py-3 text-left">Mode</th>
-                <th className="py-3 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {payments.map((p: any) => {
-                const isDraft = p.status === "DRAFT";
-                return (
-                  <tr 
-                    key={p.id} 
-                    className={clsx(
-                      "hover:bg-gray-50",
-                      isDraft ? "hover:bg-yellow-50/50 cursor-pointer font-medium" : ""
-                    )}
-                    onClick={() => {
-                      if (isDraft) loadDraft(p);
-                    }}
-                  >
-                    <td className="py-3 text-gray-500">{p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "—"}</td>
-                    <td className="py-3 font-medium text-gray-800 flex items-center gap-2">
-                      {p.entity?.name || p.entityId || "—"}
-                      {isDraft && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-yellow-50 text-yellow-700 border-yellow-200 uppercase">
-                          Draft
-                        </span>
+
+        {/* ── Empty State ── */}
+        {loading ? (
+          <div className="py-20 flex justify-center"><RefreshCw className="h-8 w-8 animate-spin text-orange-400 opacity-50" /></div>
+        ) : filtered.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-lg py-20 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center">
+              <Wallet className="h-8 w-8 text-[#f58220]" />
+            </div>
+            <div>
+              <p className="text-gray-800 font-semibold">No Payments Found</p>
+              <p className="text-gray-500 text-sm mt-1">Record a payment to track your cashflow.</p>
+            </div>
+            <button
+              onClick={() => setView("create")}
+              className="px-5 py-2.5 bg-[#f58220] hover:bg-[#e8740e] text-white font-semibold text-sm rounded-lg transition-colors"
+            >
+              Add Payment-In
+            </button>
+          </div>
+        ) : (
+          /* ── Table ── */
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-gray-500 text-xs font-medium border-b border-gray-200 uppercase">
+                  <th className="text-left px-4 py-3">Date</th>
+                  <th className="text-left px-4 py-3">Receipt No.</th>
+                  <th className="text-left px-4 py-3">Party Name</th>
+                  <th className="text-left px-4 py-3">Mode</th>
+                  <th className="text-right px-4 py-3">Amount</th>
+                  <th className="text-center px-4 py-3">Status</th>
+                  <th className="text-right px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((p: any) => {
+                  const isDraft = p.status === "DRAFT";
+                  return (
+                    <tr 
+                      key={p.id} 
+                      className={clsx(
+                        "transition-colors",
+                        isDraft ? "hover:bg-orange-50/50 cursor-pointer bg-orange-50/30" : "hover:bg-gray-50"
                       )}
-                    </td>
-                    <td className="py-3 text-blue-600">{p.paymentNumber || "—"}</td>
-                    <td className="py-3 text-gray-500">{p.paymentMode || "—"}</td>
-                    <td className="py-3 text-right font-semibold text-gray-800">₹{(p.paidAmount || 0).toFixed(2)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      onClick={() => {
+                        if (isDraft) loadDraft(p);
+                      }}
+                    >
+                      <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
+                        {p.createdAt ? new Date(p.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                      </td>
+                      <td className="px-4 py-3 font-mono font-semibold text-gray-800 text-xs">
+                        {p.paymentNumber || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="font-medium text-gray-800">
+                          {p.entity?.name || p.entityId || "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">
+                        {p.paymentMode || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-800">
+                        ₹ {(p.paidAmount || 0).toLocaleString("en-IN")}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {isDraft ? (
+                          <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold border bg-yellow-50 text-yellow-700 border-yellow-200 uppercase">
+                            Draft
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200 uppercase">
+                            Paid
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {isDraft ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteDraft(p.id); }}
+                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Delete Draft"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                title="Print"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </button>
+                              <button
+                                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                title="Share"
+                              >
+                                <Share2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

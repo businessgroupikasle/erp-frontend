@@ -153,7 +153,7 @@ export default function RequestForQuotationPage() {
                                         </td>
                                         <td className="px-3 py-2 text-right">
                                            {q.status === 'PENDING' && r.status === 'OPEN' && (
-                                              <button onClick={() => convertToPO(q.id)} className="text-green-600 font-medium hover:underline">Accept & Create PO</button>
+                                              <button onClick={() => convertToPO(q.id)} className="text-green-600 font-medium hover:underline">Accept & Create Purchase Order</button>
                                            )}
                                         </td>
                                      </tr>
