@@ -864,7 +864,7 @@ export default function DeliveryChallanPage() {
                     showDesc ? "border-[#f58220] bg-orange-50 text-[#f58220]" : "border-slate-200 text-slate-600 hover:bg-slate-50"
                   )}
                 >
-                  <ClipboardList className="h-4 w-4" /> Add Note/Description
+                  <FileText className="h-4 w-4" /> Add Note/Description
                 </button>
               </div>
 

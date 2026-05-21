@@ -665,21 +665,26 @@ export default function SalesInvoicesPage() {
   // ══════════════════════════════════════════════════════════════════════════
   if (view === "create") {
     return (
-      <div className="flex flex-col bg-[#f0f0f0] overflow-hidden" style={{ height: 'calc(100vh - 56px)' }}>
+      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: 'calc(100vh - 104px)' }}>
 
         {/* ── Top bar ── */}
-        <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-3 shrink-0">
-          <button onClick={handleBack} className="p-1 hover:bg-gray-100 rounded text-gray-600 transition-colors">
-            <ArrowLeft size={18} />
-          </button>
-          <span className="text-base font-semibold text-gray-800">Sale</span>
+        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
+          <div className="flex items-center gap-3">
+            <button onClick={handleBack} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
+              <ArrowLeft size={18} />
+            </button>
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              Sale Invoice
+            </h2>
+          </div>
+          <span className="text-xs text-slate-500 font-mono">Invoice No: <strong className="text-[#f58220] font-bold">Auto</strong></span>
         </div>
 
         {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6">
 
           {/* ── Customer + Invoice info row ── */}
-          <div className="bg-[#f0f0f0] px-6 py-2 flex flex-wrap items-start gap-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-5 flex flex-wrap items-start gap-4">
 
             {/* Customer dropdown */}
             <div className="relative" ref={customerDropRef}>
@@ -750,7 +755,7 @@ export default function SalesInvoicesPage() {
             </div>
 
             {/* Phone */}
-            <div className="bg-white border border-gray-300 rounded px-2 py-1.5 min-w-[160px]">
+            <div className="bg-white border border-slate-300 rounded-xl px-3 py-2 min-w-[160px]">
               <input
                 className="text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400 w-full"
                 placeholder="Phone No."
@@ -804,7 +809,7 @@ export default function SalesInvoicesPage() {
           </div>
 
           {/* ── Items Table ── */}
-          <div style={{ minHeight: 220, overflowX: "auto", overflowY: "visible" }}>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm" style={{ minHeight: 220, overflowX: "auto", overflowY: "visible" }}>
             <table className="w-full text-sm border-collapse bg-white">
               <thead>
                 {/* Row 1 — main column headers */}
@@ -1069,7 +1074,7 @@ export default function SalesInvoicesPage() {
           </div>
 
           {/* ── Bottom section ── */}
-          <div className="px-6 py-2 flex flex-wrap gap-4 items-start bg-[#f0f0f0]">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-5 flex flex-wrap gap-4 items-start">
 
             {/* Left — Terms */}
             <div className="min-w-[180px]">
@@ -1156,7 +1161,7 @@ export default function SalesInvoicesPage() {
         </div>
 
         {/* ── Bottom action bar ── */}
-        <div className="bg-white border-t border-gray-200 px-6 py-1.5 flex items-center justify-end gap-3 shrink-0">
+        <div className="bg-white/95 backdrop-blur-sm border-t border-white/20 px-6 py-3 flex items-center justify-end gap-3 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
           <button
             onClick={() => handleSave(true)}
             disabled={saving}
@@ -1408,7 +1413,64 @@ export default function SalesInvoicesPage() {
                       phone: newParty.phone.trim() || undefined,
                       email: newParty.email.trim() || undefined,
                       // Future-proofing payload
-                      gstin: new  // ════════════════════════════════════════════════════════════════════════════
+                      gstin: newParty.gstin.trim() || undefined,
+                      gstType: newParty.gstType,
+                      billingAddress: newParty.billingAddress.trim() || undefined,
+                      state: newParty.state || undefined,
+                      city: newParty.city || undefined,
+                      pinCode: newParty.pincode || undefined,
+                      openingBalance: Number(newParty.openingBalance) || 0,
+                      creditLimit: Number(newParty.creditLimit) || 0,
+                    });
+                    const createdParty = (res as any).data;
+                    showToast("Party created successfully", "success");
+                    setCustomers(prev => [...prev, createdParty].sort((a, b) => a.name.localeCompare(b.name)));
+                    selectCustomer(createdParty);
+                    setShowAddParty(false);
+                    setNewParty({ name: "", phone: "", email: "", gstin: "", gstType: "Unregistered/Consumer", state: "", city: "", pincode: "", billingAddress: "", shippingAddress: "", openingBalance: "", creditLimit: "" });
+                  } catch (e: any) {
+                    showToast(e?.response?.data?.error || "Failed to create party", "error");
+                  } finally {
+                    setSavingParty(false);
+                  }
+                }}
+              >
+                {savingParty ? "Saving..." : "Save Party"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Item Modal */}
+      {showAddItem && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50">
+          <div className="bg-white w-[400px] rounded-xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-bold text-gray-800">Add Item</h3>
+              <button onClick={() => setShowAddItem(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <input placeholder="Item Name *" value={newItem.name} onChange={e => setNewItem(p => ({ ...p, name: e.target.value }))} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none" />
+              <input placeholder="Item SKU" value={newItem.sku} onChange={e => setNewItem(p => ({ ...p, sku: e.target.value }))} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none" />
+              <div className="flex gap-4">
+                <input type="number" placeholder="Sales Price *" value={newItem.basePrice} onChange={e => setNewItem(p => ({ ...p, basePrice: e.target.value }))} className="w-1/2 border border-gray-300 rounded px-3 py-2 text-sm outline-none" />
+                <select value={newItem.taxPercent} onChange={e => setNewItem(p => ({ ...p, taxPercent: Number(e.target.value) }))} className="w-1/2 border border-gray-300 rounded px-3 py-2 text-sm outline-none bg-white">
+                  {TAX_OPTIONS.map((t, i) => <option key={i} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+              <textarea placeholder="Description" value={newItem.description} onChange={e => setNewItem(p => ({ ...p, description: e.target.value }))} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none resize-none h-20" />
+            </div>
+            <div className="px-5 py-3 border-t border-gray-100 flex justify-end gap-3">
+              <button disabled={savingItem} onClick={handleSaveItem} className="px-6 py-2 bg-[#f58220] text-white rounded font-bold text-sm hover:bg-[#e8740e] transition-colors disabled:opacity-50">Save Item</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
   // LIST VIEW — Simplified Clean UI
   // ════════════════════════════════════════════════════════════════════════════
   const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
@@ -1625,4 +1687,5 @@ export default function SalesInvoicesPage() {
         )}
       </div>
     </div>
+  );
 }

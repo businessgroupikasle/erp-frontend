@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   FilePlus2, Plus, RefreshCw, ChevronDown, X, Calendar,
+  Search, ArrowLeft, ArrowRight,
   Check, Printer, Share2, Trash2, AlignLeft, FileText, Image as ImageIcon
 } from "lucide-react";
 import { clsx } from "clsx";
@@ -113,10 +114,99 @@ function EmptyIllustration() {
   );
 }
 
+const MONTH_NAMES = ["January","February","March","April","May","June",
+  "July","August","September","October","November","December"];
+const DAY_NAMES = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+
+function MiniCalendar({ value, onChange, onClose }: {
+  value: string;
+  onChange: (v: string) => void;
+  onClose: () => void;
+}) {
+  const today = new Date();
+  const selected = value ? new Date(value + "T00:00:00") : today;
+  const [viewYear, setViewYear] = useState(selected.getFullYear());
+  const [viewMonth, setViewMonth] = useState(selected.getMonth());
+
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const cells: (number | null)[] = [
+    ...Array(firstDay).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); };
+  const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); };
+  const isSelected = (d: number) => selected.getFullYear() === viewYear && selected.getMonth() === viewMonth && selected.getDate() === d;
+  const isToday = (d: number) => today.getFullYear() === viewYear && today.getMonth() === viewMonth && today.getDate() === d;
+
+  return (
+    <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-3 w-64 select-none">
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500">
+          <ChevronDown size={14} className="rotate-90" />
+        </button>
+        <span className="text-sm font-semibold text-gray-800">{MONTH_NAMES[viewMonth]} {viewYear}</span>
+        <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500">
+          <ChevronDown size={14} className="-rotate-90" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 mb-1">
+        {DAY_NAMES.map(d => (
+          <div key={d} className="text-center text-[10px] font-semibold text-gray-400 py-0.5">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-y-0.5">
+        {cells.map((d, i) => d === null ? (
+          <div key={i} />
+        ) : (
+          <button
+            key={i}
+            onClick={() => {
+              const iso = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+              onChange(iso);
+              onClose();
+            }}
+            className={clsx(
+              "w-full aspect-square flex items-center justify-center text-xs rounded-lg font-medium transition-colors",
+              isSelected(d) && "bg-[#ff4d4f] text-white",
+              !isSelected(d) && isToday(d) && "bg-red-50 text-[#ff4d4f]",
+              !isSelected(d) && !isToday(d) && "text-gray-700 hover:bg-gray-100"
+            )}
+          >{d}</button>
+        ))}
+      </div>
+      <div className="mt-2 flex justify-between items-center border-t border-gray-100 pt-2">
+        <button
+          onClick={() => {
+            const t = new Date();
+            const iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+            onChange(iso);
+            onClose();
+          }}
+          className="text-[11px] font-semibold text-[#ff4d4f] hover:text-red-700"
+        >Today</button>
+        <button onClick={onClose} className="text-[11px] text-gray-400 hover:text-gray-600">Close</button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function ProformaInvoicePage() {
   const { showToast } = useToast();
+
+  // filters state
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [dateFrom, setDateFrom] = useState(getPeriodDates("this_month").start);
+  const [dateTo, setDateTo] = useState(getPeriodDates("this_month").end);
+  const [showFromCal, setShowFromCal] = useState(false);
+  const [showToCal, setShowToCal] = useState(false);
+  const fromCalRef = useRef<HTMLDivElement>(null);
+  const toCalRef = useRef<HTMLDivElement>(null);
 
   // list state
   const [proformas, setProformas] = useState<any[]>([]);
@@ -191,6 +281,8 @@ export default function ProformaInvoicePage() {
       if (customerDropRef.current && !customerDropRef.current.contains(e.target as Node)) setShowCustomerDrop(false);
       if (shareDropRef.current && !shareDropRef.current.contains(e.target as Node)) setShowShareDrop(false);
       if (priceDropRef.current && !priceDropRef.current.contains(e.target as Node)) setShowPriceDrop(false);
+      if (fromCalRef.current && !fromCalRef.current.contains(e.target as Node)) setShowFromCal(false);
+      if (toCalRef.current && !toCalRef.current.contains(e.target as Node)) setShowToCal(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -205,9 +297,33 @@ export default function ProformaInvoicePage() {
   const roundOff = roundOffEnabled ? parseFloat((Math.round(totalAmount) - totalAmount).toFixed(2)) : 0;
   const finalTotal = parseFloat((totalAmount + roundOff).toFixed(2));
 
-  const totalConverted = proformas.filter((p: any) => p.status === "CONVERTED").reduce((s: number, p: any) => s + (p.totalAmount || 0), 0);
-  const totalOpen = proformas.filter((p: any) => p.status !== "CONVERTED").reduce((s: number, p: any) => s + (p.totalAmount || 0), 0);
-  const grandTotal = proformas.reduce((s: number, p: any) => s + (p.totalAmount || 0), 0);
+
+  const filtered = proformas.filter((p: any) => {
+    if (statusFilter !== "ALL") {
+      if (statusFilter === "DRAFT" && p.status !== "DRAFT") return false;
+      if (statusFilter === "CONVERTED" && p.status !== "CONVERTED") return false;
+      if (statusFilter === "SENT" && p.status !== "SENT") return false;
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      const entityName = (p.customer?.name || "").toLowerCase();
+      const num = (p.quotationNumber || "").toLowerCase();
+      if (!entityName.includes(q) && !num.includes(q)) return false;
+    }
+    
+    // date filter
+    const d = new Date(p.quotationDate || p.createdAt || "2000-01-01");
+    const dFrom = new Date(dateFrom);
+    const dTo = new Date(dateTo);
+    dTo.setHours(23, 59, 59, 999);
+    if (d < dFrom || d > dTo) return false;
+    
+    return true;
+  });
+
+  const totalConverted = filtered.filter((p: any) => p.status === "CONVERTED").reduce((s: number, p: any) => s + (p.totalAmount || 0), 0);
+  const totalOpen = filtered.filter((p: any) => p.status !== "CONVERTED").reduce((s: number, p: any) => s + (p.totalAmount || 0), 0);
+  const grandTotal = filtered.reduce((s: number, p: any) => s + (p.totalAmount || 0), 0);
 
   const periodLabel = PERIOD_OPTIONS.find(o => o.value === period)?.label || "This Month";
 
@@ -230,6 +346,22 @@ export default function ProformaInvoicePage() {
     setItems([makeItem(), makeItem()]); setPriceMode("without_tax");
     setTermsText(""); setShowTerms(false); setDescription(""); setShowDesc(false);
     setRoundOffEnabled(true); setView("create");
+  };
+
+
+  const handleDeleteDraft = (id: string) => {
+    try {
+      const draftsStr = localStorage.getItem("sale_proforma_invoices_drafts");
+      if (draftsStr) {
+        const drafts = JSON.parse(draftsStr);
+        const newDrafts = drafts.filter((d: any) => d.id !== id);
+        localStorage.setItem("sale_proforma_invoices_drafts", JSON.stringify(newDrafts));
+        showToast("Draft deleted", "success");
+        fetchData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const loadDraft = (draft: any) => {
@@ -345,7 +477,7 @@ export default function ProformaInvoicePage() {
   // ── CREATE VIEW ────────────────────────────────────────────────────────────
   if (view === "create") {
     return (
-      <div className="flex flex-col h-screen bg-[#f0f0f0] overflow-hidden">
+      <div className="flex flex-col bg-gray-50 overflow-hidden" style={{ height: 'calc(100vh - 56px)' }}>
 
         {/* Top bar */}
         <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-4 shrink-0">
@@ -356,7 +488,7 @@ export default function ProformaInvoicePage() {
         <div className="flex-1 overflow-y-auto">
 
           {/* Customer + Invoice info row */}
-          <div className="bg-[#f0f0f0] px-6 py-4 flex flex-wrap items-start gap-4">
+          <div className="bg-gray-50 px-6 py-4 flex flex-wrap items-start gap-4">
 
             {/* Customer dropdown */}
             <div className="relative" ref={customerDropRef}>
@@ -566,7 +698,7 @@ export default function ProformaInvoicePage() {
           </div>
 
           {/* Bottom section */}
-          <div className="px-6 py-4 flex flex-wrap gap-6 items-start bg-[#f0f0f0]">
+          <div className="px-6 py-4 flex flex-wrap gap-6 items-start bg-gray-50">
             <div className="min-w-[180px]">
               {!showTerms ? (
                 <button onClick={() => setShowTerms(true)} className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 bg-white rounded px-3 py-2">
@@ -634,137 +766,205 @@ export default function ProformaInvoicePage() {
   }
 
   // ── LIST VIEW ──────────────────────────────────────────────────────────────
-  return (
-    <div className="flex flex-col min-h-screen bg-white">
+  const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <span className="text-base font-semibold text-gray-800">Proforma Invoice</span>
-          <ChevronDown size={16} className="text-gray-400" />
-        </div>
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-800">
+
+      {/* ── Page Header ── */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <h1 className="text-base font-bold text-gray-800 flex items-center gap-2">
+          <FilePlus2 className="h-5 w-5 text-[#f58220]" />
+          Proforma Invoices
+        </h1>
         <button
           onClick={openCreate}
-          className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-sm font-semibold px-4 py-2 rounded transition-colors"
+          className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors"
         >
-          <Plus size={15} strokeWidth={2.5} />
-          Add Proforma
+          <Plus className="h-4 w-4" /> New Proforma
         </button>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 flex-wrap">
-        <span className="text-sm text-gray-500">Filter by :</span>
-        <div className="relative" ref={periodDropRef}>
-          <button onClick={() => setShowPeriodDrop(v => !v)} className="flex items-center gap-1.5 text-sm text-gray-700 border border-gray-300 rounded px-3 py-1.5 bg-white hover:border-gray-400">
-            {periodLabel} <ChevronDown size={13} />
-          </button>
-          {showPeriodDrop && (
-            <div className="absolute top-full left-0 z-50 mt-1 bg-white border border-gray-200 rounded shadow-lg min-w-[140px] text-sm">
-              {PERIOD_OPTIONS.map(o => (
-                <button key={o.value} onClick={() => { setPeriod(o.value); setDateRange(getPeriodDates(o.value)); setShowPeriodDrop(false); }}
-                  className={clsx("w-full px-4 py-2 text-left hover:bg-gray-50", period === o.value && "text-[#f58220] font-medium")}>
-                  {o.label}
-                </button>
-              ))}
+      <div className="max-w-6xl mx-auto px-6 py-5 space-y-5">
+
+        {/* ── Summary Strip ── */}
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { label: "Total Quotations", value: `₹${grandTotal.toLocaleString("en-IN")}`, color: "text-gray-700", dot: "bg-gray-400" },
+            { label: "Converted",        value: `₹${totalConverted.toLocaleString("en-IN")}`,  color: "text-emerald-600", dot: "bg-emerald-500" },
+            { label: "Open",             value: `₹${totalOpen.toLocaleString("en-IN")}`,       color: "text-[#f58220]",   dot: "bg-[#f58220]" },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-lg border border-gray-200 px-4 py-3 flex items-center gap-3">
+              <div className={clsx("w-2.5 h-2.5 rounded-full", s.dot)} />
+              <div>
+                <p className="text-xs text-gray-500">{s.label}</p>
+                <p className={clsx("text-lg font-bold", s.color)}>{s.value}</p>
+              </div>
             </div>
-          )}
+          ))}
         </div>
-        <div className="flex items-center gap-1.5 border border-gray-300 rounded px-3 py-1.5 bg-white text-sm text-gray-700">
-          <Calendar size={13} className="text-gray-400" />
-          <span>{formatDate(dateRange.start)}</span>
-          <span className="text-gray-400">To</span>
-          <span>{formatDate(dateRange.end)}</span>
-        </div>
-        <button className="flex items-center gap-1.5 text-sm text-gray-700 border border-gray-300 rounded px-3 py-1.5 bg-white hover:border-gray-400">
-          All Firms <ChevronDown size={13} />
-        </button>
-        <div className="ml-auto">
-          <button onClick={fetchData} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400">
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+
+        {/* ── Filters Row ── */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search proforma or customer..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#f58220] bg-white"
+            />
+          </div>
+
+          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
+            {["ALL", "SENT", "CONVERTED", "DRAFT"].map(s => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={clsx(
+                  "px-3 py-2 text-xs font-medium transition-colors",
+                  statusFilter === s ? "bg-[#f58220] text-white" : "text-gray-600 hover:bg-gray-50"
+                )}
+              >
+                {s === "ALL" ? "All" : s}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm text-gray-700 relative">
+            <div className="flex items-center gap-1.5 cursor-pointer hover:text-gray-900" onClick={() => setShowFromCal(v => !v)}>
+              <Calendar className="h-4 w-4 text-gray-400" />
+              <span className="font-medium">{fmt(dateFrom)}</span>
+            </div>
+            {showFromCal && (
+              <div className="absolute top-full left-0 mt-1 z-50" ref={fromCalRef}>
+                <MiniCalendar value={dateFrom} onChange={setDateFrom} onClose={() => setShowFromCal(false)} />
+              </div>
+            )}
+            <span className="text-gray-300 px-1">to</span>
+            <div className="flex items-center gap-1.5 cursor-pointer hover:text-gray-900" onClick={() => setShowToCal(v => !v)}>
+              <span className="font-medium">{fmt(dateTo)}</span>
+              <Calendar className="h-4 w-4 text-gray-400" />
+            </div>
+            {showToCal && (
+              <div className="absolute top-full right-0 mt-1 z-50" ref={toCalRef}>
+                <MiniCalendar value={dateTo} onChange={setDateTo} onClose={() => setShowToCal(false)} />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1" />
+          <button onClick={fetchData} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Refresh">
+            <RefreshCw className={clsx("h-4 w-4", loading && "animate-spin")} />
           </button>
         </div>
-      </div>
 
-      {/* Stats card */}
-      <div className="px-5 py-4">
-        <div className="border border-gray-200 rounded-lg p-4 w-64 bg-white shadow-sm">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-sm text-gray-500">Total Quotations</span>
-            <span className="text-xs text-gray-400 flex items-center gap-0.5">0% ↗ <span className="text-[10px]">vs last month</span></span>
+        {/* ── Empty State ── */}
+        {loading ? (
+          <div className="py-20 flex justify-center"><RefreshCw className="h-8 w-8 animate-spin text-orange-400 opacity-50" /></div>
+        ) : filtered.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-lg py-20 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center">
+              <FilePlus2 className="h-8 w-8 text-[#f58220]" />
+            </div>
+            <div>
+              <p className="text-gray-800 font-semibold">No Proformas Found</p>
+              <p className="text-gray-500 text-sm mt-1">Create a proforma invoice to share with your customers.</p>
+            </div>
+            <button
+              onClick={openCreate}
+              className="px-5 py-2.5 bg-[#f58220] hover:bg-[#e8740e] text-white font-semibold text-sm rounded-lg transition-colors"
+            >
+              Create Proforma
+            </button>
           </div>
-          <div className="text-2xl font-bold text-gray-800 mb-1">₹{grandTotal.toFixed(2)}</div>
-          <div className="text-xs text-gray-500">
-            Converted: ₹{totalConverted.toFixed(2)}
-            <span className="mx-1 text-gray-300">|</span>
-            Open: ₹{totalOpen.toFixed(2)}
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <RefreshCw size={24} className="text-[#f58220] animate-spin" />
-        </div>
-      ) : proformas.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center pb-16">
-          <EmptyIllustration />
-          <p className="text-base font-semibold text-gray-700 mb-1">No Transactions to show</p>
-          <p className="text-sm text-gray-400 mb-5">You haven&apos;t added any transactions yet.</p>
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-1.5 bg-[#f58220] hover:bg-[#e8740e] text-white text-sm font-semibold px-6 py-2.5 rounded transition-colors"
-          >
-            <Plus size={15} strokeWidth={2.5} />
-            Add Proforma
-          </button>
-        </div>
-      ) : (
-        <div className="flex-1 overflow-auto px-5">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase">
-                <th className="py-3 text-left">Date</th>
-                <th className="py-3 text-left">Proforma No.</th>
-                <th className="py-3 text-left">Customer</th>
-                <th className="py-3 text-left">Status</th>
-                <th className="py-3 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {proformas.map((p: any) => {
-                const isDraft = p.status === "DRAFT";
-                return (
-                  <tr 
-                    key={p.id} 
-                    className={clsx(
-                      "hover:bg-gray-50",
-                      isDraft ? "hover:bg-yellow-50/50 cursor-pointer font-medium" : ""
-                    )}
-                    onClick={() => {
-                      if (isDraft) loadDraft(p);
-                    }}
-                  >
-                    <td className="py-3 text-gray-500">{p.quotationDate ? new Date(p.quotationDate).toLocaleDateString() : "—"}</td>
-                    <td className="py-3 text-[#f58220] font-medium">{p.quotationNumber || p.id?.substring(0, 8).toUpperCase()}</td>
-                    <td className="py-3 font-medium text-gray-800">{p.customer?.name || "—"}</td>
-                    <td className="py-3">
-                      <span className={clsx("px-2 py-0.5 rounded text-xs font-semibold border",
-                        p.status === "CONVERTED" ? "bg-green-100 text-green-700 border-green-200" :
-                        p.status === "DRAFT" ? "bg-yellow-50 text-yellow-700 border-yellow-200" : "bg-orange-100 text-[#f58220] border-orange-200"
-                      )}>
-                        {p.status === "CONVERTED" ? "Converted" : p.status === "DRAFT" ? "Draft" : "Open"}
-                      </span>
-                    </td>
-                  <td className="py-3 text-right font-semibold text-gray-800">₹{(p.totalAmount || 0).toFixed(2)}</td>
+        ) : (
+          /* ── Table ── */
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-gray-500 text-xs font-medium border-b border-gray-200 uppercase">
+                  <th className="text-left px-4 py-3">Date</th>
+                  <th className="text-left px-4 py-3">Proforma No.</th>
+                  <th className="text-left px-4 py-3">Party Name</th>
+                  <th className="text-right px-4 py-3">Amount</th>
+                  <th className="text-center px-4 py-3">Status</th>
+                  <th className="text-right px-4 py-3">Actions</th>
                 </tr>
-              );
-            })}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((p: any) => {
+                  const isDraft = p.status === "DRAFT";
+                  const isConverted = p.status === "CONVERTED";
+                  return (
+                    <tr 
+                      key={p.id} 
+                      className={clsx(
+                        "transition-colors",
+                        isDraft ? "hover:bg-orange-50/50 cursor-pointer bg-orange-50/30" : "hover:bg-gray-50"
+                      )}
+                      onClick={() => {
+                        if (isDraft) loadDraft(p);
+                      }}
+                    >
+                      <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
+                        {p.quotationDate ? new Date(p.quotationDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                      </td>
+                      <td className="px-4 py-3 font-mono font-semibold text-gray-800 text-xs">
+                        {p.quotationNumber || p.id?.substring(0, 8).toUpperCase() || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="font-medium text-gray-800">
+                          {p.customer?.name || "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-800">
+                        ₹ {(p.totalAmount || 0).toLocaleString("en-IN")}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={clsx("inline-block px-2 py-0.5 rounded text-[11px] font-semibold border uppercase",
+                          isConverted ? "bg-green-100 text-green-700 border-green-200" :
+                          isDraft ? "bg-yellow-50 text-yellow-700 border-yellow-200" : "bg-orange-100 text-[#f58220] border-orange-200"
+                        )}>
+                          {isConverted ? "Converted" : isDraft ? "Draft" : "Open"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {isDraft ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteDraft(p.id); }}
+                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Delete Draft"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                title="Print"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </button>
+                              <button
+                                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                title="Share"
+                              >
+                                <Share2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
