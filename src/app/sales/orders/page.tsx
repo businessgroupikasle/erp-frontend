@@ -547,9 +547,9 @@ export default function SalesOrdersPage() {
   // ════════════════════════════════════════════════════════════════════════════
   if (view === "create" || view === "edit") {
     return (
-      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: "calc(100vh - 104px)" }}>
+      <div className="flex flex-col bg-gray-50" style={{ height: "calc(100vh - 104px)" }}>
         {/* Top Header */}
-        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
+        <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
@@ -561,182 +561,173 @@ export default function SalesOrdersPage() {
                   resetForm();
                 }
               }}
-              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
+              className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
               <ClipboardList className="h-5 w-5 text-[#f58220]" />
               {view === "create" ? "Sale Order" : `Edit Order #${orderNo}`}
             </h2>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500 font-mono">Order No: <strong className="text-[#f58220] font-bold">{orderNo}</strong></span>
-          </div>
         </div>
 
         {/* Scrollable Form Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-              
-              {/* Party Selection - Notch style */}
-              <div className="md:col-span-4 relative" ref={customerDropRef}>
-                <div
-                  className={clsx(
-                    "flex items-center gap-1 bg-white border rounded-xl px-4 py-3 cursor-pointer transition-all",
-                    showCustomerDrop ? "border-blue-500 ring-2 ring-blue-500/10" : "border-slate-300"
-                  )}
-                  onClick={() => setShowCustomerDrop(v => !v)}
-                >
-                  <div className="flex-1">
-                    <div className="text-[10px] text-blue-600 font-bold uppercase tracking-wider leading-none mb-1">Party *</div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Customer + Order Details */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="grid grid-cols-2 gap-8">
+              {/* Left: Party + Phone */}
+              <div className="space-y-4">
+                <div className="relative" ref={customerDropRef}>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Party *</label>
+                  <div
+                    className={clsx(
+                      "flex items-center gap-2 border rounded-lg px-3 py-2 cursor-pointer bg-white transition-all",
+                      showCustomerDrop ? "border-orange-400 ring-1 ring-orange-200" : "border-gray-300 hover:border-gray-400"
+                    )}
+                    onClick={() => setShowCustomerDrop(v => !v)}
+                  >
                     <input
-                      className="w-full text-sm text-slate-700 outline-none bg-transparent placeholder-slate-400 font-semibold"
-                      placeholder="Select / Search Party"
+                      className="flex-1 text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400"
+                      placeholder="Select or search party"
                       value={customerSearch}
                       onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDrop(true); }}
                       onClick={e => { e.stopPropagation(); setShowCustomerDrop(true); }}
                     />
+                    <ChevronDown size={14} className="text-gray-400 shrink-0" />
                   </div>
-                  <ChevronDown size={16} className="text-slate-400 shrink-0" />
-                </div>
-
-                {showCustomerDrop && (
-                  <div className="absolute top-full left-0 z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
-                    <div className="max-h-56 overflow-y-auto">
-                      {filteredCustomers.length === 0 ? (
-                        <div className="px-4 py-4 text-xs text-slate-400 text-center">No customers found</div>
-                      ) : (
-                        filteredCustomers.map(c => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-orange-50 border-b border-slate-50 last:border-0 transition-colors"
-                            onClick={() => selectCustomer(c)}
-                          >
-                            <div className="text-left">
-                              <div className="text-sm font-semibold text-slate-800">{c.name}</div>
-                              <div className="text-xs text-slate-400">{c.phone || "—"}</div>
-                            </div>
-                          </button>
-                        ))
-                      )}
+                  {showCustomerDrop && (
+                    <div className="absolute top-full left-0 z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                      <div className="max-h-52 overflow-y-auto">
+                        {filteredCustomers.length === 0 ? (
+                          <div className="px-4 py-3 text-xs text-gray-400 text-center">No customers found</div>
+                        ) : (
+                          filteredCustomers.map(c => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-orange-50 border-b border-gray-50 last:border-0 text-left"
+                              onClick={() => selectCustomer(c)}
+                            >
+                              <div>
+                                <div className="text-sm font-semibold text-gray-800">{c.name}</div>
+                                <div className="text-xs text-gray-400">{c.phone || "—"}</div>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Phone</label>
+                  <input
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white"
+                    placeholder="Phone number"
+                    value={customerPhone}
+                    onChange={e => setCustomerPhone(e.target.value)}
+                  />
+                </div>
               </div>
 
-              {/* Phone No */}
-              <div className="md:col-span-2 bg-white border border-slate-300 rounded-xl px-4 py-3">
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1">Phone No</div>
-                <input
-                  className="text-sm text-slate-700 outline-none bg-transparent w-full"
-                  placeholder="Phone Number"
-                  value={customerPhone}
-                  onChange={e => setCustomerPhone(e.target.value)}
-                />
-              </div>
-
-              {/* Order Date */}
-              <div className="md:col-span-2 bg-white border border-slate-300 rounded-xl px-4 py-3">
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1">Order Date</div>
-                <input
-                  type="date"
-                  className="text-sm text-slate-700 outline-none bg-transparent w-full"
-                  value={orderDate}
-                  onChange={e => setOrderDate(e.target.value)}
-                />
-              </div>
-
-              {/* Due Date */}
-              <div className="md:col-span-2 bg-white border border-slate-300 rounded-xl px-4 py-3">
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1">Due Date</div>
-                <input
-                  type="date"
-                  className="text-sm text-slate-700 outline-none bg-transparent w-full"
-                  value={dueDate}
-                  onChange={e => setDueDate(e.target.value)}
-                />
-              </div>
-
-              {/* State of Supply */}
-              <div className="md:col-span-2 bg-white border border-slate-300 rounded-xl px-4 py-3">
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1">State of Supply</div>
-                <select
-                  value={stateOfSupply}
-                  onChange={e => setStateOfSupply(e.target.value)}
-                  className="w-full text-sm text-slate-700 outline-none bg-transparent cursor-pointer"
-                >
-                  <option value="">Select state</option>
-                  {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+              {/* Right: Order No, Order Date, Due Date, State of Supply */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Order No</label>
+                  <div className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-400 bg-gray-50 font-mono">{orderNo || "Auto"}</div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Order Date</label>
+                  <input
+                    type="date"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white"
+                    value={orderDate}
+                    onChange={e => setOrderDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Due Date</label>
+                  <input
+                    type="date"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white"
+                    value={dueDate}
+                    onChange={e => setDueDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">State of Supply</label>
+                  <select
+                    value={stateOfSupply}
+                    onChange={e => setStateOfSupply(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white"
+                  >
+                    <option value="">Select state</option>
+                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Table Items */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-800">Items Detail List</span>
+          {/* Items Table */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50/60">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Items</span>
               <button
                 type="button"
                 onClick={() => setPriceMode(priceMode === "without_tax" ? "with_tax" : "without_tax")}
-                className="px-3 py-1 bg-white border border-slate-200 hover:border-blue-300 text-xs font-semibold rounded-lg text-blue-600 transition-colors shadow-sm"
+                className="px-2.5 py-1 bg-white border border-gray-200 hover:border-orange-300 text-xs font-semibold rounded-md text-gray-600 transition-colors"
               >
-                {priceMode === "without_tax" ? "Without Tax" : "With Tax"}
+                Price: {priceMode === "without_tax" ? "Excl. Tax" : "Incl. Tax"}
               </button>
             </div>
-
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 font-semibold text-xs border-b border-slate-100">
-                  <th className="text-left px-4 py-3.5 w-12">#</th>
-                  <th className="text-left px-4 py-3.5">Item</th>
-                  <th className="text-center px-4 py-3.5 w-24">Qty</th>
-                  <th className="text-left px-4 py-3.5 w-32">Unit</th>
-                  <th className="text-right px-4 py-3.5 w-32">Price/Unit</th>
-                  <th className="text-left px-4 py-3.5 w-40">Tax (GST)</th>
-                  <th className="text-right px-4 py-3.5 w-36">Amount</th>
-                  <th className="w-12"></th>
+                <tr className="bg-gray-50 text-gray-500 text-xs border-b border-gray-100">
+                  <th className="text-left px-4 py-2.5 w-10 font-medium">#</th>
+                  <th className="text-left px-4 py-2.5 font-medium">Item</th>
+                  <th className="text-center px-4 py-2.5 w-20 font-medium">Qty</th>
+                  <th className="text-left px-4 py-2.5 w-28 font-medium">Unit</th>
+                  <th className="text-right px-4 py-2.5 w-28 font-medium">Price/Unit</th>
+                  <th className="text-left px-4 py-2.5 w-36 font-medium">Tax</th>
+                  <th className="text-right px-4 py-2.5 w-32 font-medium">Amount</th>
+                  <th className="w-10"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-gray-100">
                 {items.map((it, idx) => {
                   const comp = computeRow(it, withTax);
                   const isItemDropOpen = openItemDrop === it.id;
-                  
                   return (
-                    <tr key={it.id} className="hover:bg-slate-50/20 group">
-                      <td className="px-4 py-3 text-center text-xs text-slate-400">{idx + 1}</td>
-                      <td className="px-4 py-3 relative">
+                    <tr key={it.id} className="hover:bg-gray-50/50">
+                      <td className="px-4 py-2.5 text-center text-xs text-gray-400">{idx + 1}</td>
+                      <td className="px-4 py-2.5 relative">
                         <input
                           value={it.itemSearch}
-                          onChange={e => {
-                            updateItem(idx, "itemSearch", e.target.value);
-                            setOpenItemDrop(it.id);
-                          }}
+                          onChange={e => { updateItem(idx, "itemSearch", e.target.value); setOpenItemDrop(it.id); }}
                           onFocus={() => setOpenItemDrop(it.id)}
-                          placeholder="Type product name or search SKU..."
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#f58220]"
+                          placeholder="Search item..."
+                          className="w-full px-3 py-1.5 border border-gray-200 rounded-md text-sm outline-none focus:border-orange-400"
                         />
                         {isItemDropOpen && (
-                          <div className="absolute left-4 right-4 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                          <div className="absolute left-4 right-4 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden max-h-44 overflow-y-auto">
                             {products.filter(p => p.name.toLowerCase().includes(it.itemSearch.toLowerCase())).length === 0 ? (
-                              <div className="px-4 py-3 text-xs text-slate-400">No items matched</div>
+                              <div className="px-4 py-3 text-xs text-gray-400">No items found</div>
                             ) : (
                               products.filter(p => p.name.toLowerCase().includes(it.itemSearch.toLowerCase())).map(p => (
                                 <button
                                   key={p.id}
                                   type="button"
-                                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-orange-50 text-left border-b border-slate-50 last:border-0 transition-colors text-xs"
+                                  className="w-full flex items-center justify-between px-4 py-2 hover:bg-orange-50 text-left border-b border-gray-50 last:border-0 text-xs"
                                   onClick={() => selectProduct(idx, p)}
                                 >
                                   <div>
-                                    <strong className="text-slate-800 font-semibold">{p.name}</strong>
-                                    <div className="text-[10px] text-slate-400">SKU: {p.sku || "—"}</div>
+                                    <strong className="text-gray-800">{p.name}</strong>
+                                    <div className="text-gray-400">SKU: {p.sku || "—"}</div>
                                   </div>
-                                  <div className="text-[#f58220] font-bold font-mono">₹{p.basePrice || p.price || 0}</div>
+                                  <span className="text-[#f58220] font-mono font-bold">₹{p.basePrice || p.price || 0}</span>
                                 </button>
                               ))
                             )}
@@ -745,42 +736,42 @@ export default function SalesOrdersPage() {
                         <input
                           value={it.remarks}
                           onChange={e => updateItem(idx, "remarks", e.target.value)}
-                          placeholder="Add description or specific delivery details"
-                          className="w-full px-3 py-1 text-xs text-slate-400 outline-none bg-transparent border-0 mt-1 border-t border-slate-100 focus:text-slate-700"
+                          placeholder="Remarks / delivery details"
+                          className="w-full px-3 py-1 text-xs text-gray-400 outline-none bg-transparent mt-1 focus:text-gray-700"
                         />
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2.5">
                         <input
                           type="number"
                           min={1}
                           value={it.qty}
                           onChange={e => updateItem(idx, "qty", Number(e.target.value) || 0)}
-                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm text-center outline-none focus:border-[#f58220]"
+                          className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm text-center outline-none focus:border-orange-400"
                         />
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2.5">
                         <select
                           value={it.unit}
                           onChange={e => updateItem(idx, "unit", e.target.value)}
-                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:border-[#f58220]"
+                          className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm bg-white outline-none focus:border-orange-400"
                         >
                           {UNITS.map(u => <option key={u.code} value={u.code}>{u.short}</option>)}
                         </select>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="relative flex items-center">
-                          <span className="absolute left-2 text-xs text-slate-400 font-mono">₹</span>
+                      <td className="px-4 py-2.5">
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">₹</span>
                           <input
                             type="number"
                             min={0}
                             value={it.rate || ""}
                             onChange={e => updateItem(idx, "rate", Number(e.target.value) || 0)}
-                            className="w-full pl-6 pr-2 py-2 border border-slate-200 rounded-lg text-sm text-right outline-none focus:border-[#f58220]"
+                            className="w-full pl-6 pr-2 py-1.5 border border-gray-200 rounded-md text-sm text-right outline-none focus:border-orange-400"
                             placeholder="0.00"
                           />
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2.5">
                         <select
                           value={it.taxPct}
                           onChange={e => {
@@ -789,20 +780,20 @@ export default function SalesOrdersPage() {
                             updateItem(idx, "taxPct", val);
                             updateItem(idx, "taxLabel", opt?.label || "NONE");
                           }}
-                          className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:border-[#f58220]"
+                          className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm bg-white outline-none focus:border-orange-400"
                         >
                           {TAX_OPTIONS.map(t => <option key={t.label} value={t.value}>{t.label}</option>)}
                         </select>
-                        <div className="text-[10px] text-right text-slate-400 mt-1 font-mono">GST: ₹{comp.taxAmt.toFixed(2)}</div>
+                        <div className="text-[10px] text-right text-gray-400 mt-0.5 font-mono">₹{comp.taxAmt.toFixed(2)}</div>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-slate-700">
+                      <td className="px-4 py-2.5 text-right font-mono text-sm font-semibold text-gray-700">
                         ₹{comp.amount.toFixed(2)}
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-2.5 text-center">
                         <button
                           type="button"
                           onClick={() => removeRow(idx)}
-                          className="p-1.5 hover:bg-rose-50 text-slate-350 hover:text-rose-600 rounded-lg transition-colors"
+                          className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -812,196 +803,175 @@ export default function SalesOrdersPage() {
                 })}
               </tbody>
             </table>
-
-            {/* Table Footer */}
-            <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
+            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
               <button
                 type="button"
                 onClick={addRow}
-                className="flex items-center gap-1.5 px-4 py-2 border border-blue-200 hover:border-blue-600 hover:bg-orange-50 rounded-xl text-xs font-semibold text-blue-600 transition-all shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:border-orange-300 hover:bg-orange-50 rounded-lg text-xs font-semibold text-gray-600 transition-all"
               >
-                <Plus className="h-4 w-4" /> Add Row
+                <Plus className="h-3.5 w-3.5" /> Add Row
               </button>
-              <div className="flex items-center gap-6 text-xs text-slate-500 font-semibold">
-                <div>Total Items: <span className="text-slate-800 font-bold">{items.length}</span></div>
-                <div>Total Quantity: <span className="text-slate-800 font-bold">{totalQty}</span></div>
-                <div>Total Tax: <span className="text-slate-800 font-bold font-mono">₹{totalTax.toFixed(2)}</span></div>
+              <div className="flex items-center gap-5 text-xs text-gray-400">
+                <span>Qty: <strong className="text-gray-700">{totalQty}</strong></span>
+                <span>Tax: <strong className="text-gray-700 font-mono">₹{totalTax.toFixed(2)}</strong></span>
               </div>
             </div>
           </div>
 
-          {/* Form bottom add-ons & totals */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-            <div className="md:col-span-7 bg-white rounded-2xl border border-slate-100 p-6 space-y-4 shadow-sm">
-              <div className="flex flex-wrap gap-2.5">
+          {/* Notes + Summary */}
+          <div className="flex gap-4 items-start">
+            {/* Left: Add-ons */}
+            <div className="flex-1 bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => setShowTerms(v => !v)}
                   className={clsx(
-                    "flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-semibold transition-all",
-                    showTerms ? "border-blue-600 bg-blue-50 text-blue-600" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    "flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-semibold transition-all",
+                    showTerms ? "border-orange-400 bg-orange-50 text-orange-600" : "border-gray-200 text-gray-600 hover:bg-gray-50"
                   )}
                 >
-                  <ClipboardList className="h-4 w-4" /> Add Terms & Conditions
+                  <ClipboardList className="h-3.5 w-3.5" /> Terms & Conditions
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowDesc(v => !v)}
                   className={clsx(
-                    "flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-semibold transition-all",
-                    showDesc ? "border-blue-600 bg-blue-50 text-blue-600" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    "flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-semibold transition-all",
+                    showDesc ? "border-orange-400 bg-orange-50 text-orange-600" : "border-gray-200 text-gray-600 hover:bg-gray-50"
                   )}
                 >
-                  <FileText className="h-4 w-4" /> Add Description
+                  <FileText className="h-3.5 w-3.5" /> Description
                 </button>
                 <button
                   type="button"
                   onClick={() => showToast("Attachment feature is active on POS terminal only.", "warning")}
-                  className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-600 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-semibold text-gray-600"
                 >
-                  <ImageIcon className="h-4 w-4" /> Add Image
+                  <ImageIcon className="h-3.5 w-3.5" /> Image
                 </button>
                 <button
                   type="button"
                   onClick={() => showToast("Attachment feature is active on POS terminal only.", "warning")}
-                  className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-600 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-semibold text-gray-600"
                 >
-                  <LinkIcon className="h-4 w-4" /> Add Document
+                  <LinkIcon className="h-3.5 w-3.5" /> Document
                 </button>
               </div>
 
-              {/* Payment Type Selection */}
-              <div className="w-56 pt-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Payment Type</label>
-                <select
-                  value={paymentType}
-                  onChange={e => setPaymentType(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white outline-none focus:border-blue-500 font-semibold"
-                >
-                  <option value="Cash">Cash</option>
-                  <option value="Credit">Credit</option>
-                  <option value="Cheque">Cheque</option>
-                  <option value="Online">Online / UPI</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const custom = window.prompt("Enter new Payment Type name:");
-                    if (custom) {
-                      setPaymentType(custom);
-                      showToast(`Added payment method: "${custom}"`, "success");
-                    }
-                  }}
-                  className="text-[10px] font-bold text-blue-600 hover:underline block mt-1"
-                >
-                  + Add Payment Type
-                </button>
+              {/* Payment Type */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Payment Type</label>
+                <div className="flex items-center gap-2">
+                  {["Cash", "Credit", "Cheque", "Online"].map(type => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setPaymentType(type)}
+                      className={clsx(
+                        "px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+                        paymentType === type
+                          ? "bg-orange-500 text-white border-orange-500"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-orange-300"
+                      )}
+                    >
+                      {type === "Online" ? "Online/UPI" : type}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {showTerms && (
-                <div className="space-y-1.5 pt-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terms and Conditions</label>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Terms & Conditions</label>
                   <textarea
                     rows={3}
                     value={termsText}
                     onChange={e => setTermsText(e.target.value)}
                     placeholder="Enter sales terms, delivery instructions..."
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none resize-none focus:border-[#f58220]"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none resize-none focus:border-orange-400"
                   />
                 </div>
               )}
-
               {showDesc && (
-                <div className="space-y-1.5 pt-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order Remarks / Memo</label>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Order Remarks / Memo</label>
                   <textarea
                     rows={3}
                     value={description}
                     onChange={e => setDescription(e.target.value)}
-                    placeholder="Internal remarks or packaging specific instructions..."
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none resize-none focus:border-[#f58220]"
+                    placeholder="Internal remarks or packaging instructions..."
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none resize-none focus:border-orange-400"
                   />
                 </div>
               )}
             </div>
 
-            {/* Subtotals & Round off */}
-            <div className="md:col-span-5 bg-white rounded-2xl border border-slate-100 p-6 space-y-4 shadow-sm">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <span className="text-sm font-semibold text-slate-500">Subtotal</span>
-                <span className="text-sm font-semibold font-mono text-slate-800">₹{totalAmount.toFixed(2)}</span>
+            {/* Right: Summary */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4 w-64 shrink-0 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Subtotal</span>
+                <span className="font-mono font-semibold text-gray-700">₹{totalAmount.toFixed(2)}</span>
               </div>
-
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
+              {totalTax > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Tax</span>
+                  <span className="font-mono text-gray-600">₹{totalTax.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-sm">
+                <label htmlFor="so_roundoff" className="flex items-center gap-1.5 text-gray-500 cursor-pointer">
                   <input
                     type="checkbox"
                     id="so_roundoff"
                     checked={roundOffEnabled}
                     onChange={e => setRoundOffEnabled(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                    className="h-3.5 w-3.5 rounded border-gray-300"
                   />
-                  <label htmlFor="so_roundoff" className="text-sm font-semibold text-slate-500 cursor-pointer">Round Off</label>
-                </div>
-                <span className="text-sm font-semibold font-mono text-slate-800">
-                  {roundOff >= 0 ? "+" : ""}₹{roundOff.toFixed(2)}
-                </span>
+                  Round Off
+                </label>
+                <span className="font-mono text-gray-500 text-xs">{roundOff >= 0 ? "+" : ""}₹{roundOff.toFixed(2)}</span>
               </div>
-
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-base font-bold text-slate-800">Total</span>
-                <input
-                  readOnly
-                  value={`₹${finalTotal.toFixed(2)}`}
-                  className="text-right text-xl font-bold font-mono text-blue-600 outline-none w-48 bg-transparent"
-                />
+              <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+                <span className="font-bold text-gray-800">Total</span>
+                <span className="text-xl font-bold font-mono text-[#f58220]">₹{finalTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Sticky footer action buttons */}
-        <div className="bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-between shrink-0 shadow-lg">
+        {/* Action Bar */}
+        <div className="bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-end gap-3 shrink-0">
           <button
             type="button"
-            onClick={() => {
-              setView("list");
-              resetForm();
-            }}
-            className="px-5 py-2.5 text-sm font-semibold border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-600 transition-colors"
+            onClick={() => { setView("list"); resetForm(); }}
+            className="px-4 py-2 text-sm font-semibold border border-gray-200 hover:bg-gray-50 rounded-lg text-gray-600 transition-colors"
           >
             Cancel
           </button>
-          
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => handleSave("DRAFT")}
-              disabled={saving}
-              className="px-5 py-2.5 text-sm font-semibold border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-700 transition-colors disabled:opacity-50"
-            >
-              Save as Draft
-            </button>
-            <div className="relative inline-flex">
-              <button
-                type="button"
-                onClick={() => {
-                  showToast("Share links generated! Ready for PDF dispatch.", "success");
-                }}
-                className="px-4 py-2.5 text-sm font-bold border border-orange-200 hover:bg-orange-50 rounded-l-xl text-[#f58220] transition-colors shadow-sm"
-              >
-                Share
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSave("OPEN")}
-                disabled={saving}
-                className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] text-white rounded-r-xl shadow-lg shadow-orange-100 transition-all disabled:opacity-50"
-              >
-                <Check className="h-4 w-4" /> {saving ? "Saving..." : "Save"}
-              </button>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => handleSave("DRAFT")}
+            disabled={saving}
+            className="px-4 py-2 text-sm font-semibold border border-gray-200 hover:bg-gray-50 rounded-lg text-gray-700 transition-colors disabled:opacity-50"
+          >
+            Save as Draft
+          </button>
+          <button
+            type="button"
+            onClick={() => showToast("Share links generated! Ready for PDF dispatch.", "success")}
+            className="px-4 py-2 text-sm font-semibold border border-orange-200 hover:bg-orange-50 rounded-lg text-[#f58220] transition-colors"
+          >
+            Share
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSave("OPEN")}
+            disabled={saving}
+            className="flex items-center gap-2 px-5 py-2 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] text-white rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Check className="h-4 w-4" /> {saving ? "Saving..." : "Save Order"}
+          </button>
         </div>
       </div>
     );

@@ -477,174 +477,143 @@ export default function ProformaInvoicePage() {
   // ── CREATE VIEW ────────────────────────────────────────────────────────────
   if (view === "create") {
     return (
-      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: 'calc(100vh - 104px)' }}>
+      <div className="flex flex-col bg-gray-50" style={{ height: 'calc(100vh - 104px)' }}>
 
         {/* Top bar */}
-        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-slate-800">Proforma Invoice</h2>
-          </div>
-          <span className="text-xs text-slate-500 font-mono">Proforma No: <strong className="text-[#f58220] font-bold">Auto</strong></span>
+        <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-3 shrink-0">
+          <button onClick={() => setView("list")} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
+            <ArrowLeft size={18} />
+          </button>
+          <h2 className="text-lg font-bold text-gray-800">Proforma Invoice</h2>
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
 
-          {/* Customer + Invoice info row */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-5 flex flex-wrap items-start gap-4">
-
-            {/* Customer dropdown */}
-            <div className="relative" ref={customerDropRef}>
-              <div
-                className={clsx("flex items-center gap-1 min-w-[220px] bg-white border rounded px-2 py-1.5 cursor-pointer", showCustomerDrop ? "border-blue-500" : "border-gray-300")}
-                onClick={() => setShowCustomerDrop(v => !v)}
-              >
-                <div className="flex-1">
-                  <div className="text-[10px] text-[#f58220] font-medium leading-none mb-0.5">Customer *</div>
+          {/* Customer + Invoice info */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="grid grid-cols-2 gap-8">
+              {/* Left: Party + Phone */}
+              <div className="space-y-4">
+                <div className="relative" ref={customerDropRef}>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Party *</label>
+                  <div
+                    className={clsx(
+                      "flex items-center gap-2 border rounded-lg px-3 py-2 cursor-pointer bg-white transition-all",
+                      showCustomerDrop ? "border-orange-400 ring-1 ring-orange-200" : "border-gray-300 hover:border-gray-400"
+                    )}
+                    onClick={() => setShowCustomerDrop(v => !v)}
+                  >
+                    <input
+                      className="flex-1 text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400"
+                      placeholder="Select or search party"
+                      value={customerSearch}
+                      onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDrop(true); }}
+                      onClick={e => { e.stopPropagation(); setShowCustomerDrop(true); }}
+                    />
+                    <ChevronDown size={14} className="text-gray-400 shrink-0" />
+                  </div>
+                  {showCustomerDrop && (
+                    <div className="absolute top-full left-0 z-50 mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                      <button className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-[#f58220] hover:bg-orange-50 border-b border-gray-100" onClick={() => setShowCustomerDrop(false)}>
+                        <Plus size={14} /> Add Party
+                      </button>
+                      {filteredCustomers.length === 0 ? (
+                        <div className="px-3 py-4 text-sm text-gray-400 text-center">No customers found</div>
+                      ) : filteredCustomers.map(c => (
+                        <button
+                          key={c.id}
+                          className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 border-b border-gray-50 last:border-0 text-left"
+                          onClick={() => { setSelectedCustomer(c); setCustomerSearch(c.name); setCustomerPhone(c.phone || ""); setShowCustomerDrop(false); }}
+                        >
+                          <div>
+                            <div className="text-sm font-medium text-gray-800">{c.name}</div>
+                            <div className="text-xs text-gray-400">{c.phone || "—"}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Phone</label>
                   <input
-                    className="w-full text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400"
-                    placeholder="Search by Name/Phone"
-                    value={customerSearch}
-                    onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDrop(true); }}
-                    onClick={e => { e.stopPropagation(); setShowCustomerDrop(true); }}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white"
+                    placeholder="Phone number"
+                    value={customerPhone}
+                    onChange={e => setCustomerPhone(e.target.value)}
                   />
                 </div>
-                <ChevronDown size={14} className="text-gray-400 shrink-0" />
               </div>
-              {showCustomerDrop && (
-                <div className="absolute top-full left-0 z-50 mt-1 w-72 bg-white border border-gray-200 rounded shadow-lg max-h-64 overflow-y-auto">
-                  <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#f58220] hover:bg-orange-50 border-b border-gray-100" onClick={() => setShowCustomerDrop(false)}>
-                    <Plus size={14} /> Add Party
-                  </button>
-                  {filteredCustomers.length === 0 ? (
-                    <div className="px-3 py-4 text-sm text-gray-400 text-center">No customers found</div>
-                  ) : filteredCustomers.map(c => (
-                    <button
-                      key={c.id}
-                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 border-b border-gray-50 last:border-0"
-                      onClick={() => { setSelectedCustomer(c); setCustomerSearch(c.name); setCustomerPhone(c.phone || ""); setShowCustomerDrop(false); }}
-                    >
-                      <div className="text-left">
-                        <div className="text-sm font-medium text-gray-800">{c.name}</div>
-                        <div className="text-xs text-gray-400">{c.phone || "—"}</div>
-                      </div>
-                      {c.balance > 0 && (
-                        <div className="flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded">
-                          {c.balance} <Check size={10} />
-                        </div>
-                      )}
-                    </button>
-                  ))}
+
+              {/* Right: Proforma No, Date, State of Supply */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Proforma No.</label>
+                  <div className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-400 bg-gray-50 font-mono">Auto</div>
                 </div>
-              )}
-            </div>
-
-            {/* Phone */}
-            <div className="bg-white border border-gray-300 rounded px-2 py-1.5 min-w-[160px]">
-              <input
-                className="text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400 w-full"
-                placeholder="Phone No."
-                value={customerPhone}
-                onChange={e => setCustomerPhone(e.target.value)}
-              />
-            </div>
-
-            <div className="flex-1" />
-
-            {/* Metadata */}
-            <div className="flex flex-col gap-2 text-sm text-right">
-              <div className="flex items-center justify-end gap-3">
-                <span className="text-gray-500">Proforma No.</span>
-                <span className="text-gray-400 w-16 text-left">Auto</span>
-              </div>
-              <div className="flex items-center justify-end gap-3">
-                <span className="text-gray-500">Date</span>
-                <div className="flex items-center gap-1 border border-gray-300 rounded px-2 py-1 bg-white">
-                  <input type="date" value={proformaDate} onChange={e => setProformaDate(e.target.value)} className="text-sm text-gray-700 outline-none bg-transparent" />
-                  <Calendar size={13} className="text-blue-500 shrink-0" />
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Date</label>
+                  <input
+                    type="date"
+                    value={proformaDate}
+                    onChange={e => setProformaDate(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white"
+                  />
                 </div>
-              </div>
-              <div className="flex items-center justify-end gap-3">
-                <span className="text-gray-500">State of supply</span>
-                <select value={stateOfSupply} onChange={e => setStateOfSupply(e.target.value)} className="border border-gray-300 rounded px-2 py-1 bg-white text-sm text-gray-700 outline-none w-36">
-                  <option value="">Select</option>
-                  {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">State of Supply</label>
+                  <select
+                    value={stateOfSupply}
+                    onChange={e => setStateOfSupply(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white"
+                  >
+                    <option value="">Select state</option>
+                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Items table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse bg-white">
+          {/* Items Table */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="flex items-center px-4 py-2.5 border-b border-gray-100 bg-gray-50/60">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Items</span>
+            </div>
+            <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#f5f5f5] border-y border-gray-200 text-xs font-semibold text-gray-600 uppercase">
-                  <th className="w-10 px-2 py-2 border-r border-gray-200 text-center">#</th>
-                  <th className="px-3 py-2 border-r border-gray-200 text-left">ITEM</th>
-                  <th className="w-16 px-2 py-2 border-r border-gray-200 text-center">QTY</th>
-                  <th className="w-24 px-2 py-2 border-r border-gray-200 text-center">UNIT</th>
-                  <th className="w-28 px-2 py-2 border-r border-gray-200 text-center">PRICE/UNIT</th>
-                  <th className="w-32 px-2 py-2 border-r border-gray-200 text-center" colSpan={2}>DISCOUNT</th>
-                  <th className="w-40 px-2 py-2 border-r border-gray-200 text-center" colSpan={2}>TAX</th>
-                  <th className="w-24 px-2 py-2 border-r border-gray-200 text-right">AMOUNT</th>
-                  <th className="w-8 px-1 py-2 text-center">
-                    <button onClick={() => setItems(prev => [...prev, makeItem()])} className="text-blue-500 hover:text-blue-700">
-                      <Plus size={16} strokeWidth={2.5} />
-                    </button>
-                  </th>
-                </tr>
-                <tr className="bg-[#f5f5f5] border-b border-gray-200 text-[10px] text-gray-500">
-                  <th className="border-r border-gray-200" />
-                  <th className="border-r border-gray-200" />
-                  <th className="border-r border-gray-200" />
-                  <th className="border-r border-gray-200" />
-                  <th className="px-2 py-1 border-r border-gray-200 text-center">
-                    <div className="relative" ref={priceDropRef}>
-                      <button onClick={() => setShowPriceDrop(v => !v)} className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-700 mx-auto">
-                        {priceMode === "without_tax" ? "Without Tax" : "With Tax"} <ChevronDown size={10} />
-                      </button>
-                      {showPriceDrop && (
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 z-50 mt-1 bg-white border border-gray-200 rounded shadow-lg text-xs w-28">
-                          <button className="w-full px-3 py-2 text-left hover:bg-gray-50" onClick={() => { setPriceMode("with_tax"); setShowPriceDrop(false); }}>With Tax</button>
-                          <button className="w-full px-3 py-2 text-left hover:bg-gray-50" onClick={() => { setPriceMode("without_tax"); setShowPriceDrop(false); }}>Without Tax</button>
-                        </div>
-                      )}
-                    </div>
-                  </th>
-                  <th className="px-2 py-1 border-r border-gray-200 text-center w-14">%</th>
-                  <th className="px-2 py-1 border-r border-gray-200 text-center w-20">AMOUNT</th>
-                  <th className="px-2 py-1 border-r border-gray-200 text-center w-24">%</th>
-                  <th className="px-2 py-1 border-r border-gray-200 text-center w-20">AMOUNT</th>
-                  <th className="border-r border-gray-200" />
-                  <th />
+                <tr className="bg-gray-50 text-gray-500 text-xs border-b border-gray-100">
+                  <th className="text-left px-4 py-2.5 w-10 font-medium">#</th>
+                  <th className="text-left px-4 py-2.5 font-medium">Item</th>
+                  <th className="text-center px-4 py-2.5 w-20 font-medium">Qty</th>
+                  <th className="text-left px-4 py-2.5 w-28 font-medium">Unit</th>
+                  <th className="text-right px-4 py-2.5 w-28 font-medium">Price/Unit</th>
+                  <th className="text-center px-4 py-2.5 w-20 font-medium">Disc%</th>
+                  <th className="text-left px-4 py-2.5 w-36 font-medium">Tax</th>
+                  <th className="text-right px-4 py-2.5 w-32 font-medium">Amount</th>
+                  <th className="w-10"></th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {items.map((item, idx) => {
                   const { discAmt, taxAmt, amount } = computeRow(item);
                   const filtProd = products.filter(p => !item.itemSearch || p.name?.toLowerCase().includes(item.itemSearch.toLowerCase())).slice(0, 10);
                   return (
-                    <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 group">
-                      <td className="px-2 py-1.5 border-r border-gray-100 text-center text-xs text-gray-400">
-                        <div className="flex items-center justify-center gap-1">
-                          <button onClick={() => { if (items.length > 1) setItems(prev => prev.filter((_, i) => i !== idx)); }} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity">
-                            <Trash2 size={12} />
-                          </button>
-                          <span>{idx + 1}</span>
-                        </div>
-                      </td>
-                      <td className="px-2 py-1.5 border-r border-gray-100 relative">
+                    <tr key={item.id} className="hover:bg-gray-50/50">
+                      <td className="px-4 py-2.5 text-center text-xs text-gray-400">{idx + 1}</td>
+                      <td className="px-4 py-2.5 relative">
                         <input
-                          className="w-full text-sm text-gray-700 outline-none bg-transparent"
+                          className="w-full px-3 py-1.5 border border-gray-200 rounded-md text-sm outline-none focus:border-orange-400"
                           placeholder="Search item..."
                           value={item.itemSearch}
                           onChange={e => { updateItem(idx, "itemSearch", e.target.value); updateItem(idx, "productId", ""); setOpenItemDrop(item.id); }}
                           onFocus={() => setOpenItemDrop(item.id)}
                         />
                         {openItemDrop === item.id && filtProd.length > 0 && (
-                          <div className="absolute top-full left-0 z-50 mt-0.5 w-72 bg-white border border-gray-200 rounded shadow-lg max-h-48 overflow-y-auto">
+                          <div className="absolute left-4 right-4 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg max-h-44 overflow-y-auto">
                             {filtProd.map(p => (
-                              <button key={p.id} className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0" onMouseDown={() => selectProduct(idx, p)}>
+                              <button key={p.id} className="w-full flex items-center justify-between px-3 py-2 hover:bg-orange-50 text-left border-b border-gray-50 last:border-0 text-xs" onMouseDown={() => selectProduct(idx, p)}>
                                 <div>
                                   <div className="text-sm text-gray-800">{p.name}</div>
                                   <div className="text-xs text-gray-400">₹{p.basePrice || p.price || 0}</div>
@@ -654,114 +623,158 @@ export default function ProformaInvoicePage() {
                           </div>
                         )}
                       </td>
-                      <td className="px-1 py-1.5 border-r border-gray-100">
-                        <input type="number" min={0} value={item.qty} onChange={e => updateItem(idx, "qty", Number(e.target.value))} className="w-full text-sm text-gray-700 text-center outline-none bg-transparent" />
+                      <td className="px-4 py-2.5">
+                        <input type="number" min={0} value={item.qty} onChange={e => updateItem(idx, "qty", Number(e.target.value))} className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm text-center outline-none focus:border-orange-400" />
                       </td>
-                      <td className="px-1 py-1.5 border-r border-gray-100">
-                        <select value={item.unit} onChange={e => updateItem(idx, "unit", e.target.value)} className="w-full text-xs text-gray-700 outline-none bg-transparent cursor-pointer">
+                      <td className="px-4 py-2.5">
+                        <select value={item.unit} onChange={e => updateItem(idx, "unit", e.target.value)} className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm bg-white outline-none focus:border-orange-400">
                           {UNITS.map(u => <option key={u.code} value={u.code}>{u.label}</option>)}
                         </select>
                       </td>
-                      <td className="px-1 py-1.5 border-r border-gray-100">
-                        <input type="number" min={0} value={item.rate || ""} placeholder="0" onChange={e => updateItem(idx, "rate", Number(e.target.value))} className="w-full text-sm text-gray-700 text-right outline-none bg-transparent" />
+                      <td className="px-4 py-2.5">
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">₹</span>
+                          <input type="number" min={0} value={item.rate || ""} placeholder="0.00" onChange={e => updateItem(idx, "rate", Number(e.target.value))} className="w-full pl-6 pr-2 py-1.5 border border-gray-200 rounded-md text-sm text-right outline-none focus:border-orange-400" />
+                        </div>
                       </td>
-                      <td className="px-1 py-1.5 border-r border-gray-100 w-14">
-                        <input type="number" min={0} max={100} value={item.discountPct || ""} placeholder="0" onChange={e => updateItem(idx, "discountPct", Number(e.target.value))} className="w-full text-sm text-gray-700 text-center outline-none bg-transparent" />
+                      <td className="px-4 py-2.5">
+                        <input type="number" min={0} max={100} value={item.discountPct || ""} placeholder="0" onChange={e => updateItem(idx, "discountPct", Number(e.target.value))} className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm text-center outline-none focus:border-orange-400" />
+                        {discAmt > 0 && <div className="text-[10px] text-right text-gray-400 mt-0.5 font-mono">-₹{discAmt.toFixed(2)}</div>}
                       </td>
-                      <td className="px-2 py-1.5 border-r border-gray-100 text-right text-xs text-gray-500 w-20">{discAmt > 0 ? discAmt.toFixed(2) : ""}</td>
-                      <td className="px-1 py-1.5 border-r border-gray-100 w-24">
-                        <select value={item.taxPct} onChange={e => updateItem(idx, "taxPct", Number(e.target.value))} className="w-full text-xs text-gray-700 outline-none bg-transparent cursor-pointer">
+                      <td className="px-4 py-2.5">
+                        <select value={item.taxPct} onChange={e => updateItem(idx, "taxPct", Number(e.target.value))} className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm bg-white outline-none focus:border-orange-400">
                           {TAX_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                         </select>
+                        {taxAmt > 0 && <div className="text-[10px] text-right text-gray-400 mt-0.5 font-mono">₹{taxAmt.toFixed(2)}</div>}
                       </td>
-                      <td className="px-2 py-1.5 border-r border-gray-100 text-right text-xs text-gray-500 w-20">{taxAmt > 0 ? taxAmt.toFixed(2) : ""}</td>
-                      <td className="px-2 py-1.5 border-r border-gray-100 text-right text-sm font-medium text-gray-800">{amount > 0 ? amount.toFixed(2) : ""}</td>
-                      <td />
+                      <td className="px-4 py-2.5 text-right font-mono text-sm font-semibold text-gray-700">
+                        {amount > 0 ? `₹${amount.toFixed(2)}` : "—"}
+                      </td>
+                      <td className="px-4 py-2.5 text-center">
+                        <button onClick={() => { if (items.length > 1) setItems(prev => prev.filter((_, i) => i !== idx)); }} className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded transition-colors">
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
-              <tfoot>
-                <tr className="border-t border-gray-200 bg-[#f9f9f9] text-xs font-semibold text-gray-600">
-                  <td className="px-2 py-2 border-r border-gray-200" />
-                  <td className="px-3 py-2 border-r border-gray-200">
-                    <button onClick={() => setItems(prev => [...prev, makeItem()])} className="text-[#f58220] hover:text-[#e8740e] font-semibold border border-[#f58220]/40 px-2 py-0.5 rounded text-xs">ADD ROW</button>
-                    <span className="ml-6 text-gray-400 uppercase tracking-wide">TOTAL</span>
-                  </td>
-                  <td className="px-2 py-2 border-r border-gray-200 text-center text-[#f58220]">{totalQty}</td>
-                  <td className="border-r border-gray-200" /><td className="border-r border-gray-200" /><td className="border-r border-gray-200" />
-                  <td className="px-2 py-2 border-r border-gray-200 text-right text-[#f58220]">{totalDisc > 0 ? totalDisc.toFixed(2) : 0}</td>
-                  <td className="border-r border-gray-200" />
-                  <td className="px-2 py-2 border-r border-gray-200 text-right text-[#f58220]">{totalTax > 0 ? totalTax.toFixed(2) : 0}</td>
-                  <td className="px-2 py-2 border-r border-gray-200 text-right text-[#f58220]">{totalAmount > 0 ? totalAmount.toFixed(2) : 0}</td>
-                  <td />
-                </tr>
-              </tfoot>
             </table>
+            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+              <button onClick={() => setItems(prev => [...prev, makeItem()])} className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:border-orange-300 hover:bg-orange-50 rounded-lg text-xs font-semibold text-gray-600 transition-all">
+                <Plus className="h-3.5 w-3.5" /> Add Row
+              </button>
+              <div className="flex items-center gap-5 text-xs text-gray-400">
+                <span>Qty: <strong className="text-gray-700">{totalQty}</strong></span>
+                {totalDisc > 0 && <span>Disc: <strong className="text-gray-700 font-mono">₹{totalDisc.toFixed(2)}</strong></span>}
+                <span>Tax: <strong className="text-gray-700 font-mono">₹{totalTax.toFixed(2)}</strong></span>
+              </div>
+            </div>
           </div>
 
-          {/* Bottom section */}
-          <div className="px-6 py-4 flex flex-wrap gap-6 items-start bg-gray-50">
-            <div className="min-w-[180px]">
-              {!showTerms ? (
-                <button onClick={() => setShowTerms(true)} className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 bg-white rounded px-3 py-2">
-                  <AlignLeft size={13} /> ADD TERMS AND CONDITIONS
+          {/* Notes + Summary */}
+          <div className="flex gap-4 items-start">
+            <div className="flex-1 bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setShowTerms(v => !v)}
+                  className={clsx(
+                    "flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-semibold transition-all",
+                    showTerms ? "border-orange-400 bg-orange-50 text-orange-600" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  )}
+                >
+                  <AlignLeft className="h-3.5 w-3.5" /> Terms & Conditions
                 </button>
-              ) : (
-                <textarea value={termsText} onChange={e => setTermsText(e.target.value)} rows={4} placeholder="Terms and conditions..." className="w-full text-xs text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 outline-none resize-none min-w-[200px]" />
+                <button
+                  onClick={() => setShowDesc(v => !v)}
+                  className={clsx(
+                    "flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-semibold transition-all",
+                    showDesc ? "border-orange-400 bg-orange-50 text-orange-600" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  )}
+                >
+                  <FileText className="h-3.5 w-3.5" /> Description
+                </button>
+                <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-semibold text-gray-600">
+                  <ImageIcon className="h-3.5 w-3.5" /> Image
+                </button>
+                <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-semibold text-gray-600">
+                  <FileText className="h-3.5 w-3.5" /> Document
+                </button>
+              </div>
+              {showTerms && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Terms & Conditions</label>
+                  <textarea value={termsText} onChange={e => setTermsText(e.target.value)} rows={3} placeholder="Terms and conditions..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none resize-none focus:border-orange-400" />
+                </div>
+              )}
+              {showDesc && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Description</label>
+                  <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Description..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none resize-none focus:border-orange-400" />
+                </div>
               )}
             </div>
-            <div className="flex flex-col gap-2">
-              {!showDesc ? (
-                <button onClick={() => setShowDesc(true)} className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 w-40">
-                  <FileText size={13} /> ADD DESCRIPTION
-                </button>
-              ) : (
-                <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} placeholder="Description" className="w-48 text-xs text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 outline-none resize-none" />
+
+            <div className="bg-white rounded-xl border border-gray-200 p-4 w-64 shrink-0 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Subtotal</span>
+                <span className="font-mono font-semibold text-gray-700">₹{totalAmount.toFixed(2)}</span>
+              </div>
+              {totalDisc > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Discount</span>
+                  <span className="font-mono text-gray-600">-₹{totalDisc.toFixed(2)}</span>
+                </div>
               )}
-              <button className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 w-40">
-                <ImageIcon size={13} /> ADD IMAGE
-              </button>
-              <button className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 w-40">
-                <FileText size={13} /> ADD DOCUMENT
-              </button>
-            </div>
-            <div className="flex-1" />
-            <div className="flex flex-col gap-2 items-end text-sm">
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 text-gray-600 cursor-pointer">
-                  <input type="checkbox" checked={roundOffEnabled} onChange={e => setRoundOffEnabled(e.target.checked)} className="w-3.5 h-3.5 accent-blue-600" />
+              {totalTax > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Tax</span>
+                  <span className="font-mono text-gray-600">₹{totalTax.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-sm">
+                <label htmlFor="pf_roundoff" className="flex items-center gap-1.5 text-gray-500 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="pf_roundoff"
+                    checked={roundOffEnabled}
+                    onChange={e => setRoundOffEnabled(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-gray-300"
+                  />
                   Round Off
                 </label>
-                <input readOnly value={roundOff.toFixed(2)} className="w-20 text-right border border-gray-300 bg-white rounded px-2 py-1 text-xs text-gray-600 outline-none" />
+                <span className="font-mono text-gray-500 text-xs">{roundOff >= 0 ? "+" : ""}₹{roundOff.toFixed(2)}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-gray-600 font-medium">Total</span>
-                <input readOnly value={finalTotal > 0 ? finalTotal.toFixed(2) : ""} placeholder="0.00" className="w-36 text-right border border-gray-300 bg-white rounded px-2 py-1 text-sm font-semibold text-gray-800 outline-none" />
+              <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+                <span className="font-bold text-gray-800">Total</span>
+                <span className="text-xl font-bold font-mono text-[#f58220]">₹{finalTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom action bar */}
-        <div className="bg-white border-t border-gray-200 px-6 py-2.5 flex items-center justify-end gap-3 shrink-0">
-          <button onClick={() => handleSave(false, true)} disabled={saving} className="px-4 py-1.5 text-sm font-semibold text-gray-600 hover:text-gray-800 bg-white border border-gray-200 rounded disabled:opacity-60">Save Draft</button>
-          <button onClick={() => setView("list")} className="px-4 py-1.5 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+        {/* Action Bar */}
+        <div className="bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-end gap-3 shrink-0">
+          <button onClick={() => setView("list")} className="px-4 py-2 text-sm font-semibold border border-gray-200 hover:bg-gray-50 rounded-lg text-gray-600 transition-colors">
+            Cancel
+          </button>
+          <button onClick={() => handleSave(false, true)} disabled={saving} className="px-4 py-2 text-sm font-semibold border border-gray-200 hover:bg-gray-50 rounded-lg text-gray-700 transition-colors disabled:opacity-50">
+            Save Draft
+          </button>
           <div className="relative" ref={shareDropRef}>
-            <div className="flex">
-              <button onClick={() => showToast("Share feature coming soon", "info")} className="px-4 py-1.5 text-sm font-medium text-white bg-[#f58220] hover:bg-[#e8740e] rounded-l border-r border-[#e8740e]">Share</button>
-              <button onClick={() => setShowShareDrop(v => !v)} className="px-2 py-1.5 text-white bg-[#f58220] hover:bg-[#e8740e] rounded-r"><ChevronDown size={14} /></button>
-            </div>
+            <button onClick={() => setShowShareDrop(v => !v)} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold border border-orange-200 hover:bg-orange-50 rounded-lg text-[#f58220] transition-colors">
+              <Share2 size={15} /> Share <ChevronDown size={13} />
+            </button>
             {showShareDrop && (
-              <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-200 rounded shadow-lg text-sm min-w-[160px] z-50">
+              <div className="absolute bottom-full mb-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg text-sm min-w-[160px] z-50">
                 <button className="w-full px-4 py-2 text-left hover:bg-gray-50 text-gray-700 flex items-center gap-2"><Printer size={13} /> Print</button>
                 <button className="w-full px-4 py-2 text-left hover:bg-gray-50 text-gray-700 flex items-center gap-2"><Share2 size={13} /> Share</button>
                 <button className="w-full px-4 py-2 text-left hover:bg-gray-50 text-gray-700" onClick={() => { setShowShareDrop(false); handleSave(true); }}>Save &amp; New</button>
               </div>
             )}
           </div>
-          <button onClick={() => handleSave(false)} disabled={saving} className="px-6 py-1.5 text-sm font-semibold text-white bg-[#f58220] hover:bg-[#e8740e] rounded disabled:opacity-60">
-            {saving ? "Saving..." : "Save"}
+          <button onClick={() => handleSave(false)} disabled={saving} className="flex items-center gap-2 px-5 py-2 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] text-white rounded-lg transition-colors disabled:opacity-50">
+            <Check className="h-4 w-4" /> {saving ? "Saving..." : "Save Proforma"}
           </button>
         </div>
       </div>

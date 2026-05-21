@@ -546,301 +546,257 @@ export default function EstimationsPage() {
   // ══════════════════════════════════════════════════════════════════════════
   if (view === "create") {
     return (
-      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: 'calc(100vh - 104px)' }}>
+      <div className="flex flex-col bg-gray-50" style={{ height: 'calc(100vh - 104px)' }}>
 
         {/* ── Top bar ── */}
-        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
+        <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <button onClick={handleBack} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
+            <button onClick={handleBack} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
               <ArrowLeft size={18} />
             </button>
-            <h2 className="text-lg font-bold text-slate-800">Estimate / Quotation</h2>
+            <h2 className="text-lg font-bold text-gray-800">Estimate / Quotation</h2>
           </div>
-          <span className="text-xs text-slate-500 font-mono">Ref No: <strong className="text-[#f58220] font-bold">Auto</strong></span>
         </div>
 
         {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto min-h-0 p-5 space-y-4">
 
-          {/* ── Customer + Meta info row ── */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-5 flex flex-wrap items-start justify-between gap-4">
+          {/* Customer + Meta info */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="grid grid-cols-2 gap-8">
+              {/* Left: Party + Phone */}
+              <div className="space-y-4">
+                <div className="relative" ref={customerDropRef}>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Party *</label>
+                  <div
+                    className={clsx(
+                      "flex items-center gap-2 border rounded-lg px-3 py-2 cursor-pointer bg-white transition-all",
+                      showCustomerDrop ? "border-orange-400 ring-1 ring-orange-200" : "border-gray-300 hover:border-gray-400"
+                    )}
+                    onClick={() => setShowCustomerDrop(v => !v)}
+                  >
+                    <input
+                      className="flex-1 text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400"
+                      placeholder="Select or search party"
+                      value={customerSearch}
+                      onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDrop(true); }}
+                      onClick={e => { e.stopPropagation(); setShowCustomerDrop(true); }}
+                    />
+                    <ChevronDown size={14} className="text-gray-400 shrink-0" />
+                  </div>
 
-            {/* Customer dropdown */}
-            <div className="relative" ref={customerDropRef}>
-              <div
-                className={clsx(
-                  "flex items-center gap-1 min-w-[300px] bg-white border rounded-md px-3 py-1.5 cursor-pointer",
-                  showCustomerDrop ? "border-[#f58220]" : "border-slate-300"
-                )}
-                onClick={() => setShowCustomerDrop(v => !v)}
-              >
-                <div className="flex-1">
-                  <div className="text-[10px] text-[#f58220] font-semibold leading-none mb-1">Party *</div>
-                  <input
-                    className="w-full text-sm text-gray-800 outline-none bg-transparent placeholder-gray-400 font-medium"
-                    placeholder=""
-                    value={customerSearch}
-                    onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDrop(true); }}
-                    onClick={e => { e.stopPropagation(); setShowCustomerDrop(true); }}
-                  />
-                </div>
-                <ChevronDown size={16} className="text-gray-400 shrink-0" />
-              </div>
-
-              {showCustomerDrop && (
-                <div className="absolute top-full left-0 z-50 mt-1 w-[400px] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-                  {/* Add Party inline card */}
-                  {showAddParty ? (
-                    <div className="flex flex-col bg-white">
-                      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                        <span className="text-sm font-bold text-[#1a237e]">Add Party</span>
-                        <button onClick={() => { setShowAddParty(false); setNewParty({ name: "", phone: "", email: "" }); }} className="text-gray-400 hover:text-gray-600">
-                          <X size={18} />
-                        </button>
-                      </div>
-                      <div className="p-4 space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="col-span-1">
-                            <label className="text-[10px] text-[#f58220] font-semibold absolute ml-2 mt-[-6px] bg-white px-1">Party Name *</label>
-                            <input
-                              type="text"
-                              value={newParty.name}
-                              onChange={e => setNewParty(p => ({ ...p, name: e.target.value }))}
-                              className="w-full text-sm border-2 border-blue-500 rounded-md px-3 py-2 outline-none bg-white font-medium text-gray-800"
-                              autoFocus
-                            />
+                  {showCustomerDrop && (
+                    <div className="absolute top-full left-0 z-50 mt-1 w-[400px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                      {showAddParty ? (
+                        <div className="flex flex-col bg-white">
+                          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                            <span className="text-sm font-bold text-gray-800">Add Party</span>
+                            <button onClick={() => { setShowAddParty(false); setNewParty({ name: "", phone: "", email: "" }); }} className="text-gray-400 hover:text-gray-600">
+                              <X size={18} />
+                            </button>
                           </div>
-                          <div className="col-span-1">
-                            <input type="text" placeholder="GSTIN" className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none focus:border-gray-400 bg-white" />
-                          </div>
-                          <div className="col-span-1">
-                            <input type="tel" placeholder="Phone Number" value={newParty.phone} onChange={e => setNewParty(p => ({ ...p, phone: e.target.value }))} className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none focus:border-gray-400 bg-white" />
-                          </div>
-                        </div>
-
-                        {/* Tabs simulation */}
-                        <div className="flex border-b border-gray-200">
-                          <div className="px-4 py-2 border-b-2 border-[#f58220] text-sm font-bold text-[#f58220]">GST & Address</div>
-                          <div className="px-4 py-2 text-sm font-semibold text-gray-400 flex items-center gap-2">Credit & Balance <span className="bg-[#ff4d4f] text-white text-[9px] px-1.5 py-0.5 rounded">New</span></div>
-                          <div className="px-4 py-2 text-sm font-semibold text-gray-400">Additional Fields</div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-6 pt-2">
-                          <div className="space-y-3">
-                            <div className="border border-gray-300 rounded-md p-2 relative">
-                              <label className="text-[10px] text-[#f58220] font-semibold absolute top-[-7px] left-2 bg-white px-1">GST Type</label>
-                              <select className="w-full text-sm outline-none bg-transparent appearance-none font-medium text-gray-800 pt-1">
-                                <option>Unregistered/Consumer</option>
-                                <option>Registered Business - Regular</option>
-                                <option>Registered Business - Composition</option>
-                              </select>
-                              <ChevronDown size={14} className="absolute right-2 top-3 text-gray-500 pointer-events-none" />
+                          <div className="p-4 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="col-span-1">
+                                <label className="text-[10px] text-[#f58220] font-semibold absolute ml-2 mt-[-6px] bg-white px-1">Party Name *</label>
+                                <input
+                                  type="text"
+                                  value={newParty.name}
+                                  onChange={e => setNewParty(p => ({ ...p, name: e.target.value }))}
+                                  className="w-full text-sm border-2 border-blue-500 rounded-md px-3 py-2 outline-none bg-white font-medium text-gray-800"
+                                  autoFocus
+                                />
+                              </div>
+                              <div className="col-span-1">
+                                <input type="text" placeholder="GSTIN" className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none focus:border-gray-400 bg-white" />
+                              </div>
+                              <div className="col-span-1">
+                                <input type="tel" placeholder="Phone Number" value={newParty.phone} onChange={e => setNewParty(p => ({ ...p, phone: e.target.value }))} className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none focus:border-gray-400 bg-white" />
+                              </div>
                             </div>
-                            <select className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none font-medium text-gray-500 bg-white">
-                              <option>State</option>
-                              {INDIAN_STATES.map(s => <option key={s}>{s}</option>)}
-                            </select>
-                            <input type="email" placeholder="Email ID" className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none bg-white" />
-                          </div>
-                          <div>
-                            <span className="text-xs font-semibold text-gray-700 mb-1 block">Billing Address</span>
-                            <textarea placeholder="Billing Address" rows={3} className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none resize-none bg-white" />
-                            <div className="text-right mt-1">
-                              <button className="text-xs text-[#f58220] font-medium">Show Detailed Address</button>
+                            <div className="flex border-b border-gray-200">
+                              <div className="px-4 py-2 border-b-2 border-[#f58220] text-sm font-bold text-[#f58220]">GST & Address</div>
+                              <div className="px-4 py-2 text-sm font-semibold text-gray-400 flex items-center gap-2">Credit & Balance <span className="bg-[#ff4d4f] text-white text-[9px] px-1.5 py-0.5 rounded">New</span></div>
+                              <div className="px-4 py-2 text-sm font-semibold text-gray-400">Additional Fields</div>
                             </div>
-                            <div className="mt-3">
-                              <span className="text-xs font-semibold text-gray-700 mb-1 block">Shipping Address</span>
-                              <button className="text-xs text-[#f58220] font-medium">+ Enable Shipping Address</button>
+                            <div className="grid grid-cols-2 gap-6 pt-2">
+                              <div className="space-y-3">
+                                <div className="border border-gray-300 rounded-md p-2 relative">
+                                  <label className="text-[10px] text-[#f58220] font-semibold absolute top-[-7px] left-2 bg-white px-1">GST Type</label>
+                                  <select className="w-full text-sm outline-none bg-transparent appearance-none font-medium text-gray-800 pt-1">
+                                    <option>Unregistered/Consumer</option>
+                                    <option>Registered Business - Regular</option>
+                                    <option>Registered Business - Composition</option>
+                                  </select>
+                                  <ChevronDown size={14} className="absolute right-2 top-3 text-gray-500 pointer-events-none" />
+                                </div>
+                                <select className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none font-medium text-gray-500 bg-white">
+                                  <option>State</option>
+                                  {INDIAN_STATES.map(s => <option key={s}>{s}</option>)}
+                                </select>
+                                <input type="email" placeholder="Email ID" className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none bg-white" />
+                              </div>
+                              <div>
+                                <span className="text-xs font-semibold text-gray-700 mb-1 block">Billing Address</span>
+                                <textarea placeholder="Billing Address" rows={3} className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none resize-none bg-white" />
+                                <div className="text-right mt-1">
+                                  <button className="text-xs text-[#f58220] font-medium">Show Detailed Address</button>
+                                </div>
+                                <div className="mt-3">
+                                  <span className="text-xs font-semibold text-gray-700 mb-1 block">Shipping Address</span>
+                                  <button className="text-xs text-[#f58220] font-medium">+ Enable Shipping Address</button>
+                                </div>
+                              </div>
                             </div>
                           </div>
+                          <div className="border-t border-gray-100 p-4 flex justify-end gap-3 bg-white">
+                            <button
+                              disabled={!newParty.name.trim() || savingParty}
+                              onClick={async () => {
+                                setSavingParty(true);
+                                try {
+                                  const res = await customersApi.create({
+                                    name: newParty.name.trim(),
+                                    phone: newParty.phone.trim(),
+                                    email: newParty.email.trim() || undefined,
+                                  });
+                                  const created = (res as any).data;
+                                  setCustomers(prev => [created, ...prev]);
+                                  selectCustomer(created);
+                                  setShowAddParty(false);
+                                  setNewParty({ name: "", phone: "", email: "" });
+                                  showToast("Customer added successfully", "success");
+                                } catch {
+                                  showToast("Failed to add customer", "error");
+                                } finally {
+                                  setSavingParty(false);
+                                }
+                              }}
+                              className="px-6 py-2 bg-[#f58220] text-white rounded-md text-sm font-semibold hover:bg-[#e8740e] shadow-md"
+                            >
+                              {savingParty ? "Saving..." : "Save"}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                      
-                      <div className="border-t border-gray-100 p-4 flex justify-end gap-3 bg-white">
-                        <button 
-                          disabled={!newParty.name.trim() || savingParty}
-                          onClick={async () => {
-                            setSavingParty(true);
-                            try {
-                              const res = await customersApi.create({
-                                name: newParty.name.trim(),
-                                phone: newParty.phone.trim(),
-                                email: newParty.email.trim() || undefined,
-                              });
-                              const created = (res as any).data;
-                              setCustomers(prev => [created, ...prev]);
-                              selectCustomer(created);
-                              setShowAddParty(false);
-                              setNewParty({ name: "", phone: "", email: "" });
-                              showToast("Customer added successfully", "success");
-                            } catch {
-                              showToast("Failed to add customer", "error");
-                            } finally {
-                              setSavingParty(false);
-                            }
-                          }}
-                          className="px-6 py-2 bg-[#f58220] text-white rounded-md text-sm font-semibold hover:bg-[#e8740e] shadow-md"
-                        >
-                          {savingParty ? "Saving..." : "Save"}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100 font-medium"
-                      onClick={() => {
-                        const isPhone = /^[\d\s\-+()]{6,}$/.test(customerSearch.trim());
-                        setNewParty({
-                          name: isPhone ? "" : customerSearch.trim(),
-                          phone: isPhone ? customerSearch.trim() : "",
-                          email: "",
-                        });
-                        setShowAddParty(true);
-                      }}
-                    >
-                      <span className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-[#f58220] font-bold text-base leading-none">+</span>
-                      Add New Party
-                    </button>
-                  )}
-                  {/* Customer list */}
-                  {!showAddParty && (
-                    <div className="max-h-48 overflow-y-auto">
-                      {filteredCustomers.length === 0 ? (
-                        <div className="px-3 py-4 text-sm text-gray-400 text-center">No customers found</div>
                       ) : (
-                        filteredCustomers.map(c => (
-                          <button
-                            key={c.id}
-                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 border-b border-gray-50 last:border-0"
-                            onClick={() => selectCustomer(c)}
-                          >
-                            <div className="text-left">
-                              <div className="text-sm font-medium text-gray-800">{c.name}</div>
-                              <div className="text-xs text-gray-400">{c.phone || "—"}</div>
-                            </div>
-                          </button>
-                        ))
+                        <button
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100 font-medium"
+                          onClick={() => {
+                            const isPhone = /^[\d\s\-+()]{6,}$/.test(customerSearch.trim());
+                            setNewParty({
+                              name: isPhone ? "" : customerSearch.trim(),
+                              phone: isPhone ? customerSearch.trim() : "",
+                              email: "",
+                            });
+                            setShowAddParty(true);
+                          }}
+                        >
+                          <span className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-[#f58220] font-bold text-base leading-none">+</span>
+                          Add New Party
+                        </button>
+                      )}
+                      {!showAddParty && (
+                        <div className="max-h-48 overflow-y-auto">
+                          {filteredCustomers.length === 0 ? (
+                            <div className="px-3 py-4 text-sm text-gray-400 text-center">No customers found</div>
+                          ) : (
+                            filteredCustomers.map(c => (
+                              <button
+                                key={c.id}
+                                className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 border-b border-gray-50 last:border-0"
+                                onClick={() => selectCustomer(c)}
+                              >
+                                <div className="text-left">
+                                  <div className="text-sm font-medium text-gray-800">{c.name}</div>
+                                  <div className="text-xs text-gray-400">{c.phone || "—"}</div>
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-
-            {/* Phone No */}
-            <div className="bg-white border border-slate-300 rounded-xl px-3 py-2 min-w-[160px]">
-              <div className="text-[10px] text-slate-400 font-medium leading-none mb-0.5">Phone No</div>
-              <input
-                className="text-sm text-slate-700 outline-none bg-transparent placeholder-slate-400 w-full"
-                placeholder="Phone Number"
-                value={customerPhone}
-                onChange={e => setCustomerPhone(e.target.value)}
-              />
-            </div>
-
-            {/* Invoice metadata */}
-            <div className="ml-auto flex flex-col gap-3 text-xs">
-              <div className="flex items-center justify-end gap-4">
-                <span className="text-gray-500 w-24 text-right">Ref No</span>
-                <span className="text-gray-800 font-semibold w-32 text-left">Auto</span>
-              </div>
-              <div className="flex items-center justify-end gap-4">
-                <span className="text-gray-500 w-24 text-right">Valid Until</span>
-                <div className="relative w-32" ref={calendarRef}>
-                  <button
-                    onClick={() => setShowCalendar(v => !v)}
-                    className="flex items-center justify-between w-full text-xs text-gray-800 font-semibold bg-transparent transition-colors text-left"
-                  >
-                    {invoiceDate ? new Date(invoiceDate + "T00:00:00").toLocaleDateString("en-GB") : "Pick date"}
-                    <Calendar size={13} className="text-[#f58220]" />
-                  </button>
-                  {showCalendar && (
-                    <div className="absolute right-0 top-full mt-1 z-[200]">
-                      <MiniCalendar
-                        value={invoiceDate}
-                        onChange={setInvoiceDate}
-                        onClose={() => setShowCalendar(false)}
-                      />
-                    </div>
-                  )}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Phone</label>
+                  <input
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white"
+                    placeholder="Phone number"
+                    value={customerPhone}
+                    onChange={e => setCustomerPhone(e.target.value)}
+                  />
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-4">
-                <span className="text-gray-500 w-24 text-right">State of supply</span>
-                <div className="w-32 relative">
+
+              {/* Right: Ref No, Valid Until, State of Supply */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Ref No</label>
+                  <div className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-400 bg-gray-50 font-mono">Auto</div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Valid Until</label>
+                  <input
+                    type="date"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white"
+                    value={invoiceDate}
+                    onChange={e => setInvoiceDate(e.target.value)}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">State of Supply</label>
                   <select
                     value={stateOfSupply}
                     onChange={e => setStateOfSupply(e.target.value)}
-                    className="w-full bg-transparent text-xs text-gray-800 font-semibold outline-none appearance-none"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white"
                   >
-                    <option value="">Select</option>
+                    <option value="">Select state</option>
                     {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
-                  <ChevronDown size={10} className="absolute right-0 top-1 text-gray-800 pointer-events-none" />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ── Items Table ── */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <table className="w-full text-sm border-collapse bg-white border-y border-gray-200">
+          {/* Items Table */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50/60">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Items</span>
+              <button
+                type="button"
+                onClick={() => setPriceMode(priceMode === "without_tax" ? "with_tax" : "without_tax")}
+                className="px-2.5 py-1 bg-white border border-gray-200 hover:border-orange-300 text-xs font-semibold rounded-md text-gray-600 transition-colors"
+              >
+                Price: {priceMode === "without_tax" ? "Excl. Tax" : "Incl. Tax"}
+              </button>
+            </div>
+            <table className="w-full text-sm">
               <thead>
-                {/* Row 1 — main column headers */}
-                <tr className="bg-white border-b border-gray-200 text-[10px] font-bold text-gray-600 uppercase">
-                  <th className="w-10 px-2 py-2 border-r border-gray-200 text-center">#</th>
-                  <th className="px-3 py-2 border-r border-gray-200 text-left">ITEM</th>
-                  <th className="w-20 px-2 py-2 border-r border-gray-200 text-center">QTY</th>
-                  <th className="w-24 px-2 py-2 border-r border-gray-200 text-center">UNIT</th>
-                  <th className="w-48 px-2 py-0 border-r border-gray-200 text-center align-top p-0">
-                    <div className="border-b border-gray-200 py-2">PRICE/UNIT</div>
-                    <div className="relative py-1 bg-gray-50" ref={priceDropRef}>
-                      <button
-                        onClick={() => setShowPriceDrop(v => !v)}
-                        className="flex items-center justify-center gap-1 text-[9px] text-gray-500 hover:text-gray-700 w-full font-semibold"
-                      >
-                        {priceMode === "without_tax" ? "Without Tax" : "With Tax"}
-                        <ChevronDown size={10} />
-                      </button>
-                      {showPriceDrop && (
-                        <div className="absolute top-full left-0 z-50 mt-1 bg-white border border-gray-200 rounded shadow-lg text-xs w-full text-left font-normal">
-                          <button className="w-full px-3 py-2 text-left hover:bg-gray-50" onClick={() => { setPriceMode("with_tax"); setShowPriceDrop(false); }}>With Tax</button>
-                          <button className="w-full px-3 py-2 text-left hover:bg-gray-50" onClick={() => { setPriceMode("without_tax"); setShowPriceDrop(false); }}>Without Tax</button>
-                        </div>
-                      )}
-                    </div>
-                  </th>
-                  <th className="w-40 px-0 py-0 border-r border-gray-200 text-center align-top p-0">
-                    <div className="border-b border-gray-200 py-2">TAX</div>
-                    <div className="flex bg-gray-50 text-[9px]">
-                      <div className="flex-1 py-1 border-r border-gray-200">%</div>
-                      <div className="flex-1 py-1">AMOUNT</div>
-                    </div>
-                  </th>
-                  <th className="w-32 px-2 py-2 border-r border-gray-200 text-right">AMOUNT</th>
-                  <th className="w-10 text-center text-blue-500"><Plus size={14} className="mx-auto cursor-pointer" onClick={addRow} /></th>
+                <tr className="bg-gray-50 text-gray-500 text-xs border-b border-gray-100">
+                  <th className="text-left px-4 py-2.5 w-10 font-medium">#</th>
+                  <th className="text-left px-4 py-2.5 font-medium">Item</th>
+                  <th className="text-center px-4 py-2.5 w-20 font-medium">Qty</th>
+                  <th className="text-left px-4 py-2.5 w-28 font-medium">Unit</th>
+                  <th className="text-right px-4 py-2.5 w-28 font-medium">Price/Unit</th>
+                  <th className="text-left px-4 py-2.5 w-36 font-medium">Tax</th>
+                  <th className="text-right px-4 py-2.5 w-32 font-medium">Amount</th>
+                  <th className="w-10"></th>
                 </tr>
               </thead>
-
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {items.map((item, idx) => {
-                  const { discAmt, taxAmt, amount } = computeRow(item, withTax);
+                  const { taxAmt, amount } = computeRow(item, withTax);
                   const filtProd = products.filter(p =>
                     !item.itemSearch || p.name?.toLowerCase().includes(item.itemSearch.toLowerCase())
                   ).slice(0, 10);
-
                   return (
-                    <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 group">
-                      {/* # */}
-                      <td className="px-2 py-2 border-r border-gray-100 text-center text-xs text-gray-500">
-                        {idx + 1}
-                      </td>
-
-                      {/* ITEM */}
-                      <td className="px-2 py-2 border-r border-gray-100" style={{ position: "relative", overflow: "visible" }}>
+                    <tr key={item.id} className="hover:bg-gray-50/50">
+                      <td className="px-4 py-2.5 text-center text-xs text-gray-400">{idx + 1}</td>
+                      <td className="px-4 py-2.5 relative">
                         <input
-                          className="w-full text-xs text-gray-800 outline-none bg-transparent font-medium"
-                          placeholder=""
+                          className="w-full px-3 py-1.5 border border-gray-200 rounded-md text-sm outline-none focus:border-orange-400"
+                          placeholder="Search item..."
                           value={item.itemSearch}
                           onChange={e => {
                             updateItem(idx, "itemSearch", e.target.value);
@@ -855,237 +811,220 @@ export default function EstimationsPage() {
                         />
                         {openItemDrop === item.id && filtProd.length > 0 && itemDropRect && (
                           <div
-                            className="bg-white border border-gray-200 rounded-md shadow-2xl max-h-60 overflow-y-auto"
+                            className="bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto"
                             style={{ position: "fixed", top: itemDropRect.top + 4, left: itemDropRect.left, width: itemDropRect.width, zIndex: 9999 }}
                           >
                             {filtProd.map(p => (
                               <button
                                 key={p.id}
-                                className="w-full flex items-center justify-between px-3 py-2 hover:bg-blue-50 text-left border-b border-gray-50 last:border-0"
+                                className="w-full flex items-center justify-between px-3 py-2 hover:bg-orange-50 text-left border-b border-gray-50 last:border-0"
                                 onMouseDown={() => selectProduct(idx, p)}
                               >
                                 <div>
                                   <div className="text-sm font-medium text-gray-800">{p.name}</div>
-                                  <div className="text-xs text-gray-500">₹{p.basePrice || p.price || 0}</div>
+                                  <div className="text-xs text-gray-400">₹{p.basePrice || p.price || 0}</div>
                                 </div>
                               </button>
                             ))}
                           </div>
                         )}
                       </td>
-
-                      {/* QTY */}
-                      <td className="px-1 py-2 border-r border-gray-100">
+                      <td className="px-4 py-2.5">
                         <input
                           type="number"
                           min={0}
                           value={item.qty === 0 ? "" : item.qty}
                           onChange={e => updateItem(idx, "qty", Number(e.target.value))}
-                          className="w-full text-xs font-semibold text-gray-800 text-center outline-none bg-transparent"
+                          className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm text-center outline-none focus:border-orange-400"
                         />
                       </td>
-
-                      {/* UNIT */}
-                      <td className="border-r border-gray-100 px-1 py-2" style={{ position: "relative", overflow: "visible" }}>
-                        <div className="relative w-full h-full flex items-center justify-between">
-                          <select 
-                            value={item.unit}
-                            onChange={e => updateItem(idx, "unit", e.target.value)}
-                            className="w-full text-[11px] font-bold text-gray-800 outline-none bg-transparent appearance-none text-center"
-                          >
-                             {UNITS.map(u => <option key={u.code} value={u.code}>{u.short}</option>)}
-                          </select>
-                          <ChevronDown size={10} className="text-gray-800 pointer-events-none absolute right-1" />
+                      <td className="px-4 py-2.5">
+                        <select
+                          value={item.unit}
+                          onChange={e => updateItem(idx, "unit", e.target.value)}
+                          className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm bg-white outline-none focus:border-orange-400"
+                        >
+                          {UNITS.map(u => <option key={u.code} value={u.code}>{u.short}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">₹</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={item.rate === 0 ? "" : item.rate}
+                            onChange={e => updateItem(idx, "rate", Number(e.target.value))}
+                            className="w-full pl-6 pr-2 py-1.5 border border-gray-200 rounded-md text-sm text-right outline-none focus:border-orange-400"
+                          />
                         </div>
                       </td>
-
-                      {/* PRICE */}
-                      <td className="px-2 py-2 border-r border-gray-100 text-right">
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.rate === 0 ? "" : item.rate}
-                          onChange={e => updateItem(idx, "rate", Number(e.target.value))}
-                          className="w-full text-xs font-semibold text-gray-800 outline-none bg-transparent text-right"
-                        />
+                      <td className="px-4 py-2.5">
+                        <select
+                          value={item.taxLabel || "NONE"}
+                          onChange={e => {
+                            const label = e.target.value;
+                            const option = TAX_OPTIONS.find(o => o.label === label);
+                            const val = option ? option.value : 0;
+                            updateItem(idx, "taxLabel", label);
+                            updateItem(idx, "taxPct", val);
+                          }}
+                          className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm bg-white outline-none focus:border-orange-400"
+                        >
+                          {TAX_OPTIONS.map((o, index) => (
+                            <option key={index} value={o.label}>{o.label}</option>
+                          ))}
+                        </select>
+                        <div className="text-[10px] text-right text-gray-400 mt-0.5 font-mono">₹{taxAmt > 0 ? taxAmt.toFixed(2) : "0.00"}</div>
                       </td>
-
-                      {/* TAX % & AMOUNT */}
-                      <td className="p-0 border-r border-gray-100 h-full">
-                        <div className="flex h-full">
-                          <div className="flex-1 border-r border-gray-100 p-1 relative">
-                            <select
-                              value={item.taxLabel || "NONE"}
-                              onChange={e => {
-                                const label = e.target.value;
-                                const option = TAX_OPTIONS.find(o => o.label === label);
-                                const val = option ? option.value : 0;
-                                updateItem(idx, "taxLabel", label);
-                                updateItem(idx, "taxPct", val);
-                              }}
-                              className="w-full text-xs font-semibold text-gray-800 outline-none bg-transparent appearance-none h-full pl-1"
-                            >
-                              {TAX_OPTIONS.map((o, index) => (
-                                <option key={index} value={o.label}>{o.label}</option>
-                              ))}
-                            </select>
-                            <ChevronDown size={10} className="text-gray-800 pointer-events-none absolute right-1 top-2.5" />
-                          </div>
-                          <div className="flex-1 p-1 text-right text-xs font-semibold text-gray-800 flex items-center justify-end px-2">
-                             {taxAmt > 0 ? taxAmt : ""}
-                          </div>
-                        </div>
+                      <td className="px-4 py-2.5 text-right font-mono text-sm font-semibold text-gray-700">
+                        {amount > 0 ? `₹${amount.toFixed(2)}` : "—"}
                       </td>
-
-                      {/* AMOUNT */}
-                      <td className="px-2 py-2 border-r border-gray-100 text-right text-xs font-bold text-gray-800">
-                        {amount > 0 ? amount : ""}
-                      </td>
-
-                      {/* ACTIONS */}
-                      <td className="px-2 py-2 text-center">
-                         <button
-                           onClick={() => removeRow(idx)}
-                           className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
-                         >
-                           <Trash2 size={14} />
-                         </button>
+                      <td className="px-4 py-2.5 text-center">
+                        <button
+                          onClick={() => removeRow(idx)}
+                          className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-            
-            <div className="flex border-b border-gray-200 bg-white">
-              <div className="flex items-center px-4 py-2 flex-1">
-                 <button onClick={addRow} className="text-[11px] font-bold text-blue-500 border border-blue-200 rounded px-3 py-1 hover:bg-blue-50">
-                    ADD ROW
-                 </button>
+            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+              <button
+                onClick={addRow}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:border-orange-300 hover:bg-orange-50 rounded-lg text-xs font-semibold text-gray-600 transition-all"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add Row
+              </button>
+              <div className="flex items-center gap-5 text-xs text-gray-400">
+                <span>Qty: <strong className="text-gray-700">{totalQty}</strong></span>
+                <span>Tax: <strong className="text-gray-700 font-mono">₹{totalTax.toFixed(2)}</strong></span>
               </div>
-              <div className="w-20 px-2 py-2 flex items-center justify-center font-bold text-xs text-gray-600">TOTAL</div>
-              <div className="w-24 px-2 py-2 border-r border-gray-200 text-center font-bold text-xs text-gray-800">{totalQty}</div>
-              <div className="w-48 px-2 py-2 border-r border-gray-200" />
-              <div className="w-40 px-2 py-2 border-r border-gray-200 flex text-xs font-bold text-gray-800">
-                 <div className="flex-1" />
-                 <div className="flex-1 text-right">{totalTax.toFixed(2)}</div>
-              </div>
-              <div className="w-32 px-2 py-2 border-r border-gray-200 text-right font-bold text-xs text-gray-800">
-                 {totalAmount.toFixed(2)}
-              </div>
-              <div className="w-10" />
             </div>
           </div>
 
-          {/* ── Footer notes & totals ── */}
-          <div className="flex gap-4 p-6 bg-gray-50">
-            {/* Left actions */}
-            <div className="flex flex-col gap-4">
-               <button
-                 onClick={() => setShowTerms(true)}
-                 className="flex items-center gap-2 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded px-4 py-2 hover:bg-gray-50"
-               >
-                 <AlignLeft size={14} className="text-gray-400" />
-                 ADD TERMS AND CONDITIONS
-               </button>
-            </div>
-            
-            <div className="flex flex-col gap-4">
-               <button
-                 onClick={() => setShowDesc(true)}
-                 className="flex items-center justify-center gap-2 w-48 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded px-4 py-2 hover:bg-gray-50"
-               >
-                 <FileText size={14} className="text-gray-400" />
-                 ADD DESCRIPTION
-               </button>
-               <button className="flex items-center justify-center gap-2 w-48 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded px-4 py-2 hover:bg-gray-50">
-                 <ImageIcon size={14} className="text-gray-400" />
-                 ADD IMAGE
-               </button>
-               <button className="flex items-center justify-center gap-2 w-48 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded px-4 py-2 hover:bg-gray-50">
-                 <FileText size={14} className="text-gray-400" />
-                 ADD DOCUMENT
-               </button>
+          {/* Notes + Summary */}
+          <div className="flex gap-4 items-start">
+            <div className="flex-1 bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setShowTerms(v => !v)}
+                  className={clsx(
+                    "flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-semibold transition-all",
+                    showTerms ? "border-orange-400 bg-orange-50 text-orange-600" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  )}
+                >
+                  <AlignLeft className="h-3.5 w-3.5" /> Terms & Conditions
+                </button>
+                <button
+                  onClick={() => setShowDesc(v => !v)}
+                  className={clsx(
+                    "flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-semibold transition-all",
+                    showDesc ? "border-orange-400 bg-orange-50 text-orange-600" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  )}
+                >
+                  <FileText className="h-3.5 w-3.5" /> Description
+                </button>
+                <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-semibold text-gray-600">
+                  <ImageIcon className="h-3.5 w-3.5" /> Image
+                </button>
+                <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-semibold text-gray-600">
+                  <FileText className="h-3.5 w-3.5" /> Document
+                </button>
+              </div>
+              {showTerms && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Terms & Conditions</label>
+                  <textarea
+                    rows={3}
+                    value={termsText}
+                    onChange={e => setTermsText(e.target.value)}
+                    placeholder="Add terms..."
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none resize-none focus:border-orange-400"
+                  />
+                </div>
+              )}
+              {showDesc && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Description</label>
+                  <textarea
+                    rows={3}
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    placeholder="Add description..."
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none resize-none focus:border-orange-400"
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="flex-1" />
-
-            {/* Right totals */}
-            <div className="flex flex-col gap-3 min-w-[280px]">
-               <div className="flex items-center justify-end gap-3 text-xs font-semibold text-gray-600">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                     <input type="checkbox" checked={roundOffEnabled} onChange={e => setRoundOffEnabled(e.target.checked)} className="accent-blue-500" />
-                     Round Off
-                  </label>
-                  <input type="text" readOnly value={roundOff} className="w-16 border border-gray-300 rounded px-2 py-1 text-right bg-white outline-none" />
-               </div>
-               
-               <div className="flex items-center justify-end gap-3 text-sm font-bold text-gray-800">
-                  <span>Total</span>
-                  <input type="text" readOnly value={finalTotal.toFixed(2)} className="w-32 border border-gray-300 rounded-lg px-3 py-1.5 text-right bg-white outline-none text-base font-semibold" />
-               </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4 w-64 shrink-0 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Subtotal</span>
+                <span className="font-mono font-semibold text-gray-700">₹{totalAmount.toFixed(2)}</span>
+              </div>
+              {totalTax > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Tax</span>
+                  <span className="font-mono text-gray-600">₹{totalTax.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-sm">
+                <label htmlFor="est_roundoff" className="flex items-center gap-1.5 text-gray-500 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="est_roundoff"
+                    checked={roundOffEnabled}
+                    onChange={e => setRoundOffEnabled(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-gray-300"
+                  />
+                  Round Off
+                </label>
+                <span className="font-mono text-gray-500 text-xs">{roundOff >= 0 ? "+" : ""}₹{roundOff.toFixed(2)}</span>
+              </div>
+              <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+                <span className="font-bold text-gray-800">Total</span>
+                <span className="text-xl font-bold font-mono text-[#f58220]">₹{finalTotal.toFixed(2)}</span>
+              </div>
             </div>
           </div>
-
-          {/* Description modal / terms modal */}
-          {(showTerms || showDesc) && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-               <div className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden">
-                  <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200">
-                     <span className="font-bold text-sm text-gray-800">{showTerms ? "Terms & Conditions" : "Description"}</span>
-                     <button onClick={() => { setShowTerms(false); setShowDesc(false); }} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
-                  </div>
-                  <div className="p-4">
-                     <textarea
-                       rows={4}
-                       className="w-full border border-gray-300 rounded p-3 text-sm outline-none focus:border-blue-400 resize-none"
-                       placeholder={showTerms ? "Add terms..." : "Add description..."}
-                       value={showTerms ? termsText : description}
-                       onChange={e => showTerms ? setTermsText(e.target.value) : setDescription(e.target.value)}
-                     />
-                  </div>
-                  <div className="px-4 py-3 bg-gray-50 flex justify-end">
-                     <button onClick={() => { setShowTerms(false); setShowDesc(false); }} className="bg-[#f58220] text-white px-6 py-1.5 rounded text-sm font-semibold">Done</button>
-                  </div>
-               </div>
-            </div>
-          )}
 
         </div>
 
-        {/* ── Fixed Bottom Actions ── */}
-        <div className="fixed bottom-0 right-0 left-64 bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-end shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
-          <div className="flex gap-3">
-             <button
-               onClick={() => handleSave(true)}
-               disabled={saving}
-               className="px-6 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-md border border-gray-200"
-             >
-               Save Draft
-             </button>
-             <div className="relative" ref={shareDropRef}>
-                <button
-                  onClick={() => setShowShareDrop(v => !v)}
-                  className="flex items-center justify-center gap-1.5 px-6 py-2 text-sm font-bold text-[#f58220] bg-white border border-gray-200 rounded-md hover:bg-gray-50"
-                >
-                  <Share2 size={16} /> Share <ChevronDown size={14} />
-                </button>
-                {showShareDrop && (
-                  <div className="absolute bottom-full mb-2 right-0 bg-white border border-gray-200 rounded-lg shadow-xl w-32 overflow-hidden text-sm z-50">
-                     <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700">WhatsApp</button>
-                     <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700">Email</button>
-                  </div>
-                )}
-             </div>
-             
-             <button
-               onClick={() => handleSave(false)}
-               disabled={saving}
-               className="flex items-center justify-center px-8 py-2 text-sm font-bold text-white bg-[#f58220] rounded-md hover:bg-[#e8740e] shadow-md"
-             >
-               {saving ? "Saving..." : "Save"}
-             </button>
+        {/* Action Bar */}
+        <div className="bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-end gap-3 shrink-0">
+          <button
+            onClick={() => handleSave(true)}
+            disabled={saving}
+            className="px-4 py-2 text-sm font-semibold border border-gray-200 hover:bg-gray-50 rounded-lg text-gray-700 transition-colors disabled:opacity-50"
+          >
+            Save Draft
+          </button>
+          <div className="relative" ref={shareDropRef}>
+            <button
+              onClick={() => setShowShareDrop(v => !v)}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold border border-orange-200 hover:bg-orange-50 rounded-lg text-[#f58220] transition-colors"
+            >
+              <Share2 size={15} /> Share <ChevronDown size={13} />
+            </button>
+            {showShareDrop && (
+              <div className="absolute bottom-full mb-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg w-32 overflow-hidden text-sm z-50">
+                <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700">WhatsApp</button>
+                <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700">Email</button>
+              </div>
+            )}
           </div>
+          <button
+            onClick={() => handleSave(false)}
+            disabled={saving}
+            className="flex items-center gap-2 px-5 py-2 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] text-white rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Check className="h-4 w-4" /> {saving ? "Saving..." : "Save"}
+          </button>
         </div>
       </div>
     );
