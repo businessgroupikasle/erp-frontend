@@ -408,25 +408,28 @@ export default function PaymentInPage() {
   // ── CREATE VIEW ────────────────────────────────────────────────────────────
   if (view === "create") {
     return (
-      <div className="flex flex-col bg-gray-50 overflow-hidden" style={{ height: 'calc(100vh - 56px)' }}>
+      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: 'calc(100vh - 104px)' }}>
 
         {/* Top bar */}
-        <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-4 shrink-0">
-          <span className="text-base font-semibold text-gray-800">Payment-In</span>
+        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold text-slate-800">Payment-In</h2>
+          </div>
+          <span className="text-xs text-slate-500 font-mono">Receipt No: <strong className="text-[#f58220] font-bold">Auto</strong></span>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
           {/* Party + Date row */}
-          <div className="flex flex-wrap gap-4 items-start">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-5 flex flex-wrap gap-4 items-start">
 
             {/* Party dropdown */}
             <div className="relative" ref={customerDropRef}>
               <div
                 className={clsx(
                   "flex items-center gap-1 min-w-[220px] bg-white border rounded px-3 py-2 cursor-pointer",
-                  showCustomerDrop ? "border-blue-500" : "border-gray-300"
+                  showCustomerDrop ? "border-[#f58220]" : "border-slate-300"
                 )}
                 onClick={() => setShowCustomerDrop(v => !v)}
               >
@@ -493,20 +496,20 @@ export default function PaymentInPage() {
                   onChange={e => setReceiptDate(e.target.value)}
                   className="text-sm text-gray-700 outline-none bg-transparent"
                 />
-                <Calendar size={13} className="text-blue-500 shrink-0" />
+                <Calendar size={13} className="text-[#f58220] shrink-0" />
               </div>
             </div>
           </div>
 
           {/* Amount + Mode */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
             <div className="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-2">Payment Details</div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Amount */}
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Amount Received (₹) *</label>
-                <div className="flex items-center border border-gray-300 rounded bg-white overflow-hidden focus-within:border-blue-500">
+                <div className="flex items-center border border-gray-300 rounded bg-white overflow-hidden focus-within:border-[#f58220]">
                   <span className="px-3 py-2 text-gray-400 text-sm border-r border-gray-200 bg-gray-50">₹</span>
                   <input
                     type="number"
@@ -525,7 +528,7 @@ export default function PaymentInPage() {
                 <select
                   value={paymentMode}
                   onChange={e => setPaymentMode(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none bg-white focus:border-blue-500"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none bg-white focus:border-[#f58220]"
                 >
                   {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
@@ -540,7 +543,7 @@ export default function PaymentInPage() {
                     placeholder="Enter cheque number"
                     value={chequeNo}
                     onChange={e => setChequeNo(e.target.value)}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#f58220]"
                   />
                 </div>
               )}
@@ -553,7 +556,7 @@ export default function PaymentInPage() {
                   placeholder="Optional note..."
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#f58220]"
                 />
               </div>
             </div>
@@ -561,15 +564,15 @@ export default function PaymentInPage() {
 
           {/* Total display */}
           {amount && Number(amount) > 0 && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg px-5 py-3 flex items-center justify-between">
-              <span className="text-sm font-semibold text-blue-700">Amount to be Received</span>
-              <span className="text-lg font-bold text-blue-800">₹{Number(amount).toFixed(2)}</span>
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-4 flex items-center justify-between">
+              <span className="text-sm font-semibold text-slate-600">Amount to be Received</span>
+              <span className="text-lg font-bold text-[#f58220]">₹{Number(amount).toFixed(2)}</span>
             </div>
           )}
         </div>
 
         {/* Bottom action bar */}
-        <div className="bg-white border-t border-gray-200 px-6 py-2.5 flex items-center justify-end gap-3 shrink-0">
+        <div className="bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-end gap-3 shrink-0 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]">
           <button onClick={() => { resetForm(); setView("list"); }} className="px-4 py-1.5 text-sm text-gray-500 hover:text-gray-700">
             Cancel
           </button>

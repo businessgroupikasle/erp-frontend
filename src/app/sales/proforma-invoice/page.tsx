@@ -477,18 +477,21 @@ export default function ProformaInvoicePage() {
   // ── CREATE VIEW ────────────────────────────────────────────────────────────
   if (view === "create") {
     return (
-      <div className="flex flex-col bg-gray-50 overflow-hidden" style={{ height: 'calc(100vh - 56px)' }}>
+      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: 'calc(100vh - 104px)' }}>
 
         {/* Top bar */}
-        <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-4 shrink-0">
-          <span className="text-base font-semibold text-gray-800">Proforma Invoice</span>
+        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold text-slate-800">Proforma Invoice</h2>
+          </div>
+          <span className="text-xs text-slate-500 font-mono">Proforma No: <strong className="text-[#f58220] font-bold">Auto</strong></span>
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
           {/* Customer + Invoice info row */}
-          <div className="bg-gray-50 px-6 py-4 flex flex-wrap items-start gap-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-5 flex flex-wrap items-start gap-4">
 
             {/* Customer dropdown */}
             <div className="relative" ref={customerDropRef}>

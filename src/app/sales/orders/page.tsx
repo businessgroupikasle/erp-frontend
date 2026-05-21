@@ -547,7 +547,7 @@ export default function SalesOrdersPage() {
   // ════════════════════════════════════════════════════════════════════════════
   if (view === "create" || view === "edit") {
     return (
-      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: "calc(100vh - 56px)" }}>
+      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: "calc(100vh - 104px)" }}>
         {/* Top Header */}
         <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
           <div className="flex items-center gap-3">
@@ -566,12 +566,12 @@ export default function SalesOrdersPage() {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-blue-600" />
+              <ClipboardList className="h-5 w-5 text-[#f58220]" />
               {view === "create" ? "Sale Order" : `Edit Order #${orderNo}`}
             </h2>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500 font-mono">Order No: <strong className="text-blue-600 font-bold">{orderNo}</strong></span>
+            <span className="text-xs text-slate-500 font-mono">Order No: <strong className="text-[#f58220] font-bold">{orderNo}</strong></span>
           </div>
         </div>
 
@@ -988,7 +988,7 @@ export default function SalesOrdersPage() {
                 onClick={() => {
                   showToast("Share links generated! Ready for PDF dispatch.", "success");
                 }}
-                className="px-4 py-2.5 text-sm font-bold border border-blue-200 hover:bg-orange-50 rounded-l-xl text-blue-600 transition-colors shadow-sm"
+                className="px-4 py-2.5 text-sm font-bold border border-orange-200 hover:bg-orange-50 rounded-l-xl text-[#f58220] transition-colors shadow-sm"
               >
                 Share
               </button>
@@ -996,7 +996,7 @@ export default function SalesOrdersPage() {
                 type="button"
                 onClick={() => handleSave("OPEN")}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-r-xl shadow-lg shadow-blue-100 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] text-white rounded-r-xl shadow-lg shadow-orange-100 transition-all disabled:opacity-50"
               >
                 <Check className="h-4 w-4" /> {saving ? "Saving..." : "Save"}
               </button>
