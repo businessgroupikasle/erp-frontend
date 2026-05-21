@@ -486,78 +486,70 @@ export default function SalesReturnsPage() {
   // ════════════════════════════════════════════════════════════════════════════
   if (view === "create" || view === "edit") {
     return (
-      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: "calc(100vh - 104px)" }}>
-        
-        {/* Modal-alternative Full page header */}
-        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                const hasInput = selectedEntity || reason;
-                if (hasInput) {
-                  handleSave("DRAFT");
-                } else {
-                  setView("list");
-                  resetForm();
-                }
-              }}
-              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <Undo2 className="h-5 w-5 text-[#f58220]" />
-              {view === "create" ? "Record Sales Return / Credit Note" : `Edit Return #${returnNo}`}
-            </h2>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500 font-mono">Return No: <strong className="text-[#f58220] font-bold">{returnNo}</strong></span>
-          </div>
+      <div className="flex flex-col bg-gray-50" style={{ height: "calc(100vh - 104px)" }}>
+
+        {/* Top Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-3 shrink-0">
+          <button
+            onClick={() => {
+              const hasInput = selectedEntity || reason;
+              if (hasInput) {
+                handleSave("DRAFT");
+              } else {
+                setView("list");
+                resetForm();
+              }
+            }}
+            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            <Undo2 className="h-5 w-5 text-[#f58220]" />
+            {view === "create" ? "Sales Return / Credit Note" : `Edit Return #${returnNo}`}
+          </h2>
         </div>
 
         {/* Scrollable Form Workspace */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          
-          {/* Step 1 Selection cards */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-6 shadow-sm">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+
+          {/* Return Source + Entity + Order */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-5">
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 block mb-3">1. Return Source</label>
-              <div className="grid grid-cols-2 gap-4 max-w-lg">
-                <button 
+              <label className="block text-xs font-semibold text-gray-500 mb-2">Return Source</label>
+              <div className="flex gap-3 max-w-sm">
+                <button
                   type="button"
                   onClick={() => { setReturnSource('PARTNER'); resetForm(); }}
                   className={clsx(
-                    "p-4 rounded-xl border-2 transition-all flex items-center gap-3 justify-center",
-                    returnSource === 'PARTNER' ? "border-[#f58220] bg-orange-50/20" : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
+                    "flex-1 py-2.5 rounded-lg border-2 transition-all flex items-center gap-2 justify-center text-xs font-semibold",
+                    returnSource === 'PARTNER' ? "border-[#f58220] bg-orange-50 text-[#f58220]" : "border-gray-200 text-gray-500 hover:border-gray-300"
                   )}
                 >
-                  <User className={clsx("h-5 w-5", returnSource === 'PARTNER' ? "text-[#f58220]" : "text-slate-400")} />
-                  <span className={clsx("font-bold tracking-wide text-xs", returnSource === 'PARTNER' ? "text-[#f58220]" : "text-slate-500")}>Dealer / Retailer</span>
+                  <User className="h-4 w-4" /> Dealer / Retailer
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={() => { setReturnSource('FRANCHISE'); resetForm(); }}
                   className={clsx(
-                    "p-4 rounded-xl border-2 transition-all flex items-center gap-3 justify-center",
-                    returnSource === 'FRANCHISE' ? "border-[#f58220] bg-orange-50/20" : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
+                    "flex-1 py-2.5 rounded-lg border-2 transition-all flex items-center gap-2 justify-center text-xs font-semibold",
+                    returnSource === 'FRANCHISE' ? "border-[#f58220] bg-orange-50 text-[#f58220]" : "border-gray-200 text-gray-500 hover:border-gray-300"
                   )}
                 >
-                  <Building2 className={clsx("h-5 w-5", returnSource === 'FRANCHISE' ? "text-[#f58220]" : "text-slate-400")} />
-                  <span className={clsx("font-bold tracking-wide text-xs", returnSource === 'FRANCHISE' ? "text-[#f58220]" : "text-slate-500")}>Franchise Branch</span>
+                  <Building2 className="h-4 w-4" /> Franchise Branch
                 </button>
               </div>
             </div>
 
-            {/* Notch Inputs for Entity & Order */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-50">
-              <div className="bg-white border border-slate-350 rounded-xl px-4 py-3">
-                <label className="text-[10px] text-[#f58220] font-bold uppercase tracking-wider block mb-1">
+            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">
                   Select {returnSource === 'FRANCHISE' ? 'Franchise' : 'Customer'} *
                 </label>
                 <select
                   value={selectedEntity?.id || ""}
                   onChange={e => handleEntityChange(e.target.value)}
-                  className="w-full text-sm text-slate-700 outline-none bg-transparent font-semibold cursor-pointer"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white"
                 >
                   <option value="">Choose partner...</option>
                   {entities.map(e => (
@@ -565,18 +557,15 @@ export default function SalesReturnsPage() {
                   ))}
                 </select>
               </div>
-
-              <div className="bg-white border border-slate-350 rounded-xl px-4 py-3">
-                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">
-                  Select Original Invoice Reference *
-                </label>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Original Invoice Reference *</label>
                 <select
                   disabled={!selectedEntity}
                   value={selectedOrder?.id || ""}
                   onChange={e => handleOrderChange(e.target.value)}
-                  className="w-full text-sm text-slate-700 outline-none bg-transparent font-semibold cursor-pointer disabled:opacity-50"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white disabled:opacity-50"
                 >
-                  <option value="">{selectedEntity ? "Choose original transaction order..." : "Select entity first"}</option>
+                  <option value="">{selectedEntity ? "Choose original order..." : "Select entity first"}</option>
                   {ordersList.map(o => (
                     <option key={o.id} value={o.id}>
                       #{o.orderNumber || o.orderNo} (₹{Number(o.totalAmount || o.finalAmount || 0).toLocaleString()}) — {new Date(o.createdAt).toLocaleDateString()}
@@ -587,35 +576,34 @@ export default function SalesReturnsPage() {
             </div>
           </div>
 
-          {/* Step 2 Return list table */}
+          {/* Return Items Table */}
           {selectedOrder && (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in duration-300">
-              <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-800 uppercase tracking-wide">Return quantities / conditions</span>
-                <span className="text-xs font-semibold text-[#f58220] bg-orange-50 px-3 py-1 rounded-full uppercase">Order: #{selectedOrder.orderNumber || selectedOrder.orderNo}</span>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-4 py-2.5 bg-gray-50/60 border-b border-gray-100 flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Return Quantities / Conditions</span>
+                <span className="text-xs font-semibold text-[#f58220] bg-orange-50 px-2.5 py-1 rounded-md">Order: #{selectedOrder.orderNumber || selectedOrder.orderNo}</span>
               </div>
-
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-500 font-semibold text-xs border-b border-slate-100">
-                    <th className="text-left px-6 py-3.5">Product Name</th>
-                    <th className="text-center px-6 py-3.5 w-32">Qty Bought</th>
-                    <th className="text-center px-6 py-3.5 w-44">Return Qty</th>
-                    <th className="text-left px-6 py-3.5 w-48">Item Condition</th>
-                    <th className="text-right px-6 py-3.5 w-36">Refund/Unit</th>
-                    <th className="text-right px-6 py-3.5 w-40">Credit Credit</th>
+                  <tr className="bg-gray-50 text-gray-500 text-xs border-b border-gray-100">
+                    <th className="text-left px-4 py-2.5 font-medium">Product</th>
+                    <th className="text-center px-4 py-2.5 w-28 font-medium">Qty Bought</th>
+                    <th className="text-center px-4 py-2.5 w-40 font-medium">Return Qty</th>
+                    <th className="text-left px-4 py-2.5 w-44 font-medium">Condition</th>
+                    <th className="text-right px-4 py-2.5 w-32 font-medium">Rate</th>
+                    <th className="text-right px-4 py-2.5 w-36 font-medium">Credit Total</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-gray-100">
                   {returnItems.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/20">
-                      <td className="px-6 py-4">
-                        <strong className="text-slate-800 font-bold block">{item.productName}</strong>
-                        <span className="text-[10px] text-slate-400 font-mono">SKU: {item.productId.substring(0, 8)}</span>
+                    <tr key={idx} className="hover:bg-gray-50/50">
+                      <td className="px-4 py-3">
+                        <strong className="text-gray-800 font-semibold block">{item.productName}</strong>
+                        <span className="text-[10px] text-gray-400 font-mono">SKU: {item.productId.substring(0, 8)}</span>
                       </td>
-                      <td className="px-6 py-4 text-center font-bold text-slate-500">{item.orderQuantity}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-3">
+                      <td className="px-4 py-3 text-center font-semibold text-gray-500">{item.orderQuantity}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             type="button"
                             onClick={() => {
@@ -623,11 +611,9 @@ export default function SalesReturnsPage() {
                               next[idx].returnQuantity = Math.max(0, item.returnQuantity - 1);
                               setReturnItems(next);
                             }}
-                            className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-colors font-bold"
-                          >
-                            -
-                          </button>
-                          <span className="w-8 text-center font-bold font-mono">{item.returnQuantity}</span>
+                            className="w-7 h-7 rounded-md border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 font-bold text-sm"
+                          >-</button>
+                          <span className="w-8 text-center font-bold font-mono text-sm">{item.returnQuantity}</span>
                           <button
                             type="button"
                             onClick={() => {
@@ -635,13 +621,11 @@ export default function SalesReturnsPage() {
                               next[idx].returnQuantity = Math.min(item.orderQuantity, item.returnQuantity + 1);
                               setReturnItems(next);
                             }}
-                            className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-colors font-bold"
-                          >
-                            +
-                          </button>
+                            className="w-7 h-7 rounded-md border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 font-bold text-sm"
+                          >+</button>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3">
                         <select
                           value={item.condition}
                           onChange={e => {
@@ -649,7 +633,7 @@ export default function SalesReturnsPage() {
                             next[idx].condition = e.target.value;
                             setReturnItems(next);
                           }}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold outline-none cursor-pointer focus:border-[#f58220]"
+                          className="w-full bg-white border border-gray-200 rounded-md px-2 py-1.5 text-xs outline-none focus:border-orange-400"
                         >
                           <option value="Good">Good Condition</option>
                           <option value="Damaged">Damaged / Broken</option>
@@ -657,12 +641,8 @@ export default function SalesReturnsPage() {
                           <option value="Incorrect">Incorrect Item</option>
                         </select>
                       </td>
-                      <td className="px-6 py-4 text-right font-mono font-semibold text-slate-600">
-                        ₹{Number(item.rate).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-right font-mono font-bold text-slate-800">
-                        ₹{Number(item.rate * item.returnQuantity).toFixed(2)}
-                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-gray-600">₹{Number(item.rate).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-mono font-semibold text-gray-800">₹{Number(item.rate * item.returnQuantity).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -670,26 +650,25 @@ export default function SalesReturnsPage() {
             </div>
           )}
 
-          {/* Reason, refund method, summary card */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-            <div className="md:col-span-7 bg-white rounded-2xl border border-slate-100 p-6 space-y-4 shadow-sm">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Reason for Return *</label>
+          {/* Reason + Refund Method + Summary */}
+          <div className="flex gap-4 items-start">
+            <div className="flex-1 bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Reason for Return *</label>
                 <textarea
                   rows={4}
                   value={reason}
                   onChange={e => setReason(e.target.value)}
-                  placeholder="State the detailed reason for processing this return (e.g. Broken in transit, expired, wrong color delivered...)"
-                  className="w-full p-4 border border-slate-200 rounded-xl text-sm outline-none resize-none focus:border-[#f58220]"
+                  placeholder="State the reason for this return (e.g. Broken in transit, expired, wrong item...)"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none resize-none focus:border-orange-400"
                 />
               </div>
-
-              <div className="w-64 pt-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Refund Return Method</label>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Refund Method</label>
                 <select
                   value={refundMethod}
                   onChange={e => setRefundMethod(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white outline-none focus:border-[#f58220] font-semibold"
+                  className="w-64 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:border-orange-400"
                 >
                   <option value="Original Method">Original Payment Method</option>
                   <option value="Credit Ledger">Adjust in Customer Ledger</option>
@@ -699,59 +678,44 @@ export default function SalesReturnsPage() {
               </div>
             </div>
 
-            <div className="md:col-span-5 bg-slate-900 rounded-2xl p-6 text-white space-y-6 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-8 opacity-5">
-                <Undo2 className="h-44 w-44" />
+            <div className="bg-white rounded-xl border border-gray-200 p-4 w-64 shrink-0 space-y-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Estimated Credit Note</p>
+              <div className="text-3xl font-black font-mono text-[#f58220]">
+                ₹{estimatedRefund.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </div>
-              
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400">Estimated Credit Note Total</p>
-                <h2 className="text-3xl font-black font-mono text-white mt-2">
-                  ₹{estimatedRefund.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </h2>
-              </div>
-
-              <div className="flex gap-3 items-start border-t border-slate-800 pt-4 text-xs text-slate-400">
-                <AlertTriangle className="h-5 w-5 text-orange-400 shrink-0 mt-0.5" />
-                <p className="leading-relaxed">
-                  Refund or Ledger adjustment credits are estimated based on purchased row values. The ledger will be credited after physical check approval.
-                </p>
+              <div className="flex gap-2 items-start pt-2 border-t border-gray-100 text-xs text-gray-400">
+                <AlertTriangle className="h-4 w-4 text-orange-400 shrink-0 mt-0.5" />
+                <p className="leading-relaxed">Credits are estimated. Ledger will be updated after physical check approval.</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Sticky footer action buttons */}
-        <div className="bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-between shrink-0 shadow-lg">
+        {/* Action Bar */}
+        <div className="bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-end gap-3 shrink-0">
           <button
             type="button"
-            onClick={() => {
-              setView("list");
-              resetForm();
-            }}
-            className="px-5 py-2.5 text-sm font-semibold border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-600 transition-colors"
+            onClick={() => { setView("list"); resetForm(); }}
+            className="px-4 py-2 text-sm font-semibold border border-gray-200 hover:bg-gray-50 rounded-lg text-gray-600 transition-colors"
           >
             Cancel
           </button>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => handleSave("DRAFT")}
-              disabled={submitting}
-              className="px-5 py-2.5 text-sm font-semibold border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-700 transition-colors disabled:opacity-50"
-            >
-              Save as Draft
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSave("PENDING")}
-              disabled={submitting || !selectedEntity || !selectedOrder || !reason}
-              className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] hover:bg-[#e8740e00 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl shadow-lg shadow-orange-100 transition-all"
-            >
-              <Check className="h-4 w-4" /> {submitting ? "Processing..." : "Submit Return Request"}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => handleSave("DRAFT")}
+            disabled={submitting}
+            className="px-4 py-2 text-sm font-semibold border border-gray-200 hover:bg-gray-50 rounded-lg text-gray-700 transition-colors disabled:opacity-50"
+          >
+            Save as Draft
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSave("PENDING")}
+            disabled={submitting || !selectedEntity || !selectedOrder || !reason}
+            className="flex items-center gap-2 px-5 py-2 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg transition-colors"
+          >
+            <Check className="h-4 w-4" /> {submitting ? "Processing..." : "Submit Return Request"}
+          </button>
         </div>
       </div>
     );

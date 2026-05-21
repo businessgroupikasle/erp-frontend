@@ -665,535 +665,468 @@ export default function SalesInvoicesPage() {
   // ══════════════════════════════════════════════════════════════════════════
   if (view === "create") {
     return (
-      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: 'calc(100vh - 104px)' }}>
+      <div className="flex flex-col bg-gray-50" style={{ height: 'calc(100vh - 104px)' }}>
 
-        {/* ── Top bar ── */}
-        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
+        {/* Top bar */}
+        <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <button onClick={handleBack} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
-              <ArrowLeft size={18} />
+            <button onClick={handleBack} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
+              <ArrowLeft size={17} />
             </button>
-            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              Sale Invoice
-            </h2>
+            <h2 className="text-base font-semibold text-gray-800">New Sale Invoice</h2>
           </div>
-          <span className="text-xs text-slate-500 font-mono">Invoice No: <strong className="text-[#f58220] font-bold">Auto</strong></span>
+          <span className="text-xs text-gray-400">Invoice No: <span className="text-orange-500 font-semibold">Auto</span></span>
         </div>
 
-        {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6">
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-4">
 
-          {/* ── Customer + Invoice info row ── */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-5 flex flex-wrap items-start gap-4">
-
-            {/* Customer dropdown */}
-            <div className="relative" ref={customerDropRef}>
-              <div
-                className={clsx(
-                  "flex items-center gap-1 min-w-[320px] bg-white border rounded px-2 py-1.5 cursor-pointer",
-                  showCustomerDrop ? "border-orange-500" : "border-gray-300"
-                )}
-                onClick={() => setShowCustomerDrop(v => !v)}
-              >
-                <div className="flex-1">
-                  <div className="text-[10px] text-orange-600 font-medium leading-none mb-0.5">Customer *</div>
-                  <input
-                    className="w-full text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400"
-                    placeholder="Search by Name/Phone"
-                    value={customerSearch}
-                    onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDrop(true); }}
-                    onClick={e => { e.stopPropagation(); setShowCustomerDrop(true); }}
-                  />
-                </div>
-                <ChevronDown size={14} className="text-gray-400 shrink-0" />
-              </div>
-
-              {showCustomerDrop && (
-                <div className="absolute top-full left-0 z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-                  <button
-                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100 font-medium"
-                    onClick={() => {
-                      const isPhone = /^[\d\s\-+()]{6,}$/.test(customerSearch.trim());
-                      setNewParty(prev => ({
-                        ...prev,
-                        name: isPhone ? "" : customerSearch.trim(),
-                        phone: isPhone ? customerSearch.trim() : "",
-                      }));
-                      setShowAddParty(true);
-                      setShowCustomerDrop(false);
-                    }}
-                  >
-                    <Plus size={16} /> Add Party
-                  </button>
-                  {/* Customer list */}
-                  <div className="max-h-48 overflow-y-auto">
-                    {filteredCustomers.length === 0 ? (
-                      <div className="px-3 py-4 text-sm text-gray-400 text-center">No customers found</div>
-                    ) : (
-                      filteredCustomers.map(c => (
+          {/* Customer + Invoice Details */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="grid grid-cols-2 gap-8">
+              {/* Left: Customer */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Customer *</label>
+                  <div className="relative" ref={customerDropRef}>
+                    <div
+                      className={clsx(
+                        "flex items-center gap-2 border rounded-lg px-3 py-2 cursor-pointer bg-white transition-colors",
+                        showCustomerDrop ? "border-orange-400 ring-1 ring-orange-100" : "border-gray-300 hover:border-gray-400"
+                      )}
+                      onClick={() => setShowCustomerDrop(v => !v)}
+                    >
+                      <User size={14} className="text-gray-400 shrink-0" />
+                      <input
+                        className="flex-1 text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400"
+                        placeholder="Search by Name/Phone"
+                        value={customerSearch}
+                        onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDrop(true); }}
+                        onClick={e => { e.stopPropagation(); setShowCustomerDrop(true); }}
+                      />
+                      <ChevronDown size={13} className="text-gray-400 shrink-0" />
+                    </div>
+                    {showCustomerDrop && (
+                      <div className="absolute top-full left-0 z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
                         <button
-                          key={c.id}
-                          className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 border-b border-gray-50 last:border-0"
-                          onClick={() => selectCustomer(c)}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100 font-medium"
+                          onClick={() => {
+                            const isPhone = /^[\d\s\-+()]{6,}$/.test(customerSearch.trim());
+                            setNewParty(prev => ({
+                              ...prev,
+                              name: isPhone ? "" : customerSearch.trim(),
+                              phone: isPhone ? customerSearch.trim() : "",
+                            }));
+                            setShowAddParty(true);
+                            setShowCustomerDrop(false);
+                          }}
                         >
-                          <div className="text-left">
-                            <div className="text-sm font-medium text-gray-800">{c.name}</div>
-                            <div className="text-xs text-gray-400">{c.phone || "—"}</div>
-                          </div>
-                          {(c.balance !== undefined && c.balance !== 0) && (
-                            <div className="flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded">
-                              {c.balance}
-                              <Check size={10} />
-                            </div>
-                          )}
+                          <Plus size={15} /> Add Party
                         </button>
-                      ))
+                        <div className="max-h-48 overflow-y-auto">
+                          {filteredCustomers.length === 0 ? (
+                            <div className="px-3 py-4 text-sm text-gray-400 text-center">No customers found</div>
+                          ) : (
+                            filteredCustomers.map(c => (
+                              <button
+                                key={c.id}
+                                className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 border-b border-gray-50 last:border-0"
+                                onClick={() => selectCustomer(c)}
+                              >
+                                <div className="text-left">
+                                  <div className="text-sm font-medium text-gray-800">{c.name}</div>
+                                  <div className="text-xs text-gray-400">{c.phone || "—"}</div>
+                                </div>
+                                {(c.balance !== undefined && c.balance !== 0) && (
+                                  <div className="flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded">
+                                    {c.balance}<Check size={10} />
+                                  </div>
+                                )}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* Phone */}
-            <div className="bg-white border border-slate-300 rounded-xl px-3 py-2 min-w-[160px]">
-              <input
-                className="text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400 w-full"
-                placeholder="Phone No."
-                value={customerPhone}
-                onChange={e => setCustomerPhone(e.target.value)}
-              />
-            </div>
-
-            {/* Spacer */}
-            <div className="flex-1" />
-
-            {/* Invoice metadata */}
-            <div className="flex flex-col gap-2 text-sm text-right">
-              <div className="flex items-center justify-end gap-3">
-                <span className="text-gray-500">Invoice Number</span>
-                <span className="text-gray-800 font-medium w-16 text-left">Auto</span>
-              </div>
-              <div className="flex items-center justify-end gap-3">
-                <span className="text-gray-500">Invoice Date</span>
-                <div className="relative" ref={calendarRef}>
-                  <button
-                    onClick={() => setShowCalendar(v => !v)}
-                    className="flex items-center gap-2 text-sm text-gray-800 font-medium border border-gray-300 rounded-lg px-2.5 py-1 bg-white hover:border-orange-400 transition-colors min-w-[120px]"
-                  >
-                    <Calendar size={13} className="text-orange-500 shrink-0" />
-                    {invoiceDate ? new Date(invoiceDate + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Pick date"}
-                  </button>
-                  {showCalendar && (
-                    <div className="absolute right-0 top-full mt-1 z-[200]">
-                      <MiniCalendar
-                        value={invoiceDate}
-                        onChange={setInvoiceDate}
-                        onClose={() => setShowCalendar(false)}
-                      />
-                    </div>
-                  )}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
+                  <input
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400 transition-colors"
+                    placeholder="Phone Number"
+                    value={customerPhone}
+                    onChange={e => setCustomerPhone(e.target.value)}
+                  />
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-3">
-                <span className="text-gray-500">State of supply</span>
-                <select
-                  value={stateOfSupply}
-                  onChange={e => setStateOfSupply(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 bg-white text-sm text-gray-700 outline-none w-36"
-                >
-                  <option value="">Select</option>
-                  {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+
+              {/* Right: Invoice Details */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-xs font-medium text-gray-500">Invoice Number</span>
+                  <span className="text-sm font-semibold text-gray-700">Auto</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-gray-500">Invoice Date</span>
+                  <div className="relative" ref={calendarRef}>
+                    <button
+                      onClick={() => setShowCalendar(v => !v)}
+                      className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5 bg-white hover:border-orange-400 transition-colors"
+                    >
+                      <Calendar size={13} className="text-orange-500 shrink-0" />
+                      {invoiceDate ? new Date(invoiceDate + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Pick date"}
+                    </button>
+                    {showCalendar && (
+                      <div className="absolute right-0 top-full mt-1 z-[200]">
+                        <MiniCalendar value={invoiceDate} onChange={setInvoiceDate} onClose={() => setShowCalendar(false)} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-gray-500">State of Supply</span>
+                  <select
+                    value={stateOfSupply}
+                    onChange={e => setStateOfSupply(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-sm text-gray-700 outline-none focus:border-orange-400 w-44 transition-colors"
+                  >
+                    <option value="">Select</option>
+                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-gray-500">Payment Type</span>
+                  <div className="flex gap-2">
+                    {(["CASH", "CREDIT"] as const).map(pt => (
+                      <button
+                        key={pt}
+                        onClick={() => setPaymentType(pt)}
+                        className={clsx(
+                          "px-3 py-1 rounded-lg text-xs font-semibold border transition-colors",
+                          paymentType === pt
+                            ? "bg-orange-500 text-white border-orange-500"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                        )}
+                      >
+                        {pt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* ── Items Table ── */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm" style={{ minHeight: 220, overflowX: "auto", overflowY: "visible" }}>
-            <table className="w-full text-sm border-collapse bg-white">
-              <thead>
-                {/* Row 1 — main column headers */}
-                <tr className="bg-[#f5f5f5] border-y border-gray-200 text-xs font-semibold text-gray-600 uppercase">
-                  <th className="w-10 px-2 py-1 border-r border-gray-200 text-center">#</th>
-                  <th className="px-3 py-1 border-r border-gray-200 text-left">ITEM</th>
-                  <th className="w-16 px-2 py-1 border-r border-gray-200 text-center">QTY</th>
-                  <th className="w-24 px-2 py-1 border-r border-gray-200 text-center">UNIT</th>
-                  <th className="w-28 px-2 py-1 border-r border-gray-200 text-center">PRICE/UNIT</th>
-                  <th className="w-32 px-2 py-1 border-r border-gray-200 text-center" colSpan={2}>DISCOUNT</th>
-                  <th className="w-40 px-2 py-1 border-r border-gray-200 text-center" colSpan={2}>TAX</th>
-                  <th className="w-24 px-2 py-1 border-r border-gray-200 text-right">AMOUNT</th>
-                  <th className="w-8" />
-                </tr>
-                {/* Row 2 — sub-headers */}
-                <tr className="bg-[#f5f5f5] border-b border-gray-200 text-[10px] text-gray-500">
-                  <th className="border-r border-gray-200" />
-                  <th className="border-r border-gray-200" />
-                  <th className="border-r border-gray-200" />
-                  <th className="border-r border-gray-200" />
-                  <th className="px-2 py-0.5 border-r border-gray-200 text-center">
-                    <div className="relative" ref={priceDropRef}>
-                      <button
-                        onClick={() => setShowPriceDrop(v => !v)}
-                        className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-700 mx-auto"
-                      >
-                        {priceMode === "without_tax" ? "Without Tax" : "With Tax"}
-                        <ChevronDown size={10} />
-                      </button>
-                      {showPriceDrop && (
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 z-50 mt-1 bg-white border border-gray-200 rounded shadow-lg text-xs w-28">
-                          <button
-                            className="w-full px-3 py-2 text-left hover:bg-gray-50"
-                            onClick={() => { setPriceMode("with_tax"); setShowPriceDrop(false); }}
-                          >With Tax</button>
-                          <button
-                            className="w-full px-3 py-2 text-left hover:bg-gray-50"
-                            onClick={() => { setPriceMode("without_tax"); setShowPriceDrop(false); }}
-                          >Without Tax</button>
-                        </div>
-                      )}
-                    </div>
-                  </th>
-                  <th className="px-2 py-0.5 border-r border-gray-200 text-center w-14">%</th>
-                  <th className="px-2 py-0.5 border-r border-gray-200 text-center w-20">AMOUNT</th>
-                  <th className="px-2 py-0.5 border-r border-gray-200 text-center w-24">%</th>
-                  <th className="px-2 py-0.5 border-r border-gray-200 text-center w-20">AMOUNT</th>
-                  <th className="border-r border-gray-200" />
-                  <th />
-                </tr>
-              </thead>
+          {/* Items Table */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50/60">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Items</span>
+              <div className="relative" ref={priceDropRef}>
+                <button
+                  onClick={() => setShowPriceDrop(v => !v)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-300 rounded-lg px-2.5 py-1 bg-white hover:border-gray-400 transition-colors"
+                >
+                  Price: {priceMode === "without_tax" ? "Excl. Tax" : "Incl. Tax"}
+                  <ChevronDown size={11} />
+                </button>
+                {showPriceDrop && (
+                  <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg text-xs w-44 z-50">
+                    <button className="w-full px-3 py-2 text-left hover:bg-gray-50 text-gray-700" onClick={() => { setPriceMode("without_tax"); setShowPriceDrop(false); }}>Excl. Tax (Without Tax)</button>
+                    <button className="w-full px-3 py-2 text-left hover:bg-gray-50 text-gray-700" onClick={() => { setPriceMode("with_tax"); setShowPriceDrop(false); }}>Incl. Tax (With Tax)</button>
+                  </div>
+                )}
+              </div>
+            </div>
 
-              <tbody>
-                {items.map((item, idx) => {
-                  const { discAmt, taxAmt, amount } = computeRow(item, withTax);
-                  const filtProd = products.filter(p =>
-                    !item.itemSearch || p.name?.toLowerCase().includes(item.itemSearch.toLowerCase())
-                  ).slice(0, 10);
+            <div style={{ overflowX: "auto" }}>
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase">
+                    <th className="w-8 px-3 py-2.5 text-center">#</th>
+                    <th className="px-3 py-2.5 text-left">Item</th>
+                    <th className="w-16 px-2 py-2.5 text-center">Qty</th>
+                    <th className="w-20 px-2 py-2.5 text-center">Unit</th>
+                    <th className="w-24 px-3 py-2.5 text-right">Price/Unit</th>
+                    <th className="w-16 px-2 py-2.5 text-center">Disc%</th>
+                    <th className="w-36 px-2 py-2.5 text-center">Tax</th>
+                    <th className="w-24 px-3 py-2.5 text-right">Amount</th>
+                    <th className="w-8" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, idx) => {
+                    const { discAmt, taxAmt, amount } = computeRow(item, withTax);
+                    const filtProd = products.filter(p =>
+                      !item.itemSearch || p.name?.toLowerCase().includes(item.itemSearch.toLowerCase())
+                    ).slice(0, 10);
 
-                  return (
-                    <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 group">
-                      {/* # */}
-                      <td className="px-2 py-1 border-r border-gray-100 text-center text-xs text-gray-400">
-                        <div className="flex items-center justify-center gap-1">
+                    return (
+                      <tr key={item.id} className="border-b border-gray-100 hover:bg-orange-50/30 group">
+                        <td className="px-3 py-2.5 text-center text-xs text-gray-400">{idx + 1}</td>
+
+                        {/* ITEM */}
+                        <td className="px-3 py-2" style={{ position: "relative", overflow: "visible" }}>
+                          <input
+                            className="w-full text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400"
+                            placeholder="Search item..."
+                            value={item.itemSearch}
+                            onChange={e => {
+                              updateItem(idx, "itemSearch", e.target.value);
+                              updateItem(idx, "productId", "");
+                              setOpenItemDrop(item.id);
+                            }}
+                            onFocus={e => {
+                              setOpenItemDrop(item.id);
+                              const rect = (e.target as HTMLElement).getBoundingClientRect();
+                              setItemDropRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: 300 });
+                            }}
+                          />
+                          {openItemDrop === item.id && itemDropRect && (
+                            <div
+                              className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+                              style={{ position: "fixed", top: itemDropRect.top + 4, left: itemDropRect.left, width: itemDropRect.width, zIndex: 9999 }}
+                            >
+                              <button
+                                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100 font-semibold text-left transition-colors"
+                                onMouseDown={(e) => { e.preventDefault(); router.push("/inventory/stock/add"); }}
+                              >
+                                <Plus size={15} /> Add Item
+                              </button>
+                              <div className="max-h-48 overflow-y-auto">
+                                {filtProd.length === 0 ? (
+                                  <div className="px-3 py-4 text-xs text-gray-400 text-center">No matching products</div>
+                                ) : (
+                                  filtProd.map(p => (
+                                    <button
+                                      key={p.id}
+                                      className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-orange-50 text-left border-b border-gray-50 last:border-0"
+                                      onMouseDown={() => selectProduct(idx, p)}
+                                    >
+                                      <div>
+                                        <div className="text-sm font-medium text-gray-800">{p.name}</div>
+                                        <div className="text-xs text-gray-400">₹{p.basePrice || p.price || 0}</div>
+                                      </div>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* QTY */}
+                        <td className="px-2 py-2.5">
+                          <input
+                            type="number" min={0}
+                            value={item.qty}
+                            onChange={e => updateItem(idx, "qty", Number(e.target.value))}
+                            className="w-full text-sm text-gray-700 text-center outline-none bg-transparent"
+                          />
+                        </td>
+
+                        {/* UNIT */}
+                        <td style={{ position: "relative", overflow: "visible" }}>
+                          <button
+                            className="w-full flex items-center justify-center gap-0.5 px-2 py-2.5 text-xs text-gray-700 hover:bg-gray-50"
+                            onClick={e => {
+                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                              setUnitDropRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
+                              setOpenUnitDrop(v => v === item.id ? null : item.id);
+                            }}
+                          >
+                            <span>{UNITS.find(u => u.code === item.unit)?.short ?? item.unit}</span>
+                            <ChevronDown size={9} className="text-gray-400 shrink-0" />
+                          </button>
+                          {openUnitDrop === item.id && unitDropRect && (
+                            <div
+                              className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-y-auto"
+                              style={{ position: "fixed", top: unitDropRect.top + 2, left: unitDropRect.left, width: 180, maxHeight: 220, zIndex: 9999 }}
+                            >
+                              {UNITS.map(u => (
+                                <button
+                                  key={u.code}
+                                  className={clsx(
+                                    "w-full text-left px-3 py-2 text-xs border-b border-gray-50 last:border-0 hover:bg-orange-50",
+                                    item.unit === u.code ? "text-orange-600 font-semibold bg-orange-50" : "text-gray-700"
+                                  )}
+                                  onMouseDown={() => { updateItem(idx, "unit", u.code); setOpenUnitDrop(null); }}
+                                >
+                                  <span className="font-medium">{u.short}</span>
+                                  <span className="text-gray-400 ml-1">– {u.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* PRICE/UNIT */}
+                        <td className="px-3 py-2.5">
+                          <input
+                            type="number" min={0}
+                            value={item.rate || ""}
+                            placeholder="0"
+                            onChange={e => updateItem(idx, "rate", Number(e.target.value))}
+                            className="w-full text-sm text-gray-700 text-right outline-none bg-transparent"
+                          />
+                        </td>
+
+                        {/* DISC% */}
+                        <td className="px-2 py-2.5">
+                          <input
+                            type="number" min={0} max={100}
+                            value={item.discountPct || ""}
+                            placeholder="0"
+                            onChange={e => updateItem(idx, "discountPct", Number(e.target.value))}
+                            className="w-full text-sm text-gray-700 text-center outline-none bg-transparent"
+                          />
+                        </td>
+
+                        {/* TAX */}
+                        <td className="px-2 py-2.5">
+                          <select
+                            value={item.taxLabel || "NONE"}
+                            onChange={e => {
+                              const label = e.target.value;
+                              const option = TAX_OPTIONS.find(o => o.label === label);
+                              const val = option ? option.value : 0;
+                              updateItem(idx, "taxLabel", label);
+                              updateItem(idx, "taxPct", val);
+                            }}
+                            className="w-full text-xs text-gray-700 outline-none bg-transparent cursor-pointer"
+                          >
+                            {TAX_OPTIONS.map((t, index) => <option key={index} value={t.label}>{t.label}</option>)}
+                          </select>
+                        </td>
+
+                        {/* AMOUNT */}
+                        <td className="px-3 py-2.5 text-right text-sm font-medium text-gray-800">
+                          {amount > 0 ? amount.toFixed(2) : "—"}
+                        </td>
+
+                        {/* DELETE */}
+                        <td className="pr-2">
                           <button
                             onClick={() => removeRow(idx)}
-                            className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity"
+                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity p-1"
                           >
-                            <Trash2 size={12} />
+                            <Trash2 size={13} />
                           </button>
-                          <span>{idx + 1}</span>
-                        </div>
-                      </td>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                      {/* ITEM */}
-                      <td className="px-2 py-1.5 border-r border-gray-100" style={{ position: "relative", overflow: "visible" }}>
-                        <input
-                          className="w-full text-sm text-gray-700 outline-none bg-transparent"
-                          placeholder="Search item..."
-                          value={item.itemSearch}
-                          onChange={e => {
-                            updateItem(idx, "itemSearch", e.target.value);
-                            updateItem(idx, "productId", "");
-                            setOpenItemDrop(item.id);
-                          }}
-                          onFocus={e => {
-                            setOpenItemDrop(item.id);
-                            const rect = (e.target as HTMLElement).getBoundingClientRect();
-                            setItemDropRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: 320 });
-                          }}
-                        />
-                        {openItemDrop === item.id && itemDropRect && (
-                          <div
-                            className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden flex flex-col"
-                            style={{ position: "fixed", top: itemDropRect.top + 4, left: itemDropRect.left, width: itemDropRect.width, zIndex: 9999 }}
-                          >
-                            <button
-                              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100 font-semibold text-left transition-colors"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                router.push("/inventory/stock/add");
-                              }}
-                            >
-                              <Plus size={16} /> Add Item
-                            </button>
-                            <div className="max-h-48 overflow-y-auto">
-                              {filtProd.length === 0 ? (
-                                <div className="px-3 py-4 text-xs text-gray-400 text-center">No matching products</div>
-                              ) : (
-                                filtProd.map(p => (
-                                  <button
-                                    key={p.id}
-                                    className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-orange-50 text-left border-b border-gray-50 last:border-0"
-                                    onMouseDown={() => selectProduct(idx, p)}
-                                  >
-                                    <div>
-                                      <div className="text-sm font-medium text-gray-800">{p.name}</div>
-                                      <div className="text-xs text-gray-400">₹{p.basePrice || p.price || 0}</div>
-                                    </div>
-                                  </button>
-                                ))
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* QTY */}
-                      <td className="px-1 py-1.5 border-r border-gray-100">
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.qty}
-                          onChange={e => updateItem(idx, "qty", Number(e.target.value))}
-                          className="w-full text-sm text-gray-700 text-center outline-none bg-transparent"
-                        />
-                      </td>
-
-                      {/* UNIT */}
-                      <td className="border-r border-gray-100" style={{ padding: 0, width: 72, position: "relative", overflow: "visible" }}>
-                        <button
-                          className="w-full h-full flex items-center justify-center gap-0.5 px-1 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
-                          onClick={e => {
-                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                            setUnitDropRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
-                            setOpenUnitDrop(v => v === item.id ? null : item.id);
-                          }}
-                        >
-                          <span>{UNITS.find(u => u.code === item.unit)?.short ?? item.unit}</span>
-                          <ChevronDown size={9} className="text-gray-400 shrink-0" />
-                        </button>
-                        {openUnitDrop === item.id && unitDropRect && (
-                          <div
-                            className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-y-auto"
-                            style={{ position: "fixed", top: unitDropRect.top + 2, left: unitDropRect.left, width: 180, maxHeight: 220, zIndex: 9999 }}
-                          >
-                            {UNITS.map(u => (
-                              <button
-                                key={u.code}
-                                className={clsx(
-                                  "w-full text-left px-3 py-2 text-xs border-b border-gray-50 last:border-0 hover:bg-orange-50",
-                                  item.unit === u.code ? "text-orange-600 font-semibold bg-orange-50" : "text-gray-700"
-                                )}
-                                onMouseDown={() => { updateItem(idx, "unit", u.code); setOpenUnitDrop(null); }}
-                              >
-                                <span className="font-medium">{u.short}</span>
-                                <span className="text-gray-400 ml-1">– {u.label}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* PRICE/UNIT */}
-                      <td className="px-1 py-1.5 border-r border-gray-100">
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.rate || ""}
-                          placeholder="0"
-                          onChange={e => updateItem(idx, "rate", Number(e.target.value))}
-                          className="w-full text-sm text-gray-700 text-right outline-none bg-transparent"
-                        />
-                      </td>
-
-                      {/* DISCOUNT % */}
-                      <td className="px-1 py-1.5 border-r border-gray-100 w-14">
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={item.discountPct || ""}
-                          placeholder="0"
-                          onChange={e => updateItem(idx, "discountPct", Number(e.target.value))}
-                          className="w-full text-sm text-gray-700 text-center outline-none bg-transparent"
-                        />
-                      </td>
-
-                      {/* DISCOUNT AMT */}
-                      <td className="px-2 py-1.5 border-r border-gray-100 text-right text-xs text-gray-500 w-20">
-                        {discAmt > 0 ? discAmt.toFixed(2) : ""}
-                      </td>
-
-                      {/* TAX % */}
-                      <td className="px-1 py-1.5 border-r border-gray-100 w-24">
-                        <select
-                          value={item.taxLabel || "NONE"}
-                          onChange={e => {
-                            const label = e.target.value;
-                            const option = TAX_OPTIONS.find(o => o.label === label);
-                            const val = option ? option.value : 0;
-                            updateItem(idx, "taxLabel", label);
-                            updateItem(idx, "taxPct", val);
-                          }}
-                          className="w-full text-xs text-gray-700 outline-none bg-transparent cursor-pointer"
-                        >
-                          {TAX_OPTIONS.map((t, index) => <option key={index} value={t.label}>{t.label}</option>)}
-                        </select>
-                      </td>
-
-                      {/* TAX AMT */}
-                      <td className="px-2 py-1.5 border-r border-gray-100 text-right text-xs text-gray-500 w-20">
-                        {taxAmt > 0 ? taxAmt.toFixed(2) : ""}
-                      </td>
-
-                      {/* AMOUNT */}
-                      <td className="px-2 py-1.5 border-r border-gray-100 text-right text-sm font-medium text-gray-800">
-                        {amount > 0 ? amount.toFixed(2) : ""}
-                      </td>
-
-                      <td />
-                    </tr>
-                  );
-                })}
-              </tbody>
-
-              {/* Footer / Totals */}
-              <tfoot>
-                <tr className="border-t border-gray-200 bg-[#f9f9f9] text-xs font-semibold text-gray-600">
-                  <td className="px-2 py-1.5 border-r border-gray-200" />
-                  <td className="px-3 py-2 border-r border-gray-200">
-                    <button
-                      onClick={addRow}
-                      className="text-orange-600 hover:text-orange-800 font-semibold border border-orange-300 px-2 py-0.5 rounded text-xs"
-                    >
-                      ADD ROW
-                    </button>
-                    <span className="ml-6 text-gray-400 uppercase tracking-wide">TOTAL</span>
-                  </td>
-                  <td className="px-2 py-2 border-r border-gray-200 text-center text-orange-600">{totalQty}</td>
-                  <td className="border-r border-gray-200" />
-                  <td className="border-r border-gray-200" />
-                  <td className="border-r border-gray-200" />
-                  <td className="px-2 py-2 border-r border-gray-200 text-right text-orange-600">{totalDisc > 0 ? totalDisc.toFixed(2) : 0}</td>
-                  <td className="border-r border-gray-200" />
-                  <td className="px-2 py-2 border-r border-gray-200 text-right text-orange-600">{totalTax > 0 ? totalTax.toFixed(2) : 0}</td>
-                  <td className="px-2 py-2 border-r border-gray-200 text-right text-orange-600">{totalAmount > 0 ? totalAmount.toFixed(2) : 0}</td>
-                  <td />
-                </tr>
-              </tfoot>
-            </table>
+            <div className="px-4 py-2.5 border-t border-gray-100 flex items-center justify-between bg-gray-50/40">
+              <button
+                onClick={addRow}
+                className="flex items-center gap-1.5 text-xs font-semibold text-orange-600 hover:text-orange-700 border border-orange-200 hover:border-orange-300 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Plus size={13} /> Add Row
+              </button>
+              <span className="text-xs text-gray-500">Total Qty: <span className="font-semibold text-gray-700">{totalQty}</span></span>
+            </div>
           </div>
 
-          {/* ── Bottom section ── */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-5 flex flex-wrap gap-4 items-start">
-
-            {/* Left — Terms */}
-            <div className="min-w-[180px]">
+          {/* Notes + Summary */}
+          <div className="flex gap-4 items-start pb-2">
+            {/* Notes */}
+            <div className="flex-1 space-y-2">
               {!showTerms ? (
-                <button
-                  onClick={() => setShowTerms(true)}
-                  className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 bg-white rounded px-3 py-2"
-                >
-                  <AlignLeft size={13} />
-                  ADD TERMS AND CONDITIONS
+                <button onClick={() => setShowTerms(true)} className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 transition-colors">
+                  <AlignLeft size={13} /> Add Terms &amp; Conditions
                 </button>
               ) : (
-                <textarea
-                  value={termsText}
-                  onChange={e => setTermsText(e.target.value)}
-                  rows={4}
-                  placeholder="Terms and conditions..."
-                  className="w-full text-xs text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 outline-none resize-none min-w-[200px]"
-                />
+                <textarea value={termsText} onChange={e => setTermsText(e.target.value)} rows={3} placeholder="Terms and conditions..." className="w-full text-xs text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 outline-none resize-none" />
               )}
-            </div>
-
-            {/* Middle — Description / Image / Document */}
-            <div className="flex flex-col gap-2">
               {!showDesc ? (
-                <button
-                  onClick={() => setShowDesc(true)}
-                  className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 w-40"
-                >
-                  <FileText size={13} />
-                  ADD DESCRIPTION
+                <button onClick={() => setShowDesc(true)} className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 transition-colors">
+                  <FileText size={13} /> Add Description
                 </button>
               ) : (
-                <textarea
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  rows={4}
-                  placeholder="Description"
-                  className="w-48 text-xs text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 outline-none resize-none"
-                />
+                <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Description..." className="w-full text-xs text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 outline-none resize-none" />
               )}
-              <button className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 w-40">
-                <ImageIcon size={13} />
-                ADD IMAGE
-              </button>
-              <button className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 bg-white rounded px-3 py-2 w-40">
-                <FileText size={13} />
-                ADD DOCUMENT
-              </button>
+              <div className="flex gap-2">
+                <button className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 transition-colors">
+                  <ImageIcon size={13} /> Add Image
+                </button>
+                <button className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 transition-colors">
+                  <FileText size={13} /> Add Document
+                </button>
+              </div>
             </div>
 
-            {/* Spacer */}
-            <div className="flex-1" />
-
-            {/* Right — Round Off + Total */}
-            <div className="flex flex-col gap-2 items-end text-sm">
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 text-gray-600 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={roundOffEnabled}
-                    onChange={e => setRoundOffEnabled(e.target.checked)}
-                    className="w-3.5 h-3.5 accent-orange-600"
-                  />
-                  Round Off
-                </label>
-                <input
-                  readOnly
-                  value={roundOff.toFixed(2)}
-                  className="w-20 text-right border border-gray-300 bg-white rounded px-2 py-1 text-xs text-gray-600 outline-none"
-                />
+            {/* Summary */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4 w-64 shrink-0 space-y-2">
+              <div className="flex justify-between text-sm text-gray-500">
+                <span>Subtotal</span>
+                <span>₹ {totalAmount.toFixed(2)}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-gray-600 font-medium">Total</span>
-                <input
-                  readOnly
-                  value={finalTotal > 0 ? finalTotal.toFixed(2) : ""}
-                  placeholder="0.00"
-                  className="w-36 text-right border border-gray-300 bg-white rounded px-2 py-1 text-sm font-semibold text-gray-800 outline-none"
-                />
+              {totalDisc > 0 && (
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Discount</span>
+                  <span className="text-red-500">- ₹ {totalDisc.toFixed(2)}</span>
+                </div>
+              )}
+              {totalTax > 0 && (
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Tax</span>
+                  <span>+ ₹ {totalTax.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center text-sm text-gray-500 border-t border-gray-100 pt-2">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={roundOffEnabled} onChange={e => setRoundOffEnabled(e.target.checked)} className="w-3.5 h-3.5 accent-orange-500" />
+                  <span className="text-xs">Round Off</span>
+                </label>
+                <span className="text-xs">{roundOff >= 0 ? "+" : ""}{roundOff.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center border-t border-gray-200 pt-2">
+                <span className="text-sm font-semibold text-gray-800">Total</span>
+                <span className="text-lg font-bold text-orange-500">₹ {finalTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>
+
         </div>
 
-        {/* ── Bottom action bar ── */}
-        <div className="bg-white/95 backdrop-blur-sm border-t border-white/20 px-6 py-3 flex items-center justify-end gap-3 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+        {/* Action Bar */}
+        <div className="bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-end gap-3 shrink-0">
           <button
             onClick={() => handleSave(true)}
             disabled={saving}
-            className="px-4 py-1.5 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-60"
+            className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-60"
           >
             Save Draft
           </button>
           <button
             onClick={handleBack}
-            className="px-4 py-1.5 text-sm text-gray-500 hover:text-gray-700"
+            className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg"
           >
             Cancel
           </button>
 
           {/* Share dropdown */}
           <div className="relative" ref={shareDropRef}>
-            <div className="flex">
+            <div className="flex rounded-lg overflow-hidden">
               <button
                 onClick={() => showToast("Share feature coming soon", "info")}
-                className="px-4 py-1.5 text-sm font-medium text-white bg-[#f58220] hover:bg-[#e8740e] rounded-l border-r border-[#e8740e]"
+                className="px-4 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 border-r border-orange-400"
               >
                 Share
               </button>
               <button
                 onClick={() => setShowShareDrop(v => !v)}
-                className="px-2 py-1.5 text-sm text-white bg-[#f58220] hover:bg-[#e8740e] rounded-r"
+                className="px-2 py-2 text-sm text-white bg-orange-500 hover:bg-orange-600"
               >
                 <ChevronDown size={14} />
               </button>
             </div>
             {showShareDrop && (
-              <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-200 rounded shadow-lg text-sm min-w-[160px] z-50">
+              <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg text-sm min-w-[160px] z-50">
                 <button className="w-full px-4 py-2 text-left hover:bg-gray-50 text-gray-700">Generate e-Invoice</button>
                 <button className="w-full px-4 py-2 text-left hover:bg-gray-50 text-gray-700 flex items-center gap-2">
                   <Share2 size={13} /> Share
@@ -1214,7 +1147,7 @@ export default function SalesInvoicesPage() {
           <button
             onClick={() => handleSave(false)}
             disabled={saving}
-            className="px-6 py-1.5 text-sm font-semibold text-white bg-[#f58220] hover:bg-[#e8740e] rounded disabled:opacity-60"
+            className="px-6 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save"}
           </button>
