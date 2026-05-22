@@ -29,6 +29,7 @@ import {
   Wallet,
   FilePlus2,
 } from "lucide-react";
+import { title } from "process";
 
 export interface MenuItem {
   icon: any;
@@ -66,12 +67,6 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         href: "/",
         roles: SUPER_ONLY,
       },
-      {
-        icon: BarChart3,
-        label: "System Analytics",
-        href: "/reports",
-        roles: SUPER_ONLY,
-      },
     ],
   },
   {
@@ -87,6 +82,17 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         icon: ChefHat,
         label: "Production Batches",
         href: "/production/batches",
+        roles: SUPER_ONLY,
+      },
+    ],
+  },
+  {
+    title: "REPORT",
+    items: [
+      {
+        icon: BarChart3,
+        label: "Reports",
+        href: "/reports",
         roles: SUPER_ONLY,
       },
     ],

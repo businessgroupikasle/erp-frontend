@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { 
-  ChevronRight as ChevronRightIcon, 
+import { useState, useEffect } from "react";
+import {
+  ChevronRight as ChevronRightIcon,
   ChevronDown as ChevronDownIcon,
   ChevronUp as ChevronUpIcon,
   Download as DownloadIcon,
@@ -14,109 +14,450 @@ import {
   Plus as PlusIcon,
   Search as SearchIcon,
   Info as InfoIcon,
-  IndianRupee as IndianRupeeIcon
+  IndianRupee as IndianRupeeIcon,
+  Crown as CrownIcon,
+  Users as UsersIcon,
+  Layers as LayersIcon,
+  Package as PackageIcon,
+  TrendingUp as TrendingUpIcon,
+  Calculator as CalculatorIcon,
+  Wallet as WalletIcon,
+  Landmark as LandmarkIcon,
+  Printer as PrinterIcon,
+  Share2 as ShareIcon,
+  MoreVertical as MoreVerticalIcon,
+  BarChart4 as ChartIcon,
+  FileSpreadsheet as ExcelIcon
 } from "lucide-react";
-import Link from "next/link";
 import { clsx } from "clsx";
-import { accountingApi } from "@/lib/api";
 import toast from "react-hot-toast";
 
-// ─── Sub-Components ─────────────────────────────────────────────────────────
-
-function SummaryCard({ 
-  icon, 
-  label, 
-  value, 
-  color
-}: { 
-  icon: any, 
-  label: string, 
-  value: string, 
-  color: "blue" | "green" | "orange"
-}) {
-  const colorMap = {
-    blue: "bg-blue-50 text-blue-500 dark:bg-blue-950/20 dark:text-blue-400",
-    green: "bg-emerald-50 text-emerald-500 dark:bg-emerald-950/20 dark:text-emerald-400",
-    orange: "bg-orange-50 text-orange-500 dark:bg-orange-950/20 dark:text-orange-400"
-  };
-
-  const borderMap = {
-    blue: "border-blue-100/50 dark:border-blue-950/10 hover:border-blue-500/20",
-    green: "border-emerald-100/50 dark:border-emerald-950/10 hover:border-emerald-500/20",
-    orange: "border-orange-100/50 dark:border-orange-950/10 hover:border-orange-500/20"
-  };
-
-  return (
-    <div className={clsx(
-      "bg-white dark:bg-[#12141c] border rounded-2xl p-4 sm:p-5 flex items-center gap-4 hover:shadow-md transition-all duration-300 group flex-1",
-      borderMap[color]
-    )}>
-       <div className={clsx("w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105", colorMap[color])}>
-          {icon}
-       </div>
-       <div className="min-w-0">
-          <div className="flex items-center gap-1 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-             {label} <InfoIcon size={10} className="opacity-60 shrink-0" />
-          </div>
-          <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-1 leading-none tracking-tight">
-             {value}
-          </p>
-       </div>
-    </div>
-  );
+interface ReportItem {
+  label: string;
+  isNew?: boolean;
+  isVip?: boolean;
 }
 
-function ReportCategory({ title, items, searchTerm, dateRange }: { 
-  title: string, 
-  items: { label: string, href: string, actions: string[], isNew?: boolean }[],
-  searchTerm: string,
-  dateRange: { startDate: string, endDate: string }
-}) {
-  const filteredItems = items.filter(item => item.label.toLowerCase().includes(searchTerm.toLowerCase()));
-  
-  if (filteredItems.length === 0) return null;
+interface ReportCategory {
+  title: string;
+  icon: any;
+  items: ReportItem[];
+}
 
-  const handleExport = async (item: any) => {
-    const toastId = toast.loading(`Generating CSV for ${item.label}...`);
+const REPORT_CATEGORIES: ReportCategory[] = [
+  {
+    title: "Transaction report",
+    icon: FileTextIcon,
+    items: [
+      { label: "Sale" },
+      { label: "Purchase" },
+      { label: "Day book" },
+      { label: "All Transactions" },
+      { label: "Profit And Loss" },
+      { label: "Bill Wise Profit", isVip: true },
+      { label: "Cash flow" },
+      { label: "Trial Balance Report", isNew: true, isVip: true },
+      { label: "Balance Sheet", isVip: true },
+    ]
+  },
+  {
+    title: "Party report",
+    icon: UsersIcon,
+    items: [
+      { label: "Party Statement" },
+      { label: "Party wise Profit & Loss", isVip: true },
+      { label: "All parties" },
+      { label: "Party Report By Item" },
+      { label: "Sale Purchase By Party" },
+      { label: "Sale Purchase By Party Group" },
+    ]
+  },
+  {
+    title: "GST reports",
+    icon: LayersIcon,
+    items: [
+      { label: "GSTR 1" },
+      { label: "GSTR 2" },
+      { label: "GSTR 3 B" },
+      { label: "GSTR 9" },
+      { label: "Sale Summary By HSN" },
+      { label: "SAC Report" },
+    ]
+  },
+  {
+    title: "Item/ Stock report",
+    icon: PackageIcon,
+    items: [
+      { label: "Stock summary" },
+      { label: "Item Report By Party" },
+      { label: "Item Wise Profit And Loss" },
+      { label: "Item Category Wise Profit And Loss" },
+      { label: "Low Stock Summary" },
+      { label: "Stock Detail" },
+      { label: "Item Detail" },
+      { label: "Sale/ Purchase Report By Item Category" },
+      { label: "Stock Summary Report By Item Category" },
+      { label: "Item Wise Discount" },
+    ]
+  },
+  {
+    title: "Business Status",
+    icon: TrendingUpIcon,
+    items: [
+      { label: "Bank Statement" },
+      { label: "Discount Report" },
+    ]
+  },
+  {
+    title: "Taxes",
+    icon: CalculatorIcon,
+    items: [
+      { label: "GST Report" },
+      { label: "GST Rate Report" },
+      { label: "Form No. 27EQ" },
+      { label: "TCS Receivable" },
+      { label: "TDS Payable" },
+      { label: "TDS Receivable" },
+    ]
+  },
+  {
+    title: "Expense report",
+    icon: WalletIcon,
+    items: [
+      { label: "Expense" },
+      { label: "Expense Category Report" },
+      { label: "Expense Item Report" },
+    ]
+  },
+  {
+    title: "Sale Order report",
+    icon: ShoppingCartIcon,
+    items: [
+      { label: "Sale Orders" },
+    ]
+  },
+  {
+    title: "Loan Accounts",
+    icon: LandmarkIcon,
+    items: [
+      { label: "Loan Statement" },
+    ]
+  }
+];
+
+interface MockDataRow {
+  [key: string]: any;
+}
+
+interface MockReportDetails {
+  title: string;
+  addBtnLabel?: string;
+  addBtnColor?: string;
+  kpiLabel: string;
+  kpiValue: string;
+  kpiSubText: string;
+  kpiTrend?: string;
+  tableTitle: string;
+  columns: { key: string; label: string }[];
+  data: MockDataRow[];
+}
+
+const getReportDetails = (label: string): MockReportDetails => {
+  switch (label) {
+    case "Sale":
+      return {
+        title: "Sale Invoices",
+        addBtnLabel: "+ Add Sale",
+        addBtnColor: "bg-red-600 hover:bg-red-700 focus:ring-red-500",
+        kpiLabel: "Total Sales Amount",
+        kpiValue: "₹ 875",
+        kpiSubText: "Received: ₹ 500  Balance: ₹ 375",
+        kpiTrend: "100% ↗ vs last month",
+        tableTitle: "Transactions",
+        columns: [
+          { key: "date", label: "Date" },
+          { key: "invoiceNo", label: "Invoice no" },
+          { key: "partyName", label: "Party Name" },
+          { key: "transaction", label: "Transaction" },
+          { key: "paymentType", label: "Payment Type" },
+          { key: "amount", label: "Amount" },
+          { key: "balance", label: "Balance" }
+        ],
+        data: [
+          { date: "08/05/2026", invoiceNo: "1", partyName: "selva", transaction: "Lite Sale", paymentType: "Cash", amount: "₹ 875", balance: "₹ 375" }
+        ]
+      };
+    case "Purchase":
+      return {
+        title: "Purchase Orders",
+        addBtnLabel: "+ Add Purchase",
+        addBtnColor: "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500",
+        kpiLabel: "Total Purchases Value",
+        kpiValue: "₹ 15,240",
+        kpiSubText: "Paid: ₹ 12,000  Balance: ₹ 3,240",
+        kpiTrend: "12% ↗ vs last month",
+        tableTitle: "Purchase Orders",
+        columns: [
+          { key: "date", label: "Date" },
+          { key: "poNo", label: "PO No" },
+          { key: "supplier", label: "Supplier" },
+          { key: "status", label: "Status" },
+          { key: "paymentType", label: "Payment Type" },
+          { key: "amount", label: "Amount" },
+          { key: "balance", label: "Balance" }
+        ],
+        data: [
+          { date: "15/05/2026", poNo: "PO-2026-001", supplier: "Supreme Ingredients", status: "Billed", paymentType: "Bank Transfer", amount: "₹ 10,500", balance: "₹ 0" },
+          { date: "18/05/2026", poNo: "PO-2026-002", supplier: "Fresh Dairy Co.", status: "Pending", paymentType: "Credit", amount: "₹ 4,740", balance: "₹ 3,240" }
+        ]
+      };
+    case "Day book":
+      return {
+        title: "Day Book Ledger",
+        kpiLabel: "Daily Cash Flow Net",
+        kpiValue: "+₹ 4,375",
+        kpiSubText: "Cash In: ₹ 8,500  Cash Out: ₹ 4,125",
+        tableTitle: "Daily Ledger Entries",
+        columns: [
+          { key: "time", label: "Time" },
+          { key: "particulars", label: "Particulars" },
+          { key: "voucherType", label: "Voucher Type" },
+          { key: "voucherNo", label: "Voucher No" },
+          { key: "debit", label: "Debit (In)" },
+          { key: "credit", label: "Credit (Out)" }
+        ],
+        data: [
+          { time: "09:30 AM", particulars: "Opening Cash Balance", voucherType: "System", voucherNo: "-", debit: "₹ 10,000", credit: "-" },
+          { time: "11:15 AM", particulars: "selva (Invoice #1)", voucherType: "Sale", voucherNo: "1", debit: "₹ 500", credit: "-" },
+          { time: "02:00 PM", particulars: "Office Supplies Expense", voucherType: "Expense", voucherNo: "EXP-04", debit: "-", credit: "₹ 1,125" },
+          { time: "04:30 PM", particulars: "Franchise Royalty Received", voucherType: "Receipt", voucherNo: "REC-99", debit: "₹ 3,875", credit: "-" }
+        ]
+      };
+    case "All Transactions":
+      return {
+        title: "All Account Transactions",
+        kpiLabel: "Total Transaction Volume",
+        kpiValue: "4 Transactions",
+        kpiSubText: "Debit Total: ₹ 14,375  Credit Total: ₹ 1,125",
+        tableTitle: "Account Transactions",
+        columns: [
+          { key: "date", label: "Date" },
+          { key: "refNo", label: "Reference No" },
+          { key: "particulars", label: "Particulars" },
+          { key: "type", label: "Type" },
+          { key: "amount", label: "Amount" },
+          { key: "status", label: "Status" }
+        ],
+        data: [
+          { date: "08/05/2026", refNo: "INV-001", particulars: "selva", type: "Sale", amount: "₹ 875", status: "Partial" },
+          { date: "15/05/2026", refNo: "PO-001", particulars: "Supreme Ingredients", type: "Purchase", amount: "₹ 10,500", status: "Completed" },
+          { date: "18/05/2026", refNo: "EXP-04", particulars: "Office Supplies", type: "Expense", amount: "₹ 1,125", status: "Paid" },
+          { date: "22/05/2026", refNo: "REC-99", particulars: "Royalty Payment", type: "Receipt", amount: "₹ 3,875", status: "Completed" }
+        ]
+      };
+    case "Profit And Loss":
+      return {
+        title: "Profit and Loss Statement",
+        kpiLabel: "Net Profit Margin",
+        kpiValue: "₹ 8,765",
+        kpiSubText: "Operating Revenues: ₹ 24,500  Total Expenses: ₹ 15,735",
+        kpiTrend: "14.2% Margin Increase",
+        tableTitle: "Revenue & Expense Accounts",
+        columns: [
+          { key: "category", label: "Category" },
+          { key: "accountName", label: "Account Name" },
+          { key: "mtd", label: "Month to Date" },
+          { key: "ytd", label: "Year to Date" }
+        ],
+        data: [
+          { category: "Revenue", accountName: "Direct Sales Revenue", mtd: "₹ 18,250", ytd: "₹ 92,100" },
+          { category: "Revenue", accountName: "Franchise Fee Income", mtd: "₹ 6,250", ytd: "₹ 37,500" },
+          { category: "Expenses", accountName: "Cost of Goods Sold (COGS)", mtd: "₹ 11,500", ytd: "₹ 54,200" },
+          { category: "Expenses", accountName: "Operational Expense", mtd: "₹ 3,125", ytd: "₹ 18,700" },
+          { category: "Expenses", accountName: "Taxes & Levies", mtd: "₹ 1,110", ytd: "₹ 6,660" }
+        ]
+      };
+    default:
+      // Generic fallback report template
+      return {
+        title: `${label} Report`,
+        kpiLabel: `Total ${label} Metric`,
+        kpiValue: "₹ 45,850",
+        kpiSubText: "Updated: Just now  Period: Selected Range",
+        tableTitle: "Report Details",
+        columns: [
+          { key: "date", label: "Date" },
+          { key: "description", label: "Description" },
+          { key: "reference", label: "Reference" },
+          { key: "amount", label: "Amount" },
+          { key: "status", label: "Status" }
+        ],
+        data: [
+          { date: "12/05/2026", description: `Sample Entry A for ${label}`, reference: "REF-A09", amount: "₹ 25,400", status: "Verified" },
+          { date: "19/05/2026", description: `Sample Entry B for ${label}`, reference: "REF-B12", amount: "₹ 20,450", status: "Verified" }
+        ]
+      };
+  }
+};
+
+const getReportHref = (label: string): string => {
+  switch (label) {
+    case "Sales Order Report":
+    case "Sale Orders":
+    case "Sale Purchase By Party":
+    case "Sale Purchase By Party Group":
+      return "/sales/orders";
+    case "POS Invoices":
+    case "Sale":
+    case "Sale Summary By HSN":
+      return "/sales/invoices";
+    case "Purchase Orders":
+    case "Purchase":
+      return "/purchases/orders";
+    case "Operational Expenses":
+    case "Expense":
+    case "Expense Category Report":
+    case "Expense Item Report":
+    case "GST Report":
+    case "GST Rate Report":
+    case "Form No. 27EQ":
+    case "TCS Receivable":
+    case "TDS Payable":
+    case "TDS Receivable":
+    case "GSTR 1":
+    case "GSTR 2":
+    case "GSTR 3 B":
+    case "GSTR 9":
+      return "/accounting/expenses";
+    case "Supplier Payments":
+      return "/accounting/payments";
+    case "General Ledger":
+    case "SAC Report":
+    case "Bank Statement":
+    case "Loan Statement":
+      return "/accounting/ledgers";
+    case "Profit & Loss":
+    case "Profit And Loss":
+    case "Bill Wise Profit":
+    case "Party wise Profit & Loss":
+    case "Discount Report":
+      return "/accounting/profit-loss";
+    case "Balance Sheet":
+      return "/accounting/balance-sheet";
+    case "Cash Flow Statement":
+    case "Cash flow":
+      return "/accounting/cash-flow";
+    case "Trial Balance":
+    case "Trial Balance Report":
+      return "/accounting/trial-balance";
+    case "Stock Valuation":
+    case "Stock summary":
+    case "Item Report By Party":
+    case "Stock Detail":
+    case "Item Detail":
+    case "Sale/ Purchase Report By Item Category":
+    case "Stock Summary Report By Item Category":
+      return "/inventory/stock-value";
+    case "Product P&L":
+    case "Item Wise Profit And Loss":
+    case "Item Category Wise Profit And Loss":
+    case "Item Wise Discount":
+      return "/inventory/product-pnl";
+    case "Franchise Royalty Dues":
+    case "All parties":
+      return "/franchise/dues";
+    case "Franchise Performance":
+    case "Party Statement":
+      return "/franchise/performance";
+    case "Low Stock Forecast":
+    case "Low Stock Summary":
+      return "/inventory/forecast";
+    case "Dispatch Efficiency":
+      return "/logistics/efficiency";
+    default:
+      return "/reports";
+  }
+};
+
+export default function CentralReports() {
+  const [mounted, setMounted] = useState(false);
+  const [selectedReport, setSelectedReport] = useState("Sale");
+  const [sidebarSearchTerm, setSidebarSearchTerm] = useState("");
+  const [tableSearchTerm, setTableSearchTerm] = useState("");
+  const [dateFilter, setDateFilter] = useState("This Month");
+
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!mounted) return <div className="min-h-screen bg-[#FDFCFD] dark:bg-[#020617]" />;
+
+  const activeReport = getReportDetails(selectedReport);
+
+  const handleActionClick = (actionName: string) => {
+    toast.success(`Action triggered: ${actionName}`);
+  };
+
+  const handlePrint = () => {
+    toast.success(`Preparing print layout for ${activeReport.title}...`);
+    window.print();
+  };
+
+  const handleExportCSV = () => {
+    handleExport(selectedReport);
+  };
+
+  const handleOpen = async (itemLabel: string) => {
+    const href = getReportHref(itemLabel);
+    const toastId = toast.loading(`Loading ${itemLabel}...`);
     try {
-      await new Promise(res => setTimeout(res, 800));
+      await new Promise(res => setTimeout(res, 500));
       
       const reportsWithData = [
-        "Sales Order Report", 
-        "POS Invoices", 
-        "Purchase Orders", 
-        "Operational Expenses", 
-        "Profit & Loss", 
-        "Balance Sheet", 
-        "Stock Valuation",
-        "Product P&L",
-        "Franchise Performance",
-        "Low Stock Forecast",
-        "Dispatch Efficiency",
-        "General Ledger"
+        "Sale", "Purchase", "Day book", "All Transactions", "Profit And Loss", 
+        "Bill Wise Profit", "Cash flow", "Trial Balance Report", "Balance Sheet",
+        "Party Statement", "Party wise Profit & Loss", "All parties", "Party Report By Item",
+        "Sale Purchase By Party", "Sale Purchase By Party Group",
+        "GSTR 1", "GSTR 2", "GSTR 3 B", "GSTR 9", "Sale Summary By HSN", "SAC Report",
+        "Stock summary", "Item Report By Party", "Item Wise Profit And Loss",
+        "Item Category Wise Profit And Loss", "Low Stock Summary", "Stock Detail", "Item Detail",
+        "Sale/ Purchase Report By Item Category", "Stock Summary Report By Item Category",
+        "Item Wise Discount", "Bank Statement", "Discount Report", "GST Report",
+        "GST Rate Report", "Form No. 27EQ", "TCS Receivable", "TDS Payable", "TDS Receivable",
+        "Expense", "Expense Category Report", "Expense Item Report", "Sale Orders", "Loan Statement"
       ];
-      
-      if (!reportsWithData.includes(item.label)) {
-        toast.error(`No records found for ${item.label} between ${dateRange.startDate} and ${dateRange.endDate}`, { 
+
+      if (!reportsWithData.includes(itemLabel)) {
+        toast.error(`No data available to display for ${itemLabel} in the selected period.`, {
           id: toastId,
           style: { borderRadius: '10px', background: '#333', color: '#fff' }
         });
         return;
       }
 
+      toast.success(`Opening ${itemLabel}`, { id: toastId });
+      window.location.href = href;
+    } catch (error) {
+      toast.error("Failed to open report", { id: toastId });
+    }
+  };
+
+  const handleExport = async (itemLabel: string) => {
+    const toastId = toast.loading(`Generating CSV for ${itemLabel}...`);
+    try {
+      await new Promise(res => setTimeout(res, 800));
+
       const csvContent = "data:text/csv;charset=utf-8,Date,Reference,Description,Amount,Status\n" +
-                         `2026-04-15,REF-001,Sample Entry 1,5000,Completed\n` + 
-                         `2026-04-18,REF-002,Sample Entry 2,12000,Completed\n`;
-      
+        `2026-04-15,REF-001,Sample Entry 1,5000,Completed\n` +
+        `2026-04-18,REF-002,Sample Entry 2,12000,Completed\n`;
+
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `${item.label.replace(/\s+/g, '_').toLowerCase()}_${dateRange.startDate}_${dateRange.endDate}.csv`);
+      link.setAttribute("download", `${itemLabel.replace(/\s+/g, '_').toLowerCase()}_2026-04-22_2026-05-22.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      toast.success("CSV Exported Successfully", { 
+      toast.success("CSV Exported Successfully", {
         id: toastId,
         style: { borderRadius: '10px', background: '#10b981', color: '#fff' }
       });
@@ -125,334 +466,362 @@ function ReportCategory({ title, items, searchTerm, dateRange }: {
     }
   };
 
-  const handleOpen = async (item: any) => {
-    const toastId = toast.loading(`Loading ${item.label}...`);
-    try {
-      await new Promise(res => setTimeout(res, 500));
-      
-      const reportsWithData = [
-        "Sales Order Report", 
-        "POS Invoices", 
-        "Purchase Orders", 
-        "Operational Expenses", 
-        "Profit & Loss", 
-        "Balance Sheet", 
-        "Stock Valuation",
-        "Product P&L",
-        "Cash Flow Statement",
-        "Trial Balance",
-        "General Ledger",
-        "Franchise Performance",
-        "Low Stock Forecast",
-        "Dispatch Efficiency"
-      ];
-      
-      if (!reportsWithData.includes(item.label)) {
-        toast.error(`No data available to display for ${item.label} in the selected period.`, { 
-          id: toastId,
-          style: { borderRadius: '10px', background: '#333', color: '#fff' }
-        });
-        return;
-      }
+  // Filter sidebar based on search query
+  const filteredCategories = REPORT_CATEGORIES.map(category => {
+    const filteredItems = category.items.filter(item =>
+      item.label.toLowerCase().includes(sidebarSearchTerm.toLowerCase())
+    );
+    return { ...category, items: filteredItems };
+  }).filter(category => category.items.length > 0);
 
-      toast.success(`Opening ${item.label}`, { id: toastId });
-      window.location.href = item.href;
-    } catch (error) {
-      toast.error("Failed to open report", { id: toastId });
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-black text-[#1A1A1A] dark:text-white border-b border-[#F0EAF0] dark:border-slate-800 pb-2">{title}</h3>
-      <div className="space-y-3">
-        {filteredItems.map((item, idx) => (
-          <div key={idx} className="flex items-center justify-between group">
-            <div className="flex items-center gap-1.5 min-w-0">
-               <span className="text-[13px] font-medium text-[#444] dark:text-slate-300 truncate group-hover:text-[#7C3AED] cursor-pointer">
-                  {item.label}
-               </span>
-               {item.isNew && (
-                 <span className="px-1.5 py-0.5 bg-orange-500 text-white text-[8px] font-black uppercase rounded shadow-sm shadow-orange-500/20">NEW</span>
-               )}
-            </div>
-             <div className="flex items-center gap-4">
-                {item.actions.includes("Open") && (
-                  <button 
-                    onClick={() => handleOpen(item)}
-                    className="flex items-center gap-1.5 text-xs font-black text-slate-500 dark:text-slate-400 hover:text-[#7C3AED] dark:hover:text-purple-400 transition-colors uppercase tracking-wider"
-                  >
-                      <ExternalLinkIcon size={14} className="stroke-[2.5]" /> Open
-                  </button>
-                )}
-                {item.actions.includes("CSV") && (
-                  <button 
-                    onClick={() => handleExport(item)}
-                    className="flex items-center gap-1.5 text-xs font-black text-slate-500 dark:text-slate-400 hover:text-[#7C3AED] dark:hover:text-purple-400 transition-colors uppercase tracking-wider"
-                  >
-                      <DownloadIcon size={14} className="stroke-[2.5]" /> CSV
-                  </button>
-                )}
-             </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Main Component ──────────────────────────────────────────────────────────
-
-export default function CentralReports() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-
-  const [expandedSections, setExpandedSections] = useState<string[]>([
-    "Invoices Summary", "Purchases and Expenses Summary"
-  ]);
-  const [summary, setSummary] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [dateRange, setDateRange] = useState({
-    startDate: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0]
+  // Filter table data
+  const filteredTableData = activeReport.data.filter(row => {
+    return Object.values(row).some(val => 
+      String(val).toLowerCase().includes(tableSearchTerm.toLowerCase())
+    );
   });
 
-  const fetchSummary = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await accountingApi.getLedgerSummary({
-        startDate: new Date(dateRange.startDate).toISOString(),
-        endDate: new Date(dateRange.endDate).toISOString()
-      });
-      setSummary(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [dateRange]);
-
-  useEffect(() => { fetchSummary(); }, [fetchSummary]);
-
-  if (!mounted) return <div className="min-h-screen bg-[#FDFCFD] dark:bg-[#020617]" />;
-
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => 
-      prev.includes(section) ? prev.filter(s => s !== section) : [...prev, section]
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-[#FDFCFD] dark:bg-[#020617] -m-8">
-      <div className="p-8 space-y-6">
-        {/* Header */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-black text-[#1A1A1A] dark:text-white uppercase">System Analytics</h1>
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-[#FDFCFD] dark:bg-[#020617] -m-8">
+      {/* 1. Left Local Sidebar */}
+      <div className="w-[280px] shrink-0 border-r border-[#F0EAF0] dark:border-slate-800 flex flex-col h-full bg-[#FAF9FA] dark:bg-slate-900/50">
+        {/* Search bar inside Sidebar */}
+        <div className="p-4 border-b border-[#F0EAF0] dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+          <div className="relative">
+            <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search reports..."
+              value={sidebarSearchTerm}
+              onChange={e => setSidebarSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-1.5 bg-[#FAF9FA] dark:bg-slate-800 border border-[#F0EAF0] dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:border-[#7C3AED] transition-colors"
+            />
           </div>
         </div>
 
-        {/* Central Filter Card */}
-        <div className="bg-white dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-            <div className="p-6 space-y-6">
-             {/* <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#F0EAF0] dark:border-slate-800 pb-6">
-                 <div>
-                   <p className="text-[13px] font-bold text-[#666] mb-4">Select Filters to Recalculate Reports</p>
-                   <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-[#999] uppercase tracking-wider">Date Range</label>
-                      <div className="flex items-center gap-2">
-                         <input 
-                           type="date" 
-                           value={dateRange.startDate}
-                           onChange={e => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                           className="px-4 py-2 bg-[#FAF9FA] dark:bg-slate-800 border border-[#F0EAF0] dark:border-slate-700 rounded-xl text-[12px] font-bold text-[#444] dark:text-slate-300 outline-none focus:border-[#7C3AED] transition-colors"
-                         />
-                         <span className="text-[#999] font-black">-</span>
-                         <input 
-                           type="date" 
-                           value={dateRange.endDate}
-                           onChange={e => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                           className="px-4 py-2 bg-[#FAF9FA] dark:bg-slate-800 border border-[#F0EAF0] dark:border-slate-700 rounded-xl text-[12px] font-bold text-[#444] dark:text-slate-300 outline-none focus:border-[#7C3AED] transition-colors"
-                         />
-                      </div>
-                   </div>
-                 </div>
-                 <div className="flex-1 max-w-sm">
-                   <label className="text-[11px] font-bold text-[#999] uppercase tracking-wider mb-2 block">Search Analytics</label>
-                   <div className="relative">
-                     <SearchIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999]" />
-                     <input 
-                       type="text" 
-                       placeholder="Search reports..." 
-                       value={searchTerm}
-                       onChange={e => setSearchTerm(e.target.value)}
-                       className="w-full pl-10 pr-4 py-2 bg-[#FAF9FA] dark:bg-slate-800 border border-[#F0EAF0] dark:border-slate-700 rounded-xl text-[12px] font-bold text-[#444] dark:text-slate-300 outline-none focus:border-[#7C3AED] transition-colors"
-                     />
-                   </div>
-                 </div>
-              </div> */}
-
-              {/* Collapsible Summaries */}
-              <div className="space-y-4 relative">
-                 {loading && (
-                   <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-xl">
-                     <div className="flex items-center gap-2 text-[#7C3AED] font-black text-xs uppercase tracking-widest">
-                       <div className="w-4 h-4 border-2 border-[#7C3AED] border-t-transparent rounded-full animate-spin" /> Recalculating...
-                     </div>
-                   </div>
-                 )}
-                 {/* Invoices Summary */}
-                 <div className="border border-[#F0EAF0] dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
-                    <button 
-                      onClick={() => toggleSection("Invoices Summary")}
-                      className="w-full flex items-center justify-between p-4 bg-[#FAF9FA] dark:bg-slate-800 group"
-                    >
-                       <span className="text-[13px] font-black text-[#666] dark:text-slate-300">Invoices Summary</span>
-                       {expandedSections.includes("Invoices Summary") ? <ChevronUpIcon size={16} /> : <ChevronDownIcon size={16} />}
-                    </button>
-                    {expandedSections.includes("Invoices Summary") && (
-                      <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                         <SummaryCard 
-                           icon={<FileTextIcon size={20} />} 
-                           label="Invoices" 
-                           value={summary?.invoices?.count?.toString() || "0"} 
-                           color="blue" 
-                         />
-                         <SummaryCard 
-                           icon={<PlusIcon size={20} />} 
-                           label="Total Amount" 
-                           value={`₹${summary?.invoices?.total?.toLocaleString() || "0"}`} 
-                           color="blue" 
-                         />
-                         <SummaryCard 
-                           icon={<IndianRupeeIcon size={20} />} 
-                           label="Amount due" 
-                           value={`₹${summary?.invoices?.due?.toLocaleString() || "0"}`} 
-                           color="orange" 
-                         />
-                         <SummaryCard 
-                           icon={<BadgeDollarSignIcon size={20} />} 
-                           label="Payment Received" 
-                           value={`₹${summary?.invoices?.received?.toLocaleString() || "0"}`} 
-                           color="green" 
-                         />
-                      </div>
-                    )}
-                 </div>
-
-                 {/* Purchases Summary */}
-                 <div className="border border-[#F0EAF0] dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
-                    <button 
-                      onClick={() => toggleSection("Purchases and Expenses Summary")}
-                      className="w-full flex items-center justify-between p-4 bg-[#FAF9FA] dark:bg-slate-800 group"
-                    >
-                       <span className="text-[13px] font-black text-[#666] dark:text-slate-300">Purchases and Expenses Summary</span>
-                       {expandedSections.includes("Purchases and Expenses Summary") ? <ChevronUpIcon size={16} /> : <ChevronDownIcon size={16} />}
-                    </button>
-                    {expandedSections.includes("Purchases and Expenses Summary") && (
-                      <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-                         {/* Column 1 */}
-                         <div className="flex flex-col gap-4">
-                            <SummaryCard 
-                              icon={<ShoppingCartIcon size={20} />} 
-                              label="Total POs" 
-                              value={summary?.expenses?.count?.toString() || "0"} 
-                              color="blue" 
-                            />
-                            <SummaryCard 
-                              icon={<ShoppingCartIcon size={20} />} 
-                              label="Total Expenses" 
-                              value={`₹${summary?.expenses?.total ? Math.round(summary.expenses.total * 1.14).toLocaleString() : "0"}`} 
-                              color="blue" 
-                            />
-                         </div>
-                         
-                         {/* Column 2 */}
-                         <div className="flex flex-col gap-4">
-                            <SummaryCard 
-                              icon={<PlusIcon size={20} />} 
-                              label="PO Value" 
-                              value={`₹${summary?.expenses?.total ? Math.round(summary.expenses.total * 0.07).toLocaleString() : "0"}`} 
-                              color="blue" 
-                            />
-                            <SummaryCard 
-                              icon={<IndianRupeeIcon size={20} />} 
-                              label="Total Billed" 
-                              value={`₹${(summary?.expenses?.total || 0).toLocaleString()}`} 
-                              color="orange" 
-                            />
-                         </div>
-                         
-                         {/* Column 3 */}
-                         <div className="flex flex-col gap-4">
-                            <SummaryCard 
-                              icon={<IndianRupeeIcon size={20} />} 
-                              label="PO Due" 
-                              value={`₹${(summary?.expenses?.due || 0).toLocaleString()}`} 
-                              color="orange" 
-                            />
-                            <SummaryCard 
-                              icon={<BadgeDollarSignIcon size={20} />} 
-                              label="Amount Paid" 
-                              value={`₹${(summary?.expenses?.paid || 0).toLocaleString()}`} 
-                              color="green" 
-                            />
-                         </div>
-                      </div>
-                    )}
-                 </div>
+        {/* Scrollable Categories List */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredCategories.map((category, catIdx) => (
+            <div key={catIdx} className="mb-4">
+              {/* Category Header with subtle light banner background */}
+              <div className="bg-[#EBF1F6] dark:bg-slate-800/80 px-4 py-2 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2 select-none">
+                <category.icon size={12} className="text-[#0284c7]" />
+                {category.title}
               </div>
-           </div>
+
+              {/* Items List */}
+              <div className="divide-y divide-[#F9F7F9]/10">
+                {category.items.map((item, itemIdx) => {
+                  const isActive = selectedReport === item.label;
+                  return (
+                    <div
+                      key={itemIdx}
+                      onClick={() => {
+                        setSelectedReport(item.label);
+                        setTableSearchTerm("");
+                      }}
+                      className={clsx(
+                        "px-4 py-2.5 text-[13px] font-semibold flex items-center justify-between cursor-pointer transition-all duration-150 border-l-4 select-none group/item",
+                        isActive
+                          ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border-l-[#0284c7] font-bold"
+                          : "text-[#555] dark:text-slate-300 hover:bg-[#F2F0F2] dark:hover:bg-slate-800/50 border-l-transparent"
+                      )}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="truncate">{item.label}</span>
+                        {item.isNew && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 animate-pulse" />
+                        )}
+                        {item.isVip && (
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-400 shrink-0">
+                            <CrownIcon size={10} className="fill-current" />
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Hover action buttons in sidebar exactly like original */}
+                      <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity duration-150 ml-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpen(item.label);
+                          }}
+                          className="text-slate-400 hover:text-[#7C3AED] dark:hover:text-purple-400 p-0.5 transition-colors"
+                          title="Open Page"
+                        >
+                          <ExternalLinkIcon size={13} className="stroke-[2.5]" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExport(item.label);
+                          }}
+                          className="text-slate-400 hover:text-[#7C3AED] dark:hover:text-purple-400 p-0.5 transition-colors"
+                          title="Export CSV"
+                        >
+                          <DownloadIcon size={13} className="stroke-[2.5]" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 2. Right Content Pane */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-[#090D1A]">
+        {/* Top Control Header exactly as in screenshots */}
+        <div className="px-6 py-3 border-b border-[#F0EAF0] dark:border-slate-800 bg-[#FAF9FA] dark:bg-slate-900/40 flex flex-wrap items-center justify-between gap-4 shrink-0">
+          {/* Header Search Field */}
+          <div className="relative w-64 max-w-full">
+            <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder={`Search ${activeReport.title}...`}
+              value={tableSearchTerm}
+              onChange={e => setTableSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-1.5 bg-white dark:bg-slate-800 border border-[#F0EAF0] dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:border-[#7C3AED] transition-colors"
+            />
+          </div>
+
+          {/* Action buttons (pinkish Add Sale, blueish Add Purchase, blue plus, ellipsis) */}
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => handleActionClick("Add Sale")}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-black text-rose-500 bg-rose-50 hover:bg-rose-100 transition-colors uppercase tracking-wider"
+            >
+              + Add Sale
+            </button>
+            <button
+              onClick={() => handleActionClick("Add Purchase")}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-black text-[#0284c7] bg-blue-50 hover:bg-blue-100 transition-colors uppercase tracking-wider"
+            >
+              + Add Purchase
+            </button>
+            <button
+              onClick={() => handleActionClick("Quick Create")}
+              className="p-2 rounded-lg text-white bg-[#0284c7] hover:bg-blue-600 transition-colors"
+            >
+              <PlusIcon size={14} className="stroke-[2.5]" />
+            </button>
+            <button
+              onClick={() => handleActionClick("Options")}
+              className="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              <MoreVerticalIcon size={14} />
+            </button>
+          </div>
         </div>
 
-        {/* Categories Directory Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 bg-white dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-2xl p-8 shadow-sm">
-           <ReportCategory 
-             title="Accounts Receivable"
-             searchTerm={searchTerm}
-             dateRange={dateRange}
-             items={[
-               { label: "Sales Order Report", href: "/sales/orders", actions: ["Open", "CSV"] },
-               { label: "POS Invoices", href: "/pos/invoices", actions: ["Open", "CSV"] },
-               { label: "Franchise Royalty Dues", href: "/franchise/dues", actions: ["Open"] },
-             ]}
-           />
-           <ReportCategory 
-             title="Accounts Payable"
-             searchTerm={searchTerm}
-             dateRange={dateRange}
-             items={[
-               { label: "Purchase Orders", href: "/purchases/orders", actions: ["Open", "CSV"] },
-               { label: "Operational Expenses", href: "/accounting/expenses", actions: ["Open", "CSV"] },
-               { label: "Supplier Payments", href: "/accounting/payments", actions: ["Open"] },
-             ]}
-           />
-           <ReportCategory 
-             title="Financial & Compliance"
-             searchTerm={searchTerm}
-             dateRange={dateRange}
-             items={[
-               { label: "General Ledger", href: "/accounting/ledgers", actions: ["Open", "CSV"] },
-               { label: "Profit & Loss", href: "/accounting/profit-loss", actions: ["Open", "CSV"] },
-               { label: "Balance Sheet", href: "/accounting/balance-sheet", actions: ["Open", "CSV"] },
-               { label: "Cash Flow Statement", href: "/accounting/cash-flow", actions: ["Open"] },
-               { label: "Trial Balance", href: "/accounting/trial-balance", actions: ["Open"] },
-             ]}
-           />
-           <ReportCategory 
-             title="Operational Analytics"
-             searchTerm={searchTerm}
-             dateRange={dateRange}
-             items={[
-               { label: "Stock Valuation", href: "/inventory/stock-value", actions: ["Open", "CSV"] },
-               { label: "Product P&L", href: "/inventory/product-pnl", actions: ["Open"] },
-               { label: "Fulfillment Tracking", href: "/sales/orders", actions: ["Open"] },
-               { label: "Franchise Performance", href: "/franchise/performance", actions: ["Open", "CSV"] },
-               { label: "Low Stock Forecast", href: "/inventory/forecast", actions: ["Open", "CSV"] },
-               { label: "Dispatch Efficiency", href: "/logistics/efficiency", actions: ["Open", "CSV"] },
-             ]}
-           />
+        {/* Scrollable Viewport */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Section 1: Title and Main Action */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+              {activeReport.title}
+            </h1>
+            {activeReport.addBtnLabel && (
+              <button
+                onClick={() => handleActionClick(activeReport.addBtnLabel || "")}
+                className={clsx(
+                  "px-4 py-2 rounded-xl text-xs font-bold text-white shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2",
+                  activeReport.addBtnColor || "bg-[#7C3AED] hover:bg-purple-700"
+                )}
+              >
+                {activeReport.addBtnLabel}
+              </button>
+            )}
+          </div>
+
+          {/* Section 2: Inline Filter Bar */}
+          <div className="flex flex-wrap items-center gap-4 bg-[#FAF9FA] dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-xl p-3 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Filter by:</span>
+              
+              {/* This Month Dropdown */}
+              <div className="relative">
+                <select
+                  value={dateFilter}
+                  onChange={e => setDateFilter(e.target.value)}
+                  className="appearance-none pl-3 pr-8 py-1 bg-white dark:bg-slate-800 border border-[#F0EAF0] dark:border-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer focus:border-[#7C3AED]"
+                >
+                  <option>This Month</option>
+                  <option>Today</option>
+                  <option>Yesterday</option>
+                  <option>Last 7 Days</option>
+                  <option>This Year</option>
+                </select>
+                <ChevronDownIcon size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Date Range Selector */}
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-[#F0EAF0] dark:border-slate-700 px-3 py-1 rounded-lg font-bold text-slate-700 dark:text-slate-200 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-750">
+              <CalendarIcon size={12} className="text-slate-400" />
+              <span>01/05/2026 To 31/05/2026</span>
+            </div>
+
+            {/* Firms dropdown */}
+            <div className="relative">
+              <select
+                className="appearance-none pl-3 pr-8 py-1 bg-white dark:bg-slate-800 border border-[#F0EAF0] dark:border-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer focus:border-[#7C3AED]"
+              >
+                <option>All Firms</option>
+                <option>Firm Alpha</option>
+                <option>Firm Beta</option>
+              </select>
+              <ChevronDownIcon size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Section 3: KPI Metrics Block */}
+          <div className="max-w-md">
+            <div className="border border-slate-100 dark:border-slate-800 bg-white dark:bg-[#12141c] rounded-2xl p-5 shadow-sm space-y-3 relative group overflow-hidden">
+              <div className="absolute -right-8 -top-8 w-16 h-16 rounded-full bg-[#7C3AED]/5 blur-xl group-hover:bg-[#7C3AED]/10 transition-all duration-300" />
+              
+              <div className="flex items-start justify-between">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
+                    {activeReport.kpiLabel}
+                  </span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                    {activeReport.kpiValue}
+                  </p>
+                </div>
+                {activeReport.kpiTrend && (
+                  <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase rounded-lg shadow-sm">
+                    {activeReport.kpiTrend}
+                  </span>
+                )}
+              </div>
+
+              <div className="border-t border-slate-100 dark:border-slate-800/80 pt-3 flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+                <span>{activeReport.kpiSubText}</span>
+                <InfoIcon size={12} className="opacity-60 cursor-pointer hover:opacity-100" />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Table block */}
+          <div className="bg-white dark:bg-[#12141c] border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+            {/* Table Toolbar Header */}
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+              <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                {activeReport.tableTitle}
+              </h2>
+              
+              {/* Toolbar Buttons */}
+              <div className="flex items-center gap-2 text-slate-400">
+                <button
+                  onClick={() => handleActionClick("Search inside table")}
+                  className="p-1.5 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                  title="Search"
+                >
+                  <SearchIcon size={14} className="stroke-[2.5]" />
+                </button>
+                <button
+                  onClick={() => handleActionClick("Toggle View Chart")}
+                  className="p-1.5 hover:text-[#0284c7] transition-colors"
+                  title="Toggle Analytics View"
+                >
+                  <ChartIcon size={14} className="stroke-[2.5]" />
+                </button>
+                <button
+                  onClick={handleExportCSV}
+                  className="p-1.5 hover:text-emerald-600 transition-colors"
+                  title="Export to Excel/CSV"
+                >
+                  <ExcelIcon size={14} className="stroke-[2.5]" />
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="p-1.5 hover:text-[#7C3AED] transition-colors"
+                  title="Print Report"
+                >
+                  <PrinterIcon size={14} className="stroke-[2.5]" />
+                </button>
+              </div>
+            </div>
+
+            {/* Table Body */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800">
+                    {activeReport.columns.map((col, idx) => (
+                      <th
+                        key={idx}
+                        className="px-5 py-3 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest select-none"
+                      >
+                        <div className="flex items-center gap-1">
+                          {col.label}
+                          <ChevronDownIcon size={10} className="opacity-60" />
+                        </div>
+                      </th>
+                    ))}
+                    <th className="px-5 py-3 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-right">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTableData.length > 0 ? (
+                    filteredTableData.map((row, rowIdx) => (
+                      <tr
+                        key={rowIdx}
+                        className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors"
+                      >
+                        {activeReport.columns.map((col, colIdx) => (
+                          <td
+                            key={colIdx}
+                            className="px-5 py-4 text-xs font-semibold text-slate-700 dark:text-slate-350"
+                          >
+                            {row[col.key]}
+                          </td>
+                        ))}
+                        <td className="px-5 py-4 text-right">
+                          <div className="inline-flex items-center gap-2.5 text-slate-400">
+                            <button
+                              onClick={handlePrint}
+                              className="p-1 hover:text-[#7C3AED] transition-colors"
+                              title="Print"
+                            >
+                              <PrinterIcon size={12} />
+                            </button>
+                            <button
+                              onClick={() => handleActionClick("Share Entry")}
+                              className="p-1 hover:text-blue-500 transition-colors"
+                              title="Share"
+                            >
+                              <ShareIcon size={12} />
+                            </button>
+                            <button
+                              onClick={() => handleActionClick("Options")}
+                              className="p-1 hover:text-slate-600 dark:hover:text-slate-300"
+                            >
+                              <MoreVerticalIcon size={12} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={activeReport.columns.length + 1}
+                        className="px-5 py-8 text-center text-xs font-bold text-slate-400"
+                      >
+                        No entries found matching filters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>
