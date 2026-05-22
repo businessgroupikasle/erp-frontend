@@ -162,8 +162,8 @@ function NewPurchaseContent() {
       {/* Top bar */}
       <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-100 rounded-lg">
-            <Package size={18} className="text-purple-600" />
+          <div className="p-2 bg-orange-100 rounded-lg">
+            <Package size={18} className="text-orange-600" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-gray-800">New Purchase Order</h1>
@@ -171,7 +171,7 @@ function NewPurchaseContent() {
           </div>
           <span className={clsx(
             "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border",
-            poStatus === "DRAFT" ? "bg-gray-50 text-gray-500 border-gray-200" : "bg-purple-50 text-purple-600 border-purple-100"
+            poStatus === "DRAFT" ? "bg-gray-50 text-gray-500 border-gray-200" : "bg-orange-50 text-orange-600 border-orange-100"
           )}>
             {poStatus}
           </span>
@@ -193,7 +193,7 @@ function NewPurchaseContent() {
           <button
             onClick={handleCreatePO}
             disabled={!isValid || isSubmitting}
-            className="flex items-center gap-2 px-5 py-2 text-sm font-bold bg-[#7C3AED] hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] text-white rounded-lg transition-colors disabled:opacity-50"
           >
             <CheckCircle2 size={15} /> {isSubmitting ? "Creating..." : "Create Purchase Order"}
           </button>
@@ -215,7 +215,7 @@ function NewPurchaseContent() {
                   <select
                     value={purchaseType}
                     onChange={(e) => setPurchaseType(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-purple-400"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
                   >
                     <option value="RAW_MATERIAL">Raw Material</option>
                     <option value="PACKAGING">Packaging</option>
@@ -230,7 +230,7 @@ function NewPurchaseContent() {
                     </label>
                     <button
                       onClick={() => setShowWarehouseModal(true)}
-                      className="text-[10px] font-semibold text-purple-600 hover:text-purple-700 flex items-center gap-0.5"
+                      className="text-[10px] font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-0.5"
                     >
                       <Plus size={10} strokeWidth={3} /> Add
                     </button>
@@ -238,7 +238,7 @@ function NewPurchaseContent() {
                   <select
                     value={warehouseId}
                     onChange={(e) => setWarehouseId(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-purple-400"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
                   >
                     <option value="">Select Warehouse</option>
                     {warehouses.map(w => (
@@ -254,7 +254,7 @@ function NewPurchaseContent() {
                     type="date"
                     value={expectedDeliveryDate}
                     onChange={(e) => setExpectedDeliveryDate(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-purple-400"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
                   />
                 </div>
                 <div>
@@ -264,7 +264,7 @@ function NewPurchaseContent() {
                   <select
                     value={paymentTerms}
                     onChange={(e) => setPaymentTerms(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-purple-400"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
                   >
                     <option value="IMMEDIATE">Immediate</option>
                     <option value="NET_7">Net 7 Days</option>
@@ -285,7 +285,7 @@ function NewPurchaseContent() {
                     value={invoiceNo}
                     onChange={(e) => setInvoiceNo(e.target.value)}
                     placeholder="Reference #"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-purple-400"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
                   />
                 </div>
                 <div>
@@ -294,7 +294,7 @@ function NewPurchaseContent() {
                     type="date"
                     value={purchaseDate}
                     onChange={(e) => setPurchaseDate(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-purple-400"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
                   />
                 </div>
               </div>
@@ -317,7 +317,7 @@ function NewPurchaseContent() {
                   onClick={() => setActiveTab("items")}
                   className={clsx(
                     "px-6 py-3 text-xs font-semibold uppercase tracking-wide transition-all border-b-2",
-                    activeTab === "items" ? "border-purple-500 text-purple-600" : "border-transparent text-gray-400 hover:text-gray-600"
+                    activeTab === "items" ? "border-orange-500 text-orange-600" : "border-transparent text-gray-400 hover:text-gray-600"
                   )}
                 >
                   Material Items
@@ -326,7 +326,7 @@ function NewPurchaseContent() {
                   onClick={() => setActiveTab("notes")}
                   className={clsx(
                     "px-6 py-3 text-xs font-semibold uppercase tracking-wide transition-all border-b-2",
-                    activeTab === "notes" ? "border-purple-500 text-purple-600" : "border-transparent text-gray-400 hover:text-gray-600"
+                    activeTab === "notes" ? "border-orange-500 text-orange-600" : "border-transparent text-gray-400 hover:text-gray-600"
                   )}
                 >
                   Notes & Terms
@@ -335,7 +335,7 @@ function NewPurchaseContent() {
                   onClick={() => setActiveTab("attachments")}
                   className={clsx(
                     "px-6 py-3 text-xs font-semibold uppercase tracking-wide transition-all border-b-2",
-                    activeTab === "attachments" ? "border-purple-500 text-purple-600" : "border-transparent text-gray-400 hover:text-gray-600"
+                    activeTab === "attachments" ? "border-orange-500 text-orange-600" : "border-transparent text-gray-400 hover:text-gray-600"
                   )}
                 >
                   Attachments
@@ -352,7 +352,7 @@ function NewPurchaseContent() {
                           value={internalNotes}
                           onChange={(e) => setInternalNotes(e.target.value)}
                           placeholder="Internal collaboration notes..."
-                          className="w-full min-h-[120px] px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none resize-none focus:border-purple-400"
+                          className="w-full min-h-[120px] px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none resize-none focus:border-orange-400"
                         />
                       </div>
                       <div>
@@ -361,7 +361,7 @@ function NewPurchaseContent() {
                           value={vendorNotes}
                           onChange={(e) => setVendorNotes(e.target.value)}
                           placeholder="Delivery instructions, terms, etc..."
-                          className="w-full min-h-[120px] px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none resize-none focus:border-purple-400"
+                          className="w-full min-h-[120px] px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none resize-none focus:border-orange-400"
                         />
                       </div>
                     </div>
@@ -388,15 +388,15 @@ function NewPurchaseContent() {
               <DocumentSummary />
               <div className="bg-white rounded-xl border border-gray-200 p-4">
                 <h4 className="text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1.5 uppercase tracking-wide">
-                  <ShieldCheck size={12} className="text-purple-500" /> Lifecycle Status
+                  <ShieldCheck size={12} className="text-orange-500" /> Lifecycle Status
                 </h4>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 cursor-pointer hover:border-purple-200 transition-all group">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 cursor-pointer hover:border-orange-200 transition-all group">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-orange-400" />
                       <span className="text-xs font-semibold text-gray-600">Mark Ordered</span>
                     </div>
-                    <ArrowRight size={13} className="text-gray-300 group-hover:text-purple-500 transition-all" />
+                    <ArrowRight size={13} className="text-gray-300 group-hover:text-orange-500 transition-all" />
                   </div>
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 opacity-40 cursor-default">
                     <div className="flex items-center gap-2">
@@ -450,7 +450,7 @@ export default function NewPurchasePage() {
 
   if (!mounted) return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#020617] flex items-center justify-center">
-       <div className="w-10 h-10 border-4 border-purple-500/20 border-t-purple-600 rounded-full animate-spin" />
+       <div className="w-10 h-10 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
     </div>
   );
 

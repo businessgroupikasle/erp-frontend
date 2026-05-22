@@ -39,7 +39,7 @@ export default function DocumentSummary() {
           {/* Dynamic Adjustments */}
           <div className="flex justify-between items-center text-xs font-bold text-slate-500 group">
              <div className="flex items-center gap-2">
-                <Tag size={12} className="text-slate-300 group-hover:text-purple-500 transition-colors" />
+                <Tag size={12} className="text-slate-300 group-hover:text-orange-500 transition-colors" />
                 <span>Discount</span>
              </div>
              <input 
@@ -47,7 +47,7 @@ export default function DocumentSummary() {
                value={discountAmount || ""}
                onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
                placeholder="0.00"
-               className="w-24 text-right bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 outline-none font-black text-slate-900 dark:text-white focus:border-purple-500 transition-colors shadow-sm"
+               className="w-24 text-right bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 outline-none font-black text-slate-900 dark:text-white focus:border-orange-500 transition-colors shadow-sm"
              />
           </div>
 
@@ -104,7 +104,7 @@ export default function DocumentSummary() {
             className={clsx(
               "flex items-center justify-between p-3 rounded-xl border-2 transition-all cursor-pointer group",
               useAdvance 
-                ? "bg-purple-50 border-purple-200" 
+                ? "bg-orange-50 border-orange-200" 
                 : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-slate-200"
             )}
           >
@@ -113,7 +113,7 @@ export default function DocumentSummary() {
                 type="checkbox"
                 checked={useAdvance}
                 onChange={(e) => setUseAdvance(e.target.checked)}
-                className="w-4 h-4 rounded text-[#7C3AED] focus:ring-[#7C3AED] cursor-pointer"
+                className="w-4 h-4 rounded text-orange-500 focus:ring-orange-400 cursor-pointer"
               />
               <div className="flex flex-col">
                 <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">Apply Advance</span>
@@ -121,7 +121,7 @@ export default function DocumentSummary() {
               </div>
             </div>
             {useAdvance && (
-              <span className="text-xs font-black text-[#7C3AED]">-₹{totals.appliedAdvance.toLocaleString()}</span>
+              <span className="text-xs font-black text-orange-600">-₹{totals.appliedAdvance.toLocaleString()}</span>
             )}
           </label>
         </div>
@@ -133,7 +133,7 @@ export default function DocumentSummary() {
               <span className="text-2xl font-black text-slate-900 dark:text-white">₹{totals.total.toLocaleString()}</span>
            </div>
            {useAdvance && (
-             <div className="flex justify-between items-center text-sm font-black text-[#7C3AED] pt-2">
+             <div className="flex justify-between items-center text-sm font-black text-orange-600 pt-2">
                <span className="uppercase tracking-widest">Balance Due</span>
                <span className="flex items-center gap-1">
                   ₹{totals.balanceDue.toLocaleString()} <ArrowRight size={14} />

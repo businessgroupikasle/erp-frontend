@@ -100,7 +100,7 @@ export default function LineItemsTable() {
 
               return (
                 <tr key={item.id} className="group hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-all relative">
-                  <td className="px-6 py-4 align-middle text-[10px] font-black text-slate-300 group-hover:text-[#7C3AED] transition-colors text-center">
+                  <td className="px-6 py-4 align-middle text-[10px] font-black text-slate-300 group-hover:text-orange-500 transition-colors text-center">
                     {String(index + 1).padStart(2, '0')}
                   </td>
                   <td className="px-4 py-4 align-top relative">
@@ -111,7 +111,7 @@ export default function LineItemsTable() {
                       )}
                       onClick={() => !item.materialId && setActiveSearchId(item.id)}
                     >
-                      <Package size={14} className={item.materialId ? "text-[#7C3AED]" : "text-slate-300"} />
+                      <Package size={14} className={item.materialId ? "text-orange-500" : "text-slate-300"} />
                         <div className="flex flex-col flex-1 relative">
                           <input
                             type="text"
@@ -190,7 +190,7 @@ export default function LineItemsTable() {
                                         }
                                         setActiveSearchId(null);
                                       }}
-                                      className="p-3 hover:bg-purple-50 dark:hover:bg-slate-800 cursor-pointer transition-colors flex justify-between items-center"
+                                      className="p-3 hover:bg-orange-50 dark:hover:bg-slate-800 cursor-pointer transition-colors flex justify-between items-center"
                                     >
                                        <div className="flex flex-col gap-0.5">
                                           <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{m.name}</span>
@@ -202,11 +202,11 @@ export default function LineItemsTable() {
                                        <div className="flex flex-col items-end gap-1">
                                           <div className="flex items-center gap-2">
                                             {vendorPrice !== null && (
-                                              <span className="text-[8px] font-black text-[#7C3AED] bg-purple-50 px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-purple-100 uppercase tracking-tighter">
+                                              <span className="text-[8px] font-black text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-orange-100 uppercase tracking-tighter">
                                                 <Zap size={8} /> Vendor Rate
                                               </span>
                                             )}
-                                            <span className={`text-[10px] font-black ${vendorPrice !== null ? "text-[#7C3AED]" : "text-slate-900"}`}>
+                                            <span className={`text-[10px] font-black ${vendorPrice !== null ? "text-orange-500" : "text-slate-900"}`}>
                                               ₹{displayPrice}
                                             </span>
                                           </div>
@@ -221,7 +221,7 @@ export default function LineItemsTable() {
                                        e.stopPropagation();
                                        setShowAddMaterialDrawer(true);
                                      }} 
-                                     className="inline-flex items-center gap-2 px-4 py-2 bg-[#7C3AED] hover:bg-purple-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm"
+                                     className="inline-flex items-center gap-2 px-4 py-2 bg-[#f58220] hover:bg-[#e8740e] text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm"
                                    >
                                       <Plus size={14} /> Add New Material
                                    </button>
@@ -238,7 +238,7 @@ export default function LineItemsTable() {
                                        e.stopPropagation();
                                        setShowAddMaterialDrawer(true);
                                      }} 
-                                     className="inline-flex items-center gap-2 px-4 py-2 bg-[#7C3AED] hover:bg-purple-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm mt-2"
+                                     className="inline-flex items-center gap-2 px-4 py-2 bg-[#f58220] hover:bg-[#e8740e] text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm mt-2"
                                    >
                                       <Plus size={14} /> Add New Material
                                    </button>
@@ -257,7 +257,7 @@ export default function LineItemsTable() {
                   <td className="px-4 py-4 align-top">
                     <input
                       type="number"
-                      className="w-full p-2 bg-slate-50/50 dark:bg-slate-950 rounded-xl outline-none text-xs font-black text-center border-2 border-transparent focus:border-purple-100 focus:bg-white transition-all"
+                      className="w-full p-2 bg-slate-50/50 dark:bg-slate-950 rounded-xl outline-none text-xs font-black text-center border-2 border-transparent focus:border-orange-100 focus:bg-white transition-all"
                       value={item.quantity === 0 ? "" : item.quantity}
                       onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
                       onKeyDown={(e) => handleKeyDown(e, item.id)}
@@ -276,8 +276,8 @@ export default function LineItemsTable() {
                         className={clsx(
                           "w-full pl-7 p-2 rounded-xl outline-none text-xs font-black border-2 transition-all",
                           autoFilledIds.has(item.id)
-                            ? "bg-purple-50/50 border-purple-100 text-[#7C3AED] focus:bg-white"
-                            : "bg-slate-50/50 dark:bg-slate-950 border-transparent focus:border-purple-100 focus:bg-white"
+                            ? "bg-orange-50/50 border-orange-100 text-orange-500 focus:bg-white"
+                            : "bg-slate-50/50 dark:bg-slate-950 border-transparent focus:border-orange-100 focus:bg-white"
                         )}
                         value={item.price === 0 ? "" : item.price}
                         onChange={(e) => {
@@ -287,14 +287,14 @@ export default function LineItemsTable() {
                         onKeyDown={(e) => handleKeyDown(e, item.id)}
                       />
                       {autoFilledIds.has(item.id) && (
-                        <div className="absolute -top-3.5 left-0 flex items-center gap-1 text-[8px] font-black text-[#7C3AED] uppercase tracking-tighter">
+                        <div className="absolute -top-3.5 left-0 flex items-center gap-1 text-[8px] font-black text-orange-500 uppercase tracking-tighter">
                           <Zap size={8} /> Auto Vendor Rate
                         </div>
                       )}
                     </div>
                   </td>
                   <td className="px-4 py-4 align-top text-center">
-                    <span className="text-xs font-black text-purple-600">
+                    <span className="text-xs font-black text-orange-600">
                       {item.gstRate}%
                     </span>
                   </td>
@@ -325,9 +325,9 @@ export default function LineItemsTable() {
 
       <button
         onClick={addItem}
-        className="w-full py-4 mt-4 bg-slate-50/50 dark:bg-slate-900/50 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl text-slate-400 font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-white hover:border-[#7C3AED] hover:text-[#7C3AED] transition-all group"
+        className="w-full py-4 mt-4 bg-slate-50/50 dark:bg-slate-900/50 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl text-slate-400 font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-white hover:border-orange-400 hover:text-orange-500 transition-all group"
       >
-        <div className="w-8 h-8 rounded-full bg-white shadow-sm border border-slate-100 group-hover:border-[#7C3AED] group-hover:bg-[#7C3AED] group-hover:text-white flex items-center justify-center transition-all">
+        <div className="w-8 h-8 rounded-full bg-white shadow-sm border border-slate-100 group-hover:border-orange-400 group-hover:bg-[#f58220] group-hover:text-white flex items-center justify-center transition-all">
           <Plus size={16} />
         </div>
         Add New Line Item
