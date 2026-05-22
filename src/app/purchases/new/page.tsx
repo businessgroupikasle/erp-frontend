@@ -46,7 +46,7 @@ function NewPurchaseContent() {
   
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<"items" | "notes">("items");
+  const [activeTab, setActiveTab] = useState<"items" | "notes" | "attachments">("items");
   const [showVendorModal, setShowVendorModal] = useState(false);
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([]);
@@ -412,10 +412,11 @@ function NewPurchaseContent() {
                 </div>
                 <div className="mt-8 pt-6 border-t border-white/10 text-center">
                    <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em]">Accounting Ready v2.0</p>
-                </div>
-             </div>
-          </div>
+                 </div>
+              </div>
+           </div>
         </div>
+      </div>
       </div>
 
       {showPreview && (

@@ -219,16 +219,6 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         roles: SUPER_ONLY,
       },
       {
-        icon: ShoppingCart,
-        label: "Purchase Orders",
-        href: "/purchases/orders",
-        roles: SUPER_ONLY,
-        children: [
-          { label: "View All Orders", href: "/purchases/orders" },
-          { label: "Create New PO", href: "/purchases/new" },
-        ]
-      },
-      {
         icon: Truck,
         label: "Purchase Inward (GRN)",
         href: "/purchases/inward",
