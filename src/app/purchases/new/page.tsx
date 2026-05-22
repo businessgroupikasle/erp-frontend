@@ -46,7 +46,7 @@ function NewPurchaseContent() {
   
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<"items" | "notes" | "attachments">("items");
+  const [activeTab, setActiveTab] = useState<"items" | "notes">("items");
   const [showVendorModal, setShowVendorModal] = useState(false);
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([]);
@@ -310,10 +310,10 @@ function NewPurchaseContent() {
               onAddTarget={() => setShowVendorModal(true)}
             />
 
-            {/* Material Table */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="flex border-b border-gray-100 bg-gray-50/60">
-                <button
+          {/* Section 3: Material Table & Accordions */}
+          <div className="bg-white dark:bg-[#0A0D14] rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+             <div className="flex bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                <button 
                   onClick={() => setActiveTab("items")}
                   className={clsx(
                     "px-6 py-3 text-xs font-semibold uppercase tracking-wide transition-all border-b-2",
@@ -331,64 +331,68 @@ function NewPurchaseContent() {
                 >
                   Notes & Terms
                 </button>
-                <button
+                <button 
                   onClick={() => setActiveTab("attachments")}
                   className={clsx(
-                    "px-6 py-3 text-xs font-semibold uppercase tracking-wide transition-all border-b-2",
-                    activeTab === "attachments" ? "border-orange-500 text-orange-600" : "border-transparent text-gray-400 hover:text-gray-600"
+                    "px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2",
+                    activeTab === "attachments" ? "border-[#7C3AED] text-[#7C3AED]" : "border-transparent text-slate-400 hover:text-slate-600"
                   )}
                 >
                   Attachments
                 </button>
-              </div>
-              <div>
+             </div>
+
+             <div className="p-0">
                 {activeTab === "items" && <LineItemsTable />}
                 {activeTab === "notes" && (
-                  <div className="p-5 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Internal Remarks</label>
-                        <textarea
-                          value={internalNotes}
-                          onChange={(e) => setInternalNotes(e.target.value)}
-                          placeholder="Internal collaboration notes..."
-                          className="w-full min-h-[120px] px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none resize-none focus:border-orange-400"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Supplier Instructions</label>
-                        <textarea
-                          value={vendorNotes}
-                          onChange={(e) => setVendorNotes(e.target.value)}
-                          placeholder="Delivery instructions, terms, etc..."
-                          className="w-full min-h-[120px] px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none resize-none focus:border-orange-400"
-                        />
-                      </div>
-                    </div>
+                  <div className="p-10 space-y-10">
+                     <div className="grid grid-cols-2 gap-10">
+                        <div className="space-y-3">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Internal Remarks</label>
+                           <textarea 
+                             value={internalNotes}
+                             onChange={(e) => setInternalNotes(e.target.value)}
+                             placeholder="Internal collaboration notes..."
+                             className="w-full min-h-[140px] p-5 bg-slate-50 dark:bg-slate-900 border-none rounded-[2rem] text-sm outline-none focus:ring-2 ring-purple-500/10"
+                           />
+                        </div>
+                        <div className="space-y-3">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Supplier Instructions</label>
+                           <textarea 
+                             value={vendorNotes}
+                             onChange={(e) => setVendorNotes(e.target.value)}
+                             placeholder="Delivery instructions, terms, etc..."
+                             className="w-full min-h-[140px] p-5 bg-slate-50 dark:bg-slate-900 border-none rounded-[2rem] text-sm outline-none focus:ring-2 ring-purple-500/10"
+                           />
+                        </div>
+                     </div>
                   </div>
                 )}
                 {activeTab === "attachments" && (
-                  <div className="py-16 text-center flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center text-gray-300">
-                      <Plus size={32} />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-700">Upload Documents</h4>
-                      <p className="text-xs text-gray-400 mt-1">Supplier Quotations, Invoices, or Specs</p>
-                    </div>
-                  </div>
+                   <div className="p-20 text-center flex flex-col items-center gap-6">
+                      <div className="w-20 h-20 rounded-[2rem] bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-300">
+                         <Plus size={40} />
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">Upload Documents</h4>
+                        <p className="text-xs text-slate-400 font-medium">Click to upload or drag & drop Supplier Quotations, Invoices, or Specs</p>
+                      </div>
+                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Right Sidebar */}
-          <div className="col-span-12 lg:col-span-3">
-            <div className="sticky top-24 space-y-4">
-              <DocumentSummary />
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <h4 className="text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1.5 uppercase tracking-wide">
-                  <ShieldCheck size={12} className="text-orange-500" /> Lifecycle Status
+        {/* Right Sticky Sidebar */}
+        <div className="col-span-12 lg:col-span-3">
+          <div className="sticky top-24 space-y-8">
+             <DocumentSummary />
+             
+             {/* Dynamic Helper Card */}
+             <div className="bg-slate-900 dark:bg-[#0F172A] rounded-[2.5rem] p-8 text-white shadow-2xl shadow-slate-200 dark:shadow-none relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-3xl rounded-full -mr-16 -mt-16" />
+                <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-400 mb-6 flex items-center gap-2">
+                   <ShieldCheck size={12} /> Lifecycle Status
                 </h4>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 cursor-pointer hover:border-orange-200 transition-all group">
@@ -406,8 +410,10 @@ function NewPurchaseContent() {
                     <Info size={13} className="text-gray-300" />
                   </div>
                 </div>
-              </div>
-            </div>
+                <div className="mt-8 pt-6 border-t border-white/10 text-center">
+                   <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em]">Accounting Ready v2.0</p>
+                </div>
+             </div>
           </div>
         </div>
       </div>
