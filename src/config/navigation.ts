@@ -213,9 +213,15 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     title: "PROCUREMENT",
     items: [
       {
-        icon: Store,
-        label: "Vendors",
+        icon: Users,
+        label: "Parties",
         href: "/vendors",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Send,
+        label: "Whatsapp Connect",
+        href: "/vendors/whatsapp",
         roles: SUPER_ONLY,
       },
       {
@@ -456,7 +462,7 @@ export const franchiseMenuSections: MenuSection[] = [
       },
       {
         icon: User,
-        label: "Customers",
+        label: "Parties",
         href: "/customers",
         roles: FRANCHISE_ONLY,
       },

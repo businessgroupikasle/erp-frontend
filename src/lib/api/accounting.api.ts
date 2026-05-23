@@ -45,7 +45,7 @@ export const reportsApi = {
   // Party Reports
   getPartyStatement: (params?: any) => api.get('/api/reports/party-statement', { params }),
   getPartyProfitLoss: (params?: any) => api.get('/api/reports/party-profit-loss', { params }),
-  getAllParties: (params?: any) => api.get('/api/customers', { params }),
+  getAllParties: (params?: any) => api.get('/api/reports/all-parties', { params }),
   getPartyByItem: (params?: any) => api.get('/api/reports/party-by-item', { params }),
   getSalePurchaseByParty: (params?: any) => api.get('/api/reports/sale-purchase-by-party', { params }),
   getSalePurchaseByPartyGroup: (params?: any) => api.get('/api/reports/sale-purchase-by-party-group', { params }),
