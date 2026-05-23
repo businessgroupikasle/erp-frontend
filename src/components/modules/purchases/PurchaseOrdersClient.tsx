@@ -30,7 +30,7 @@ interface POItem {
 const STATUS_STYLES: Record<string, string> = {
   DRAFT: "bg-slate-100 text-slate-600 border border-slate-200 shadow-sm",
   PENDING_APPROVAL: "bg-amber-50 text-amber-600 border border-amber-200 shadow-sm shadow-amber-500/10",
-  APPROVED: "bg-indigo-50 text-indigo-600 border border-indigo-200 shadow-sm shadow-indigo-500/10",
+  APPROVED: "bg-orange-50 text-orange-600 border border-orange-200 shadow-sm shadow-orange-500/10",
   SENT: "bg-blue-50 text-blue-600 border border-blue-200 shadow-sm shadow-blue-500/10",
   PARTIALLY_RECEIVED: "bg-orange-50 text-orange-600 border border-orange-200 shadow-sm shadow-orange-500/10",
   RECEIVED: "bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-sm shadow-emerald-500/10",
@@ -252,7 +252,7 @@ export default function PurchaseOrdersClient() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Spend", value: formatCurrency(totalSpend), icon: ShoppingCart, color: "text-indigo-500", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
+          { label: "Total Spend", value: formatCurrency(totalSpend), icon: ShoppingCart, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-500/10" },
           { label: "Pending GRNs", value: String(orders.filter(o => o.status === 'APPROVED' || o.status === 'SENT').length), icon: Store, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-500/10" },
           { label: "Pending Invoices", value: String(orders.filter(o => o.invoiceStatus === 'PENDING').length), icon: AlertCircle, color: "text-red-500", bg: "bg-red-50 dark:bg-red-500/10" },
 
@@ -367,7 +367,7 @@ export default function PurchaseOrdersClient() {
                           {balance > 0 && vendors.find(v => v.id === po.vendorId)?.advance > 0 && (
                             <button 
                               onClick={() => handleApplyAdvance(po.id)}
-                              className="text-[9px] font-black text-indigo-600 hover:text-indigo-700 uppercase underline decoration-dotted"
+                              className="text-[9px] font-black text-orange-600 hover:text-orange-700 uppercase underline decoration-dotted"
                             >
                               Apply Advance
                             </button>
@@ -376,7 +376,7 @@ export default function PurchaseOrdersClient() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <button type="button" onClick={() => setViewingDetailsPO(po)} className="text-indigo-600 hover:text-indigo-700 text-[10px] font-black uppercase tracking-widest">View Details</button>
+                      <button type="button" onClick={() => setViewingDetailsPO(po)} className="text-orange-600 hover:text-orange-700 text-[10px] font-black uppercase tracking-widest">View Details</button>
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1 transition-opacity">
@@ -405,7 +405,7 @@ export default function PurchaseOrdersClient() {
                             }
                             setViewingPO(po);
                           }}
-                          className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg text-indigo-500 transition-colors"
+                          className="p-2 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-lg text-orange-500 transition-colors"
                           title="Invoice"
                         >
                           <Download size={14} />
@@ -441,7 +441,7 @@ export default function PurchaseOrdersClient() {
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg, #f58220, #e8740e)", boxShadow: "0 8px 24px rgba(245,130,32,0.25)" }}>
                     <Settings size={22} className="text-white" />
                   </div>
                   <div>
@@ -558,7 +558,8 @@ export default function PurchaseOrdersClient() {
                 <button
                   onClick={handleSaveProfile}
                   disabled={profileSaving}
-                  className="flex-[2] py-4 bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="flex-[2] py-4 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{ background: "linear-gradient(135deg, #f58220, #e8740e)" }}
                 >
                   {profileSaving ? "Saving..." : "Save Changes"}
                 </button>
@@ -626,7 +627,7 @@ export default function PurchaseOrdersClient() {
                     <h3 className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-widest px-1">Order Intelligence</h3>
                     <div className="grid grid-cols-1 gap-3">
                       <div className="bg-slate-50 dark:bg-white/5 p-5 rounded-3xl border border-slate-100 dark:border-white/5">
-                        <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-2">Internal Workflow Notes</p>
+                        <p className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-2">Internal Workflow Notes</p>
                         <p className="text-xs font-bold text-slate-600 dark:text-slate-400 italic">
                           {viewingDetailsPO.internalNotes || "No internal notes recorded for this workflow."}
                         </p>
@@ -679,8 +680,8 @@ export default function PurchaseOrdersClient() {
                     </div>
                     {viewingDetailsPO.approvedAt && (
                       <div className="relative">
-                        <div className="absolute -left-[41px] top-0 w-4 h-4 rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/20" />
-                        <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">Approved</p>
+                        <div className="absolute -left-[41px] top-0 w-4 h-4 rounded-full bg-orange-500 shadow-lg shadow-orange-500/20" />
+                        <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Approved</p>
                         <p className="text-xs font-bold text-gray-900 dark:text-white">{format(new Date(viewingDetailsPO.approvedAt), "dd MMM yyyy · HH:mm")}</p>
                         <p className="text-[10px] text-gray-400 mt-1 uppercase">By: {viewingDetailsPO.approvedBy || 'Admin'}</p>
                       </div>

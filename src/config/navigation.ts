@@ -29,6 +29,7 @@ import {
   Wallet,
   FilePlus2,
 } from "lucide-react";
+import { title } from "process";
 
 export interface MenuItem {
   icon: any;
@@ -66,12 +67,6 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         href: "/",
         roles: SUPER_ONLY,
       },
-      {
-        icon: BarChart3,
-        label: "System Analytics",
-        href: "/reports",
-        roles: SUPER_ONLY,
-      },
     ],
   },
   {
@@ -87,6 +82,17 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         icon: ChefHat,
         label: "Production Batches",
         href: "/production/batches",
+        roles: SUPER_ONLY,
+      },
+    ],
+  },
+  {
+    title: "REPORT",
+    items: [
+      {
+        icon: BarChart3,
+        label: "Reports",
+        href: "/reports",
         roles: SUPER_ONLY,
       },
     ],
@@ -164,6 +170,46 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     ],
   },
   {
+    title: "PURCHASE & EXPENSE",
+    items: [
+      {
+        icon: Receipt,
+        label: "Purchase Bills",
+        href: "/purchases/invoices",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: CreditCard,
+        label: "Payment-Out",
+        href: "/purchases/payout-receipts",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: TrendingUp,
+        label: "Expenses",
+        href: "/accounting/expenses",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: ClipboardList,
+        label: "Purchase Order",
+        href: "/purchases/orders",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: Undo2,
+        label: "Purchase Return / Dr. Note",
+        href: "/purchases/debit-notes",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+    ],
+  },
+  {
     title: "PROCUREMENT",
     items: [
       {
@@ -171,16 +217,6 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         label: "Vendors",
         href: "/vendors",
         roles: SUPER_ONLY,
-      },
-      {
-        icon: ShoppingCart,
-        label: "Purchase Orders",
-        href: "/purchases/orders",
-        roles: SUPER_ONLY,
-        children: [
-          { label: "View All Orders", href: "/purchases/orders" },
-          { label: "Create New PO", href: "/purchases/new" },
-        ]
       },
       {
         icon: Truck,
