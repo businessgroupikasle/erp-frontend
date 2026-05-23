@@ -7,7 +7,7 @@ import {
   FileText, ArrowLeft,
 } from "lucide-react";
 import { clsx } from "clsx";
-import { vendorsApi } from "@/lib/api";
+import { vendorsApi, accountsApi, accountingApi } from "@/lib/api";
 import { toast } from "react-hot-toast";
 
 // ── Types & Constants ─────────────────────────────────────────────────────────
@@ -86,6 +86,8 @@ export default function PaymentOutPage() {
   const [showNote, setShowNote] = useState(false);
   const [showShareDrop, setShowShareDrop] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [accountId, setAccountId] = useState("");
 
   // date filter
   const now = new Date();
@@ -106,36 +108,36 @@ export default function PaymentOutPage() {
     setLoading(true);
     try {
       const vRes = await vendorsApi.getAll();
+      const aRes = await accountsApi.getAll().catch(() => ({ data: [] }));
+      const pRes = await accountingApi.getPayments().catch(() => ({ data: [] }));
+      
       const allVendors = vRes.data?.vendors || vRes.data || [];
+      const allAccounts = aRes.data?.accounts || aRes.data || [];
+      const allPayments = pRes.data?.payments || pRes.data || [];
+      
       setVendors(allVendors);
+      setAccounts(allAccounts);
+      if (allAccounts.length > 0 && !accountId) setAccountId(allAccounts[0].id);
 
-      const txns: any[] = [];
-      await Promise.all(
-        allVendors.slice(0, 20).map(async (v: any) => {
-          try {
-            const ledger = await vendorsApi.getLedger(v.id, {});
-            const entries = ledger.data?.entries || ledger.data || [];
-            entries.forEach((e: any) => {
-              if (e.type === "PAYMENT" || e.transactionType === "PAYMENT") {
-                txns.push({
-                  id: e.id || Math.random().toString(36),
-                  vendorId: v.id,
-                  vendorName: v.name,
-                  amount: e.amount || e.credit || 0,
-                  paymentMode: e.paymentMode || "Cash",
-                  note: e.note || e.description || "",
-                  date: e.date || e.createdAt || date,
-                  receiptNo: e.reference || e.receiptNo || "",
-                  status: "PAID",
-                });
-              }
-            });
-          } catch { /* skip */ }
-        })
-      );
+      const vendorMap = new Map(allVendors.map((v: any) => [v.id, v.name]));
+
+      const txns = allPayments
+        .filter((p: any) => p.flow === "OUT" && (p.sourceModule === "PROCUREMENT" || p.entityType === "VENDOR" || p.type === "INVOICE_LINKED" || p.type === "ADVANCE"))
+        .map((p: any) => ({
+          id: p.id,
+          vendorId: p.entity,
+          vendorName: vendorMap.get(p.entity) || "Vendor",
+          amount: p.amount || 0,
+          paymentMode: p.method || "Cash",
+          note: p.reference || "",
+          date: p.date,
+          receiptNo: p.paymentNumber || p.linkedDocId || "",
+          status: p.status,
+        }));
+
       setPayments(txns);
     } finally { setLoading(false); }
-  }, [date]);
+  }, [date, accountId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -170,7 +172,7 @@ export default function PaymentOutPage() {
       await vendorsApi.recordPayment(selectedVendor.id, {
         amount: amt,
         note: note || `Payment-Out — ${date}`,
-        accountId: "",
+        accountId: accountId,
         paymentMode: paymentMode.replace(/\s/g, "_").toUpperCase(),
       });
       toast.success("Payment-Out recorded");
@@ -259,6 +261,17 @@ export default function PaymentOutPage() {
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white transition-colors"
                   >
                     {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Source Account *</label>
+                  <select
+                    value={accountId}
+                    onChange={e => setAccountId(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white transition-colors"
+                  >
+                    <option value="" disabled>Select an account</option>
+                    {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.type})</option>)}
                   </select>
                 </div>
               </div>
