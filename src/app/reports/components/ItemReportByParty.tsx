@@ -6,7 +6,7 @@ import {
   PackageIcon, AlertCircleIcon, FileTextIcon, CalculatorIcon, UsersIcon,
   ArrowUpRightIcon, ArrowDownLeftIcon
 } from "lucide-react";
-import { accountingApi, reportsApi } from "@/lib/api/accounting.api";
+import { reportsApi } from "@/lib/api/accounting.api";
 
 interface PartyItemRow {
   itemName: string;
@@ -41,26 +41,10 @@ export default function ItemReportByParty() {
           purchaseAmount: Number(r.purchaseAmount !== undefined ? r.purchaseAmount : (r.purchaseValue || 0))
         }));
 
-        setReportData(formatted.length > 0 ? formatted : [
-          {
-            itemName: "potato",
-            saleQuantity: 10,
-            saleAmount: 350.00,
-            purchaseQuantity: 1,
-            purchaseAmount: 0.00
-          }
-        ]);
+        setReportData(formatted);
       } catch (err) {
         console.error(err);
-        setReportData([
-          {
-            itemName: "potato",
-            saleQuantity: 10,
-            saleAmount: 350.00,
-            purchaseQuantity: 1,
-            purchaseAmount: 0.00
-          }
-        ]);
+        setReportData([]);
       } finally {
         setLoading(false);
       }

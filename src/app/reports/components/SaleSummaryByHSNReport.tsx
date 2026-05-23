@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { 
   FileTextIcon, PrinterIcon, ChevronDownIcon, SearchIcon, FilterIcon
 } from "lucide-react";
-import { accountingApi } from "@/lib/api/accounting.api";
+import { reportsApi } from "@/lib/api/accounting.api";
 
 interface HSNRow {
   hsn: string;
@@ -27,7 +27,7 @@ export default function SaleSummaryByHSNReport() {
     async function fetchData() {
       try {
         setLoading(true);
-        const res = await accountingApi.getHsnSummary({ startDate, endDate });
+        const res = await reportsApi.getHsnSummary({ startDate, endDate });
         setReportData(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error(err);

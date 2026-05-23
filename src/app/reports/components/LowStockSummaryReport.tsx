@@ -5,7 +5,6 @@ import {
   SearchIcon, FileTextIcon, PrinterIcon, ChevronDownIcon, 
   AlertCircleIcon, PackageMinusIcon, TrendingDownIcon
 } from "lucide-react";
-import { accountingApi } from "@/lib/api/accounting.api";
 
 interface LowStockRow {
   itemName: string;
@@ -42,29 +41,15 @@ export default function LowStockSummaryReport() {
         
         const formatted = rows.map((r: any) => ({
           itemName: r.itemName || r.name || "—",
-          minimumStock: Number(r.minimumStock !== undefined ? r.minimumStock : 10),
-          stockQty: Number(r.stockQty !== undefined ? r.stockQty : -9),
-          stockValue: Number(r.stockValue !== undefined ? r.stockValue : 0)
+          minimumStock: Number(r.minimumStock ?? 0),
+          stockQty: Number(r.stockQty ?? 0),
+          stockValue: Number(r.stockValue ?? 0)
         }));
 
-        setReportData(formatted.length > 0 ? formatted : [
-          {
-            itemName: "potato",
-            minimumStock: 0,
-            stockQty: -9,
-            stockValue: 0.00
-          }
-        ]);
+        setReportData(formatted);
       } catch (err) {
         console.error(err);
-        setReportData([
-          {
-            itemName: "potato",
-            minimumStock: 0,
-            stockQty: -9,
-            stockValue: 0.00
-          }
-        ]);
+        setReportData([]);
       } finally {
         setLoading(false);
       }

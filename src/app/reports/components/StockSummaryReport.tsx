@@ -5,7 +5,7 @@ import {
   SearchIcon, FileTextIcon, PrinterIcon, ChevronDownIcon, 
   AlertCircleIcon, PackageIcon, TrendingUpIcon, CalculatorIcon 
 } from "lucide-react";
-import { accountingApi, reportsApi } from "@/lib/api/accounting.api";
+import { reportsApi } from "@/lib/api/accounting.api";
 
 interface StockRow {
   itemName: string;
@@ -36,32 +36,16 @@ export default function StockSummaryReport() {
         // Match the columns expected: Item Name, Sale Price, Purchase Price, Stock Qty, Stock Value
         const formatted = rows.map((r: any) => ({
           itemName: r.itemName || r.name || "—",
-          salePrice: Number(r.salePrice !== undefined ? r.salePrice : (r.customerPrice || r.basePrice || 35.00)),
-          purchasePrice: Number(r.purchasePrice !== undefined ? r.purchasePrice : (r.costPrice || 0)),
-          stockQty: Number(r.stockQty !== undefined ? r.stockQty : (r.currentStock || -9)),
-          stockValue: Number(r.stockValue !== undefined ? r.stockValue : (r.currentStock * r.costPrice || 0))
+          salePrice: Number(r.salePrice ?? r.customerPrice ?? r.basePrice ?? 0),
+          purchasePrice: Number(r.purchasePrice ?? r.costPrice ?? 0),
+          stockQty: Number(r.stockQty ?? r.currentStock ?? 0),
+          stockValue: Number(r.stockValue ?? 0)
         }));
 
-        setReportData(formatted.length > 0 ? formatted : [
-          {
-            itemName: "potato",
-            salePrice: 35.00,
-            purchasePrice: 0.00,
-            stockQty: -9,
-            stockValue: 0.00
-          }
-        ]);
+        setReportData(formatted);
       } catch (err) {
         console.error(err);
-        setReportData([
-          {
-            itemName: "potato",
-            salePrice: 35.00,
-            purchasePrice: 0.00,
-            stockQty: -9,
-            stockValue: 0.00
-          }
-        ]);
+        setReportData([]);
       } finally {
         setLoading(false);
       }

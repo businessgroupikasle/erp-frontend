@@ -39,16 +39,12 @@ export default function CentralSalePurchaseByPartyGroup({
       endDate
     }).then((res: any) => {
       if (!res.data || res.data.length === 0) {
-        setRows([
-          { groupName: "General", saleAmount: 350, purchaseAmount: 0 }
-        ]);
+        setRows([]);
       } else {
         setRows(res.data);
       }
     }).catch(() => {
-      setRows([
-        { groupName: "General", saleAmount: 350, purchaseAmount: 0 }
-      ]);
+      setRows([]);
     }).finally(() => {
       setLoading(false);
     });

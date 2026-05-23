@@ -41,17 +41,12 @@ export default function CentralPartyProfitLossReport({
     }).then((res: any) => {
       // Mock data if empty to match screenshot
       if (!res.data || res.data.length === 0) {
-        setRows([
-          { partyName: "Mani", phoneNo: "9345601619", totalSaleAmount: 350, profit: 350 }
-        ]);
+        setRows([]);
       } else {
         setRows(res.data);
       }
     }).catch(() => {
-      // toast.error("Failed to load party profit & loss records");
-      setRows([
-        { partyName: "Mani", phoneNo: "9345601619", totalSaleAmount: 350, profit: 350 }
-      ]);
+      setRows([]);
     }).finally(() => {
       setLoading(false);
     });

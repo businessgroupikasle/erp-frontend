@@ -5,7 +5,7 @@ import {
   SearchIcon, FileTextIcon, PrinterIcon, ChevronDownIcon, 
   AlertCircleIcon, RefreshCwIcon, TrendingUpIcon
 } from "lucide-react";
-import { accountingApi, reportsApi } from "@/lib/api/accounting.api";
+import { reportsApi } from "@/lib/api/accounting.api";
 
 interface ProfitLossRow {
   itemName: string;
@@ -41,53 +41,23 @@ export default function ItemWiseProfitLossReport() {
         
         const formatted = rows.map((r: any) => ({
           itemName: r.itemName || r.name || "—",
-          sale: Number(r.sale !== undefined ? r.sale : 350.00),
-          saleReturn: Number(r.saleReturn !== undefined ? r.saleReturn : 0),
-          purchase: Number(r.purchase !== undefined ? r.purchase : 0),
-          purchaseReturn: Number(r.purchaseReturn !== undefined ? r.purchaseReturn : 0),
-          openingStock: Number(r.openingStock !== undefined ? r.openingStock : 0),
-          closingStock: Number(r.closingStock !== undefined ? r.closingStock : 0),
-          taxReceivable: Number(r.taxReceivable !== undefined ? r.taxReceivable : 0),
-          taxPayable: Number(r.taxPayable !== undefined ? r.taxPayable : 0),
-          mfgCost: Number(r.mfgCost !== undefined ? r.mfgCost : 0),
-          consumptionCost: Number(r.consumptionCost !== undefined ? r.consumptionCost : 0),
-          netProfitLoss: Number(r.netProfitLoss !== undefined ? r.netProfitLoss : 350.00)
+          sale: Number(r.sale ?? 0),
+          saleReturn: Number(r.saleReturn ?? 0),
+          purchase: Number(r.purchase ?? 0),
+          purchaseReturn: Number(r.purchaseReturn ?? 0),
+          openingStock: Number(r.openingStock ?? 0),
+          closingStock: Number(r.closingStock ?? 0),
+          taxReceivable: Number(r.taxReceivable ?? 0),
+          taxPayable: Number(r.taxPayable ?? 0),
+          mfgCost: Number(r.mfgCost ?? 0),
+          consumptionCost: Number(r.consumptionCost ?? 0),
+          netProfitLoss: Number(r.netProfitLoss ?? 0)
         }));
 
-        setReportData(formatted.length > 0 ? formatted : [
-          {
-            itemName: "potato",
-            sale: 350.00,
-            saleReturn: 0,
-            purchase: 0,
-            purchaseReturn: 0,
-            openingStock: 0,
-            closingStock: 0,
-            taxReceivable: 0,
-            taxPayable: 0,
-            mfgCost: 0,
-            consumptionCost: 0,
-            netProfitLoss: 350.00
-          }
-        ]);
+        setReportData(formatted);
       } catch (err) {
         console.error(err);
-        setReportData([
-          {
-            itemName: "potato",
-            sale: 350.00,
-            saleReturn: 0,
-            purchase: 0,
-            purchaseReturn: 0,
-            openingStock: 0,
-            closingStock: 0,
-            taxReceivable: 0,
-            taxPayable: 0,
-            mfgCost: 0,
-            consumptionCost: 0,
-            netProfitLoss: 350.00
-          }
-        ]);
+        setReportData([]);
       } finally {
         setLoading(false);
       }

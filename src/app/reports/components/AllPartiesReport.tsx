@@ -9,7 +9,7 @@ import {
   Search as SearchIcon,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { accountingApi } from "@/lib/api/accounting.api";
+import { reportsApi } from "@/lib/api/accounting.api";
 
 interface PartyRow {
   id: string;
@@ -39,11 +39,9 @@ export default function CentralAllPartiesReport({
   useEffect(() => {
     setLoading(true);
     // Ideally this goes to getAllParties
-    accountingApi.getAllParties().then((res: any) => {
+    reportsApi.getAllParties().then((res: any) => {
       if (!res.data || res.data.length === 0) {
-        setRows([
-          { id: "1", partyName: "Mani", email: null, phoneNo: "9345601619", receivableBalance: 350, payableBalance: null, creditLimit: null }
-        ]);
+        setRows([]);
       } else {
         const parsed = res.data.map((c: any) => ({
           id: c.id,
@@ -54,18 +52,10 @@ export default function CentralAllPartiesReport({
           payableBalance: c.currentBalance < 0 ? Math.abs(c.currentBalance) : null,
           creditLimit: c.creditLimit || null
         }));
-        if (parsed.length === 0) {
-          setRows([
-            { id: "1", partyName: "Mani", email: null, phoneNo: "9345601619", receivableBalance: 350, payableBalance: null, creditLimit: null }
-          ]);
-        } else {
-          setRows(parsed);
-        }
+        setRows(parsed);
       }
     }).catch(() => {
-      setRows([
-        { id: "1", partyName: "Mani", email: null, phoneNo: "9345601619", receivableBalance: 350, payableBalance: null, creditLimit: null }
-      ]);
+      setRows([]);
     }).finally(() => {
       setLoading(false);
     });

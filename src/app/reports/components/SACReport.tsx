@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { 
   FileTextIcon, PrinterIcon, ChevronDownIcon, SearchIcon, FilterIcon
 } from "lucide-react";
-import { accountingApi } from "@/lib/api/accounting.api";
+import { reportsApi } from "@/lib/api/accounting.api";
 
 interface SACRow {
   sac: string;
@@ -28,7 +28,7 @@ export default function SACReport() {
     async function fetchData() {
       try {
         setLoading(true);
-        const res = await accountingApi.getSacReport({ startDate, endDate });
+        const res = await reportsApi.getSacReport({ startDate, endDate });
         setReportData(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error(err);

@@ -56,30 +56,10 @@ export default function StockDetailReport() {
           closingQuantity: Number(r.closingQuantity || 0)
         }));
 
-        setReportData(formatted.length > 0 ? formatted : [
-          {
-            itemName: "potato",
-            beginningQuantity: 0,
-            quantityIn: 1,
-            purchaseAmount: 0.00,
-            quantityOut: 10,
-            saleAmount: 350.00,
-            closingQuantity: -9
-          }
-        ]);
+        setReportData(formatted);
       } catch (err) {
         console.error(err);
-        setReportData([
-          {
-            itemName: "potato",
-            beginningQuantity: 0,
-            quantityIn: 1,
-            purchaseAmount: 0.00,
-            quantityOut: 10,
-            saleAmount: 350.00,
-            closingQuantity: -9
-          }
-        ]);
+        setReportData([]);
       } finally {
         setLoading(false);
       }

@@ -41,16 +41,12 @@ export default function CentralPartyReportByItem({
       endDate
     }).then((res: any) => {
       if (!res.data || res.data.length === 0) {
-        setRows([
-          { partyName: "Mani", saleQty: 10, saleAmount: 350, purchaseQty: 1, purchaseAmount: 0 }
-        ]);
+        setRows([]);
       } else {
         setRows(res.data);
       }
     }).catch(() => {
-      setRows([
-        { partyName: "Mani", saleQty: 10, saleAmount: 350, purchaseQty: 1, purchaseAmount: 0 }
-      ]);
+      setRows([]);
     }).finally(() => {
       setLoading(false);
     });
