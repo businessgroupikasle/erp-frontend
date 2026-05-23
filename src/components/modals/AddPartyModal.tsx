@@ -18,7 +18,6 @@ const getEmptyForm = (partyType?: 'vendor' | 'customer') => ({
   name: "",
   contact: "",
   email: "",
-  gstNumber: "",
   category: "",
   
   // GST & Address Tab
