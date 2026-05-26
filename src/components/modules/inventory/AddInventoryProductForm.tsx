@@ -377,7 +377,7 @@ export default function AddInventoryProductForm({ onSuccess, onCancel, isModal }
     };
 
     try {
-      await rawMaterialsApi.create(payload);
+      const res = await rawMaterialsApi.create(payload);
       setSuccess("Inventory Product Master successfully registered!");
       
       if (onSuccess) {
