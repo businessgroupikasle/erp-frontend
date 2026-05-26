@@ -27,7 +27,8 @@ import {
   Share2 as ShareIcon,
   MoreVertical as MoreVerticalIcon,
   BarChart4 as ChartIcon,
-  FileSpreadsheet as ExcelIcon
+  FileSpreadsheet as ExcelIcon,
+  ChefHat as ChefHatIcon
 } from "lucide-react";
 import { clsx } from "clsx";
 import toast from "react-hot-toast";
@@ -101,6 +102,13 @@ const REPORT_CATEGORIES: ReportCategory[] = [
     ]
   },
   {
+    title: "Recipe Management",
+    icon: ChefHatIcon,
+    items: [
+      { label: "Recipes" }
+    ]
+  },
+  {
     title: "Business Status",
     icon: TrendingUpIcon,
     items: [
@@ -164,6 +172,27 @@ interface MockReportDetails {
 
 const getReportDetails = (label: string): MockReportDetails => {
   switch (label) {
+    case "Recipes":
+      return {
+        title: "Recipe Registry",
+        addBtnLabel: "+ Add Recipe",
+        addBtnColor: "bg-orange-600 hover:bg-orange-700 focus:ring-orange-500",
+        kpiLabel: "Total Formulas",
+        kpiValue: "12 Formulas",
+        kpiSubText: "Active: 12  In Production: 8",
+        tableTitle: "Recipes",
+        columns: [
+          { key: "name", label: "Recipe Name" },
+          { key: "product", label: "Finished Product" },
+          { key: "yield", label: "Standard Yield" },
+          { key: "materials", label: "Ingredients" },
+          { key: "status", label: "Status" }
+        ],
+        data: [
+          { name: "Standard Chocolate Cake", product: "Chocolate Cake 1kg", yield: "10 Units", materials: "6 ingredients", status: "Production Ready" },
+          { name: "Vanilla Sponge Cake", product: "Vanilla Sponge Cake 500g", yield: "20 Units", materials: "5 ingredients", status: "Production Ready" }
+        ]
+      };
     case "Sale":
       return {
         title: "Sale Invoices",
@@ -302,6 +331,8 @@ const getReportDetails = (label: string): MockReportDetails => {
 
 const getReportHref = (label: string): string => {
   switch (label) {
+    case "Recipes":
+      return "/production/recipes";
     case "Sales Order Report":
     case "Sale Orders":
     case "Sale Purchase By Party":
@@ -410,9 +441,9 @@ export default function CentralReports() {
     const toastId = toast.loading(`Loading ${itemLabel}...`);
     try {
       await new Promise(res => setTimeout(res, 500));
-      
+
       const reportsWithData = [
-        "Sale", "Purchase", "Day book", "All Transactions", "Profit And Loss", 
+        "Sale", "Purchase", "Day book", "All Transactions", "Profit And Loss",
         "Bill Wise Profit", "Cash flow", "Trial Balance Report", "Balance Sheet",
         "Party Statement", "Party wise Profit & Loss", "All parties", "Party Report By Item",
         "Sale Purchase By Party", "Sale Purchase By Party Group",
@@ -422,7 +453,8 @@ export default function CentralReports() {
         "Sale/ Purchase Report By Item Category", "Stock Summary Report By Item Category",
         "Item Wise Discount", "Bank Statement", "Discount Report", "GST Report",
         "GST Rate Report", "Form No. 27EQ", "TCS Receivable", "TDS Payable", "TDS Receivable",
-        "Expense", "Expense Category Report", "Expense Item Report", "Sale Orders", "Loan Statement"
+        "Expense", "Expense Category Report", "Expense Item Report", "Sale Orders", "Loan Statement",
+        "Recipes"
       ];
 
       if (!reportsWithData.includes(itemLabel)) {
@@ -476,7 +508,7 @@ export default function CentralReports() {
 
   // Filter table data
   const filteredTableData = activeReport.data.filter(row => {
-    return Object.values(row).some(val => 
+    return Object.values(row).some(val =>
       String(val).toLowerCase().includes(tableSearchTerm.toLowerCase())
     );
   });
@@ -640,7 +672,7 @@ export default function CentralReports() {
           <div className="flex flex-wrap items-center gap-4 bg-[#FAF9FA] dark:bg-slate-900 border border-[#F0EAF0] dark:border-slate-800 rounded-xl p-3 text-xs">
             <div className="flex items-center gap-2">
               <span className="font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Filter by:</span>
-              
+
               {/* This Month Dropdown */}
               <div className="relative">
                 <select
@@ -681,7 +713,7 @@ export default function CentralReports() {
           <div className="max-w-md">
             <div className="border border-slate-100 dark:border-slate-800 bg-white dark:bg-[#12141c] rounded-2xl p-5 shadow-sm space-y-3 relative group overflow-hidden">
               <div className="absolute -right-8 -top-8 w-16 h-16 rounded-full bg-[#7C3AED]/5 blur-xl group-hover:bg-[#7C3AED]/10 transition-all duration-300" />
-              
+
               <div className="flex items-start justify-between">
                 <div className="space-y-0.5">
                   <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
@@ -712,7 +744,7 @@ export default function CentralReports() {
               <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">
                 {activeReport.tableTitle}
               </h2>
-              
+
               {/* Toolbar Buttons */}
               <div className="flex items-center gap-2 text-slate-400">
                 <button

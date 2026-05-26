@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Lock, User, Loader2, Eye, EyeOff } from "lucide-react";
 
@@ -48,9 +49,10 @@ export default function LoginPage() {
         <div className="text-center space-y-6">
           <div className="flex justify-center flex-col items-center">
             <div className="relative w-48 h-20 mb-4 transform hover:scale-105 transition-transform duration-300">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo.png"
+              <Image
+                src="/logo1.png"
+                height={200}
+                width={200}
                 alt="Kiddos Foods Logo"
                 className="w-48 h-20 object-contain"
               />

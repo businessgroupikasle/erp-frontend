@@ -303,19 +303,21 @@ export default function VendorsClient() {
                     "w-full flex items-center gap-3 p-3 rounded-2xl transition-all group relative overflow-hidden",
                     isActive 
                       ? "bg-white dark:bg-slate-800 shadow-md border border-slate-200 dark:border-white/10" 
-                      : "hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent"
+                      : "hover:bg-orange-50/40 dark:hover:bg-orange-950/5 border border-transparent hover:border-orange-100 dark:hover:border-orange-900/20"
                   )}
                 >
                   {isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-orange-500 rounded-full" />}
                   <div className={clsx(
                     "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all",
-                    isActive ? "bg-orange-500 text-white shadow-orange-500/20" : "bg-slate-100 dark:bg-white/5 text-slate-400"
+                    isActive 
+                      ? "bg-orange-500 text-white shadow-orange-500/20" 
+                      : "bg-slate-100 dark:bg-white/5 text-slate-400 group-hover:bg-orange-500/10 group-hover:text-orange-500"
                   )}>
                     <Store size={18} />
                   </div>
                   <div className="flex-1 text-left min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                       <h3 className={clsx("font-black text-[11px] truncate", isActive ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400")}>
+                       <h3 className={clsx("font-black text-[11px] truncate transition-colors", isActive ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400 group-hover:text-orange-500")}>
                           {v.name}
                        </h3>
                        <div className={clsx("w-1.5 h-1.5 rounded-full shrink-0", status.color.replace('text', 'bg'))} />

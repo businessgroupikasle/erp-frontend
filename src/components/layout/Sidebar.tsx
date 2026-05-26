@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LogOut,
@@ -85,8 +86,8 @@ export default function Sidebar() {
     <>
       {/* Mobile Overlay */}
       {isMobileOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm lg:hidden z-[90]" 
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm lg:hidden z-[90]"
           onClick={closeMobile}
         />
       )}
@@ -110,10 +111,12 @@ export default function Sidebar() {
             isCollapsed ? "w-10 h-10" : "w-9 h-9"
           )}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo.png"
+            <Image
+              src="/logo1.png"
               alt="Logo"
-              className="w-full h-full object-contain"
+              width={40}
+              height={40}
+              className="object-contain"
             />
           </div>
           {(!isCollapsed || isMobileOpen) && (
@@ -166,7 +169,7 @@ export default function Sidebar() {
                   <div key={section.title}>
                     {/* Section Header */}
                     {!isCollapsed && (
-                      <div 
+                      <div
                         onClick={() => toggleSection(section.title)}
                         className="px-2 pb-2 mt-6 flex items-center justify-between cursor-pointer group/section"
                       >
@@ -176,12 +179,12 @@ export default function Sidebar() {
                         )}>
                           {section.title}
                         </p>
-                        <ChevronDown 
-                          size={10} 
+                        <ChevronDown
+                          size={10}
                           className={clsx(
                             "text-slate-300 dark:text-slate-700 transition-transform duration-300",
                             collapsedSections.includes(section.title) ? "-rotate-90" : "rotate-0"
-                          )} 
+                          )}
                         />
                       </div>
                     )}
@@ -195,134 +198,134 @@ export default function Sidebar() {
                       collapsedSections.includes(section.title) ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"
                     )}>
 
-                    {/* Section Items */}
-                    {filteredItems.map((item) => {
-                      const itemIcon = item.icon;
-                      const isExpanded = expandedMenus.includes(item.label);
-                      const hasChildren = !!item.children?.length;
-                      const isActive =
-                        pathname === item.href ||
-                        (hasChildren && item.children?.some((c) => pathname === c.href));
-                      const isHovered = hoveredItem === item.label;
-                      const isComingSoon = item.isComingSoon;
+                      {/* Section Items */}
+                      {filteredItems.map((item) => {
+                        const itemIcon = item.icon;
+                        const isExpanded = expandedMenus.includes(item.label);
+                        const hasChildren = !!item.children?.length;
+                        const isActive =
+                          pathname === item.href ||
+                          (hasChildren && item.children?.some((c) => pathname === c.href));
+                        const isHovered = hoveredItem === item.label;
+                        const isComingSoon = item.isComingSoon;
 
-                      const IconComponent = itemIcon;
+                        const IconComponent = itemIcon;
 
-                      return (
-                        <div
-                          key={item.label}
-                          className="relative"
-                          onMouseEnter={() => setHoveredItem(item.label)}
-                          onMouseLeave={() => setHoveredItem(null)}
-                        >
-                          {/* Row */}
+                        return (
                           <div
-                            onClick={() => (!hasChildren && !isComingSoon) ? undefined : (hasChildren ? toggleMenu(item.label) : undefined)}
-                            className={clsx(
-                              "flex items-center select-none transition-all duration-300 relative group/item",
-                              isCollapsed ? "justify-center px-0 w-12 h-12 mx-auto" : "px-4 py-2.5 gap-3",
-                              "my-0.5 rounded-xl",
-                              isComingSoon ? "opacity-50 cursor-not-allowed grayscale" : "cursor-pointer",
-                              isActive
-                                ? "bg-primary/10 text-primary font-bold scale-[1.01]"
-                                : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.03] hover:text-slate-900 dark:hover:text-slate-200"
-                            )}
+                            key={item.label}
+                            className="relative"
+                            onMouseEnter={() => setHoveredItem(item.label)}
+                            onMouseLeave={() => setHoveredItem(null)}
                           >
-                            {/* Prefix Icon */}
-                            {IconComponent && isCollapsed && (
-                              <div className={clsx(
-                                "flex items-center justify-center shrink-0 transition-all duration-300",
-                                "w-10 h-10",
-                                isActive 
-                                  ? "text-primary" 
-                                  : "text-slate-400 group-hover/item:text-primary dark:group-hover/item:text-primary"
-                              )}>
-                                <IconComponent size={20} strokeWidth={isActive ? 2.5 : 2} />
+                            {/* Row */}
+                            <div
+                              onClick={() => (!hasChildren && !isComingSoon) ? undefined : (hasChildren ? toggleMenu(item.label) : undefined)}
+                              className={clsx(
+                                "flex items-center select-none transition-all duration-300 relative group/item",
+                                isCollapsed ? "justify-center px-0 w-12 h-12 mx-auto" : "px-4 py-2.5 gap-3",
+                                "my-0.5 rounded-xl",
+                                isComingSoon ? "opacity-50 cursor-not-allowed grayscale" : "cursor-pointer",
+                                isActive
+                                  ? "bg-primary/10 text-primary font-bold scale-[1.01]"
+                                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.03] hover:text-slate-900 dark:hover:text-slate-200"
+                              )}
+                            >
+                              {/* Prefix Icon */}
+                              {IconComponent && isCollapsed && (
+                                <div className={clsx(
+                                  "flex items-center justify-center shrink-0 transition-all duration-300",
+                                  "w-10 h-10",
+                                  isActive
+                                    ? "text-primary"
+                                    : "text-slate-400 group-hover/item:text-primary dark:group-hover/item:text-primary"
+                                )}>
+                                  <IconComponent size={20} strokeWidth={isActive ? 2.5 : 2} />
+                                </div>
+                              )}
+
+                              {/* Label (Visible only when expanded) */}
+                              {!isCollapsed && (
+                                <>
+                                  {hasChildren ? (
+                                    <span className="flex items-center gap-3 flex-1 min-w-0">
+                                      <span className="text-[13px] font-semibold flex-1 truncate tracking-tight">{item.label}</span>
+                                    </span>
+                                  ) : (
+                                    isComingSoon ? (
+                                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <span className="text-[13px] font-semibold flex-1 truncate tracking-tight text-slate-400">{item.label}</span>
+                                      </div>
+                                    ) : (
+                                      <Link
+                                        href={item.href}
+                                        className="flex items-center gap-3 flex-1 min-w-0"
+                                        onClick={(e) => { e.stopPropagation(); closeMobile(); }}
+                                      >
+                                        <span className="text-[13px] font-semibold flex-1 truncate tracking-tight">{item.label}</span>
+                                      </Link>
+                                    )
+                                  )}
+
+
+                                  {item.isComingSoon && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0">Soon</span>
+                                  )}
+                                  {item.isHot && !item.isNew && !item.isComingSoon && (
+                                    <span className="badge-hot shrink-0">Hot</span>
+                                  )}
+                                  {hasChildren && (
+                                    <ChevronRight
+                                      size={12}
+                                      strokeWidth={2.5}
+                                      className={clsx(
+                                        "shrink-0 text-slate-400 dark:text-slate-500 group-hover/item:text-primary transition-transform duration-200",
+                                        isExpanded && (isActive ? "rotate-90 text-primary" : "rotate-90")
+                                      )}
+                                    />
+                                  )}
+                                </>
+                              )}
+                            </div>
+
+                            {/* Tooltip (collapsed) */}
+                            {isCollapsed && isHovered && (
+                              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[200] pointer-events-none">
+                                <div className="bg-gray-900 dark:bg-slate-700 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
+                                  {item.label}
+                                  {item.isNew && (
+                                    <span className="ml-1.5 text-primary text-[9px] font-bold">NEW</span>
+                                  )}
+                                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900 dark:border-r-slate-700" />
+                                </div>
                               </div>
                             )}
 
-                            {/* Label (Visible only when expanded) */}
-                            {!isCollapsed && (
-                              <>
-                                {hasChildren ? (
-                                  <span className="flex items-center gap-3 flex-1 min-w-0">
-                                    <span className="text-[13px] font-semibold flex-1 truncate tracking-tight">{item.label}</span>
-                                  </span>
-                                ) : (
-                                  isComingSoon ? (
-                                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                                      <span className="text-[13px] font-semibold flex-1 truncate tracking-tight text-slate-400">{item.label}</span>
-                                    </div>
-                                  ) : (
-                                    <Link
-                                      href={item.href}
-                                      className="flex items-center gap-3 flex-1 min-w-0"
-                                      onClick={(e) => { e.stopPropagation(); closeMobile(); }}
-                                    >
-                                      <span className="text-[13px] font-semibold flex-1 truncate tracking-tight">{item.label}</span>
-                                    </Link>
-                                  )
-                                )}
+                            {/* Submenu */}
+                            {!isCollapsed && hasChildren && isExpanded && (
+                              <div className="pl-11 mt-1 space-y-1 pb-2 relative">
+                                {/* Connector Line */}
+                                <div className="absolute left-[23px] top-0 bottom-4 w-px bg-slate-100 dark:bg-white/5" />
 
-
-                                {item.isComingSoon && (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0">Soon</span>
-                                )}
-                                {item.isHot && !item.isNew && !item.isComingSoon && (
-                                  <span className="badge-hot shrink-0">Hot</span>
-                                )}
-                                {hasChildren && (
-                                  <ChevronRight
-                                    size={12}
-                                    strokeWidth={2.5}
+                                {item.children?.map((child) => (
+                                  <Link
+                                    key={child.href}
+                                    href={child.href}
+                                    onClick={closeMobile}
                                     className={clsx(
-                                      "shrink-0 text-slate-400 dark:text-slate-500 group-hover/item:text-primary transition-transform duration-200",
-                                      isExpanded && (isActive ? "rotate-90 text-primary" : "rotate-90")
+                                      "flex items-center justify-between px-3 py-2 rounded-lg text-[12px] font-medium transition-all relative",
+                                      pathname === child.href
+                                        ? "text-primary dark:text-primary-foreground bg-primary/10 dark:bg-primary/20 font-semibold"
+                                        : "text-slate-500 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 hover:bg-slate-50/50 dark:hover:bg-white/[0.02]"
                                     )}
-                                  />
-                                )}
-                              </>
+                                  >
+                                    <span className="truncate">{child.label}</span>
+
+                                  </Link>
+                                ))}
+                              </div>
                             )}
                           </div>
-
-                          {/* Tooltip (collapsed) */}
-                          {isCollapsed && isHovered && (
-                            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[200] pointer-events-none">
-                              <div className="bg-gray-900 dark:bg-slate-700 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
-                                {item.label}
-                                {item.isNew && (
-                                  <span className="ml-1.5 text-primary text-[9px] font-bold">NEW</span>
-                                )}
-                                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900 dark:border-r-slate-700" />
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Submenu */}
-                          {!isCollapsed && hasChildren && isExpanded && (
-                            <div className="pl-11 mt-1 space-y-1 pb-2 relative">
-                              {/* Connector Line */}
-                              <div className="absolute left-[23px] top-0 bottom-4 w-px bg-slate-100 dark:bg-white/5" />
-                              
-                              {item.children?.map((child) => (
-                                <Link
-                                  key={child.href}
-                                  href={child.href}
-                                  onClick={closeMobile}
-                                  className={clsx(
-                                    "flex items-center justify-between px-3 py-2 rounded-lg text-[12px] font-medium transition-all relative",
-                                    pathname === child.href
-                                      ? "text-primary dark:text-primary-foreground bg-primary/10 dark:bg-primary/20 font-semibold"
-                                      : "text-slate-500 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 hover:bg-slate-50/50 dark:hover:bg-white/[0.02]"
-                                  )}
-                                >
-                                  <span className="truncate">{child.label}</span>
-
-                                </Link>
-                              ))}
-                            </div>
-                          )}
-                        </div>
                         );
                       })}
                     </div>
