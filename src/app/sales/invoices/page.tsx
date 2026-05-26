@@ -12,6 +12,8 @@ import { useAuth } from "@/context/AuthContext";
 import { customersApi, productsFullApi, draftsApi } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import api from "@/lib/api/base";
+import AddPartyModal from "@/components/modals/AddPartyModal";
+import AddInventoryProductForm from "@/components/modules/inventory/AddInventoryProductForm";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -85,6 +87,10 @@ interface LineItem {
   discountPct: number;
   taxPct: number;
   taxLabel?: string;
+  baseUnit?: any;
+  conversions?: any[];
+  availableStock?: number;
+  basePrice: number;
 }
 
 function makeItem(): LineItem {
@@ -95,6 +101,7 @@ function makeItem(): LineItem {
     qty: 1,
     unit: "NONE",
     rate: 0,
+    basePrice: 0,
     discountPct: 0,
     taxPct: 0,
     taxLabel: "NONE",
@@ -243,6 +250,7 @@ export default function SalesInvoicesPage() {
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
   const [customerPhone, setCustomerPhone] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split("T")[0]);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
   const [stateOfSupply, setStateOfSupply] = useState("");
   const [items, setItems] = useState<LineItem[]>([makeItem(), makeItem()]);
   const [priceMode, setPriceMode] = useState<"without_tax" | "with_tax">("without_tax");
@@ -443,6 +451,7 @@ export default function SalesInvoicesPage() {
     setCustomerSearch("");
     setCustomerPhone("");
     setInvoiceDate(new Date().toISOString().split("T")[0]);
+    setInvoiceNumber("");
     setStateOfSupply("");
     setItems([makeItem(), makeItem()]);
     setPriceMode("without_tax");
@@ -462,6 +471,7 @@ export default function SalesInvoicesPage() {
     setCustomerSearch(raw.customerSearch || "");
     setCustomerPhone(raw.customerPhone || "");
     setInvoiceDate(raw.invoiceDate || new Date().toISOString().split("T")[0]);
+    setInvoiceNumber(raw.invoiceNumber || "");
     setStateOfSupply(raw.stateOfSupply || "");
     setItems(raw.items && raw.items.length > 0 ? raw.items : [makeItem(), makeItem()]);
     setPriceMode(raw.priceMode || "without_tax");
@@ -476,7 +486,7 @@ export default function SalesInvoicesPage() {
   const selectCustomer = (c: any) => {
     setSelectedCustomer(c);
     setCustomerSearch(c.name);
-    setCustomerPhone(c.phone || "");
+    setCustomerPhone(c.contact || c.phone || "");
     setShowCustomerDrop(false);
   };
 
@@ -486,17 +496,40 @@ export default function SalesInvoicesPage() {
         ...it,
         productId: p.id,
         itemSearch: p.name,
+        basePrice: p.basePrice || p.price || 0,
         rate: p.basePrice || p.price || 0,
         unit: p.unit || "NONE",
         taxPct: p.taxPercent || 0,
         taxLabel: TAX_OPTIONS.find(o => o.value === (p.taxPercent || 0))?.label || "NONE",
+        baseUnit: p.baseUnit,
+        conversions: p.conversions || [],
+        availableStock: p.currentStock || 0,
       } : it
     ));
     setOpenItemDrop(null);
   };
 
   const updateItem = (idx: number, field: keyof LineItem, value: any) => {
-    setItems(prev => prev.map((it, i) => i === idx ? { ...it, [field]: value } : it));
+    setItems(prev => prev.map((it, i) => {
+      if (i !== idx) return it;
+      const updated = { ...it, [field]: value };
+      
+      if (field === "unit") {
+        const u = String(value).toUpperCase();
+        const conv = it.conversions?.find((c: any) => 
+          c.unitId === value || 
+          c.unit?.code === value || 
+          c.unit?.name?.toUpperCase() === u || 
+          c.unit?.shortName?.toUpperCase() === u
+        );
+        if (conv) {
+          updated.rate = Number((updated.basePrice * conv.multiplier).toFixed(2));
+        } else {
+          updated.rate = updated.basePrice;
+        }
+      }
+      return updated;
+    }));
   };
 
   const addRow = () => setItems(prev => [...prev, makeItem()]);
@@ -510,6 +543,26 @@ export default function SalesInvoicesPage() {
     const validItems = items.filter(i => i.productId && i.qty > 0 && i.rate > 0);
     if (validItems.length === 0 && !isDraft) { showToast("Add at least one item with price", "error"); return; }
     
+    // Unit conversion and stock validation check
+    if (!isDraft) {
+      for (const i of validItems) {
+        let req = i.qty;
+        const u = String(i.unit).toUpperCase();
+        let conv = i.conversions?.find((c: any) => 
+          c.unitId === i.unit || 
+          c.unit?.code === i.unit || 
+          c.unit?.name?.toUpperCase() === u || 
+          c.unit?.shortName?.toUpperCase() === u
+        );
+        if (conv) req = i.qty * conv.multiplier;
+        
+        if (req > (i.availableStock || 0)) {
+          showToast(`Insufficient stock for ${i.itemSearch}. Required: ${req}, Available: ${i.availableStock || 0}`, "error");
+          return;
+        }
+      }
+    }
+
     // Draft with NO items and NO customer is basically empty, just close it
     if (isDraft && !selectedCustomer && validItems.length === 0) {
        setView("list");
@@ -523,6 +576,7 @@ export default function SalesInvoicesPage() {
         customerSearch,
         customerPhone,
         invoiceDate,
+        invoiceNumber,
         stateOfSupply,
         paymentType,
         items,
@@ -557,6 +611,7 @@ export default function SalesInvoicesPage() {
       const receivedAmount = (paymentType === "CASH") ? finalTotal : 0;
       const payload: any = {
         invoiceDate,
+        invoiceNumber: invoiceNumber.trim() || undefined,
         stateOfSupply: stateOfSupply || undefined,
         paymentType,
         status: "SENT",
@@ -657,7 +712,8 @@ export default function SalesInvoicesPage() {
   const filteredCustomers = customers.filter(c =>
     !customerSearch ||
     c.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-    c.phone?.includes(customerSearch)
+    (c.contact && c.contact.includes(customerSearch)) ||
+    (c.phone && c.phone.includes(customerSearch))
   );
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -675,7 +731,7 @@ export default function SalesInvoicesPage() {
             </button>
             <h2 className="text-base font-semibold text-gray-800">New Sale Invoice</h2>
           </div>
-          <span className="text-xs text-gray-400">Invoice No: <span className="text-orange-500 font-semibold">Auto</span></span>
+          <span className="text-xs text-gray-400">Invoice No: <span className="text-orange-500 font-semibold">{invoiceNumber || "Auto"}</span></span>
         </div>
 
         {/* Scrollable body */}
@@ -765,7 +821,13 @@ export default function SalesInvoicesPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between py-1">
                   <span className="text-xs font-medium text-gray-500">Invoice Number</span>
-                  <span className="text-sm font-semibold text-gray-700">Auto</span>
+                  <input
+                    type="text"
+                    placeholder="Auto"
+                    value={invoiceNumber}
+                    onChange={(e) => setInvoiceNumber(e.target.value)}
+                    className="text-sm font-semibold text-gray-700 bg-transparent border-b border-dashed border-gray-300 outline-none w-24 text-right focus:border-orange-500"
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-gray-500">Invoice Date</span>
@@ -794,26 +856,6 @@ export default function SalesInvoicesPage() {
                     <option value="">Select</option>
                     {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-gray-500">Payment Type</span>
-                  <div className="flex gap-2">
-                    {(["CASH", "CREDIT"] as const).map(pt => (
-                      <button
-                        key={pt}
-                        onClick={() => setPaymentType(pt)}
-                        className={clsx(
-                          "px-3 py-1 rounded-lg text-xs font-semibold border transition-colors",
-                          paymentType === pt
-                            ? "bg-orange-500 text-white border-orange-500"
-                            : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
-                        )}
-                      >
-                        {pt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -882,6 +924,34 @@ export default function SalesInvoicesPage() {
                               setItemDropRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: 300 });
                             }}
                           />
+                          
+                          {item.productId && (
+                            <div className="text-[10px] text-gray-500 mt-1 leading-tight">
+                              {(() => {
+                                let req = item.qty;
+                                const u = String(item.unit).toUpperCase();
+                                let conv = item.conversions?.find((c: any) => 
+                                  c.unitId === item.unit || 
+                                  c.unit?.code === item.unit || 
+                                  c.unit?.name?.toUpperCase() === u || 
+                                  c.unit?.shortName?.toUpperCase() === u
+                                );
+                                if (conv) req = item.qty * conv.multiplier;
+                                
+                                const baseName = item.baseUnit?.shortName || item.baseUnit?.name || "Units";
+                                const isInsufficient = req > (item.availableStock || 0);
+                                
+                                return (
+                                  <>
+                                    Available: {item.availableStock || 0} {baseName}
+                                    {req > 0 && ` | Req: ${req} ${baseName}`}
+                                    {isInsufficient && <span className="text-red-500 font-semibold block mt-0.5">❌ Insufficient Stock</span>}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          )}
+
                           {openItemDrop === item.id && itemDropRect && (
                             <div
                               className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden flex flex-col"
@@ -889,7 +959,11 @@ export default function SalesInvoicesPage() {
                             >
                               <button
                                 className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100 font-semibold text-left transition-colors"
-                                onMouseDown={(e) => { e.preventDefault(); router.push("/inventory/stock/add"); }}
+                                onMouseDown={(e) => { 
+                                  e.preventDefault(); 
+                                  setAddingItemIdx(idx);
+                                  setShowAddItem(true); 
+                                }}
                               >
                                 <Plus size={15} /> Add Item
                               </button>
@@ -1032,61 +1106,69 @@ export default function SalesInvoicesPage() {
           </div>
 
           {/* Notes + Summary */}
-          <div className="flex gap-4 items-start pb-2">
-            {/* Notes */}
-            <div className="flex-1 space-y-2">
+          <div className="flex justify-between items-start pt-4 px-4 pb-8 bg-gray-50/30">
+            {/* Left: Terms and Conditions */}
+            <div className="w-64">
               {!showTerms ? (
-                <button onClick={() => setShowTerms(true)} className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 transition-colors">
-                  <AlignLeft size={13} /> Add Terms &amp; Conditions
+                <button onClick={() => setShowTerms(true)} className="flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-gray-600 border border-gray-200 bg-gray-50 hover:bg-gray-100 rounded px-4 py-2 transition-colors uppercase w-full justify-center shadow-sm">
+                  <AlignLeft size={14} /> ADD TERMS AND CONDITIONS
                 </button>
               ) : (
-                <textarea value={termsText} onChange={e => setTermsText(e.target.value)} rows={3} placeholder="Terms and conditions..." className="w-full text-xs text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 outline-none resize-none" />
+                <textarea value={termsText} onChange={e => setTermsText(e.target.value)} rows={3} placeholder="Terms and conditions..." className="w-full text-xs text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 outline-none resize-none shadow-sm" />
               )}
-              {!showDesc ? (
-                <button onClick={() => setShowDesc(true)} className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 transition-colors">
-                  <FileText size={13} /> Add Description
+            </div>
+
+            {/* Middle: Payment Type and Attachments */}
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col items-start w-32 relative mt-2">
+                <span className="text-[10px] text-gray-500 absolute -top-2 left-2 bg-gray-50 px-1 z-10">Payment Type</span>
+                <select
+                  value={paymentType}
+                  onChange={e => setPaymentType(e.target.value as any)}
+                  className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs outline-none bg-transparent appearance-none"
+                >
+                  <option value="CASH">Cash</option>
+                  <option value="CREDIT">Credit</option>
+                </select>
+                <ChevronDown size={12} className="absolute right-2 top-2 text-gray-400 pointer-events-none" />
+                <button className="text-[10px] text-blue-500 hover:text-blue-600 font-bold mt-1.5 self-start">+ Add Payment type</button>
+              </div>
+
+              <div className="flex flex-col gap-2 w-40">
+                {!showDesc ? (
+                  <button onClick={() => setShowDesc(true)} className="flex items-center gap-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 border border-gray-200 bg-gray-50 hover:bg-gray-100 rounded px-3 py-1.5 transition-colors uppercase justify-center w-full shadow-sm">
+                    <FileText size={12} /> ADD DESCRIPTION
+                  </button>
+                ) : (
+                  <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Description..." className="w-full text-xs text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 outline-none resize-none shadow-sm" />
+                )}
+                <button className="flex items-center gap-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 border border-gray-200 bg-gray-50 hover:bg-gray-100 rounded px-3 py-1.5 transition-colors uppercase justify-center w-full shadow-sm">
+                  <ImageIcon size={12} /> ADD IMAGE
                 </button>
-              ) : (
-                <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Description..." className="w-full text-xs text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 outline-none resize-none" />
-              )}
-              <div className="flex gap-2">
-                <button className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 transition-colors">
-                  <ImageIcon size={13} /> Add Image
-                </button>
-                <button className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 transition-colors">
-                  <FileText size={13} /> Add Document
+                <button className="flex items-center gap-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 border border-gray-200 bg-gray-50 hover:bg-gray-100 rounded px-3 py-1.5 transition-colors uppercase justify-center w-full shadow-sm">
+                  <FileText size={12} /> ADD DOCUMENT
                 </button>
               </div>
             </div>
 
-            {/* Summary */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 w-64 shrink-0 space-y-2">
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>Subtotal</span>
-                <span>₹ {totalAmount.toFixed(2)}</span>
-              </div>
-              {totalDisc > 0 && (
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>Discount</span>
-                  <span className="text-red-500">- ₹ {totalDisc.toFixed(2)}</span>
-                </div>
-              )}
-              {totalTax > 0 && (
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>Tax</span>
-                  <span>+ ₹ {totalTax.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center text-sm text-gray-500 border-t border-gray-100 pt-2">
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={roundOffEnabled} onChange={e => setRoundOffEnabled(e.target.checked)} className="w-3.5 h-3.5 accent-orange-500" />
-                  <span className="text-xs">Round Off</span>
+            {/* Right: Summary */}
+            <div className="w-72 flex flex-col items-end gap-2 text-xs font-semibold text-gray-700">
+              <div className="flex items-center gap-3 w-full justify-end">
+                <label className="flex items-center gap-1.5 cursor-pointer mr-2">
+                  <input type="checkbox" checked={roundOffEnabled} onChange={e => setRoundOffEnabled(e.target.checked)} className="w-3.5 h-3.5 accent-blue-500" />
+                  <span className="text-[11px] text-gray-500">Round Off</span>
                 </label>
-                <span className="text-xs">{roundOff >= 0 ? "+" : ""}{roundOff.toFixed(2)}</span>
+                <input type="text" readOnly value={roundOff >= 0 ? roundOff.toFixed(2) : roundOff.toFixed(2)} className="w-16 border border-gray-200 rounded px-2 py-1 bg-white text-right text-[11px]" />
+                <span className="w-12 text-right text-gray-600">Total</span>
+                <input type="text" readOnly value={finalTotal.toFixed(2)} className="w-24 border border-gray-200 bg-gray-50 rounded px-2 py-1 text-right font-bold text-gray-800 shadow-inner" />
               </div>
-              <div className="flex justify-between items-center border-t border-gray-200 pt-2">
-                <span className="text-sm font-semibold text-gray-800">Total</span>
-                <span className="text-lg font-bold text-orange-500">₹ {finalTotal.toFixed(2)}</span>
+              <div className="flex items-center gap-3 w-full justify-end">
+                <span className="w-16 text-right text-gray-600">Received</span>
+                <input type="number" placeholder="0" className="w-24 border border-gray-200 rounded px-2 py-1 bg-white text-right outline-none focus:border-blue-400 shadow-sm" />
+              </div>
+              <div className="flex items-center gap-3 w-full justify-end pr-[104px] mt-1">
+                <span className="w-16 text-right text-gray-800 font-bold">Balance</span>
+                <span className="w-auto text-right font-bold text-gray-800">{finalTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -1153,251 +1235,49 @@ export default function SalesInvoicesPage() {
           </button>
         </div>
       {/* ── Add Party Modal ── */}
-      {showAddParty && (
-        <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-[650px] h-[530px] overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Header */}
-            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-[#f8fafc]">
-              <h2 className="text-[17px] font-bold text-[#1e3a8a]">Add Party</h2>
-              <button
-                onClick={() => {
-                  setShowAddParty(false);
-                  setNewParty({ name: "", phone: "", email: "", gstin: "", gstType: "Unregistered/Consumer", state: "", city: "", pincode: "", billingAddress: "", shippingAddress: "", openingBalance: "", creditLimit: "" });
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-5 overflow-y-auto flex-1">
-              {/* Top Inputs */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                  <div className="relative">
-                    <label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-semibold text-[#f58220]">Party Name *</label>
-                    <input
-                      type="text"
-                      value={newParty.name}
-                      onChange={e => setNewParty(p => ({ ...p, name: e.target.value }))}
-                      className="w-full border-2 border-blue-500 rounded-lg px-3 py-2 text-sm outline-none bg-white"
-                      autoFocus
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="GSTIN"
-                      value={newParty.gstin}
-                      onChange={e => {
-                        const val = e.target.value.toUpperCase().trim();
-                        setNewParty(p => ({ ...p, gstin: val }));
-                        if (val.length === 15) fetchGstDetails(val);
-                      }}
-                      className="w-full pl-3 pr-16 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:border-gray-400 bg-white placeholder-gray-400 font-mono"
-                    />
-                    {newParty.gstin.length === 15 && !fetchingGst && (
-                      <button
-                        type="button"
-                        onClick={() => fetchGstDetails(newParty.gstin)}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200 hover:bg-orange-100 transition-colors"
-                      >
-                        FETCH
-                      </button>
-                    )}
-                    {fetchingGst && (
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-orange-600 animate-pulse">
-                        Fetching...
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <input
-                    type="tel"
-                    placeholder="Phone Number"
-                    value={newParty.phone}
-                    onChange={e => setNewParty(p => ({ ...p, phone: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-gray-400 bg-white placeholder-gray-400"
-                  />
-                </div>
-              </div>
-
-              {/* Tabs */}
-              <div className="flex border-b border-gray-200 mb-4">
-                <button
-                  onClick={() => setPartyTab("GST")}
-                  className={clsx(
-                    "flex-1 text-center py-2 text-sm font-bold border-b-2 transition-colors",
-                    partyTab === "GST" ? "border-[#f58220] text-[#f58220]" : "border-transparent text-gray-400 hover:text-gray-600"
-                  )}
-                >
-                  GST &amp; Address
-                </button>
-                <button
-                  onClick={() => setPartyTab("CREDIT")}
-                  className={clsx(
-                    "flex-1 text-center py-2 text-sm font-bold border-b-2 transition-colors",
-                    partyTab === "CREDIT" ? "border-[#f58220] text-[#f58220]" : "border-transparent text-gray-400 hover:text-gray-600"
-                  )}
-                >
-                  Credit &amp; Balance
-                </button>
-              </div>
-
-              {/* Tab Content */}
-              {partyTab === "GST" && (
-                <div className="flex gap-6">
-                  <div className="flex-1 space-y-4">
-                    <div className="relative">
-                      <label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-semibold text-[#f58220]">GST Type</label>
-                      <select
-                        value={newParty.gstType}
-                        onChange={e => setNewParty(p => ({ ...p, gstType: e.target.value }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-gray-400 bg-white appearance-none"
-                      >
-                        <option>Unregistered/Consumer</option>
-                        <option>Registered Regular</option>
-                        <option>Registered Composition</option>
-                      </select>
-                    </div>
-                    <select
-                      value={newParty.state}
-                      onChange={e => setNewParty(p => ({ ...p, state: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-gray-400 bg-white"
-                    >
-                      <option value="">State</option>
-                      {INDIAN_STATES.map(st => <option key={st} value={st}>{st}</option>)}
-                    </select>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="City"
-                        value={newParty.city}
-                        onChange={e => setNewParty(p => ({ ...p, city: e.target.value }))}
-                        className="w-1/2 border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-gray-400 bg-white placeholder-gray-400"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Pincode"
-                        value={newParty.pincode}
-                        onChange={e => setNewParty(p => ({ ...p, pincode: e.target.value }))}
-                        className="w-1/2 border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-gray-400 bg-white placeholder-gray-400"
-                      />
-                    </div>
-                    <input
-                      type="email"
-                      placeholder="Email ID"
-                      value={newParty.email}
-                      onChange={e => setNewParty(p => ({ ...p, email: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-gray-400 bg-white placeholder-gray-400"
-                    />
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <label className="text-[11px] font-bold text-gray-700">Billing Address</label>
-                    <textarea
-                      placeholder="Billing Address"
-                      value={newParty.billingAddress}
-                      onChange={e => setNewParty(p => ({ ...p, billingAddress: e.target.value }))}
-                      className="w-full h-36 border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-gray-400 bg-white placeholder-gray-400 resize-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {partyTab === "CREDIT" && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs text-gray-500 block mb-1">Opening Balance</label>
-                    <input
-                      type="number"
-                      placeholder="₹ 0.00"
-                      value={newParty.openingBalance}
-                      onChange={e => setNewParty(p => ({ ...p, openingBalance: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 block mb-1">Credit Limit</label>
-                    <input
-                      type="number"
-                      placeholder="₹ 0.00"
-                      value={newParty.creditLimit}
-                      onChange={e => setNewParty(p => ({ ...p, creditLimit: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Footer Buttons */}
-            <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-end gap-3 bg-white">
-              <button
-                disabled={!newParty.name.trim() || savingParty}
-                className="px-8 py-2 bg-[#f58220] text-white rounded-lg font-bold text-sm hover:bg-[#e8740e] transition-colors disabled:opacity-50"
-                onClick={async () => {
-                  setSavingParty(true);
-                  try {
-                    const res = await customersApi.create({
-                      name: newParty.name.trim(),
-                      phone: newParty.phone.trim() || undefined,
-                      email: newParty.email.trim() || undefined,
-                      // Future-proofing payload
-                      gstin: newParty.gstin.trim() || undefined,
-                      gstType: newParty.gstType,
-                      billingAddress: newParty.billingAddress.trim() || undefined,
-                      state: newParty.state || undefined,
-                      city: newParty.city || undefined,
-                      pinCode: newParty.pincode || undefined,
-                      openingBalance: Number(newParty.openingBalance) || 0,
-                      creditLimit: Number(newParty.creditLimit) || 0,
-                    });
-                    const createdParty = (res as any).data;
-                    showToast("Party created successfully", "success");
-                    setCustomers(prev => [...prev, createdParty].sort((a, b) => a.name.localeCompare(b.name)));
-                    selectCustomer(createdParty);
-                    setShowAddParty(false);
-                    setNewParty({ name: "", phone: "", email: "", gstin: "", gstType: "Unregistered/Consumer", state: "", city: "", pincode: "", billingAddress: "", shippingAddress: "", openingBalance: "", creditLimit: "" });
-                  } catch (e: any) {
-                    showToast(e?.response?.data?.error || "Failed to create party", "error");
-                  } finally {
-                    setSavingParty(false);
-                  }
-                }}
-              >
-                {savingParty ? "Saving..." : "Save Party"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddPartyModal
+        isOpen={showAddParty}
+        onClose={() => {
+          setShowAddParty(false);
+          setNewParty({ name: "", phone: "", email: "", gstin: "", gstType: "Unregistered/Consumer", state: "", city: "", pincode: "", billingAddress: "", shippingAddress: "", openingBalance: "", creditLimit: "" });
+        }}
+        partyType="customer"
+        title="ADD PARTY"
+        initialData={newParty.name || newParty.phone ? newParty : undefined}
+        onSave={async (data) => {
+          try {
+            const res = await customersApi.create({ ...data, phone: data.contact });
+            const createdParty = (res as any).data;
+            showToast("Party created successfully", "success");
+            setCustomers(prev => [...prev, createdParty].sort((a, b) => a.name.localeCompare(b.name)));
+            selectCustomer(createdParty);
+            setShowAddParty(false);
+            setNewParty({ name: "", phone: "", email: "", gstin: "", gstType: "Unregistered/Consumer", state: "", city: "", pincode: "", billingAddress: "", shippingAddress: "", openingBalance: "", creditLimit: "" });
+          } catch (e: any) {
+            showToast(e?.response?.data?.error || "Failed to create party", "error");
+            throw e;
+          }
+        }}
+      />
 
       {/* Add Item Modal */}
       {showAddItem && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50">
-          <div className="bg-white w-[400px] rounded-xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-bold text-gray-800">Add Item</h3>
-              <button onClick={() => setShowAddItem(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
-            </div>
-            <div className="p-5 space-y-4">
-              <input placeholder="Item Name *" value={newItem.name} onChange={e => setNewItem(p => ({ ...p, name: e.target.value }))} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none" />
-              <input placeholder="Item SKU" value={newItem.sku} onChange={e => setNewItem(p => ({ ...p, sku: e.target.value }))} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none" />
-              <div className="flex gap-4">
-                <input type="number" placeholder="Sales Price *" value={newItem.basePrice} onChange={e => setNewItem(p => ({ ...p, basePrice: e.target.value }))} className="w-1/2 border border-gray-300 rounded px-3 py-2 text-sm outline-none" />
-                <select value={newItem.taxPercent} onChange={e => setNewItem(p => ({ ...p, taxPercent: Number(e.target.value) }))} className="w-1/2 border border-gray-300 rounded px-3 py-2 text-sm outline-none bg-white">
-                  {TAX_OPTIONS.map((t, i) => <option key={i} value={t.value}>{t.label}</option>)}
-                </select>
-              </div>
-              <textarea placeholder="Description" value={newItem.description} onChange={e => setNewItem(p => ({ ...p, description: e.target.value }))} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none resize-none h-20" />
-            </div>
-            <div className="px-5 py-3 border-t border-gray-100 flex justify-end gap-3">
-              <button disabled={savingItem} onClick={handleSaveItem} className="px-6 py-2 bg-[#f58220] text-white rounded font-bold text-sm hover:bg-[#e8740e] transition-colors disabled:opacity-50">Save Item</button>
-            </div>
-          </div>
+        <div className="fixed inset-0 z-[999] bg-white overflow-y-auto w-full h-full">
+          <AddInventoryProductForm
+            isModal={true}
+            onCancel={() => {
+              setShowAddItem(false);
+              setAddingItemIdx(null);
+            }}
+            onSuccess={(createdProduct) => {
+              setShowAddItem(false);
+              setProducts((prev) => [...prev, createdProduct].sort((a, b) => a.name.localeCompare(b.name)));
+              if (addingItemIdx !== null) {
+                selectProduct(addingItemIdx, createdProduct);
+              }
+              setAddingItemIdx(null);
+            }}
+          />
         </div>
       )}
 
