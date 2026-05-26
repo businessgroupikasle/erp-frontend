@@ -39,7 +39,8 @@ const getEmptyForm = (partyType?: 'vendor' | 'customer') => ({
   customCreditLimit: "",
 });
 
-export default function AddPartyModal({ isOpen, onClose, onSave, initialData, title = "ADD VENDOR", partyType = "vendor" }: AddPartyModalProps) {
+export default function AddPartyModal({ isOpen, onClose, onSave, initialData, title, partyType = "vendor" }: AddPartyModalProps) {
+  const displayTitle = title || (partyType === 'customer' ? 'ADD PARTY' : 'ADD VENDOR');
   const [form, setForm] = useState(getEmptyForm(partyType));
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"GST" | "CREDIT">("GST");
@@ -97,6 +98,8 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
         setForm({ 
           ...getEmptyForm(partyType), 
           ...initialData,
+          name: initialData.name || "",
+          contact: initialData.contact || initialData.phone || "",
           billingAddress: initialData.address || initialData.billingAddress || "",
           pincode: initialData.pinCode || initialData.pincode || "",
           openingBalance: Math.abs(bal) || "",
@@ -158,7 +161,7 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
       >
         {/* Header */}
         <div className="px-6 py-4 flex items-center justify-between shrink-0 border-b border-gray-200">
-          <h2 className="text-base font-semibold text-gray-800">{title}</h2>
+          <h2 className="text-base font-semibold text-gray-800">{displayTitle}</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
             <X size={20} />
           </button>
@@ -169,7 +172,7 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
           {/* Top Always-Visible Fields */}
           <div className="grid grid-cols-3 gap-6 mb-6">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Vendor Name *</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">{partyType === 'customer' ? 'Party Name *' : 'Vendor Name *'}</label>
               <input 
                 placeholder="Enter name..." 
                 value={form.name} 

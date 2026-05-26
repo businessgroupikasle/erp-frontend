@@ -20,6 +20,7 @@ export default function PartiesPage() {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -308,7 +309,7 @@ export default function PartiesPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-bold text-slate-800 tracking-tight">{selectedCustomer.name}</h2>
-                  <button className="text-orange-500 hover:text-orange-600 transition-colors">
+                  <button onClick={() => setIsEditModalOpen(true)} className="text-orange-500 hover:text-orange-600 transition-colors">
                     <Edit3 size={16} />
                   </button>
                 </div>
@@ -599,7 +600,7 @@ export default function PartiesPage() {
         onClose={() => setIsAddModalOpen(false)} 
         onSave={async (data) => {
           try {
-            await customersApi.create(data);
+            await customersApi.create({ ...data, phone: data.contact });
             toast.success("Party added successfully!");
             setIsAddModalOpen(false);
             fetchCustomers();
@@ -609,6 +610,26 @@ export default function PartiesPage() {
           }
         }} 
         title="ADD PARTY"
+        partyType="customer"
+      />
+
+      <AddPartyModal 
+        isOpen={isEditModalOpen} 
+        onClose={() => setIsEditModalOpen(false)} 
+        initialData={selectedCustomerDetail}
+        onSave={async (data) => {
+          try {
+            if (!selectedCustomerId) return;
+            await customersApi.update(selectedCustomerId, { ...data, phone: data.contact });
+            toast.success("Party updated successfully!");
+            setIsEditModalOpen(false);
+            fetchCustomers();
+          } catch (error: any) {
+            toast.error(error.response?.data?.error || "Failed to update party");
+            throw error;
+          }
+        }} 
+        title="EDIT PARTY"
         partyType="customer"
       />
 

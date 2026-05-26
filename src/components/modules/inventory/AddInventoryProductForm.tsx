@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   ArrowLeft, Save, X,
   ChevronDown,
@@ -18,15 +18,19 @@ import { useAuth } from "@/context/AuthContext";
 import Fuse from "fuse.js";
 import { toast } from "react-hot-toast";
 
-function EditItemForm() {
+interface AddInventoryProductFormProps {
+  onSuccess?: (product: any) => void;
+  onCancel?: () => void;
+  isModal?: boolean;
+}
+
+export default function AddInventoryProductForm({ onSuccess, onCancel, isModal }: AddInventoryProductFormProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const id = searchParams.get("id");
-
+  const returnTo = searchParams.get("returnTo");
   const { user } = useAuth();
   const [franchises, setFranchises] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -188,97 +192,26 @@ function EditItemForm() {
     return match ? match[0].toUpperCase() : primaryUnit.toUpperCase();
   };
 
-  // Preload stock item details on mount
+  // Fetch initial dependencies
   useEffect(() => {
-    if (!id) {
-      setError("No Item ID provided.");
-      setLoading(false);
-      return;
-    }
-
     const fetchData = async () => {
       try {
-        const [matRes, vendRes, fRes, wRes] = await Promise.all([
-          inventoryApi.getItem(id as string),
-          vendorsApi.getAll().catch(() => ({ data: [] })),
+        const [fRes, vRes, wRes] = await Promise.all([
           franchiseApi.getAll().catch(() => ({ data: [] })),
+          vendorsApi.getAll().catch(() => ({ data: [] })),
           inventoryApi.getWarehouses().catch(() => ({ data: [] }))
         ]);
-
-        const m = matRes.data;
-        setVendors(vendRes.data || []);
         setFranchises((fRes.data || []).filter((f: any) =>
           !f.name.toUpperCase().includes("HEADQUARTERS") && f.id !== "hq-001"
         ));
+        setVendors(vRes.data || []);
         setWarehouses(wRes.data || []);
-
-        // Hydrate product state details
-        setName(m.name || "");
-        setItemCode(m.sku || "");
-        setHsnCode(m.hsnCode || "");
-        setCategory(m.category || "RAW_MATERIAL");
-        setPrimaryUnit(m.unit || "kg");
-        setSecondaryUnit(m.secondaryUnit || "box");
-        setConversionRatio(m.conversionRatio || 10);
-        setGstRate(m.gstRate !== undefined && m.gstRate !== null ? m.gstRate : 18);
-        setDiscountType(m.discountType || "PERCENT");
-        setDiscountValue(m.discountValue || 0);
-        
-        let initialSize = "1KG";
-        if (m.sku) {
-           const parts = m.sku.split('-');
-           if (parts.length >= 2) initialSize = parts[parts.length - 1];
-        }
-        setSize(initialSize);
-
-        if (initialSize) {
-          const matchNum = initialSize.match(/^\d+(\.\d+)?/);
-          const matchUnit = initialSize.match(/[A-Z]+$/i);
-          if (matchNum) setCustomNumber(matchNum[0]);
-          if (matchUnit) setCustomUnit(matchUnit[0].toUpperCase());
-        }
-
-        const currentGst = m.gstRate || 18;
-        const factor = 1 + currentGst / 100;
-
-        setPrices({
-          purchasePrice: m.costPrice || 0,
-          purchasePriceWithTax: Math.round((m.costPrice || 0) * factor * 100) / 100,
-          franchisePrice: m.franchisePrice || m.basePrice || 0,
-          franchisePriceWithTax: Math.round((m.franchisePrice || m.basePrice || 0) * factor * 100) / 100,
-          dealerPrice: m.dealerPrice || 0,
-          dealerPriceWithTax: Math.round((m.dealerPrice || 0) * factor * 100) / 100,
-          customerPrice: m.customerPrice || m.basePrice || 0,
-          customerPriceWithTax: Math.round((m.customerPrice || m.basePrice || 0) * factor * 100) / 100,
-          customModeName: m.customModeName || "Amazon",
-          customModePrice: m.customModePrice || 0,
-          customModePriceWithTax: Math.round((m.customModePrice || 0) * factor * 100) / 100,
-        });
-
-        setCustomChannels([
-          {
-            id: "1",
-            name: m.customModeName || "Amazon",
-            price: m.customModePrice || 0,
-            priceWithTax: Math.round((m.customModePrice || 0) * factor * 100) / 100
-          }
-        ]);
-
-        setOpeningStock(m.currentStock || 0);
-        setOpeningDate(m.openingStockDate ? m.openingStockDate.split("T")[0] : new Date().toISOString().split("T")[0]);
-        setOpeningPurchasePrice(m.openingPurchasePrice || m.costPrice || 0);
-        setOpeningPurchasePriceWithTax(Math.round((m.openingPurchasePrice || m.costPrice || 0) * factor * 100) / 100);
-        setMinimumStock(m.minimumStock ?? "5");
-        setItemLocation(m.binLocation || "");
-
-      } catch (e: any) {
-        setError(`Failed to fetch details: ${e.message}`);
-      } finally {
-        setLoading(false);
+      } catch (e) {
+        console.error("Failed to fetch dependencies", e);
       }
     };
     fetchData();
-  }, [id]);
+  }, []);
 
   // Sync primary unit from weight variant unit for raw materials
   useEffect(() => {
@@ -396,8 +329,13 @@ function EditItemForm() {
       return;
     }
     if (category === "FINISHED_GOOD" && (!prices.customerPrice || prices.customerPrice <= 0)) {
-      toast.error("Please configure a valid Customer Retail selling price before updating the item master.");
-      setError("Please configure a valid Customer Retail selling price before updating the item master.");
+      toast.error("Please configure a valid Customer Retail selling price before launching the item master.");
+      setError("Please configure a valid Customer Retail selling price before launching the item master.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    if (Number(openingStock) > 0 && !itemLocation) {
+      setError("Please select a Warehouse for the opening stock.");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -420,6 +358,8 @@ function EditItemForm() {
       hsnCode,
       gstRate,
       minimumStock: Number(minimumStock) || 0,
+      initialStock: Number(openingStock) || 0,
+      franchiseId: "hq-001",
       costPrice: prices.purchasePrice,
       basePrice: discountValue > 0 ? discountedSellingPrice : prices.customerPrice,
       secondaryUnit,
@@ -434,29 +374,30 @@ function EditItemForm() {
       openingStockDate: openingDate,
       openingPurchasePrice: openingPurchasePrice,
       binLocation: itemLocation,
-      initialStock: Number(openingStock) || 0,
     };
 
     try {
-      await rawMaterialsApi.update(id as string, payload);
-      setSuccess("Inventory Product Master successfully updated!");
-      setTimeout(() => {
-        router.push("/inventory/stock");
-      }, 1500);
+      await rawMaterialsApi.create(payload);
+      setSuccess("Inventory Product Master successfully registered!");
+      
+      if (onSuccess) {
+        onSuccess((res as any).data || payload);
+      } else {
+        setTimeout(() => {
+          if (returnTo) {
+            router.push(returnTo);
+          } else {
+            router.push("/inventory/stock");
+          }
+        }, 1500);
+      }
     } catch (e: any) {
-      setError(e.response?.data?.error || e.message || "Failed to update product details.");
+      setError(e.response?.data?.error || e.message || "Failed to finalize product registration.");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSaving(false);
     }
   };
-
-  if (loading) return (
-    <div className="flex flex-col items-center justify-center py-40 gap-4">
-      <RefreshCw className="animate-spin text-orange-500" size={32} />
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hydrating Item Master...</p>
-    </div>
-  );
 
   return (
     <div className="max-w-6xl mx-auto pb-24 px-4 sm:px-6">
@@ -481,7 +422,7 @@ function EditItemForm() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">
-                Edit <span className="text-orange-600">Inventory Product</span>
+                Add <span className="text-orange-600">Inventory Product</span>
               </h1>
               <p className="text-[10px] sm:text-xs text-slate-400 font-medium tracking-wide mt-0.5 uppercase flex items-center gap-1.5">
                 <Tag size={12} className="text-orange-500" />
@@ -793,13 +734,13 @@ function EditItemForm() {
                             <button
                               type="button"
                               onClick={() => {
-                                  if (newPrimaryUnitInput.trim()) {
-                                    const val = newPrimaryUnitInput.trim().toLowerCase();
-                                    setCustomUnits(prev => prev.includes(val) ? prev : [...prev, val]);
-                                    setPrimaryUnit(val);
-                                  }
-                                  setShowAddPrimaryUnit(false);
-                                  setNewPrimaryUnitInput("");
+                                if (newPrimaryUnitInput.trim()) {
+                                  const val = newPrimaryUnitInput.trim().toLowerCase();
+                                  setCustomUnits(prev => prev.includes(val) ? prev : [...prev, val]);
+                                  setPrimaryUnit(val);
+                                }
+                                setShowAddPrimaryUnit(false);
+                                setNewPrimaryUnitInput("");
                               }}
                               className="px-3 py-2 bg-orange-500 text-white rounded-lg text-[10px] font-bold"
                             >
@@ -851,13 +792,13 @@ function EditItemForm() {
                             <button
                               type="button"
                               onClick={() => {
-                                  if (newSecondaryUnitInput.trim()) {
-                                    const val = newSecondaryUnitInput.trim().toLowerCase();
-                                    setCustomUnits(prev => prev.includes(val) ? prev : [...prev, val]);
-                                    setSecondaryUnit(val);
-                                  }
-                                  setShowAddSecondaryUnit(false);
-                                  setNewSecondaryUnitInput("");
+                                if (newSecondaryUnitInput.trim()) {
+                                  const val = newSecondaryUnitInput.trim().toLowerCase();
+                                  setCustomUnits(prev => prev.includes(val) ? prev : [...prev, val]);
+                                  setSecondaryUnit(val);
+                                }
+                                setShowAddSecondaryUnit(false);
+                                setNewSecondaryUnitInput("");
                               }}
                               className="px-3 py-2 bg-orange-500 text-white rounded-lg text-[10px] font-bold"
                             >
@@ -1549,28 +1490,30 @@ function EditItemForm() {
               className="flex items-center justify-center gap-2 w-full py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 border-none cursor-pointer"
             >
               {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-              {saving ? "Syncing..." : "Update Item Master"}
+              {saving ? "Registering..." : "Launch Item Master"}
             </button>
 
-            <Link 
-              href="/inventory/stock" 
-              className="w-full text-center py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
-            >
-              Discard & Quit
-            </Link>
+            {isModal ? (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="w-full text-center py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+              >
+                Discard & Quit
+              </button>
+            ) : (
+              <Link 
+                href="/inventory/stock" 
+                className="w-full text-center py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+              >
+                Discard & Quit
+              </Link>
+            )}
           </div>
 
         </div>
 
       </div>
     </div>
-  );
-}
-
-export default function EditItemPage() {
-  return (
-    <Suspense fallback={<div className="p-20 text-center font-black uppercase tracking-widest text-slate-400">Loading Item Master...</div>}>
-      <EditItemForm />
-    </Suspense>
   );
 }

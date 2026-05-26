@@ -10,6 +10,7 @@ import { clsx } from "clsx";
 import { customersApi, productsFullApi } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import api from "@/lib/api/base";
+import AddPartyModal from "@/components/modals/AddPartyModal";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -376,7 +377,7 @@ export default function EstimationsPage() {
   const selectCustomer = (c: any) => {
     setSelectedCustomer(c);
     setCustomerSearch(c.name);
-    setCustomerPhone(c.phone || "");
+    setCustomerPhone(c.contact || c.phone || "");
     setShowCustomerDrop(false);
   };
 
@@ -538,7 +539,8 @@ export default function EstimationsPage() {
   const filteredCustomers = customers.filter(c =>
     !customerSearch ||
     c.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-    c.phone?.includes(customerSearch)
+    (c.contact && c.contact.includes(customerSearch)) ||
+    (c.phone && c.phone.includes(customerSearch))
   );
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -587,134 +589,40 @@ export default function EstimationsPage() {
 
                   {showCustomerDrop && (
                     <div className="absolute top-full left-0 z-50 mt-1 w-[400px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                      {showAddParty ? (
-                        <div className="flex flex-col bg-white">
-                          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                            <span className="text-sm font-bold text-gray-800">Add Party</span>
-                            <button onClick={() => { setShowAddParty(false); setNewParty({ name: "", phone: "", email: "" }); }} className="text-gray-400 hover:text-gray-600">
-                              <X size={18} />
-                            </button>
-                          </div>
-                          <div className="p-4 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="col-span-1">
-                                <label className="text-[10px] text-[#f58220] font-semibold absolute ml-2 mt-[-6px] bg-white px-1">Party Name *</label>
-                                <input
-                                  type="text"
-                                  value={newParty.name}
-                                  onChange={e => setNewParty(p => ({ ...p, name: e.target.value }))}
-                                  className="w-full text-sm border-2 border-blue-500 rounded-md px-3 py-2 outline-none bg-white font-medium text-gray-800"
-                                  autoFocus
-                                />
-                              </div>
-                              <div className="col-span-1">
-                                <input type="text" placeholder="GSTIN" className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none focus:border-gray-400 bg-white" />
-                              </div>
-                              <div className="col-span-1">
-                                <input type="tel" placeholder="Phone Number" value={newParty.phone} onChange={e => setNewParty(p => ({ ...p, phone: e.target.value }))} className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none focus:border-gray-400 bg-white" />
-                              </div>
-                            </div>
-                            <div className="flex border-b border-gray-200">
-                              <div className="px-4 py-2 border-b-2 border-[#f58220] text-sm font-bold text-[#f58220]">GST & Address</div>
-                              <div className="px-4 py-2 text-sm font-semibold text-gray-400 flex items-center gap-2">Credit & Balance <span className="bg-[#ff4d4f] text-white text-[9px] px-1.5 py-0.5 rounded">New</span></div>
-                              <div className="px-4 py-2 text-sm font-semibold text-gray-400">Additional Fields</div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-6 pt-2">
-                              <div className="space-y-3">
-                                <div className="border border-gray-300 rounded-md p-2 relative">
-                                  <label className="text-[10px] text-[#f58220] font-semibold absolute top-[-7px] left-2 bg-white px-1">GST Type</label>
-                                  <select className="w-full text-sm outline-none bg-transparent appearance-none font-medium text-gray-800 pt-1">
-                                    <option>Unregistered/Consumer</option>
-                                    <option>Registered Business - Regular</option>
-                                    <option>Registered Business - Composition</option>
-                                  </select>
-                                  <ChevronDown size={14} className="absolute right-2 top-3 text-gray-500 pointer-events-none" />
-                                </div>
-                                <select className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none font-medium text-gray-500 bg-white">
-                                  <option>State</option>
-                                  {INDIAN_STATES.map(s => <option key={s}>{s}</option>)}
-                                </select>
-                                <input type="email" placeholder="Email ID" className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none bg-white" />
-                              </div>
-                              <div>
-                                <span className="text-xs font-semibold text-gray-700 mb-1 block">Billing Address</span>
-                                <textarea placeholder="Billing Address" rows={3} className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none resize-none bg-white" />
-                                <div className="text-right mt-1">
-                                  <button className="text-xs text-[#f58220] font-medium">Show Detailed Address</button>
-                                </div>
-                                <div className="mt-3">
-                                  <span className="text-xs font-semibold text-gray-700 mb-1 block">Shipping Address</span>
-                                  <button className="text-xs text-[#f58220] font-medium">+ Enable Shipping Address</button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="border-t border-gray-100 p-4 flex justify-end gap-3 bg-white">
+                      <button
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100 font-medium"
+                        onClick={() => {
+                          const isPhone = /^[\d\s\-+()]{6,}$/.test(customerSearch.trim());
+                          setNewParty(prev => ({
+                            ...prev,
+                            name: isPhone ? "" : customerSearch.trim(),
+                            phone: isPhone ? customerSearch.trim() : "",
+                          }));
+                          setShowAddParty(true);
+                          setShowCustomerDrop(false);
+                        }}
+                      >
+                        <span className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-[#f58220] font-bold text-base leading-none">+</span>
+                        Add New Party
+                      </button>
+                      <div className="max-h-48 overflow-y-auto">
+                        {filteredCustomers.length === 0 ? (
+                          <div className="px-3 py-4 text-sm text-gray-400 text-center">No customers found</div>
+                        ) : (
+                          filteredCustomers.map(c => (
                             <button
-                              disabled={!newParty.name.trim() || savingParty}
-                              onClick={async () => {
-                                setSavingParty(true);
-                                try {
-                                  const res = await customersApi.create({
-                                    name: newParty.name.trim(),
-                                    phone: newParty.phone.trim(),
-                                    email: newParty.email.trim() || undefined,
-                                  });
-                                  const created = (res as any).data;
-                                  setCustomers(prev => [created, ...prev]);
-                                  selectCustomer(created);
-                                  setShowAddParty(false);
-                                  setNewParty({ name: "", phone: "", email: "" });
-                                  showToast("Customer added successfully", "success");
-                                } catch {
-                                  showToast("Failed to add customer", "error");
-                                } finally {
-                                  setSavingParty(false);
-                                }
-                              }}
-                              className="px-6 py-2 bg-[#f58220] text-white rounded-md text-sm font-semibold hover:bg-[#e8740e] shadow-md"
+                              key={c.id}
+                              className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 border-b border-gray-50 last:border-0"
+                              onClick={() => selectCustomer(c)}
                             >
-                              {savingParty ? "Saving..." : "Save"}
+                              <div className="text-left">
+                                <div className="text-sm font-medium text-gray-800">{c.name}</div>
+                                <div className="text-xs text-gray-400">{c.contact || c.phone || "—"}</div>
+                              </div>
                             </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100 font-medium"
-                          onClick={() => {
-                            const isPhone = /^[\d\s\-+()]{6,}$/.test(customerSearch.trim());
-                            setNewParty({
-                              name: isPhone ? "" : customerSearch.trim(),
-                              phone: isPhone ? customerSearch.trim() : "",
-                              email: "",
-                            });
-                            setShowAddParty(true);
-                          }}
-                        >
-                          <span className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-[#f58220] font-bold text-base leading-none">+</span>
-                          Add New Party
-                        </button>
-                      )}
-                      {!showAddParty && (
-                        <div className="max-h-48 overflow-y-auto">
-                          {filteredCustomers.length === 0 ? (
-                            <div className="px-3 py-4 text-sm text-gray-400 text-center">No customers found</div>
-                          ) : (
-                            filteredCustomers.map(c => (
-                              <button
-                                key={c.id}
-                                className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 border-b border-gray-50 last:border-0"
-                                onClick={() => selectCustomer(c)}
-                              >
-                                <div className="text-left">
-                                  <div className="text-sm font-medium text-gray-800">{c.name}</div>
-                                  <div className="text-xs text-gray-400">{c.phone || "—"}</div>
-                                </div>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
+                          ))
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1026,6 +934,32 @@ export default function EstimationsPage() {
             <Check className="h-4 w-4" /> {saving ? "Saving..." : "Save"}
           </button>
         </div>
+
+        {/* ── Add Party Modal ── */}
+        <AddPartyModal
+          isOpen={showAddParty}
+          onClose={() => {
+            setShowAddParty(false);
+            setNewParty({ name: "", phone: "", email: "" });
+          }}
+          partyType="customer"
+          title="ADD PARTY"
+          initialData={newParty.name || newParty.phone ? newParty : undefined}
+          onSave={async (data) => {
+            try {
+              const res = await customersApi.create({ ...data, phone: data.contact });
+              const createdParty = (res as any).data;
+              showToast("Party created successfully", "success");
+              setCustomers(prev => [...prev, createdParty].sort((a, b) => a.name.localeCompare(b.name)));
+              selectCustomer(createdParty);
+              setShowAddParty(false);
+              setNewParty({ name: "", phone: "", email: "" });
+            } catch (e: any) {
+              showToast(e?.response?.data?.error || "Failed to create party", "error");
+              throw e;
+            }
+          }}
+        />
       </div>
     );
   }
