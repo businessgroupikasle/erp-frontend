@@ -10,24 +10,17 @@ import {
   CheckCircle2, FileText, Download,
   Phone, Mail, ShieldCheck, Zap, ArrowRight,
   Package, Truck, Receipt, LayoutDashboard, Settings2,
-  AlertTriangle, Star, Calendar, FileCheck, Loader2
+  AlertTriangle, Star, Calendar, FileCheck, Loader2,
+  Printer, MoreVertical, Filter, ChevronDown, MessageSquare, Clock, Info, X
 } from "lucide-react";
 import { clsx } from "clsx";
+
 import api, { vendorsApi, accountsApi } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
+import AddPartyModal from "@/components/modals/AddPartyModal";
 
-const EMPTY_FORM = {
-  name: "",
-  contact: "",
-  email: "",
-  address: "",
-  remark: "",
-  gstNumber: "",
-  category: "",
-  paymentTerms: "IMMEDIATE" as "IMMEDIATE" | "NET_7" | "NET_30" | "ADVANCE",
-  status: "ACTIVE" as "ACTIVE" | "BLOCKED" | "BLACKLISTED"
-};
+
 
 const VENDOR_STATUS = [
   { value: "ACTIVE", label: "Active", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-400/10", border: "border-emerald-200 dark:border-emerald-400/20" },
@@ -39,15 +32,16 @@ export default function VendorsClient() {
   const router = useRouter();
   const { user } = useAuth();
   const { showToast } = useToast();
-  
+
   // -- State --
   const [vendors, setVendors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState<'ALL' | 'OWED' | 'ADVANCE'>('ALL');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({ all: true, active: false, inactive: false, toReceive: false, toPay: false });
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState<'OVERVIEW' | 'POS' | 'GRNS' | 'MATERIALS' | 'INVOICES' | 'LEDGER'>('OVERVIEW');
-  
+
   const [selectedVendorDetail, setSelectedVendorDetail] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [ledger, setLedger] = useState<any[]>([]);
@@ -55,52 +49,70 @@ export default function VendorsClient() {
   const [aging, setAging] = useState<any>(null);
   const [summary, setSummary] = useState<any>(null);
 
+  const [isTypeFilterOpen, setIsTypeFilterOpen] = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+
+  const [isNumberFilterOpen, setIsNumberFilterOpen] = useState(false);
+  const [numberFilter, setNumberFilter] = useState({ category: 'Contains', value: '' });
+
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
+  const [dateFilter, setDateFilter] = useState({ category: 'Equal To', value: '', endDate: '' });
+
+  const [isTotalFilterOpen, setIsTotalFilterOpen] = useState(false);
+  
+  const [isTransactionSearchOpen, setIsTransactionSearchOpen] = useState(false);
+  const [transactionSearchQuery, setTransactionSearchQuery] = useState("");
+  
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.filter-popover-container')) {
+        setIsFilterOpen(false);
+        setIsTypeFilterOpen(false);
+        setIsBalanceFilterOpen(false);
+        setIsMoreMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const [settings, setSettings] = useState({
+    partyGrouping: false,
+    shippingAddress: false,
+    managePartyStatus: false,
+    enablePaymentReminder: true,
+    reminderDays: "1"
+  });
+  
+  const [saving, setSaving] = useState(false);
+  const [totalFilter, setTotalFilter] = useState({ category: 'Equal To', value: '', endValue: '' });
+
+  const [isBalanceFilterOpen, setIsBalanceFilterOpen] = useState(false);
+  const [balanceFilter, setBalanceFilter] = useState({ category: 'Equal To', value: '', endValue: '' });
+
+  const transactionTypes = [
+    "Sale", "Sale (e-Invoice)", "Purchase", "Credit Note",
+    "Credit Note (e-Invoice)", "Debit Note", "Sale Order",
+    "Purchase Order", "Payment-In", "Payment-Out", "Estimate",
+    "Proforma Invoice", "Delivery Challan", "Receivable Opening Balance",
+    "Payable Opening Balance", "Party to Party [Received]",
+    "Party to Party [Paid]", "Sale FA", "Sale FA (e-Invoice)",
+    "Purchase FA", "Sale[Cancelled]", "Job work out (Challan)",
+    "Purchase (Job work)", "Journal Entry"
+  ];
+
   // -- Modals --
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
-  const [fetchingGst, setFetchingGst] = useState(false);
-
-  // Auto-fetch GST details from Next.js server-side route
-  const fetchGstDetails = async (gstin: string) => {
-    const cleanGst = gstin.trim().toUpperCase();
-    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(cleanGst)) {
-      return;
-    }
-
-    setFetchingGst(true);
-    try {
-      const res = await fetch(`/api/gst-verify/${cleanGst}`);
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to fetch GST details");
-      }
-      
-      const data = await res.json();
-      if (data.success) {
-        setForm((prev) => ({
-          ...prev,
-          name: data.legalName || prev.name,
-          address: data.address || prev.address
-        }));
-        showToast(
-          `Successfully auto-filled details for "${data.legalName}"${data.mocked ? " (Demo Mode)" : ""}`,
-          "success"
-        );
-      }
-    } catch (err: any) {
-      console.error("Auto-fetch GST details failed:", err);
-      showToast(err.message || "Could not auto-fetch GST details. Please enter manually.", "warning");
-    } finally {
-      setFetchingGst(false);
-    }
-  };
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentForm, setPaymentForm] = useState({ 
-    amount: "", 
-    note: "", 
-    type: "PAYMENT" as "PAYMENT" | "ADVANCE", 
+  const [paymentForm, setPaymentForm] = useState({
+    amount: "",
+    note: "",
+    type: "PAYMENT" as "PAYMENT" | "ADVANCE",
     accountId: "",
     paymentMode: "CASH",
     referenceId: "",
@@ -150,7 +162,7 @@ export default function VendorsClient() {
         vendorsApi.getById(vendorId),
         vendorsApi.getAging(vendorId)
       ]);
-      
+
       setLedger(lRes.data || []);
       setSelectedVendorDetail(dRes.data);
       setAging(aRes.data || { current: 0, thirtySixty: 0, sixtyNinety: 0, overNinety: 0 });
@@ -169,29 +181,32 @@ export default function VendorsClient() {
   const filteredVendors = useMemo(() => {
     return vendors.filter(v => {
       const matchSearch = v.name?.toLowerCase().includes(search.toLowerCase()) || v.vendorCode?.toLowerCase().includes(search.toLowerCase());
-      if (filterType === 'OWED') return matchSearch && (v.due > 0);
-      if (filterType === 'ADVANCE') return matchSearch && (v.advance > 0);
-      return matchSearch;
+      if (!matchSearch) return false;
+
+      if (filters.all) return true;
+
+      const checkStatus = filters.active || filters.inactive;
+      let statusMatch = true;
+      if (checkStatus) {
+        statusMatch = (filters.active && v.status === 'ACTIVE') || (filters.inactive && v.status !== 'ACTIVE');
+      }
+
+      const bal = Number(v.balance) || Number(v.closingBalance) || Number(v.openingBalance) || 0;
+      const checkBalance = filters.toReceive || filters.toPay;
+      let balanceMatch = true;
+      if (checkBalance) {
+        balanceMatch = (filters.toPay && bal > 0) || (filters.toReceive && bal < 0);
+      }
+
+      if (!checkStatus && !checkBalance) return false;
+
+      return statusMatch && balanceMatch;
     });
-  }, [vendors, search, filterType]);
+  }, [vendors, search, filters]);
 
   const selectedVendor = useMemo(() => vendors.find(v => v.id === selectedVendorId) || null, [vendors, selectedVendorId]);
 
   // -- Actions --
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      if (editing) await vendorsApi.update(editing.id, form);
-      else await vendorsApi.create(form);
-      showToast(editing ? "Vendor identity synchronized" : "New vendor registered", "success");
-      setShowForm(false);
-      fetchData();
-    } catch (e: any) {
-      showToast(e.response?.data?.error || "Transaction Aborted", "error");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handlePayment = async () => {
     if (!selectedVendorId || !paymentForm.amount || !paymentForm.accountId) {
@@ -240,96 +255,128 @@ export default function VendorsClient() {
 
   return (
     <div className="flex h-[calc(100vh-100px)] bg-slate-50 dark:bg-[#0b0c14] -m-4 overflow-hidden selection:bg-orange-500/30 selection:text-orange-500 transition-colors">
-      
+
       {/* Sidebar */}
-      <div className="w-[320px] flex flex-col bg-white dark:bg-slate-900/40 border-r border-slate-200 dark:border-white/5 relative overflow-hidden shrink-0">
-        <div className="p-4 space-y-4 relative z-10 border-b border-slate-100 dark:border-white/5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
-              <Store className="text-orange-500 w-4 h-4" /> Directory
-            </h2>
-            <button 
-              onClick={() => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); }}
-              className="p-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-all shadow-lg shadow-orange-500/20 active:scale-90"
-            >
-              <Plus size={18} />
-            </button>
-          </div>
+      <div className="w-[300px] border-r border-slate-200 flex flex-col shrink-0 bg-white relative z-10">
+        
+        {/* Sidebar Header */}
+        <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+          <button className="flex items-center gap-2 text-lg font-bold text-slate-800 hover:text-blue-600 transition-colors">
+            Vendors <ChevronDown size={18} className="text-blue-500" />
+          </button>
+          <button
+            onClick={() => { setEditing(null); setShowForm(true); }}
+            className="p-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition-all shadow-sm active:scale-95"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
 
-          <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/5">
-            {(['ALL', 'OWED', 'ADVANCE'] as const).map((t) => (
-              <button 
-                key={t}
-                onClick={() => setFilterType(t)}
-                className={clsx(
-                  "flex-1 py-1.5 text-[8px] font-bold uppercase tracking-[0.15em] rounded-lg transition-all",
-                  filterType === t ? "bg-white dark:bg-slate-800 text-orange-600 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                )}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
+        {/* Search & List Headers */}
+        <div className="px-3 py-2 border-b border-slate-200 space-y-2">
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input 
+            <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search..."
-              className="w-full pl-9 pr-3 py-2.5 bg-slate-100 dark:bg-white/5 border border-transparent dark:border-white/5 rounded-xl text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 ring-orange-500/20 transition-all outline-none"
+              placeholder="Search Vendor Name"
+              className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-full text-xs outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 text-slate-700"
             />
+          </div>
+
+          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 relative filter-popover-container">
+            <div 
+              className="flex items-center gap-2 cursor-pointer"
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+            >
+              <span className="text-[12px] font-bold text-slate-500">Vendor Name</span>
+              <Filter size={12} className="text-orange-500" />
+            </div>
+
+            {/* Filter Popover */}
+            {isFilterOpen && (
+              <div className="absolute top-full left-4 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-slate-100 z-50 p-3">
+                <div className="space-y-2 mb-3">
+                  {[
+                    { id: "all", label: "All" },
+                    { id: "active", label: "Active" },
+                    { id: "inactive", label: "Inactive" },
+                    { id: "toReceive", label: "To Receive" },
+                    { id: "toPay", label: "To Pay" },
+                  ].map((f) => (
+                    <label key={f.id} className="flex items-center gap-3 cursor-pointer group">
+                      <div className="relative flex items-center justify-center">
+                        <input 
+                          type="checkbox" 
+                          checked={(filters as any)[f.id]}
+                          onChange={(e) => setFilters({...filters, [f.id]: e.target.checked, all: f.id === 'all' ? e.target.checked : false})}
+                          className="peer appearance-none w-4 h-4 rounded border border-slate-300 checked:bg-orange-500 checked:border-orange-500 cursor-pointer transition-colors" 
+                        />
+                        <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      </div>
+                      <span className="text-xs font-medium text-slate-700">{f.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                  <button 
+                    onClick={() => { setFilters({ all: true, active: false, inactive: false, toReceive: false, toPay: false }); setIsFilterOpen(false); }}
+                    className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-full transition-colors"
+                  >
+                    Clear
+                  </button>
+                  <button 
+                    onClick={() => setIsFilterOpen(false)}
+                    className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-full transition-colors"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex items-center gap-1.5 cursor-pointer relative">
+              <span className="text-[12px] font-bold text-slate-500">Amount</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
           {loading ? (
-             Array(8).fill(0).map((_, i) => <div key={i} className="h-16 bg-slate-100 dark:bg-white/5 rounded-2xl animate-pulse" />)
+            <div className="p-6 text-center text-xs font-semibold text-slate-400 animate-pulse">Loading vendors...</div>
           ) : filteredVendors.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-slate-400">
-               <ShieldCheck size={32} className="opacity-10 mb-2" />
-               <p className="text-[9px] font-bold uppercase tracking-[0.2em]">Empty directory</p>
+              <ShieldCheck size={32} className="opacity-10 mb-2" />
+              <p className="text-[10px] font-bold uppercase tracking-[0.1em]">No vendors found</p>
             </div>
           ) : (
             filteredVendors.map(v => {
               const isActive = selectedVendorId === v.id;
-              const status = VENDOR_STATUS.find(s => s.value === v.status) || VENDOR_STATUS[0];
-              const bal = v.balance || 0;
+              const bal = Number(v.balance) || Number(v.closingBalance) || Number(v.openingBalance) || 0;
               return (
-                <button
+                <div
                   key={v.id}
                   onClick={() => setSelectedVendorId(v.id)}
-                  className={clsx(
-                    "w-full flex items-center gap-3 p-3 rounded-2xl transition-all group relative overflow-hidden",
-                    isActive 
-                      ? "bg-white dark:bg-slate-800 shadow-md border border-slate-200 dark:border-white/10" 
-                      : "hover:bg-orange-50/40 dark:hover:bg-orange-950/5 border border-transparent hover:border-orange-100 dark:hover:border-orange-900/20"
-                  )}
+                  className={`flex items-center justify-between px-4 py-3 cursor-pointer border-b border-slate-50 transition-colors ${
+                    isActive ? "bg-[#e6f4fc]" : "hover:bg-slate-50 bg-white"
+                  }`}
                 >
-                  {isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-orange-500 rounded-full" />}
-                  <div className={clsx(
-                    "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all",
-                    isActive 
-                      ? "bg-orange-500 text-white shadow-orange-500/20" 
-                      : "bg-slate-100 dark:bg-white/5 text-slate-400 group-hover:bg-orange-500/10 group-hover:text-orange-500"
-                  )}>
-                    <Store size={18} />
+                  <span className="text-sm text-slate-800 truncate pr-2">{v.name}</span>
+                  <div className="flex flex-col items-end shrink-0">
+                    <span className={`text-sm font-semibold ${
+                      bal > 0 ? "text-rose-500" : bal < 0 ? "text-emerald-500" : "text-slate-400"
+                    }`}>
+                      {bal === 0 ? "0.00" : Math.abs(bal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    {bal !== 0 && (
+                      <span className="text-[9px] font-bold uppercase text-slate-400 -mt-0.5">
+                        {bal > 0 ? "To Pay" : "To Receive"}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex-1 text-left min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                       <h3 className={clsx("font-black text-[11px] truncate transition-colors", isActive ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400 group-hover:text-orange-500")}>
-                          {v.name}
-                       </h3>
-                       <div className={clsx("w-1.5 h-1.5 rounded-full shrink-0", status.color.replace('text', 'bg'))} />
-                    </div>
-                    <div className="flex items-center justify-between mt-1">
-                       <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{v.vendorCode || 'NEW'}</span>
-                       <span className={clsx("text-[10px] font-black tracking-tighter", bal > 0 ? "text-emerald-500" : bal < 0 ? "text-rose-500" : "text-slate-400")}>
-                         {bal === 0 ? "Settled" : `₹${Math.abs(Math.round(bal)).toLocaleString()}`}
-                       </span>
-                    </div>
-                  </div>
-                </button>
+                </div>
               );
             })
           )}
@@ -340,496 +387,439 @@ export default function VendorsClient() {
       <div className="flex-1 flex flex-col relative overflow-hidden bg-white dark:bg-[#0b0c14]">
         {selectedVendor ? (
           <>
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-white/5 relative z-10 flex items-center justify-between bg-white dark:bg-transparent">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/20">
-                  <Store size={24} />
+            {/* Party Details Header */}
+            <div className="px-6 py-4 flex items-start justify-between border-b border-slate-200 dark:border-white/5 bg-white dark:bg-[#0b0c14]">
+              <div className="space-y-4 w-full">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">{selectedVendor.name}</h2>
+                    <button onClick={() => { setEditing(selectedVendor); setShowForm(true); }} className="text-orange-500 hover:text-orange-600 transition-colors">
+                      <Edit2 size={16} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-4 text-slate-400">
+                    <button onClick={() => setIsSettingsOpen(true)} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><Settings2 size={18} /></button>
+                    <div className="relative filter-popover-container">
+                      <button onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><MoreVertical size={18} /></button>
+                      {/* More Options Menu */}
+                      {isMoreMenuOpen && (
+                        <div className="absolute top-full right-0 mt-2 w-60 bg-white rounded-xl shadow-xl border border-slate-200 dark:border-white/5 z-50 py-1.5">
+                          {[
+                            "Import from Excel",
+                            "Import from Phone",
+                            "Import Via Google Contacts",
+                            "Party Statement (Report)",
+                            "All Parties (Report)"
+                          ].map((item, i) => (
+                            <button key={i} className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                              {item}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
+                
+                <div className="grid grid-cols-3 gap-6 max-w-3xl">
+                  <div>
+                    <p className="text-[11px] text-slate-400 mb-0.5">Phone Number</p>
+                    <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300">{selectedVendorDetail?.contact || selectedVendor.contact || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-slate-400 mb-0.5">Email</p>
+                    <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300">{selectedVendorDetail?.email || selectedVendor.email || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-slate-400 mb-0.5">GSTIN</p>
+                    <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300">{selectedVendorDetail?.gstNumber || selectedVendor.gstNumber || "—"}</p>
+                  </div>
+                </div>
+
                 <div>
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">{selectedVendor.name}</h1>
-                    <span className={clsx("px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border", VENDOR_STATUS.find(s => s.value === selectedVendor.status)?.color, VENDOR_STATUS.find(s => s.value === selectedVendor.status)?.bg, VENDOR_STATUS.find(s => s.value === selectedVendor.status)?.border)}>
-                      {selectedVendor.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 mt-1 text-slate-500 font-bold text-[10px] uppercase tracking-widest">
-                     <span className="flex items-center gap-1.5"><Phone size={10} className="text-orange-500" /> {selectedVendor.contact}</span>
-                     <span className="flex items-center gap-1.5"><Mail size={10} className="text-blue-500" /> {selectedVendor.email || "N/A"}</span>
-                  </div>
+                  <p className="text-[11px] text-slate-400 mb-0.5">Billing Address</p>
+                  <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300">{selectedVendorDetail?.address || selectedVendor.address || "—"}</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                 <button onClick={() => { setEditing(selectedVendor); setForm({ ...selectedVendor }); setShowForm(true); }} className="px-4 py-2 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white rounded-xl text-[9px] font-bold uppercase tracking-widest border border-slate-200 dark:border-white/10 transition-all">Edit Profile</button>
-                 <button onClick={() => { 
-                   setPaymentForm({ amount: "", note: "", type: "PAYMENT", accountId: accounts[0]?.id || "", paymentMode: "CASH", referenceId: "", vendorInvoiceId: "", date: new Date().toISOString().split('T')[0] }); 
-                   fetchVendorInvoices(selectedVendorId!);
-                   setShowPaymentModal(true); 
-                 }} className="px-6 py-2 bg-orange-500 text-white rounded-xl text-[9px] font-bold uppercase tracking-widest shadow-lg shadow-orange-500/20 active:scale-95 transition-all">Record Transaction</button>
               </div>
             </div>
 
-            {/* Tab Navigation */}
-            <div className="px-6 flex items-center gap-6 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-transparent">
-              {([
-                { id: 'OVERVIEW', label: 'Overview', icon: LayoutDashboard },
-                { id: 'POS', label: 'Purchase Orders', icon: Package },
-                { id: 'GRNS', label: 'Receipts (GRN)', icon: Truck },
-                { id: 'MATERIALS', label: 'Materials', icon: Zap },
-                { id: 'INVOICES', label: 'Invoices', icon: Receipt },
-                { id: 'LEDGER', label: 'Audit Ledger', icon: History }
-              ] as const).map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setSelectedTab(tab.id)}
-                  className={clsx(
-                    "flex items-center gap-2 py-4 text-[10px] font-bold uppercase tracking-[0.15em] border-b-2 transition-all",
-                    selectedTab === tab.id 
-                      ? "border-orange-500 text-orange-600 dark:text-white" 
-                      : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            {/* Transactions Section */}
+            <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-[#0b0c14]">
+              {/* Section Header */}
+              <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 dark:border-white/5">
+                <h3 className="text-sm font-bold text-slate-700 dark:text-white">Transactions</h3>
+                <div className="flex items-center gap-3 text-slate-400">
+                  {isTransactionSearchOpen ? (
+                    <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-full px-3 py-1">
+                      <Search size={14} className="text-slate-400" />
+                      <input 
+                        type="text" 
+                        autoFocus
+                        placeholder="Search transactions..." 
+                        className="bg-transparent border-none text-xs w-32 focus:outline-none ml-2 text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
+                        value={transactionSearchQuery}
+                        onChange={(e) => setTransactionSearchQuery(e.target.value)}
+                        onBlur={() => !transactionSearchQuery && setIsTransactionSearchOpen(false)}
+                      />
+                    </div>
+                  ) : (
+                    <button onClick={() => setIsTransactionSearchOpen(true)} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><Search size={16} /></button>
                   )}
-                >
-                  <tab.icon size={14} /> {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex-1 overflow-hidden flex flex-col min-h-0 bg-slate-50/50 dark:bg-transparent p-4">
-              {selectedTab === 'OVERVIEW' && (
-                <div className="space-y-4 overflow-y-auto custom-scrollbar pr-2">
-                  <div className="grid grid-cols-4 gap-4">
-                    <div className="p-5 rounded-[2rem] border bg-white dark:bg-slate-900/40 border-slate-100 dark:border-white/5 shadow-sm">
-                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5"><AlertCircle size={10} className="text-rose-500" /> Total Payable</p>
-                      <h3 className="text-3xl font-black text-rose-600 dark:text-rose-400 tracking-tighter">₹{Math.round(selectedVendor.due || 0).toLocaleString()}</h3>
-                      <div className="mt-4 flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-rose-500/10 text-rose-500 rounded-full text-[7px] font-bold uppercase tracking-wider">Outstanding</span>
-                      </div>
-                    </div>
-                    <div className="p-5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[2.5rem] shadow-sm">
-                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5"><CheckCircle2 size={10} className="text-emerald-500" /> Total Settled</p>
-                      <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">₹{Math.round(selectedVendor.totalPaid || 0).toLocaleString()}</h3>
-                      <p className="mt-2 text-[8px] font-bold text-slate-400 uppercase tracking-widest">Lifetime transaction value</p>
-                    </div>
-                    <div className="p-5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[2.5rem] shadow-sm">
-                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5"><Wallet size={10} className="text-indigo-500" /> Vendor Balance</p>
-                      <h3 className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">₹{Math.round(selectedVendor.advance || 0).toLocaleString()}</h3>
-                      <div className="mt-4 flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-500 rounded-full text-[7px] font-bold uppercase tracking-wider">Available Credit</span>
-                      </div>
-                    </div>
-                    <div className="p-5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[2.5rem] shadow-sm flex flex-col">
-                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3">Due Aging</p>
-                      <div className="flex-1 flex flex-col justify-center">
-                        <div className="h-4 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden flex mb-3 border border-slate-200 dark:border-white/10">
-                          {aging && (
-                            <>
-                              <div style={{ width: `${(aging.current / (selectedVendor.due || 1)) * 100}%` }} className="bg-emerald-500 h-full transition-all duration-1000" />
-                              <div style={{ width: `${(aging.thirtySixty / (selectedVendor.due || 1)) * 100}%` }} className="bg-amber-500 h-full transition-all duration-1000" />
-                              <div style={{ width: `${(aging.sixtyNinety / (selectedVendor.due || 1)) * 100}%` }} className="bg-orange-500 h-full transition-all duration-1000" />
-                              <div style={{ width: `${(aging.overNinety / (selectedVendor.due || 1)) * 100}%` }} className="bg-rose-500 h-full transition-all duration-1000" />
-                            </>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-4 gap-1 text-[6px] font-bold uppercase text-center tracking-[0.1em]">
-                          <div className="text-emerald-500">0-30D</div>
-                          <div className="text-amber-500">31-60D</div>
-                          <div className="text-orange-500">61-90D</div>
-                          <div className="text-rose-500">90D+</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* GST & Operational Info */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-6 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[2rem] shadow-sm space-y-4">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white flex items-center gap-2">
-                        <FileText size={14} className="text-orange-500" /> GST & Tax Details
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
-                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">GST Registration No.</p>
-                          <p className="text-sm font-black text-slate-900 dark:text-white tracking-wide">
-                            {selectedVendor.gstNumber || <span className="text-slate-400 font-bold text-xs">Not Provided</span>}
-                          </p>
-                        </div>
-                        <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
-                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Settlement Cycle</p>
-                          <p className="text-sm font-black text-slate-900 dark:text-white uppercase">{selectedVendor.paymentTerms || "IMMEDIATE"}</p>
-                        </div>
-                        <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
-                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Business Category</p>
-                          <p className="text-sm font-black text-slate-900 dark:text-white uppercase">{selectedVendor.category || "General"}</p>
-                        </div>
-                        <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
-                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Vendor Status</p>
-                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${VENDOR_STATUS.find(s => s.value === selectedVendor.status)?.color} ${VENDOR_STATUS.find(s => s.value === selectedVendor.status)?.bg}`}>
-                            {selectedVendor.status}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
-                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Registered Address</p>
-                        <p className="text-xs font-medium text-slate-700 dark:text-slate-300">{selectedVendor.address || "No address recorded."}</p>
-                      </div>
-                    </div>
-
-                    <div className="p-6 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[2rem] shadow-sm space-y-4">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white flex items-center gap-2">
-                        <TrendingUp size={14} className="text-blue-500" /> Transaction Summary
-                      </h4>
-                      <div className="space-y-3">
-                        {[
-                          { label: "Total Orders", value: selectedVendorDetail?.orders?.length || 0, suffix: "POs" },
-                          { label: "Total GRNs", value: selectedVendorDetail?.orders?.flatMap((o: any) => o.goodsReceipts || []).length || 0, suffix: "Receipts" },
-                          { label: "Materials Supplied", value: selectedVendorDetail?.suppliedMaterials?.length || 0, suffix: "Items" },
-                          { label: "Vendor Code", value: selectedVendor.vendorCode || "N/A", suffix: "" },
-                        ].map((item, i) => (
-                          <div key={i} className="flex items-center justify-between py-2 border-b border-slate-50 dark:border-white/5">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.label}</span>
-                            <span className="text-sm font-black text-slate-900 dark:text-white">{item.value} <span className="text-[9px] font-bold text-slate-400">{item.suffix}</span></span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  <button className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><Printer size={16} /></button>
+                  <button className="text-emerald-600 hover:text-emerald-700 transition-colors"><FileText size={16} className="opacity-80" /></button>
                 </div>
-              )}
+              </div>
 
-
-              {selectedTab === 'POS' && (
-                <div className="flex-1 flex flex-col bg-white dark:bg-slate-900/20 border border-slate-200 dark:border-white/5 rounded-[2rem] overflow-hidden">
-                   <div className="p-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-                      <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-900 dark:text-white">Recent Purchase Orders</h4>
-                   </div>
-                   <div className="flex-1 overflow-y-auto custom-scrollbar">
-                      <table className="w-full text-left">
-                        <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0 z-20">
-                          <tr className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-white/5 tracking-widest">
-                            <th className="py-3 pl-6">PO Number</th>
-                            <th className="py-3">Date</th>
-                            <th className="py-3">Status</th>
-                            <th className="py-3 text-right">Total</th>
-                            <th className="py-3 text-right">Paid</th>
-                            <th className="py-3 text-right pr-6">Balance</th>
-                            <th className="py-3 text-right pr-6"></th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                          {selectedVendorDetail?.orders?.map((po: any) => (
-                            <tr key={po.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors text-[11px]">
-                              <td className="py-4 pl-6 font-black text-orange-600 tracking-tight">{po.poNumber || po.id.substring(0,8)}</td>
-                              <td className="py-4 font-bold text-slate-500">{new Date(po.createdAt).toLocaleDateString()}</td>
-                              <td className="py-4">
-                                <span className={clsx(
-                                  "px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider",
-                                  po.status === 'RECEIVED' ? "bg-emerald-500/10 text-emerald-500" : 
-                                  po.status === 'PENDING' ? "bg-amber-500/10 text-amber-500" : "bg-slate-100 text-slate-400"
-                                )}>
-                                  {po.status}
-                                </span>
-                              </td>
-                              <td className="py-4 text-right font-black text-slate-900 dark:text-white tracking-tighter">₹{Math.round(po.totalAmount).toLocaleString()}</td>
-                              <td className="py-4 text-right font-bold text-emerald-500">₹{Math.round(po.paid || 0).toLocaleString()}</td>
-                              <td className="py-4 text-right pr-6 font-black text-rose-500 tracking-tighter">
-                                 ₹{Math.round(po.totalAmount - (po.paid || 0)).toLocaleString()}
-                              </td>
-                              <td className="py-4 text-right pr-6">
-                                 {po.totalAmount > (po.paid || 0) && (selectedVendor.advance || 0) > 0 && (
-                                   <button 
-                                     onClick={async () => {
-                                       try {
-                                         await api.post(`/api/purchase-orders/${po.id}/apply-advance`);
-                                         showToast("Settled from advance", "success");
-                                         fetchVendorDetails(selectedVendorId!);
-                                       } catch (e) {
-                                         showToast("Settle failed", "error");
-                                       }
-                                     }}
-                                     className="px-3 py-1 bg-indigo-500 text-white rounded-lg text-[8px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all"
-                                   >
-                                     Settle
-                                   </button>
-                                 )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {(!selectedVendorDetail?.orders || selectedVendorDetail.orders.length === 0) && (
-                        <div className="p-10 text-center opacity-30 flex flex-col items-center"><Package size={40} /><p className="text-[10px] font-bold uppercase tracking-widest mt-2">No active purchase orders</p></div>
-                      )}
-                   </div>
-                </div>
-              )}
-
-              {selectedTab === 'GRNS' && (
-                <div className="flex-1 flex flex-col bg-white dark:bg-slate-900/20 border border-slate-200 dark:border-white/5 rounded-[2rem] overflow-hidden">
-                   <div className="p-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-                      <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-900 dark:text-white">Goods Receipt History</h4>
-                   </div>
-                   <div className="flex-1 overflow-y-auto custom-scrollbar">
-                      <table className="w-full text-left">
-                        <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0 z-20">
-                          <tr className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-white/5 tracking-widest">
-                            <th className="py-3 pl-6">GRN ID</th>
-                            <th className="py-3">PO Reference</th>
-                            <th className="py-3">Received At</th>
-                            <th className="py-3 text-center">QC Status</th>
-                            <th className="py-3 text-right pr-6">Items Received</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                          {selectedVendorDetail?.orders?.flatMap((po: any) => (po.goodsReceipts || []).map((gr:any) => ({...gr, poNumber: po.poNumber})))?.map((grn: any) => (
-                            <tr key={grn.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors text-[11px]">
-                              <td className="py-4 pl-6 font-black tracking-tight">{grn.id.substring(0,8)}</td>
-                              <td className="py-4 font-bold text-orange-600">#{grn.poNumber || grn.poId.substring(0,8)}</td>
-                              <td className="py-4 font-bold text-slate-500">{new Date(grn.createdAt).toLocaleDateString()}</td>
-                              <td className="py-4 text-center">
-                                <span className={clsx(
-                                  "px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider",
-                                  grn.status === 'COMPLETED' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
-                                )}>
-                                  {grn.status === 'COMPLETED' ? "PASSED QC" : grn.status}
-                                </span>
-                              </td>
-                              <td className="py-4 text-right pr-6 font-black text-emerald-600 tracking-tighter">{grn.items?.reduce((s:number, i:any) => s + (i.receivedQty || 0), 0)} Units</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {(!selectedVendorDetail?.orders?.some((o:any) => o.goodsReceipts?.length > 0)) && (
-                        <div className="p-10 text-center opacity-30 flex flex-col items-center"><Truck size={40} /><p className="text-[10px] font-bold uppercase tracking-[0.2em] mt-2">No warehouse movements recorded</p></div>
-                      )}
-                   </div>
-                </div>
-              )}
-
-              {selectedTab === 'MATERIALS' && (
-                <div className="grid grid-cols-3 gap-4">
-                  {selectedVendorDetail?.suppliedMaterials?.map((sm: any) => (
-                    <div key={sm.materialId} className="p-5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-[2rem] shadow-sm flex flex-col justify-between">
-                       <div>
-                          <div className="flex items-center gap-3 mb-4">
-                             <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400">
-                                <Package size={20} />
-                             </div>
-                             <div>
-                                <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase truncate max-w-[150px]">{sm.material?.name}</h4>
-                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{sm.material?.sku}</p>
-                             </div>
+              {/* Transactions Table */}
+              <div className="flex-1 overflow-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-white dark:bg-[#0b0c14] sticky top-0 z-10 border-b border-slate-200 dark:border-white/5">
+                    <tr>
+                      <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative filter-popover-container">
+                        <div className="flex items-center justify-between">
+                          Type
+                          <button onClick={() => setIsTypeFilterOpen(!isTypeFilterOpen)}>
+                            <Filter size={14} className="text-slate-400 hover:text-slate-700" />
+                          </button>
+                        </div>
+                        {/* Type Filter Popover */}
+                        {isTypeFilterOpen && (
+                          <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal">
+                            <div className="max-h-[240px] overflow-y-auto custom-scrollbar p-2 space-y-1">
+                              {transactionTypes.map(type => (
+                                <label key={type} className="flex items-start gap-2 p-1.5 hover:bg-slate-50 rounded cursor-pointer group">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedTypes.includes(type)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) setSelectedTypes([...selectedTypes, type]);
+                                      else setSelectedTypes(selectedTypes.filter(t => t !== type));
+                                    }}
+                                    className="mt-0.5 w-3.5 h-3.5 rounded border-slate-300 text-rose-500 focus:ring-rose-500 cursor-pointer"
+                                  />
+                                  <span className="text-[11px] leading-tight group-hover:text-slate-900">{type}</span>
+                                </label>
+                              ))}
+                            </div>
+                            <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
+                              <button
+                                onClick={() => { setSelectedTypes([]); setIsTypeFilterOpen(false); }}
+                                className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors"
+                              >
+                                Clear
+                              </button>
+                              <button
+                                onClick={() => setIsTypeFilterOpen(false)}
+                                className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm border-2 border-orange-500"
+                              >
+                                Apply
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between py-2 border-t border-slate-50 dark:border-white/5">
-                             <span className="text-[9px] font-bold text-slate-500 uppercase">Standard Price</span>
-                             <span className="text-xs font-black text-slate-900 dark:text-white">₹{sm.price || 0}</span>
-                          </div>
-                          <div className="flex items-center justify-between py-2 border-t border-slate-50 dark:border-white/5">
-                             <span className="text-[9px] font-bold text-slate-500 uppercase">Unit</span>
-                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{sm.material?.unit}</span>
-                          </div>
-                       </div>
-                       <button className="mt-4 w-full py-2 bg-slate-50 dark:bg-white/5 hover:bg-orange-500/10 hover:text-orange-600 text-slate-400 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all">Update Pricing</button>
-                    </div>
-                  ))}
-                  {(!selectedVendorDetail?.suppliedMaterials || selectedVendorDetail.suppliedMaterials.length === 0) && (
-                    <div className="col-span-3 p-10 text-center opacity-30 flex flex-col items-center"><Zap size={40} /><p className="text-[10px] font-black uppercase mt-2">No materials linked to this vendor</p></div>
-                  )}
-                </div>
-              )}
-
-              {selectedTab === 'INVOICES' && (
-                <div className="flex-1 flex flex-col bg-white dark:bg-slate-900/20 border border-slate-200 dark:border-white/5 rounded-[2rem] overflow-hidden">
-                   <div className="p-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-                      <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-900 dark:text-white">Vendor Invoices & 3-Way Match</h4>
-                   </div>
-                   <div className="flex-1 overflow-y-auto custom-scrollbar">
-                      <table className="w-full text-left">
-                        <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0 z-20">
-                          <tr className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-white/5 tracking-widest">
-                            <th className="py-3 pl-6">Invoice No</th>
-                            <th className="py-3">PO Reference</th>
-                            <th className="py-3">Amount</th>
-                            <th className="py-3">Match Status</th>
-                            <th className="py-3 text-right pr-6">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                          {selectedVendorDetail?.invoices?.map((inv: any) => (
-                            <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors text-[11px]">
-                              <td className="py-4 pl-6 font-black tracking-tight">{inv.invoiceNumber}</td>
-                              <td className="py-4 font-bold text-orange-600">#{inv.poNumber || inv.poId.substring(0,8)}</td>
-                              <td className="py-4 font-black tracking-tighter">₹{inv.amount?.toLocaleString()}</td>
-                              <td className="py-4">
-                                <div className="flex items-center gap-2">
-                                  <span className={clsx(
-                                    "w-1.5 h-1.5 rounded-full",
-                                    inv.status === 'MATCHED' ? "bg-emerald-500" : "bg-rose-500"
-                                  )} />
-                                  <span className="font-bold uppercase text-[8px] tracking-[0.1em]">{inv.status}</span>
+                        )}
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative">
+                        <div className="flex items-center justify-between">
+                          Number
+                          <button onClick={() => setIsNumberFilterOpen(!isNumberFilterOpen)}>
+                            <Filter size={14} className="text-slate-400 hover:text-slate-700" />
+                          </button>
+                        </div>
+                        {isNumberFilterOpen && (
+                          <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal">
+                            <div className="p-3 space-y-3">
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-400">Select Category</label>
+                                <div className="relative mt-1">
+                                  <select
+                                    className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                    value={numberFilter.category}
+                                    onChange={e => setNumberFilter({ ...numberFilter, category: e.target.value })}
+                                  >
+                                    <option>Contains</option>
+                                    <option>Exact match</option>
+                                  </select>
+                                  <ChevronDown size={14} className="absolute right-2 top-2 text-slate-400 pointer-events-none" />
                                 </div>
-                              </td>
-                              <td className="py-4 text-right pr-6">
-                                <button className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-400 transition-all"><FileCheck size={14} /></button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {(!selectedVendorDetail?.invoices || selectedVendorDetail.invoices.length === 0) && (
-                        <div className="p-10 text-center opacity-30 flex flex-col items-center"><Receipt size={40} /><p className="text-[10px] font-bold uppercase tracking-[0.2em] mt-2">No vendor invoices processed</p></div>
-                      )}
-                   </div>
-                </div>
-              )}
-
-              {selectedTab === 'LEDGER' && (
-                <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-                  <div className={clsx("flex-1 overflow-y-auto custom-scrollbar border border-slate-200 dark:border-white/5 rounded-[2rem] bg-white dark:bg-slate-900/20", ledgerLoading ? "opacity-50" : "opacity-100")}>
-                      {ledger.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full py-10 opacity-40"><FileText size={32} className="mb-2" /><p className="text-[10px] font-bold uppercase tracking-[0.2em]">No verified transactions</p></div>
-                      ) : (
-                        <table className="w-full text-left">
-                          <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0 z-20">
-                              <tr className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-white/5 tracking-widest">
-                                <th className="py-3 pl-6">Timestamp</th>
-                                <th className="py-3">Reference / Doc</th>
-                                <th className="py-3">Module</th>
-                                <th className="py-3 text-right">Debit</th>
-                                <th className="py-3 text-right">Credit</th>
-                                <th className="py-3 text-right pr-6">Balance</th>
-                              </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                              {ledger.map(e => {
-                                const isDebit = e.type === 'DEBIT';
-                                const balance = e.runningBalance || e.balanceAfterTransaction || 0;
-                                return (
-                                  <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors text-[10px]">
-                                    <td className="py-4 pl-6">
-                                        <div className="flex flex-col">
-                                          <span className="font-bold">{new Date(e.createdAt).toLocaleDateString()}</span>
-                                          <span className="text-[7px] text-slate-400 font-black uppercase">{new Date(e.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                        </div>
-                                    </td>
-                                    <td className="py-4">
-                                        <div className="flex flex-col">
-                                          <span className="font-black text-orange-600 uppercase tracking-tighter">{e.referenceType}</span>
-                                          <span className="text-slate-500 truncate max-w-[150px] font-bold">{e.note || "-"}</span>
-                                        </div>
-                                    </td>
-                                    <td className="py-4"><span className="text-[8px] font-black bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-lg uppercase border border-slate-200 dark:border-white/5">{e.sourceModule}</span></td>
-                                    <td className="py-4 text-right"><span className={clsx("font-black text-xs tracking-tighter", isDebit ? "text-rose-600" : "opacity-0")}>{isDebit ? `₹${Math.round(e.amount).toLocaleString()}` : "—"}</span></td>
-                                    <td className="py-4 text-right"><span className={clsx("font-black text-xs tracking-tighter", !isDebit ? "text-emerald-600" : "opacity-0")}>{!isDebit ? `₹${Math.round(e.amount).toLocaleString()}` : "—"}</span></td>
-                                    <td className="py-4 pr-6 text-right">
-                                        <div className={clsx("inline-flex flex-col items-end px-3 py-1 rounded-xl border", balance >= 0 ? "text-emerald-600 bg-emerald-500/5 border-emerald-500/10" : "text-rose-600 bg-rose-500/5 border-rose-500/10")}>
-                                          <span className="font-black tracking-tighter text-xs">₹{Math.abs(Math.round(balance)).toLocaleString()}</span>
-                                          <span className="text-[6px] font-black uppercase">{balance >= 0 ? "VENDOR CREDIT (CR)" : "OUTSTANDING (DR)"}</span>
-                                        </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                          </tbody>
-                        </table>
-                      )}
-                  </div>
-                </div>
-              )}
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-400">Number</label>
+                                <input
+                                  type="text"
+                                  className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                  value={numberFilter.value}
+                                  onChange={e => setNumberFilter({ ...numberFilter, value: e.target.value })}
+                                />
+                              </div>
+                            </div>
+                            <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
+                              <button onClick={() => { setNumberFilter({ category: 'Contains', value: '' }); setIsNumberFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
+                              <button onClick={() => setIsNumberFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
+                            </div>
+                          </div>
+                        )}
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-1">Date <ChevronDown size={12} className="text-slate-400" /></span>
+                          <button onClick={() => setIsDateFilterOpen(!isDateFilterOpen)}>
+                            <Filter size={14} className="text-slate-400 hover:text-slate-700" />
+                          </button>
+                        </div>
+                        {isDateFilterOpen && (
+                          <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal">
+                            <div className="p-3 space-y-3">
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-400">Select Category</label>
+                                <div className="relative mt-1">
+                                  <select
+                                    className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                    value={dateFilter.category}
+                                    onChange={e => setDateFilter({ ...dateFilter, category: e.target.value })}
+                                  >
+                                    <option>Equal To</option>
+                                    <option>Less Than</option>
+                                    <option>Greater Than</option>
+                                    <option>Range</option>
+                                  </select>
+                                  <ChevronDown size={14} className="absolute right-2 top-2 text-slate-400 pointer-events-none" />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-400">{dateFilter.category === 'Range' ? 'Start Date' : 'Select Date'}</label>
+                                <div className="relative mt-1">
+                                  <input
+                                    type="date"
+                                    className="w-full border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                                    value={dateFilter.value}
+                                    onChange={e => setDateFilter({ ...dateFilter, value: e.target.value })}
+                                  />
+                                  <Calendar size={14} className="absolute right-2 top-1.5 text-blue-500 pointer-events-none" />
+                                </div>
+                              </div>
+                              {dateFilter.category === 'Range' && (
+                                <div>
+                                  <label className="text-[10px] font-bold text-slate-400">End Date</label>
+                                  <div className="relative mt-1">
+                                    <input
+                                      type="date"
+                                      className="w-full border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                                      value={dateFilter.endDate}
+                                      onChange={e => setDateFilter({ ...dateFilter, endDate: e.target.value })}
+                                    />
+                                    <Calendar size={14} className="absolute right-2 top-1.5 text-blue-500 pointer-events-none" />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
+                              <button onClick={() => { setDateFilter({ category: 'Equal To', value: '', endDate: '' }); setIsDateFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
+                              <button onClick={() => setIsDateFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
+                            </div>
+                          </div>
+                        )}
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          Total
+                          <button onClick={() => setIsTotalFilterOpen(!isTotalFilterOpen)}>
+                            <Filter size={14} className="text-slate-400 hover:text-slate-700" />
+                          </button>
+                        </div>
+                        {isTotalFilterOpen && (
+                          <div className="absolute top-full right-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal text-left">
+                            <div className="p-3 space-y-3">
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-400">Select Category</label>
+                                <div className="relative mt-1">
+                                  <select
+                                    className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                    value={totalFilter.category}
+                                    onChange={e => setTotalFilter({ ...totalFilter, category: e.target.value })}
+                                  >
+                                    <option>Equal To</option>
+                                    <option>Less Than</option>
+                                    <option>Greater Than</option>
+                                    <option>Range</option>
+                                  </select>
+                                  <ChevronDown size={14} className="absolute right-2 top-2 text-slate-400 pointer-events-none" />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-400">{totalFilter.category === 'Range' ? 'Min Amount' : 'Amount'}</label>
+                                <input
+                                  type="number"
+                                  className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                  value={totalFilter.value}
+                                  onChange={e => setTotalFilter({ ...totalFilter, value: e.target.value })}
+                                />
+                              </div>
+                              {totalFilter.category === 'Range' && (
+                                <div>
+                                  <label className="text-[10px] font-bold text-slate-400">Max Amount</label>
+                                  <input
+                                    type="number"
+                                    className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                    value={totalFilter.endValue}
+                                    onChange={e => setTotalFilter({ ...totalFilter, endValue: e.target.value })}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
+                              <button onClick={() => { setTotalFilter({ category: 'Equal To', value: '', endValue: '' }); setIsTotalFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
+                              <button onClick={() => setIsTotalFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
+                            </div>
+                          </div>
+                        )}
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          Balance
+                          <button onClick={() => setIsBalanceFilterOpen(!isBalanceFilterOpen)}>
+                            <Filter size={14} className="text-slate-400 hover:text-slate-700" />
+                          </button>
+                        </div>
+                        {isBalanceFilterOpen && (
+                          <div className="absolute top-full right-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal text-left">
+                            <div className="p-3 space-y-3">
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-400">Select Category</label>
+                                <div className="relative mt-1">
+                                  <select
+                                    className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                    value={balanceFilter.category}
+                                    onChange={e => setBalanceFilter({ ...balanceFilter, category: e.target.value })}
+                                  >
+                                    <option>Equal To</option>
+                                    <option>Less Than</option>
+                                    <option>Greater Than</option>
+                                    <option>Range</option>
+                                  </select>
+                                  <ChevronDown size={14} className="absolute right-2 top-2 text-slate-400 pointer-events-none" />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-400">{balanceFilter.category === 'Range' ? 'Min Amount' : 'Amount'}</label>
+                                <input
+                                  type="number"
+                                  className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                  value={balanceFilter.value}
+                                  onChange={e => setBalanceFilter({ ...balanceFilter, value: e.target.value })}
+                                />
+                              </div>
+                              {balanceFilter.category === 'Range' && (
+                                <div>
+                                  <label className="text-[10px] font-bold text-slate-400">Max Amount</label>
+                                  <input
+                                    type="number"
+                                    className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                    value={balanceFilter.endValue}
+                                    onChange={e => setBalanceFilter({ ...balanceFilter, endValue: e.target.value })}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
+                              <button onClick={() => { setBalanceFilter({ category: 'Equal To', value: '', endValue: '' }); setIsBalanceFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
+                              <button onClick={() => setIsBalanceFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
+                            </div>
+                          </div>
+                        )}
+                      </th>
+                      <th className="w-10 px-2 py-3 border-b border-slate-200 dark:border-white/5"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                    {ledgerLoading ? (
+                      <tr><td colSpan={6} className="text-center py-10 text-slate-400 font-medium">Loading...</td></tr>
+                    ) : ledger.length === 0 ? (
+                      <tr><td colSpan={6} className="text-center py-10 text-slate-400 font-medium">No transactions found</td></tr>
+                    ) : (
+                      ledger.map(e => {
+                        const balance = e.runningBalance || e.balanceAfterTransaction || 0;
+                        return (
+                          <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group">
+                            <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">
+                              {e.referenceType === 'PAYMENT' ? 'Payment Out' : e.referenceType === 'PURCHASE' ? 'Purchase' : e.referenceType}
+                            </td>
+                            <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">{e.referenceId || "—"}</td>
+                            <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">{new Date(e.createdAt).toLocaleDateString()}</td>
+                            <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5 text-right">₹ {Math.round(e.amount).toLocaleString()}</td>
+                            <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5 text-right">₹ {Math.abs(Math.round(balance)).toLocaleString()} {balance >= 0 ? 'Cr' : 'Dr'}</td>
+                            <td className="px-2 py-4 text-center">
+                              <button className="text-slate-300 hover:text-slate-500">
+                                <MoreVertical size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/30 dark:bg-[#0b0c14] relative">
-             <div className="relative z-10 flex flex-col items-center max-w-md text-center px-10">
-                <div className="w-24 h-24 rounded-full bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center text-slate-200 dark:text-slate-800 mb-8">
-                   <Store size={48} />
-                </div>
-                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-4">Vendor Command Center</h2>
-                <p className="text-sm font-bold text-slate-400 mb-10">Select a supplier from the directory to manage procurement, monitor financial ledgers, and track warehouse receiving.</p>
-                
-                <div className="grid grid-cols-2 gap-4 w-full">
-                   <button onClick={() => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); }} className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-3xl hover:border-orange-500/50 hover:shadow-xl hover:shadow-orange-500/10 transition-all group text-left">
-                      <Plus className="text-orange-500 mb-2 group-hover:scale-110 transition-transform" size={24} />
-                      <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">New Supplier</p>
-                      <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase">Onboard a vendor</p>
-                   </button>
-                   <button onClick={() => fetchData()} className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-3xl hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/10 transition-all group text-left">
-                      <RefreshCw className="text-blue-500 mb-2 group-hover:rotate-180 transition-transform duration-500" size={24} />
-                      <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Global Sync</p>
-                      <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase">Refresh ERP nodes</p>
-                   </button>
-                </div>
-             </div>
+            <div className="relative z-10 flex flex-col items-center max-w-md text-center px-10">
+              <div className="w-24 h-24 rounded-full bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center text-slate-200 dark:text-slate-800 mb-8">
+                <Store size={48} />
+              </div>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-4">Vendor Command Center</h2>
+              <p className="text-sm font-bold text-slate-400 mb-10">Select a supplier from the directory to manage procurement, monitor financial ledgers, and track warehouse receiving.</p>
+
+              <div className="grid grid-cols-2 gap-4 w-full">
+                <button onClick={() => { setEditing(null); setShowForm(true); }} className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-3xl hover:border-orange-500/50 hover:shadow-xl hover:shadow-orange-500/10 transition-all group text-left">
+                  <Plus className="text-orange-500 mb-2 group-hover:scale-110 transition-transform" size={24} />
+                  <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">New Supplier</p>
+                  <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase">Onboard a vendor</p>
+                </button>
+                <button onClick={() => fetchData()} className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-3xl hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/10 transition-all group text-left">
+                  <RefreshCw className="text-blue-500 mb-2 group-hover:rotate-180 transition-transform duration-500" size={24} />
+                  <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Global Sync</p>
+                  <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase">Refresh ERP nodes</p>
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
 
       {/* Modals */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-xl p-8 space-y-6">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-tight">{editing ? "Edit Vendor" : "Add Vendor"}</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1 col-span-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Vendor Name *</label><input placeholder="Enter name..." value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Contact Number</label><input placeholder="10 digits..." value={form.contact} maxLength={10} onChange={(e) => setForm({...form, contact: e.target.value.replace(/\D/g, "")})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label><input placeholder="optional@gmail.com" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" /></div>
-              <div className="space-y-1">
-                <div className="flex justify-between items-center ml-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">GST Number</label>
-                  {fetchingGst && (
-                    <span className="text-[8px] font-black text-orange-500 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Loader2 size={10} className="animate-spin" /> Fetching...
-                    </span>
-                  )}
-                </div>
-                <div className="relative">
-                  <input 
-                    placeholder="e.g. 29ABCDE1234F1Z5" 
-                    value={form.gstNumber} 
-                    maxLength={15}
-                    onChange={(e) => {
-                      const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
-                      setForm({...form, gstNumber: val});
-                      if (val.length === 15) {
-                        fetchGstDetails(val);
-                      }
-                    }} 
-                    className="w-full pl-4 pr-16 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20 tracking-wider font-mono" 
-                  />
-                  <span className="absolute right-2 bottom-[-18px] text-[9px] text-slate-400 font-bold">{form.gstNumber.length}/15</span>
-                  {form.gstNumber.length === 15 && !fetchingGst && (
-                    <button
-                      type="button"
-                      onClick={() => fetchGstDetails(form.gstNumber)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-600 bg-orange-50 dark:bg-orange-950/40 px-2.5 py-1 rounded-lg border border-orange-100 dark:border-orange-900 transition-all active:scale-95"
-                    >
-                      Fetch
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Business Category</label><input placeholder="e.g. Spices, Dairy..." value={form.category} onChange={(e) => setForm({...form, category: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20" /></div>
-              <div className="space-y-1 col-span-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Address</label><textarea placeholder="Address..." value={form.address} rows={2} onChange={(e) => setForm({...form, address: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-semibold text-sm outline-none focus:ring-2 ring-orange-500/20 resize-none" /></div>
-            </div>
-            <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-white/5">
-              <button onClick={() => setShowForm(false)} className="px-5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded-lg transition-all">Cancel</button>
-              <button onClick={handleSave} className="flex-1 px-8 py-2.5 bg-orange-500 text-white rounded-lg text-xs font-bold uppercase transition-all disabled:opacity-50" disabled={saving}>{saving ? "Saving..." : "Confirm"}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddPartyModal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        onSave={async (data) => {
+          try {
+            if (editing) await vendorsApi.update(editing.id, data);
+            else await vendorsApi.create(data);
+            showToast(editing ? "Vendor identity synchronized" : "New vendor registered", "success");
+            setShowForm(false);
+            fetchData();
+          } catch (e: any) {
+            showToast(e.response?.data?.error || "Transaction Aborted", "error");
+            throw e;
+          }
+        }}
+        initialData={editing}
+        title={editing ? "EDIT VENDOR" : "ADD VENDOR"}
+      />
 
       {showPaymentModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6">
             <h2 className="text-lg font-black text-gray-900 dark:text-white">Record Transaction</h2>
             <div className="p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl flex border border-slate-200 dark:border-white/5">
-              <button onClick={() => setPaymentForm({...paymentForm, type: 'PAYMENT'})} className={clsx("flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all", paymentForm.type === 'PAYMENT' ? "bg-white dark:bg-slate-700 text-orange-600 dark:text-white shadow-sm" : "text-slate-500")}>Pay Due</button>
-              <button onClick={() => setPaymentForm({...paymentForm, type: 'ADVANCE'})} className={clsx("flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all", paymentForm.type === 'ADVANCE' ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm" : "text-slate-500")}>Advance</button>
+              <button onClick={() => setPaymentForm({ ...paymentForm, type: 'PAYMENT' })} className={clsx("flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all", paymentForm.type === 'PAYMENT' ? "bg-white dark:bg-slate-700 text-orange-600 dark:text-white shadow-sm" : "text-slate-500")}>Pay Due</button>
+              <button onClick={() => setPaymentForm({ ...paymentForm, type: 'ADVANCE' })} className={clsx("flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all", paymentForm.type === 'ADVANCE' ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm" : "text-slate-500")}>Advance</button>
             </div>
             <div className="space-y-1">
               <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Transaction Amount</label>
               <div className="relative group">
                 <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl font-black text-slate-300">₹</span>
-                <input value={paymentForm.amount} onChange={e => setPaymentForm({...paymentForm, amount: e.target.value.replace(/[^0-9.]/g, '')})} placeholder="0.00" className="w-full pl-12 pr-6 py-5 text-3xl font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-white/5 rounded-2xl outline-none focus:ring-4 ring-orange-500/10" />
+                <input value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value.replace(/[^0-9.]/g, '') })} placeholder="0.00" className="w-full pl-12 pr-6 py-5 text-3xl font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-white/5 rounded-2xl outline-none focus:ring-4 ring-orange-500/10" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -840,14 +830,14 @@ export default function VendorsClient() {
                     <p className="text-[9px] font-bold text-rose-600 dark:text-rose-400">No accounts found. Create one in <span className="underline cursor-pointer" onClick={() => router.push('/banking/accounts')}>Banking</span></p>
                   </div>
                 ) : (
-                  <select value={paymentForm.accountId} onChange={e => setPaymentForm({...paymentForm, accountId: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none">
+                  <select value={paymentForm.accountId} onChange={e => setPaymentForm({ ...paymentForm, accountId: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none">
                     {accounts.map(a => <option key={a.id} value={a.id}>{a.name} (₹{Math.round(a.balance).toLocaleString()})</option>)}
                   </select>
                 )}
               </div>
               <div className="space-y-1">
                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Payment Mode</label>
-                <select value={paymentForm.paymentMode} onChange={e => setPaymentForm({...paymentForm, paymentMode: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none">
+                <select value={paymentForm.paymentMode} onChange={e => setPaymentForm({ ...paymentForm, paymentMode: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none">
                   <option value="CASH">Cash</option>
                   <option value="BANK_TRANSFER">Bank Transfer</option>
                   <option value="UPI">UPI / Digital</option>
@@ -856,21 +846,21 @@ export default function VendorsClient() {
               </div>
               <div className="space-y-1">
                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Reference No.</label>
-                <input placeholder="TXN-123456" value={paymentForm.referenceId} onChange={e => setPaymentForm({...paymentForm, referenceId: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
+                <input placeholder="TXN-123456" value={paymentForm.referenceId} onChange={e => setPaymentForm({ ...paymentForm, referenceId: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
               </div>
               {paymentForm.type === 'PAYMENT' && (
                 <div className="space-y-1 col-span-2">
                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Allocate to Invoice (Recommended)</label>
-                  <select 
-                    value={paymentForm.vendorInvoiceId} 
+                  <select
+                    value={paymentForm.vendorInvoiceId}
                     onChange={e => {
                       const inv = vendorInvoices.find(i => i.id === e.target.value);
                       setPaymentForm({
-                        ...paymentForm, 
+                        ...paymentForm,
                         vendorInvoiceId: e.target.value,
                         amount: inv ? inv.amount.toString() : paymentForm.amount
                       });
-                    }} 
+                    }}
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none"
                   >
                     <option value="">Direct Payment (Unallocated)</option>
@@ -882,12 +872,12 @@ export default function VendorsClient() {
               )}
               <div className="space-y-1">
                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Transaction Date</label>
-                <input type="date" value={paymentForm.date} onChange={e => setPaymentForm({...paymentForm, date: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
+                <input type="date" value={paymentForm.date} onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
               </div>
             </div>
             <div className="space-y-1">
-               <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Remarks / Internal Notes</label>
-               <input placeholder="Note for accounting..." value={paymentForm.note} onChange={e => setPaymentForm({...paymentForm, note: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Remarks / Internal Notes</label>
+              <input placeholder="Note for accounting..." value={paymentForm.note} onChange={e => setPaymentForm({ ...paymentForm, note: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
             </div>
             {amountNum > 0 && (
               <div className="p-4 bg-orange-500/5 border border-orange-500/10 rounded-2xl space-y-2">
@@ -900,14 +890,14 @@ export default function VendorsClient() {
             )}
             <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-white/5">
               <button onClick={() => setShowPaymentModal(false)} className="px-5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded-lg transition-all">Cancel</button>
-              <button 
-                onClick={handlePayment} 
+              <button
+                onClick={handlePayment}
                 className={clsx(
                   "flex-1 px-8 py-2.5 rounded-lg text-xs font-bold uppercase transition-all shadow-lg",
                   saving || !amountNum || !paymentForm.accountId
                     ? "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none"
                     : "bg-orange-500 text-white shadow-orange-500/20 hover:bg-orange-600 active:scale-95"
-                )} 
+                )}
                 disabled={saving || !amountNum || !paymentForm.accountId}
               >
                 {saving ? "Processing..." : "Confirm Settlement"}
@@ -916,6 +906,92 @@ export default function VendorsClient() {
           </div>
         </div>
       )}
+
+      {/* Party Settings Slide-over */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/40 flex justify-end">
+          <div className="w-[400px] bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right">
+            
+            {/* Header */}
+            <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200 bg-white z-10 shrink-0">
+              <h3 className="text-lg font-bold text-slate-700">Party Settings</h3>
+              <button onClick={() => setIsSettingsOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Settings Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              
+              {/* General Section */}
+              <div className="space-y-4">
+                <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
+                  <span className="text-sm font-bold text-slate-600">General</span>
+                </div>
+                
+                {[
+                  { id: "partyGrouping", label: "Party Grouping" },
+                  { id: "shippingAddress", label: "Shipping Address" },
+                  { id: "managePartyStatus", label: "Manage Party Status" }
+                ].map(opt => (
+                  <div key={opt.id} className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      checked={(settings as any)[opt.id]}
+                      onChange={(e) => setSettings({...settings, [opt.id]: e.target.checked})}
+                      className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500" 
+                    />
+                    <span className="text-sm font-medium text-slate-700">{opt.label}</span>
+                    <Info size={14} className="text-slate-400" />
+                  </div>
+                ))}
+
+                {/* Payment Reminder */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      checked={settings.enablePaymentReminder}
+                      onChange={(e) => setSettings({...settings, enablePaymentReminder: e.target.checked})}
+                      className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500 bg-orange-500" 
+                    />
+                    <span className="text-sm font-medium text-slate-700">Enable Payment Reminder</span>
+                    <Info size={14} className="text-slate-400" />
+                  </div>
+                  
+                  {settings.enablePaymentReminder && (
+                    <div className="pl-7 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-500">Remind me for payment due in</span>
+                        <Info size={12} className="text-slate-400" />
+                      </div>
+                      <div className="flex items-center relative">
+                        <input 
+                          type="text" 
+                          value={settings.reminderDays}
+                          onChange={(e) => setSettings({...settings, reminderDays: e.target.value})}
+                          className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-orange-400"
+                        />
+                        <span className="absolute right-4 text-sm font-semibold text-slate-400">(Days)</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-200 bg-slate-50 shrink-0">
+              <button onClick={() => setIsSettingsOpen(false)} className="w-full py-2.5 flex items-center justify-center gap-2 text-sm font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors">
+                <Settings2 size={16} />
+                More Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

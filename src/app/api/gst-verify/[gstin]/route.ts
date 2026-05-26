@@ -96,6 +96,7 @@ export async function GET(
         status: "ACTIVE",
         address: stateDetails.sampleAddress,
         state: stateDetails.state,
+        district: stateDetails.city,
         city: stateDetails.city,
         pinCode: stateDetails.pin,
         taxpayerType: "Regular",
@@ -215,6 +216,8 @@ export async function GET(
       status,
       address: formattedAddress,
       state: pradr?.addr?.stcd || "",
+      district: pradr?.addr?.dst || "",
+      city: pradr?.addr?.loc || pradr?.addr?.dst || "",
       pinCode: pradr?.addr?.pncd || "",
       taxpayerType: gstData.dty || "Regular"
     });

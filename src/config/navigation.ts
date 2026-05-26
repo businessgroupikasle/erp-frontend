@@ -170,23 +170,59 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     ],
   },
   {
+    title: "PURCHASE & EXPENSE",
+    items: [
+      {
+        icon: Receipt,
+        label: "Purchase Bills",
+        href: "/purchases/invoices",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: CreditCard,
+        label: "Payment-Out",
+        href: "/purchases/payout-receipts",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: TrendingUp,
+        label: "Expenses",
+        href: "/accounting/expenses",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: ClipboardList,
+        label: "Purchase Order",
+        href: "/purchases/orders",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+      {
+        icon: Undo2,
+        label: "Purchase Return / Dr. Note",
+        href: "/purchases/debit-notes",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
+    ],
+  },
+  {
     title: "PROCUREMENT",
     items: [
       {
-        icon: Store,
-        label: "Vendors",
+        icon: Users,
+        label: "Parties",
         href: "/vendors",
         roles: SUPER_ONLY,
       },
       {
-        icon: ShoppingCart,
-        label: "Purchase Orders",
-        href: "/purchases/orders",
+        icon: Send,
+        label: "Whatsapp Connect",
+        href: "/vendors/whatsapp",
         roles: SUPER_ONLY,
-        children: [
-          { label: "View All Orders", href: "/purchases/orders" },
-          { label: "Create New PO", href: "/purchases/new" },
-        ]
       },
       {
         icon: Truck,
@@ -426,7 +462,7 @@ export const franchiseMenuSections: MenuSection[] = [
       },
       {
         icon: User,
-        label: "Customers",
+        label: "Parties",
         href: "/customers",
         roles: FRANCHISE_ONLY,
       },

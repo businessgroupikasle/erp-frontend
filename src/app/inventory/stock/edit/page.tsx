@@ -582,8 +582,14 @@ function EditItemForm() {
                       <button
                         type="button"
                         onClick={() => {
-                          const code = "ITM-" + Math.random().toString(36).toUpperCase().slice(2, 8);
-                          setItemCode(code);
+                          if (name.trim()) {
+                            // Generate code based on item name (e.g., "Batter Idly" -> "BATTER-IDLY")
+                            const base = name.trim().toUpperCase().replace(/\s+/g, '-').replace(/[^A-Z0-9-]/g, '');
+                            setItemCode(base);
+                          } else {
+                            const code = "ITM-" + Math.random().toString(36).toUpperCase().slice(2, 8);
+                            setItemCode(code);
+                          }
                         }}
                         className="px-3 py-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-slate-800 rounded-lg text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:border-orange-400 hover:text-orange-600 transition-all whitespace-nowrap"
                       >

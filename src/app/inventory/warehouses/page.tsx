@@ -80,11 +80,7 @@ export default function WarehousesPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-white/5">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
-              <Warehouse size={14} className="text-orange-500" />
-              <ChevronRight size={12} />
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Inventory</span>
-            </div>
+            
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               Warehouses Directory
             </h1>
