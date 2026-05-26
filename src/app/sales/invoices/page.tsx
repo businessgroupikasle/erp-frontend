@@ -856,6 +856,7 @@ export default function SalesInvoicesPage() {
                     <option value="">Select</option>
                     {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
+                </div>
               </div>
             </div>
           </div>
