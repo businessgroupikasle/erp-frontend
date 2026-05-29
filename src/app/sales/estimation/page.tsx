@@ -724,7 +724,7 @@ export default function EstimationsPage() {
                     placeholder="Auto"
                     value={refNo}
                     onChange={e => setRefNo(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400 font-mono"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400"
                   />
                 </div>
                 <div>
@@ -901,9 +901,9 @@ export default function EstimationsPage() {
                             <option key={index} value={o.label}>{o.label}</option>
                           ))}
                         </select>
-                        <div className="text-[10px] text-right text-gray-400 mt-0.5 font-mono">₹{taxAmt > 0 ? taxAmt.toFixed(2) : "0.00"}</div>
+                        <div className="text-[10px] text-right text-gray-400 mt-0.5">₹{taxAmt > 0 ? taxAmt.toFixed(2) : "0.00"}</div>
                       </td>
-                      <td className="px-4 py-2.5 text-right font-mono text-sm font-semibold text-gray-700 align-top">
+                      <td className="px-4 py-2.5 text-right text-sm font-semibold text-gray-700 align-top">
                         <div className="py-1.5">
                           {amount > 0 ? `₹${amount.toFixed(2)}` : "—"}
                         </div>
@@ -932,7 +932,7 @@ export default function EstimationsPage() {
               </button>
               <div className="flex items-center gap-5 text-xs text-gray-400">
                 <span>Qty: <strong className="text-gray-700">{totalQty}</strong></span>
-                <span>Tax: <strong className="text-gray-700 font-mono">₹{totalTax.toFixed(2)}</strong></span>
+                <span>Tax: <strong className="text-gray-700 font-sans">₹{totalTax.toFixed(2)}</strong></span>
               </div>
             </div>
           </div>
@@ -1000,12 +1000,12 @@ export default function EstimationsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-4 w-64 shrink-0 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500">Subtotal</span>
-                <span className="font-mono font-semibold text-gray-700">₹{totalAmount.toFixed(2)}</span>
+                <span className="font-semibold text-gray-700">₹{totalAmount.toFixed(2)}</span>
               </div>
               {totalTax > 0 && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500">Tax</span>
-                  <span className="font-mono text-gray-600">₹{totalTax.toFixed(2)}</span>
+                  <span className="text-gray-600">₹{totalTax.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex items-center justify-between text-sm">
@@ -1019,11 +1019,11 @@ export default function EstimationsPage() {
                   />
                   Round Off
                 </label>
-                <span className="font-mono text-gray-500 text-xs">{roundOff >= 0 ? "+" : ""}₹{roundOff.toFixed(2)}</span>
+                <span className="text-gray-500 text-xs">{roundOff >= 0 ? "+" : ""}₹{roundOff.toFixed(2)}</span>
               </div>
               <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
                 <span className="font-bold text-gray-800">Total</span>
-                <span className="text-xl font-bold font-mono text-[#f58220]">₹{finalTotal.toFixed(2)}</span>
+                <span className="text-xl font-bold text-[#f58220]">₹{finalTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -1181,7 +1181,7 @@ export default function EstimationsPage() {
                     placeholder="Enter Tracking ID / AWB Number"
                     value={trackingNumber}
                     onChange={e => setTrackingNumber(e.target.value)}
-                    className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm outline-none focus:ring-2 focus:ring-[#f58220]/20 focus:border-[#f58220] transition-all font-mono"
+                    className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm outline-none focus:ring-2 focus:ring-[#f58220]/20 focus:border-[#f58220] transition-all"
                   />
                 </div>
 
@@ -1263,7 +1263,7 @@ export default function EstimationsPage() {
                     placeholder="Enter Tracking ID / AWB Number"
                     value={editTrackingNumber}
                     onChange={e => setEditTrackingNumber(e.target.value)}
-                    className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm outline-none focus:ring-2 focus:ring-[#f58220]/20 focus:border-[#f58220] transition-all font-mono"
+                    className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm outline-none focus:ring-2 focus:ring-[#f58220]/20 focus:border-[#f58220] transition-all"
                   />
                 </div>
               </div>
@@ -1437,7 +1437,7 @@ export default function EstimationsPage() {
                       <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
                         {new Date(est.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
-                      <td className="px-4 py-3 font-mono font-semibold text-gray-800 text-xs">
+                      <td className="px-4 py-3 font-semibold text-gray-800 text-xs">
                         <div>{est.quotationNumber}</div>
                         {est.status === "CONVERTED" && est.convertedOrderNumber && (
                           <div className="text-[10px] text-green-600 font-bold mt-1 bg-green-50 px-1.5 py-0.5 rounded inline-block">
@@ -1458,7 +1458,7 @@ export default function EstimationsPage() {
                           {style.label}
                         </span>
                         {est.status === "CONVERTED" && (est.trackingNumber || est.courierName) && (
-                          <div className="text-[10px] text-gray-500 mt-1 font-medium font-mono">
+                          <div className="text-[10px] text-gray-500 mt-1 font-medium">
                             {est.courierName ? `${est.courierName}: ` : ""}{est.trackingNumber || "No Tracking ID"}
                           </div>
                         )}
