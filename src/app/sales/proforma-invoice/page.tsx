@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   FilePlus2, Plus, RefreshCw, ChevronDown, X, Calendar,
   Search, ArrowLeft, ArrowRight,
-  Check, Printer, Share2, Trash2, AlignLeft, FileText, Image as ImageIcon
+  Check, Printer, Share2, Trash2, AlignLeft, FileText,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { customersApi, productsFullApi } from "@/lib/api";
@@ -694,12 +694,7 @@ export default function ProformaInvoicePage() {
                 >
                   <FileText className="h-3.5 w-3.5" /> Description
                 </button>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-semibold text-gray-600">
-                  <ImageIcon className="h-3.5 w-3.5" /> Image
-                </button>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-semibold text-gray-600">
-                  <FileText className="h-3.5 w-3.5" /> Document
-                </button>
+                
               </div>
               {showTerms && (
                 <div>

@@ -38,9 +38,9 @@ export const Toast: React.FC<ToastProps> = ({ message, type = 'info', onClose })
   return (
     <div
       className={clsx(
-        "pointer-events-auto flex items-center gap-4 px-6 py-4 rounded-3xl border backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] transition-all duration-500 ease-out transform max-w-[800px] min-w-[400px]",
+        "pointer-events-auto flex items-center gap-4 px-6 py-4 rounded-xl border backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] transition-all duration-500 ease-out transform max-w-[800px] min-w-[400px]",
         COLORS[type],
-        isVisible ? "translate-y-0 opacity-100 scale-100" : "translate-y-4 opacity-0 scale-95"
+        isVisible ? "translate-y-0 opacity-100 scale-100" : "-translate-y-4 opacity-0 scale-95"
       )}
       role="alert"
     >

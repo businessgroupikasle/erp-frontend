@@ -8,7 +8,7 @@ import { clsx } from "clsx";
 interface ActionCardProps {
   title: string;
   description: string;
-  image: string;
+
   actionText: string;
   actionHref: string;
   demoHref?: string;
@@ -18,7 +18,6 @@ interface ActionCardProps {
 export default function ActionCard({
   title,
   description,
-  image,
   actionText,
   actionHref,
   demoHref,
@@ -34,12 +33,7 @@ export default function ActionCard({
       </div>
 
       <div className="relative aspect-[16/10] bg-[#F9F7F9] dark:bg-slate-900 rounded-xl overflow-hidden border border-[#F0EAF0] dark:border-slate-800 mb-6 group-hover:scale-[1.02] transition-transform">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img 
-          src={image} 
-          alt={title} 
-          className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-        />
+        <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-500">No Image</div>
         <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent" />
       </div>
 

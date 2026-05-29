@@ -172,6 +172,32 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
           {/* Top Always-Visible Fields */}
           <div className="grid grid-cols-3 gap-6 mb-6">
             <div>
+              <label className="block text-xs font-semibold text-orange-500 mb-1.5 flex items-center gap-1">
+                GST Number
+                <span className="text-[10px] bg-orange-100 text-[#f58220] px-1.5 py-0.5 rounded font-normal font-sans">Priority</span>
+              </label>
+              <div className="relative">
+                <input 
+                  placeholder="e.g. 29ABCDE1234F1Z5" 
+                  value={form.gstNumber} 
+                  maxLength={15}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                    setForm({...form, gstNumber: val});
+                    if (val.length === 15) {
+                      fetchGstDetails(val);
+                    }
+                  }} 
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400 transition-colors uppercase font-mono pr-12" 
+                />
+                {fetchingGst ? (
+                  <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-500 animate-spin" />
+                ) : (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-medium">{form.gstNumber.length}/15</span>
+                )}
+              </div>
+            </div>
+            <div>
               <label className="block text-xs font-medium text-gray-500 mb-1.5">{partyType === 'customer' ? 'Party Name *' : 'Vendor Name *'}</label>
               <input 
                 placeholder="Enter name..." 
@@ -190,7 +216,20 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400 transition-colors" 
               />
             </div>
+
             <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">GST Type</label>
+              <select 
+                value={form.gstType} 
+                onChange={(e) => setForm({...form, gstType: e.target.value})} 
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white transition-colors"
+              >
+                <option>Unregistered/Consumer</option>
+                <option>Registered Business</option>
+                <option>Composition Scheme</option>
+              </select>
+            </div>
+            <div className="col-span-2">
               <label className="block text-xs font-medium text-gray-500 mb-1.5">Email Address</label>
               <input 
                 placeholder="optional@gmail.com" 
@@ -204,6 +243,7 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
           {/* Tabs Navigation */}
           <div className="flex items-center gap-8 border-b border-gray-200 mb-6">
             <button 
+              type="button"
               onClick={() => setActiveTab("GST")}
               className={clsx(
                 "pb-3 text-sm font-semibold transition-all",
@@ -213,6 +253,7 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
               GST & Address
             </button>
             <button 
+              type="button"
               onClick={() => setActiveTab("CREDIT")}
               className={clsx(
                 "pb-3 text-sm font-semibold transition-all flex items-center gap-2",
@@ -231,40 +272,38 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
                   {/* Left Column */}
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1.5">GST Number</label>
-                      <div className="relative">
-                        <input 
-                          placeholder="e.g. 29ABCDE1234F1Z5" 
-                          value={form.gstNumber} 
-                          maxLength={15}
-                          onChange={(e) => {
-                            const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-                            setForm({...form, gstNumber: val});
-                            if (val.length === 15) {
-                              fetchGstDetails(val);
-                            }
-                          }} 
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400 transition-colors uppercase font-mono pr-12" 
-                        />
-                        {fetchingGst ? (
-                          <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-500 animate-spin" />
-                        ) : (
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-medium">{form.gstNumber.length}/15</span>
-                        )}
-                      </div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1.5">Billing Address</label>
+                      <textarea 
+                        rows={3}
+                        placeholder="Address..." 
+                        value={form.billingAddress} 
+                        onChange={(e) => setForm({...form, billingAddress: e.target.value})} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400 transition-colors resize-none h-[88px]" 
+                      />
                     </div>
-                    
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1.5">GST Type</label>
-                      <select 
-                        value={form.gstType} 
-                        onChange={(e) => setForm({...form, gstType: e.target.value})} 
+                      <label className="block text-xs font-medium text-gray-500 mb-1.5">Shipping Address</label>
+                      <textarea 
+                        rows={3}
+                        placeholder="Shipping Address..." 
+                        value={form.shippingAddress} 
+                        onChange={(e) => setForm({...form, shippingAddress: e.target.value})} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400 transition-colors resize-none h-[88px]" 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1.5">Pincode</label>
+                      <input 
+                        placeholder="Pincode"
+                        value={form.pincode} 
+                        onChange={(e) => setForm({...form, pincode: e.target.value.replace(/\D/g, "")})} 
+                        maxLength={6}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white transition-colors"
-                      >
-                        <option>Unregistered/Consumer</option>
-                        <option>Registered Business</option>
-                        <option>Composition Scheme</option>
-                      </select>
+                      />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -298,45 +337,9 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
                       />
                     </div>
                   </div>
-
-                  {/* Right Column */}
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1.5">Billing Address</label>
-                      <textarea 
-                        rows={3}
-                        placeholder="Address..." 
-                        value={form.billingAddress} 
-                        onChange={(e) => setForm({...form, billingAddress: e.target.value})} 
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400 transition-colors resize-none h-[88px]" 
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1.5">Pincode</label>
-                      <input 
-                        placeholder="Pincode"
-                        value={form.pincode} 
-                        onChange={(e) => setForm({...form, pincode: e.target.value.replace(/\D/g, "")})} 
-                        maxLength={6}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white transition-colors"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1.5">Shipping Address</label>
-                      <textarea 
-                        rows={3}
-                        placeholder="Shipping Address..." 
-                        value={form.shippingAddress} 
-                        onChange={(e) => setForm({...form, shippingAddress: e.target.value})} 
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400 transition-colors resize-none h-[88px]" 
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
-            )}
+            ) }
 
             {activeTab === "CREDIT" && (
               <div className="animate-in fade-in slide-in-from-right-4 duration-300 w-1/2">
