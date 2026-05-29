@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Calculator, Plus, Search, RefreshCw, X, User,
   Printer, ChevronDown, Trash2, Check, Share2, Calendar,
-  AlignLeft, Image as ImageIcon, FileText, ArrowLeft, ArrowRight, FileClock
+  AlignLeft, FileText, ArrowLeft, ArrowRight, FileClock, Pencil, Truck
 } from "lucide-react";
 import { clsx } from "clsx";
 import { customersApi, productsFullApi } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import api from "@/lib/api/base";
 import AddPartyModal from "@/components/modals/AddPartyModal";
+import AddInventoryProductForm from "@/components/modules/inventory/AddInventoryProductForm";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -100,15 +101,19 @@ function makeItem(): LineItem {
 }
 
 function computeRow(item: LineItem, withTax: boolean) {
-  const gross = item.qty * item.rate;
-  const discAmt = parseFloat((gross * item.discountPct / 100).toFixed(2));
+  const qty = item.qty || 0;
+  const rate = item.rate || 0;
+  const discountPct = item.discountPct || 0;
+  const taxPct = item.taxPct || 0;
+  const gross = qty * rate;
+  const discAmt = parseFloat((gross * discountPct / 100).toFixed(2));
   if (withTax) {
     const netAmt = gross - discAmt;
-    const taxAmt = parseFloat((netAmt * item.taxPct / (100 + item.taxPct)).toFixed(2));
+    const taxAmt = parseFloat((netAmt * taxPct / (100 + taxPct)).toFixed(2));
     return { discAmt, taxAmt, amount: parseFloat(netAmt.toFixed(2)) };
   }
   const taxable = gross - discAmt;
-  const taxAmt = parseFloat((taxable * item.taxPct / 100).toFixed(2));
+  const taxAmt = parseFloat((taxable * taxPct / 100).toFixed(2));
   return { discAmt, taxAmt, amount: parseFloat((taxable + taxAmt).toFixed(2)) };
 }
 
@@ -234,6 +239,7 @@ export default function EstimationsPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split("T")[0]);
   const [stateOfSupply, setStateOfSupply] = useState("");
+  const [refNo, setRefNo] = useState("");
   const [items, setItems] = useState<LineItem[]>([makeItem(), makeItem()]);
   const [priceMode, setPriceMode] = useState<"without_tax" | "with_tax">("without_tax");
   const [showPriceDrop, setShowPriceDrop] = useState(false);
@@ -250,10 +256,27 @@ export default function EstimationsPage() {
   const [converting, setConverting] = useState<string | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
 
+  // Convert to Sales Order & Tracking Modals
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [selectedEstForConvert, setSelectedEstForConvert] = useState<any>(null);
+  const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [courierName, setCourierName] = useState("");
+
+  const [showEditTrackingModal, setShowEditTrackingModal] = useState(false);
+  const [selectedEstForTracking, setSelectedEstForTracking] = useState<any>(null);
+  const [editTrackingNumber, setEditTrackingNumber] = useState("");
+  const [editCourierName, setEditCourierName] = useState("");
+
   // Add Party inline form
   const [showAddParty, setShowAddParty] = useState(false);
   const [newParty, setNewParty] = useState({ name: "", phone: "", email: "" });
   const [savingParty, setSavingParty] = useState(false);
+
+  // Add Product inline form
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [activeItemIdx, setActiveItemIdx] = useState<number | null>(null);
 
   // Item dropdown fixed position
   const [itemDropRect, setItemDropRect] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -308,6 +331,15 @@ export default function EstimationsPage() {
         setShowPriceDrop(false);
       if (calendarRef.current && !calendarRef.current.contains(e.target as Node))
         setShowCalendar(false);
+
+      // Close item drop if clicked outside
+      if (openItemDrop) {
+        const isInput = (e.target as HTMLElement).tagName === "INPUT" && (e.target as HTMLInputElement).placeholder === "Search item...";
+        const isDrop = (e.target as HTMLElement).closest(".item-dropdown-container");
+        if (!isInput && !isDrop) {
+          setOpenItemDrop(null);
+        }
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -331,6 +363,7 @@ export default function EstimationsPage() {
     setCustomerPhone("");
     setInvoiceDate(new Date().toISOString().split("T")[0]);
     setStateOfSupply("");
+    setRefNo("");
     setItems([makeItem(), makeItem()]);
     setPriceMode("without_tax");
     setTermsText("");
@@ -341,36 +374,72 @@ export default function EstimationsPage() {
     setView("create");
   };
 
-  const handleDeleteDraft = (id: string) => {
+  const handleDeleteDraft = async (id: string) => {
     try {
-      const draftsStr = localStorage.getItem("sale_estimations_drafts");
-      if (draftsStr) {
-        const drafts = JSON.parse(draftsStr);
-        const newDrafts = drafts.filter((d: any) => d.id !== id);
-        localStorage.setItem("sale_estimations_drafts", JSON.stringify(newDrafts));
-        showToast("Draft deleted", "success");
-        fetchData();
+      if (id.startsWith("draft_")) {
+        const draftsStr = localStorage.getItem("sale_estimations_drafts");
+        if (draftsStr) {
+          const drafts = JSON.parse(draftsStr);
+          const newDrafts = drafts.filter((d: any) => d.id !== id);
+          localStorage.setItem("sale_estimations_drafts", JSON.stringify(newDrafts));
+        }
+      } else {
+        await api.delete(`/api/sales/quotations/${id}`);
       }
-    } catch (e) {
-      console.error(e);
+      showToast("Draft deleted", "success");
+      fetchData();
+    } catch (e: any) {
+      showToast(e?.response?.data?.error || "Failed to delete draft", "error");
     }
   };
 
   const loadDraft = (draft: any) => {
     setDraftId(draft.id);
     const raw = draft._rawState || {};
-    setSelectedCustomer(raw.selectedCustomer || null);
-    setCustomerSearch(raw.customerSearch || "");
-    setCustomerPhone(raw.customerPhone || "");
-    setInvoiceDate(raw.invoiceDate || new Date().toISOString().split("T")[0]);
-    setStateOfSupply(raw.stateOfSupply || "");
-    setItems(raw.items && raw.items.length > 0 ? raw.items : [makeItem(), makeItem()]);
-    setPriceMode(raw.priceMode || "without_tax");
-    setTermsText(raw.termsText || "");
-    setShowTerms(raw.showTerms || !!raw.termsText);
-    setDescription(raw.description || "");
-    setShowDesc(raw.showDesc || !!raw.description);
-    setRoundOffEnabled(raw.roundOffEnabled ?? true);
+    if (draft._rawState) {
+      setSelectedCustomer(raw.selectedCustomer || null);
+      setCustomerSearch(raw.customerSearch || "");
+      setCustomerPhone(raw.customerPhone || "");
+      setInvoiceDate(raw.invoiceDate || new Date().toISOString().split("T")[0]);
+      setStateOfSupply(raw.stateOfSupply || "");
+      setRefNo(raw.refNo || "");
+      setItems(raw.items && raw.items.length > 0 ? raw.items : [makeItem(), makeItem()]);
+      setPriceMode(raw.priceMode || "without_tax");
+      setTermsText(raw.termsText || "");
+      setShowTerms(raw.showTerms || !!raw.termsText);
+      setDescription(raw.description || "");
+      setShowDesc(raw.showDesc || !!raw.description);
+      setRoundOffEnabled(raw.roundOffEnabled ?? true);
+    } else {
+      const customer = customers.find((c: any) => c.id === draft.customerId) || null;
+      setSelectedCustomer(customer);
+      setCustomerSearch(draft.customerName || (customer ? customer.name : ""));
+      setCustomerPhone(draft.customerPhone || (customer ? customer.contact || customer.phone : ""));
+      setInvoiceDate(draft.validUntil ? new Date(draft.validUntil).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]);
+      setStateOfSupply(customer?.state || "");
+      setRefNo(draft.quotationNumber || "");
+      
+      const mappedItems = draft.items && draft.items.length > 0
+        ? draft.items.map((i: any) => ({
+            id: i.id || `item_${Math.random()}`,
+            productId: i.productId,
+            itemSearch: i.productName,
+            qty: i.quantity,
+            unit: i.unit || "NONE",
+            rate: i.rate,
+            discountPct: 0,
+            taxPct: i.taxPercent || 0,
+            taxLabel: TAX_OPTIONS.find(o => o.value === i.taxPercent)?.label || "NONE",
+          }))
+        : [makeItem(), makeItem()];
+      setItems(mappedItems);
+      setPriceMode("without_tax");
+      setTermsText(draft.termsConditions || "");
+      setShowTerms(!!draft.termsConditions);
+      setDescription(draft.notes || "");
+      setShowDesc(!!draft.notes);
+      setRoundOffEnabled(true);
+    }
     setView("create");
   };
 
@@ -378,6 +447,9 @@ export default function EstimationsPage() {
     setSelectedCustomer(c);
     setCustomerSearch(c.name);
     setCustomerPhone(c.contact || c.phone || "");
+    if (c.state) {
+      setStateOfSupply(c.state);
+    }
     setShowCustomerDrop(false);
   };
 
@@ -416,53 +488,15 @@ export default function EstimationsPage() {
        return;
     }
 
-    const draftPayload = {
-      id: draftId || `draft_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      status: "DRAFT",
-      createdAt: new Date().toISOString(),
-      quotationNumber: "DRAFT",
-      customerName: selectedCustomer?.name || "Unknown Customer",
-      totalAmount: finalTotal,
-      _rawState: {
-        selectedCustomer,
-        customerSearch,
-        customerPhone,
-        invoiceDate,
-        stateOfSupply,
-        items,
-        priceMode,
-        termsText,
-        description,
-        roundOffEnabled
-      }
-    };
-
-    if (isDraft) {
-      try {
-        const draftsStr = localStorage.getItem("sale_estimations_drafts");
-        let drafts = draftsStr ? JSON.parse(draftsStr) : [];
-        if (draftId) {
-          drafts = drafts.filter((d: any) => d.id !== draftId);
-        }
-        drafts.unshift(draftPayload);
-        localStorage.setItem("sale_estimations_drafts", JSON.stringify(drafts));
-        showToast("Draft saved locally", "success");
-        fetchData();
-        setView("list");
-      } catch (e) {
-        console.error("Failed to save draft locally", e);
-      }
-      return;
-    }
-
     setSaving(true);
     try {
       const payload: any = {
+        quotationNumber: refNo.trim() || undefined,
         customerId: selectedCustomer?.id,
         customerName: selectedCustomer ? undefined : customerSearch,
         customerPhone,
         validUntil: invoiceDate,
-        status: "SENT",
+        status: isDraft ? "DRAFT" : "SENT",
         items: validItems.map(i => ({
           productId: i.productId || undefined,
           productName: i.itemSearch,
@@ -472,14 +506,18 @@ export default function EstimationsPage() {
           taxPercent: i.taxPct,
         })),
         discountAmount: totalDisc,
-        termsConditions: termsText || undefined,
-        notes: description || undefined,
+        termsConditions: showTerms ? (termsText || undefined) : undefined,
+        notes: showDesc ? (description || undefined) : undefined,
       };
 
-      await api.post("/api/sales/quotations", payload);
+      if (draftId && !draftId.startsWith("draft_")) {
+        await api.patch(`/api/sales/quotations/${draftId}`, payload);
+      } else {
+        await api.post("/api/sales/quotations", payload);
+      }
       
       // If we saved an estimation that was previously a draft, remove the draft
-      if (draftId) {
+      if (draftId && draftId.startsWith("draft_")) {
         try {
           const draftsStr = localStorage.getItem("sale_estimations_drafts");
           if (draftsStr) {
@@ -492,7 +530,7 @@ export default function EstimationsPage() {
         }
       }
 
-      showToast("Estimation saved successfully", "success");
+      showToast(isDraft ? "Draft saved successfully" : "Estimation saved successfully", "success");
       fetchData();
       setView("list");
     } catch (e: any) {
@@ -511,15 +549,55 @@ export default function EstimationsPage() {
     }
   };
 
-  const handleConvertToOrder = async (id: string) => {
-    setConverting(id);
+  const handleOpenConvertModal = (est: any) => {
+    setSelectedEstForConvert(est);
+    setDeliveryDate(new Date().toISOString().split("T")[0]);
+    setDeliveryAddress("");
+    setTrackingNumber("");
+    setCourierName("");
+    setShowConvertModal(true);
+  };
+
+  const submitConvert = async () => {
+    if (!selectedEstForConvert) return;
+    setConverting(selectedEstForConvert.id);
     try {
-      await api.post(`/api/sales/quotations/${id}/convert`);
-      showToast("Converted to Sales Order", "success");
+      await api.post(`/api/sales/quotations/${selectedEstForConvert.id}/convert`, {
+        deliveryDate: deliveryDate || undefined,
+        deliveryAddress: deliveryAddress || undefined,
+        trackingNumber: trackingNumber || undefined,
+        courierName: courierName || undefined
+      });
+      showToast("Converted to Sales Order successfully", "success");
+      setShowConvertModal(false);
       fetchData();
     } catch (e: any) {
       showToast(e?.response?.data?.error || "Conversion failed", "error");
-    } finally { setConverting(null); }
+    } finally {
+      setConverting(null);
+    }
+  };
+
+  const handleOpenEditTracking = (est: any) => {
+    setSelectedEstForTracking(est);
+    setEditTrackingNumber(est.trackingNumber || "");
+    setEditCourierName(est.courierName || "");
+    setShowEditTrackingModal(true);
+  };
+
+  const submitEditTracking = async () => {
+    if (!selectedEstForTracking) return;
+    try {
+      await api.patch(`/api/sales/quotations/${selectedEstForTracking.id}`, {
+        trackingNumber: editTrackingNumber,
+        courierName: editCourierName
+      });
+      showToast("Tracking details updated successfully", "success");
+      setShowEditTrackingModal(false);
+      fetchData();
+    } catch (e: any) {
+      showToast(e?.response?.data?.error || "Update failed", "error");
+    }
   };
 
   // ── Filtered list ──────────────────────────────────────────────────────────
@@ -641,16 +719,33 @@ export default function EstimationsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5">Ref No</label>
-                  <div className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-400 bg-gray-50 font-mono">Auto</div>
+                  <input
+                    type="text"
+                    placeholder="Auto"
+                    value={refNo}
+                    onChange={e => setRefNo(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400 font-mono"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5">Valid Until</label>
-                  <input
-                    type="date"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white"
-                    value={invoiceDate}
-                    onChange={e => setInvoiceDate(e.target.value)}
-                  />
+                  <div className="relative" ref={calendarRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowCalendar(v => !v)}
+                      className="w-full flex items-center justify-between border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white hover:border-orange-400 transition-colors"
+                    >
+                      <span className="font-medium text-gray-700">
+                        {invoiceDate ? new Date(invoiceDate + "T00:00:00").toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }) : "Pick date"}
+                      </span>
+                      <Calendar size={14} className="text-gray-400 shrink-0" />
+                    </button>
+                    {showCalendar && (
+                      <div className="absolute right-0 top-full mt-1.5 z-[200]">
+                        <MiniCalendar value={invoiceDate} onChange={setInvoiceDate} onClose={() => setShowCalendar(false)} />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5">State of Supply</label>
@@ -700,8 +795,12 @@ export default function EstimationsPage() {
                   ).slice(0, 10);
                   return (
                     <tr key={item.id} className="hover:bg-gray-50/50">
-                      <td className="px-4 py-2.5 text-center text-xs text-gray-400">{idx + 1}</td>
-                      <td className="px-4 py-2.5 relative">
+                      <td className="px-4 py-2.5 text-center text-xs text-gray-400 align-top">
+                        <div className="py-1.5">
+                          {idx + 1}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 relative align-top">
                         <input
                           className="w-full px-3 py-1.5 border border-gray-200 rounded-md text-sm outline-none focus:border-orange-400"
                           placeholder="Search item..."
@@ -717,27 +816,46 @@ export default function EstimationsPage() {
                             setItemDropRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: 320 });
                           }}
                         />
-                        {openItemDrop === item.id && filtProd.length > 0 && itemDropRect && (
+                        {openItemDrop === item.id && itemDropRect && (
                           <div
-                            className="bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto"
+                            className="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden flex flex-col item-dropdown-container"
                             style={{ position: "fixed", top: itemDropRect.top + 4, left: itemDropRect.left, width: itemDropRect.width, zIndex: 9999 }}
                           >
-                            {filtProd.map(p => (
-                              <button
-                                key={p.id}
-                                className="w-full flex items-center justify-between px-3 py-2 hover:bg-orange-50 text-left border-b border-gray-50 last:border-0"
-                                onMouseDown={() => selectProduct(idx, p)}
-                              >
-                                <div>
-                                  <div className="text-sm font-medium text-gray-800">{p.name}</div>
-                                  <div className="text-xs text-gray-400">₹{p.basePrice || p.price || 0}</div>
-                                </div>
-                              </button>
-                            ))}
+                            <button
+                              type="button"
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-orange-600 hover:bg-orange-50 border-b border-gray-100 font-semibold shrink-0"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                setActiveItemIdx(idx);
+                                setShowAddProduct(true);
+                                setOpenItemDrop(null);
+                              }}
+                            >
+                              <span className="w-4 h-4 rounded-full bg-orange-100 flex items-center justify-center text-[#f58220] font-bold text-xs leading-none">+</span>
+                              Add New Product
+                            </button>
+                            <div className="max-h-48 overflow-y-auto">
+                              {filtProd.length === 0 ? (
+                                <div className="px-3 py-4 text-xs text-gray-400 text-center">No products found</div>
+                              ) : (
+                                filtProd.map(p => (
+                                  <button
+                                    key={p.id}
+                                    className="w-full flex items-center justify-between px-3 py-2 hover:bg-orange-50 text-left border-b border-gray-50 last:border-0"
+                                    onMouseDown={() => selectProduct(idx, p)}
+                                  >
+                                    <div>
+                                      <div className="text-sm font-medium text-gray-800">{p.name}</div>
+                                      <div className="text-xs text-gray-400">₹{p.basePrice || p.price || 0}</div>
+                                    </div>
+                                  </button>
+                                ))
+                              )}
+                            </div>
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5 align-top">
                         <input
                           type="number"
                           min={0}
@@ -746,7 +864,7 @@ export default function EstimationsPage() {
                           className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm text-center outline-none focus:border-orange-400"
                         />
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5 align-top">
                         <select
                           value={item.unit}
                           onChange={e => updateItem(idx, "unit", e.target.value)}
@@ -755,7 +873,7 @@ export default function EstimationsPage() {
                           {UNITS.map(u => <option key={u.code} value={u.code}>{u.short}</option>)}
                         </select>
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5 align-top">
                         <div className="relative">
                           <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">₹</span>
                           <input
@@ -767,7 +885,7 @@ export default function EstimationsPage() {
                           />
                         </div>
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5 align-top">
                         <select
                           value={item.taxLabel || "NONE"}
                           onChange={e => {
@@ -785,16 +903,20 @@ export default function EstimationsPage() {
                         </select>
                         <div className="text-[10px] text-right text-gray-400 mt-0.5 font-mono">₹{taxAmt > 0 ? taxAmt.toFixed(2) : "0.00"}</div>
                       </td>
-                      <td className="px-4 py-2.5 text-right font-mono text-sm font-semibold text-gray-700">
-                        {amount > 0 ? `₹${amount.toFixed(2)}` : "—"}
+                      <td className="px-4 py-2.5 text-right font-mono text-sm font-semibold text-gray-700 align-top">
+                        <div className="py-1.5">
+                          {amount > 0 ? `₹${amount.toFixed(2)}` : "—"}
+                        </div>
                       </td>
-                      <td className="px-4 py-2.5 text-center">
-                        <button
-                          onClick={() => removeRow(idx)}
-                          className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                      <td className="px-4 py-2.5 text-center align-top">
+                        <div className="py-1">
+                          <button
+                            onClick={() => removeRow(idx)}
+                            className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -820,7 +942,12 @@ export default function EstimationsPage() {
             <div className="flex-1 bg-white rounded-xl border border-gray-200 p-4 space-y-3">
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => setShowTerms(v => !v)}
+                  onClick={() => {
+                    setShowTerms(v => {
+                      if (v) setTermsText("");
+                      return !v;
+                    });
+                  }}
                   className={clsx(
                     "flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-semibold transition-all",
                     showTerms ? "border-orange-400 bg-orange-50 text-orange-600" : "border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -829,7 +956,12 @@ export default function EstimationsPage() {
                   <AlignLeft className="h-3.5 w-3.5" /> Terms & Conditions
                 </button>
                 <button
-                  onClick={() => setShowDesc(v => !v)}
+                  onClick={() => {
+                    setShowDesc(v => {
+                      if (v) setDescription("");
+                      return !v;
+                    });
+                  }}
                   className={clsx(
                     "flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-semibold transition-all",
                     showDesc ? "border-orange-400 bg-orange-50 text-orange-600" : "border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -837,12 +969,7 @@ export default function EstimationsPage() {
                 >
                   <FileText className="h-3.5 w-3.5" /> Description
                 </button>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-semibold text-gray-600">
-                  <ImageIcon className="h-3.5 w-3.5" /> Image
-                </button>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-semibold text-gray-600">
-                  <FileText className="h-3.5 w-3.5" /> Document
-                </button>
+
               </div>
               {showTerms && (
                 <div>
@@ -960,6 +1087,205 @@ export default function EstimationsPage() {
             }
           }}
         />
+
+        {showAddProduct && (
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-5xl mx-4 min-h-[680px] max-h-[90vh] overflow-y-auto p-6 relative">
+              <button
+                type="button"
+                onClick={() => setShowAddProduct(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-lg bg-gray-50 border border-gray-200"
+              >
+                <X size={18} />
+              </button>
+              <AddInventoryProductForm
+                isModal={true}
+                onCancel={() => setShowAddProduct(false)}
+                onSuccess={(newProd) => {
+                  showToast("Product created successfully", "success");
+                  fetchData();
+                  if (activeItemIdx !== null) {
+                    selectProduct(activeItemIdx, newProd);
+                  }
+                  setShowAddProduct(false);
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Convert to Sales Order Modal */}
+        {showConvertModal && selectedEstForConvert && (
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-150 w-full max-w-lg mx-4 overflow-hidden relative transform transition-all animate-in zoom-in-95 duration-200 animate-out fade-out slide-out-to-top-5">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-orange-500 to-[#f58220] px-6 py-4 flex items-center justify-between text-white">
+                <div>
+                  <h3 className="font-bold text-lg">Convert to Sales Order</h3>
+                  <p className="text-white/80 text-xs mt-0.5">{selectedEstForConvert.quotationNumber} • {selectedEstForConvert.customerName || "No Customer Name"}</p>
+                </div>
+                <button
+                  onClick={() => setShowConvertModal(false)}
+                  className="p-1 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-4 text-sm text-gray-700">
+                <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-orange-600 font-semibold uppercase tracking-wider">Total Payable</div>
+                    <div className="text-2xl font-bold text-gray-800 mt-0.5">₹ {(selectedEstForConvert.totalAmount || 0).toLocaleString("en-IN")}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-400">Items</div>
+                    <div className="text-sm font-semibold text-gray-700 mt-0.5">{selectedEstForConvert.items?.length || 0} line items</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col">
+                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                      <Calendar size={12} /> Delivery Date
+                    </label>
+                    <input
+                      type="date"
+                      value={deliveryDate}
+                      onChange={e => setDeliveryDate(e.target.value)}
+                      className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm outline-none focus:ring-2 focus:ring-[#f58220]/20 focus:border-[#f58220] transition-all"
+                    />
+                  </div>
+
+                  <div className="flex flex-col">
+                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                      <Truck size={12} /> Courier Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Delhivery, BlueDart"
+                      value={courierName}
+                      onChange={e => setCourierName(e.target.value)}
+                      className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm outline-none focus:ring-2 focus:ring-[#f58220]/20 focus:border-[#f58220] transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                    <AlignLeft size={12} /> Tracking / Waybill Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter Tracking ID / AWB Number"
+                    value={trackingNumber}
+                    onChange={e => setTrackingNumber(e.target.value)}
+                    className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm outline-none focus:ring-2 focus:ring-[#f58220]/20 focus:border-[#f58220] transition-all font-mono"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                    <FileText size={12} /> Delivery Address
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Enter the shipping/delivery address..."
+                    value={deliveryAddress}
+                    onChange={e => setDeliveryAddress(e.target.value)}
+                    className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm outline-none focus:ring-2 focus:ring-[#f58220]/20 focus:border-[#f58220] transition-all resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 border-t border-gray-150 px-6 py-4 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setShowConvertModal(false)}
+                  className="px-4 py-2.5 text-xs font-black text-gray-500 uppercase tracking-widest hover:bg-white rounded-xl border border-gray-200 transition-all active:scale-95"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitConvert}
+                  disabled={!!converting}
+                  className="px-5 py-2.5 bg-green-600 text-white text-xs font-black rounded-xl shadow-lg shadow-green-100 hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95 disabled:opacity-50"
+                >
+                  {converting ? "Converting..." : "Convert to SO"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Tracking Modal */}
+        {showEditTrackingModal && selectedEstForTracking && (
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-150 w-full max-w-md mx-4 overflow-hidden relative transform transition-all animate-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="bg-[#f58220] px-6 py-4 flex items-center justify-between text-white">
+                <div>
+                  <h3 className="font-bold text-lg flex items-center gap-2">
+                    <Truck size={20} /> Update Tracking Info
+                  </h3>
+                  <p className="text-white/80 text-xs mt-0.5">{selectedEstForTracking.quotationNumber} • Converted</p>
+                </div>
+                <button
+                  onClick={() => setShowEditTrackingModal(false)}
+                  className="p-1 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-4 text-sm text-gray-700">
+                <div className="flex flex-col">
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                    Courier Partner Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Delhivery, BlueDart, Professional Courier"
+                    value={editCourierName}
+                    onChange={e => setEditCourierName(e.target.value)}
+                    className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm outline-none focus:ring-2 focus:ring-[#f58220]/20 focus:border-[#f58220] transition-all"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                    Tracking / Waybill Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter Tracking ID / AWB Number"
+                    value={editTrackingNumber}
+                    onChange={e => setEditTrackingNumber(e.target.value)}
+                    className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm outline-none focus:ring-2 focus:ring-[#f58220]/20 focus:border-[#f58220] transition-all font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 border-t border-gray-150 px-6 py-4 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setShowEditTrackingModal(false)}
+                  className="px-4 py-2.5 text-xs font-black text-gray-500 uppercase tracking-widest hover:bg-white rounded-xl border border-gray-200 transition-all active:scale-95"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitEditTracking}
+                  className="px-5 py-2.5 bg-[#f58220] text-white text-xs font-black rounded-xl shadow-lg shadow-orange-100 hover:bg-[#e8740e] transition-all flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1112,7 +1438,12 @@ export default function EstimationsPage() {
                         {new Date(est.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
                       <td className="px-4 py-3 font-mono font-semibold text-gray-800 text-xs">
-                        {est.quotationNumber}
+                        <div>{est.quotationNumber}</div>
+                        {est.status === "CONVERTED" && est.convertedOrderNumber && (
+                          <div className="text-[10px] text-green-600 font-bold mt-1 bg-green-50 px-1.5 py-0.5 rounded inline-block">
+                            Order: {est.convertedOrderNumber}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span className="font-medium text-gray-800">
@@ -1126,12 +1457,17 @@ export default function EstimationsPage() {
                         <span className={clsx("inline-block px-2 py-0.5 rounded text-[11px] font-semibold border", style.color, style.bg, style.border)}>
                           {style.label}
                         </span>
+                        {est.status === "CONVERTED" && (est.trackingNumber || est.courierName) && (
+                          <div className="text-[10px] text-gray-500 mt-1 font-medium font-mono">
+                            {est.courierName ? `${est.courierName}: ` : ""}{est.trackingNumber || "No Tracking ID"}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
                           {est.status !== "CONVERTED" && !isDraft && (
                              <button
-                               onClick={(e) => { e.stopPropagation(); handleConvertToOrder(est.id); }}
+                               onClick={(e) => { e.stopPropagation(); handleOpenConvertModal(est); }}
                                disabled={!!converting}
                                className="px-2 py-1 bg-green-50 text-green-600 border border-green-200 rounded text-xs font-bold hover:bg-green-100 transition-colors mr-2"
                              >
@@ -1139,15 +1475,33 @@ export default function EstimationsPage() {
                              </button>
                           )}
                           {isDraft ? (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteDraft(est.id); }}
-                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                              title="Delete Draft"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); loadDraft(est); }}
+                                className="p-1 text-gray-400 hover:text-[#f58220] hover:bg-orange-50 rounded transition-colors"
+                                title="Edit Draft"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeleteDraft(est.id); }}
+                                className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Delete Draft"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           ) : (
                             <>
+                              {est.status === "CONVERTED" && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleOpenEditTracking(est); }}
+                                  className="p-1 text-gray-400 hover:text-[#f58220] hover:bg-orange-50 rounded transition-colors mr-1"
+                                  title="Edit Tracking"
+                                >
+                                  <Truck className="h-4 w-4" />
+                                </button>
+                              )}
                               <button
                                 onClick={(e) => e.stopPropagation()}
                                 className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"

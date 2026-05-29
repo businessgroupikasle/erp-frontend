@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Receipt, Plus, Search, RefreshCw, X, User,
   Printer, ChevronDown, Trash2, Check, Share2, Calendar,
-  AlignLeft, Image as ImageIcon, FileText, ArrowLeft
+  AlignLeft, FileText, ArrowLeft
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useRouter } from "next/navigation";
@@ -1143,12 +1143,7 @@ export default function SalesInvoicesPage() {
                 ) : (
                   <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Description..." className="w-full text-xs text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 outline-none resize-none shadow-sm" />
                 )}
-                <button className="flex items-center gap-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 border border-gray-200 bg-gray-50 hover:bg-gray-100 rounded px-3 py-1.5 transition-colors uppercase justify-center w-full shadow-sm">
-                  <ImageIcon size={12} /> ADD IMAGE
-                </button>
-                <button className="flex items-center gap-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 border border-gray-200 bg-gray-50 hover:bg-gray-100 rounded px-3 py-1.5 transition-colors uppercase justify-center w-full shadow-sm">
-                  <FileText size={12} /> ADD DOCUMENT
-                </button>
+
               </div>
             </div>
 

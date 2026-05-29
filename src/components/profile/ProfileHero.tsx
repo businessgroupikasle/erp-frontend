@@ -5,13 +5,7 @@ import { Camera, User, Share2, Mail, Users, Pencil } from "lucide-react";
 export default function ProfileHero() {
   return (
     <div className="w-full bg-white dark:bg-slate-900 border-b border-[#F0EAF0] dark:border-slate-800">
-      {/* Cover Image Area */}
-      <div className="relative h-64 bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
-        <h2 className="text-5xl font-black text-[#DDD] dark:text-slate-700 tracking-tighter">Add a cover image</h2>
-        <button className="absolute bottom-6 right-6 flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur border border-slate-200 rounded-lg text-xs font-bold text-[#1A1A1A] hover:bg-white transition-all shadow-sm">
-          <Camera size={16} /> Edit Cover Image
-        </button>
-      </div>
+
 
       {/* Profile Detail Area */}
       <div className="max-w-[1200px] mx-auto px-10 -mt-16 pb-10 flex flex-col items-center">

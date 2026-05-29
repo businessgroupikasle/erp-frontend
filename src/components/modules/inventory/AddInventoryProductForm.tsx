@@ -1158,7 +1158,9 @@ export default function AddInventoryProductForm({ onSuccess, onCancel, isModal }
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                           <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Channel Platform Name</label>
+                            <div className="min-h-[28px] flex items-end">
+                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-tight">Channel Platform Name</label>
+                            </div>
                             <input 
                               type="text"
                               value={ch.name}
@@ -1169,7 +1171,9 @@ export default function AddInventoryProductForm({ onSuccess, onCancel, isModal }
                           </div>
                           
                           <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Price Excl. GST (Without Tax)</label>
+                            <div className="min-h-[28px] flex items-end">
+                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-tight">Price Excl. GST (Without Tax)</label>
+                            </div>
                             <div className="relative">
                               <input 
                                 type="number"
@@ -1182,7 +1186,9 @@ export default function AddInventoryProductForm({ onSuccess, onCancel, isModal }
                           </div>
                           
                           <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Price Incl. GST (With Tax)</label>
+                            <div className="min-h-[28px] flex items-end">
+                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-tight">Price Incl. GST (With Tax)</label>
+                            </div>
                             <div className="relative">
                               <input 
                                 type="number"
