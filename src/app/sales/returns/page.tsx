@@ -541,7 +541,7 @@ export default function SalesReturnsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-gray-100">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">
                   Select {returnSource === 'FRANCHISE' ? 'Franchise' : 'Customer'} *
@@ -583,7 +583,8 @@ export default function SalesReturnsPage() {
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Return Quantities / Conditions</span>
                 <span className="text-xs font-semibold text-[#f58220] bg-orange-50 px-2.5 py-1 rounded-md">Order: #{selectedOrder.orderNumber || selectedOrder.orderNo}</span>
               </div>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[768px]">
                 <thead>
                   <tr className="bg-gray-50 text-gray-500 text-xs border-b border-gray-100">
                     <th className="text-left px-4 py-2.5 font-medium">Product</th>
@@ -648,10 +649,11 @@ export default function SalesReturnsPage() {
                 </tbody>
               </table>
             </div>
+            </div>
           )}
 
           {/* Reason + Refund Method + Summary */}
-          <div className="flex gap-4 items-start">
+          <div className="flex flex-col md:flex-row gap-4 items-start w-full">
             <div className="flex-1 bg-white rounded-xl border border-gray-200 p-4 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">Reason for Return *</label>
@@ -668,7 +670,7 @@ export default function SalesReturnsPage() {
                 <select
                   value={refundMethod}
                   onChange={e => setRefundMethod(e.target.value)}
-                  className="w-64 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:border-orange-400"
+                  className="w-full md:w-64 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:border-orange-400"
                 >
                   <option value="Original Method">Original Payment Method</option>
                   <option value="Credit Ledger">Adjust in Customer Ledger</option>
@@ -678,7 +680,7 @@ export default function SalesReturnsPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-4 w-64 shrink-0 space-y-3">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 w-full md:w-64 shrink-0 space-y-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Estimated Credit Note</p>
               <div className="text-3xl font-black font-mono text-[#f58220]">
                 ₹{estimatedRefund.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -712,7 +714,7 @@ export default function SalesReturnsPage() {
             type="button"
             onClick={() => handleSave("PENDING")}
             disabled={submitting || !selectedEntity || !selectedOrder || !reason}
-            className="flex items-center gap-2 px-5 py-2 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg transition-colors"
+            className="flex items-center gap-2 px-5 py-2 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] disabled:bg-gray-200 disabled:text-gray-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 text-white rounded-lg transition-colors"
           >
             <Check className="h-4 w-4" /> {submitting ? "Processing..." : "Submit Return Request"}
           </button>
@@ -744,7 +746,7 @@ export default function SalesReturnsPage() {
       <div className="max-w-6xl mx-auto px-6 py-5 space-y-5">
 
         {/* ── Summary Strip ── */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { label: "Total",     value: stats.total,                               color: "text-gray-700",    dot: "bg-gray-400" },
             { label: "Pending",   value: stats.pending,                             color: "text-orange-600",  dot: "bg-orange-500" },
@@ -762,7 +764,7 @@ export default function SalesReturnsPage() {
         </div>
 
         {/* ── Filters Row ── */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -811,7 +813,7 @@ export default function SalesReturnsPage() {
           </div>
         ) : (
           /* ── Table ── */
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 text-xs font-medium border-b border-gray-200 uppercase">

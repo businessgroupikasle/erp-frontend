@@ -170,7 +170,7 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
           
           {/* Top Always-Visible Fields */}
-          <div className="grid grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6">
             <div>
               <label className="block text-xs font-semibold text-orange-500 mb-1.5 flex items-center gap-1">
                 GST Number
@@ -229,7 +229,7 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
                 <option>Composition Scheme</option>
               </select>
             </div>
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <label className="block text-xs font-medium text-gray-500 mb-1.5">Email Address</label>
               <input 
                 placeholder="optional@gmail.com" 
@@ -268,7 +268,7 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
           <div className="min-h-[360px]">
             {activeTab === "GST" && (
               <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                   {/* Left Column */}
                   <div className="space-y-4">
                     <div>
@@ -342,9 +342,9 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
             ) }
 
             {activeTab === "CREDIT" && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-300 w-1/2">
+              <div className="animate-in fade-in slide-in-from-right-4 duration-300 w-full md:w-1/2">
                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-blue-500 mb-1.5">Opening Balance</label>
                       <input 

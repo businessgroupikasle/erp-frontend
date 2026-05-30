@@ -15,7 +15,7 @@ export default function DocumentSummary() {
   } = usePurchaseOrder();
 
   return (
-    <div className="bg-white dark:bg-[#0A0D14] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-100 overflow-hidden">
+    <div className="bg-white dark:bg-[#0A0D14] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-none overflow-hidden">
       {/* Financial Header */}
       <div className="bg-slate-50 dark:bg-slate-900/50 px-6 py-4 border-b border-slate-100 dark:border-slate-800">
         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">

@@ -90,35 +90,35 @@ export default function AccountsPage() {
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-         <div className="p-6 bg-emerald-500 text-white rounded-[2rem] shadow-xl shadow-emerald-500/20 relative overflow-hidden group">
+         <div className="p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-[2rem] shadow-sm relative overflow-hidden group hover:border-emerald-500/30 dark:hover:border-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/[0.04] hover:-translate-y-1 transition-all duration-300">
             <div className="relative z-10">
-               <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Total Liquidity</p>
-               <h3 className="text-3xl font-black mt-1">₹{accounts.reduce((acc, curr) => acc + curr.balance, 0).toLocaleString()}</h3>
-               <div className="flex items-center gap-2 mt-4 text-[10px] font-bold bg-white/20 w-fit px-3 py-1 rounded-full backdrop-blur-md">
-                  <ArrowUpRight size={12} /> Live synchronized
+               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Liquidity</p>
+               <h3 className="text-3xl font-black mt-1 text-slate-900 dark:text-white">₹{accounts.reduce((acc, curr) => acc + curr.balance, 0).toLocaleString()}</h3>
+               <div className="flex items-center gap-2 mt-4 text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-white/5 w-fit px-3 py-1 rounded-full">
+                  <ArrowUpRight size={12} className="text-emerald-500" /> Live synchronized
                </div>
             </div>
-            <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+            <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500 text-slate-400">
                <Wallet size={120} />
             </div>
          </div>
 
-         <div className="p-6 bg-slate-900 dark:bg-slate-800 text-white rounded-[2rem] shadow-xl relative overflow-hidden group">
+         <div className="p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-[2rem] shadow-sm relative overflow-hidden group hover:border-blue-500/30 dark:hover:border-blue-500/20 hover:shadow-lg hover:shadow-blue-500/[0.04] hover:-translate-y-1 transition-all duration-300">
             <div className="relative z-10">
-               <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Bank Holdings</p>
-               <h3 className="text-3xl font-black mt-1">₹{accounts.filter(a => a.type === 'BANK').reduce((acc, curr) => acc + curr.balance, 0).toLocaleString()}</h3>
-               <div className="flex items-center gap-2 mt-4 text-[10px] font-bold bg-white/10 w-fit px-3 py-1 rounded-full">
-                  <Building2 size={12} /> {accounts.filter(a => a.type === 'BANK').length} Accounts
+               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Bank Holdings</p>
+               <h3 className="text-3xl font-black mt-1 text-slate-900 dark:text-white">₹{accounts.filter(a => a.type === 'BANK').reduce((acc, curr) => acc + curr.balance, 0).toLocaleString()}</h3>
+               <div className="flex items-center gap-2 mt-4 text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-white/5 w-fit px-3 py-1 rounded-full">
+                  <Building2 size={12} className="text-blue-500" /> {accounts.filter(a => a.type === 'BANK').length} Accounts
                </div>
             </div>
          </div>
 
-         <div className="p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-[2rem] shadow-sm relative overflow-hidden group">
+         <div className="p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-[2rem] shadow-sm relative overflow-hidden group hover:border-orange-500/30 dark:hover:border-orange-500/20 hover:shadow-lg hover:shadow-orange-500/[0.04] hover:-translate-y-1 transition-all duration-300">
             <div className="relative z-10">
                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cash & Digital</p>
                <h3 className="text-3xl font-black mt-1 text-slate-900 dark:text-white">₹{accounts.filter(a => a.type !== 'BANK').reduce((acc, curr) => acc + curr.balance, 0).toLocaleString()}</h3>
                <div className="flex items-center gap-2 mt-4 text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-white/5 w-fit px-3 py-1 rounded-full">
-                  <Smartphone size={12} /> {accounts.filter(a => a.type !== 'BANK').length} Wallets
+                  <Smartphone size={12} className="text-orange-500" /> {accounts.filter(a => a.type !== 'BANK').length} Wallets
                </div>
             </div>
          </div>
@@ -127,7 +127,15 @@ export default function AccountsPage() {
       {/* Accounts List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {accounts.map(acc => (
-          <div key={acc.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 space-y-6 hover:shadow-xl hover:-translate-y-1 transition-all group">
+          <div 
+            key={acc.id} 
+            className={clsx(
+              "bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 space-y-6 hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group",
+              acc.type === 'CASH' ? "hover:border-orange-500/30 dark:hover:border-orange-500/20 hover:shadow-orange-500/[0.03] hover:bg-orange-500/[0.005] dark:hover:bg-orange-500/[0.01]" :
+              acc.type === 'BANK' ? "hover:border-blue-500/30 dark:hover:border-blue-500/20 hover:shadow-blue-500/[0.03] hover:bg-blue-500/[0.005] dark:hover:bg-blue-500/[0.01]" :
+              "hover:border-indigo-500/30 dark:hover:border-indigo-500/20 hover:shadow-indigo-500/[0.03] hover:bg-indigo-500/[0.005] dark:hover:bg-indigo-500/[0.01]"
+            )}
+          >
             <div className="flex items-start justify-between">
               <div className={clsx(
                 "p-4 rounded-2xl shadow-inner",

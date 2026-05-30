@@ -218,10 +218,21 @@ export default function DeliveryChallanPage() {
       if (shareDropRef.current && !shareDropRef.current.contains(e.target as Node)) {
         setShowShareDrop(false);
       }
+      
+      // Close item drop if clicked outside
+      if (openItemDrop) {
+        const isInput = (e.target as HTMLElement).tagName === "INPUT" && 
+          ((e.target as HTMLInputElement).placeholder === "Search item..." || 
+           (e.target as HTMLInputElement).placeholder === "Search product...");
+        const isDrop = (e.target as HTMLElement).closest(".item-dropdown-container");
+        if (!isInput && !isDrop) {
+          setOpenItemDrop(null);
+        }
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [openItemDrop]);
 
   // ── Calculations ────────────────────────────────────────────────────────────
 
@@ -583,7 +594,7 @@ export default function DeliveryChallanPage() {
 
           {/* Customer + Details card */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="grid grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1.5">Party *</label>
@@ -656,7 +667,7 @@ export default function DeliveryChallanPage() {
               </button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm min-w-[768px]">
                 <thead>
                   <tr className="bg-gray-50 text-gray-500 font-semibold text-xs border-b border-gray-200 uppercase">
                     <th className="text-left px-4 py-2.5 w-10">#</th>
@@ -679,7 +690,7 @@ export default function DeliveryChallanPage() {
                         <td className="px-4 py-2 relative">
                           <input value={it.itemSearch} onChange={e => { updateItem(idx, "itemSearch", e.target.value); setOpenItemDrop(it.id); }} onFocus={() => setOpenItemDrop(it.id)} placeholder="Search product..." className="w-full text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400" />
                           {isItemDropOpen && (
-                            <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                            <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto item-dropdown-container">
                               {products.filter(p => p.name.toLowerCase().includes(it.itemSearch.toLowerCase())).length === 0 ? (
                                 <div className="px-4 py-3 text-xs text-gray-400">No items matched</div>
                               ) : products.filter(p => p.name.toLowerCase().includes(it.itemSearch.toLowerCase())).map(p => (
@@ -715,14 +726,14 @@ export default function DeliveryChallanPage() {
           </div>
 
           {/* Notes + Summary */}
-          <div className="flex gap-4 items-start pb-2">
+          <div className="flex flex-col md:flex-row gap-4 items-start pb-2 w-full">
             <div className="flex-1 space-y-2">
               <button type="button" onClick={() => setShowTerms(v => !v)} className={clsx("flex items-center gap-2 text-xs font-medium border rounded-lg px-3 py-2 transition-colors", showTerms ? "border-orange-300 bg-orange-50 text-orange-600" : "border-gray-200 bg-white text-gray-500 hover:text-gray-700")}><FileText className="h-3.5 w-3.5" /> Terms &amp; Conditions</button>
               <button type="button" onClick={() => setShowDesc(v => !v)} className={clsx("flex items-center gap-2 text-xs font-medium border rounded-lg px-3 py-2 transition-colors", showDesc ? "border-orange-300 bg-orange-50 text-orange-600" : "border-gray-200 bg-white text-gray-500 hover:text-gray-700")}><FileText className="h-3.5 w-3.5" /> Add Description</button>
               {showTerms && <textarea rows={3} value={termsText} onChange={e => setTermsText(e.target.value)} placeholder="Enter terms..." className="w-full text-xs text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 outline-none resize-none" />}
               {showDesc && <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Enter description..." className="w-full text-xs text-gray-700 border border-gray-200 bg-white rounded-lg px-3 py-2 outline-none resize-none" />}
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4 w-64 shrink-0 space-y-2">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 w-full md:w-64 shrink-0 space-y-2">
               <div className="flex justify-between text-sm text-gray-500"><span>Subtotal</span><span>₹ {totalAmount.toFixed(2)}</span></div>
               {totalTax > 0 && <div className="flex justify-between text-sm text-gray-500"><span>Tax</span><span>+ ₹ {totalTax.toFixed(2)}</span></div>}
               <div className="flex justify-between items-center text-sm text-gray-500 border-t border-gray-100 pt-2">
@@ -774,7 +785,7 @@ export default function DeliveryChallanPage() {
       <div className="max-w-6xl mx-auto px-6 py-5 space-y-5">
 
         {/* ── Summary Strip ── */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { label: "Total",    value: stats.total,  color: "text-gray-700",    dot: "bg-gray-400" },
             { label: "Open",     value: stats.open,   color: "text-blue-600",    dot: "bg-blue-500" },
@@ -792,7 +803,7 @@ export default function DeliveryChallanPage() {
         </div>
 
         {/* ── Filters Row ── */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -843,7 +854,7 @@ export default function DeliveryChallanPage() {
           </div>
         ) : (
           /* ── Table ── */
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 text-xs font-medium border-b border-gray-200 uppercase">

@@ -239,7 +239,7 @@ export default function RefrensHeader() {
 
         {/* Dynamic Page Title */}
         {pageTitle && (
-          <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
+          <div className="hidden sm:flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
             <div className="w-px h-5 bg-slate-200 dark:bg-white/10" />
             <h1 className="text-[15px] font-black text-gray-900 dark:text-white tracking-tight uppercase">
               {pageTitle}

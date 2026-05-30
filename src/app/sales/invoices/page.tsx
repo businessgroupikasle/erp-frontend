@@ -285,8 +285,7 @@ export default function SalesInvoicesPage() {
   });
   const [savingItem, setSavingItem] = useState(false);
 
-  // Item dropdown fixed position
-  const [itemDropRect, setItemDropRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
 
   // Custom calendar
   const [showCalendar, setShowCalendar] = useState(false);
@@ -428,10 +427,19 @@ export default function SalesInvoicesPage() {
         setShowPriceDrop(false);
       if (calendarRef.current && !calendarRef.current.contains(e.target as Node))
         setShowCalendar(false);
+
+      // Close item drop if clicked outside
+      if (openItemDrop) {
+        const isInput = (e.target as HTMLElement).tagName === "INPUT" && (e.target as HTMLInputElement).placeholder === "Search item...";
+        const isDrop = (e.target as HTMLElement).closest(".item-dropdown-container");
+        if (!isInput && !isDrop) {
+          setOpenItemDrop(null);
+        }
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  }, [openItemDrop]);
 
   // ── Computed totals ────────────────────────────────────────────────────────
   const withTax = priceMode === "with_tax";
@@ -739,7 +747,7 @@ export default function SalesInvoicesPage() {
 
           {/* Customer + Invoice Details */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="grid grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
               {/* Left: Customer */}
               <div className="space-y-3">
                 <div>
@@ -862,7 +870,7 @@ export default function SalesInvoicesPage() {
           </div>
 
           {/* Items Table */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50/60">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Items</span>
               <div className="relative" ref={priceDropRef}>
@@ -883,7 +891,7 @@ export default function SalesInvoicesPage() {
             </div>
 
             <div style={{ overflowX: "auto" }}>
-              <table className="w-full text-sm border-collapse">
+              <table className="w-full text-sm border-collapse min-w-[800px]">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase">
                     <th className="w-8 px-3 py-2.5 text-center">#</th>
@@ -919,10 +927,8 @@ export default function SalesInvoicesPage() {
                               updateItem(idx, "productId", "");
                               setOpenItemDrop(item.id);
                             }}
-                            onFocus={e => {
+                            onFocus={() => {
                               setOpenItemDrop(item.id);
-                              const rect = (e.target as HTMLElement).getBoundingClientRect();
-                              setItemDropRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: 300 });
                             }}
                           />
                           
@@ -953,10 +959,9 @@ export default function SalesInvoicesPage() {
                             </div>
                           )}
 
-                          {openItemDrop === item.id && itemDropRect && (
+                          {openItemDrop === item.id && (
                             <div
-                              className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden flex flex-col"
-                              style={{ position: "fixed", top: itemDropRect.top + 4, left: itemDropRect.left, width: itemDropRect.width, zIndex: 9999 }}
+                              className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden flex flex-col item-dropdown-container absolute left-3 right-3 top-full mt-1 z-50"
                             >
                               <button
                                 className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100 font-semibold text-left transition-colors"
@@ -1107,9 +1112,9 @@ export default function SalesInvoicesPage() {
           </div>
 
           {/* Notes + Summary */}
-          <div className="flex justify-between items-start pt-4 px-4 pb-8 bg-gray-50/30">
+          <div className="flex flex-col md:flex-row gap-6 md:gap-4 justify-between items-start pt-4 px-4 pb-8 bg-gray-50/30">
             {/* Left: Terms and Conditions */}
-            <div className="w-64">
+            <div className="w-full md:w-64">
               {!showTerms ? (
                 <button onClick={() => setShowTerms(true)} className="flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-gray-600 border border-gray-200 bg-gray-50 hover:bg-gray-100 rounded px-4 py-2 transition-colors uppercase w-full justify-center shadow-sm">
                   <AlignLeft size={14} /> ADD TERMS AND CONDITIONS
@@ -1120,8 +1125,8 @@ export default function SalesInvoicesPage() {
             </div>
 
             {/* Middle: Payment Type and Attachments */}
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex flex-col items-start w-32 relative mt-2">
+            <div className="flex flex-col items-start md:items-center gap-4 w-full md:w-auto">
+              <div className="flex flex-col items-start w-full md:w-32 relative mt-2">
                 <span className="text-[10px] text-gray-500 absolute -top-2 left-2 bg-gray-50 px-1 z-10">Payment Type</span>
                 <select
                   value={paymentType}
@@ -1135,7 +1140,7 @@ export default function SalesInvoicesPage() {
                 <button className="text-[10px] text-blue-500 hover:text-blue-600 font-bold mt-1.5 self-start">+ Add Payment type</button>
               </div>
 
-              <div className="flex flex-col gap-2 w-40">
+              <div className="flex flex-col gap-2 w-full md:w-40">
                 {!showDesc ? (
                   <button onClick={() => setShowDesc(true)} className="flex items-center gap-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 border border-gray-200 bg-gray-50 hover:bg-gray-100 rounded px-3 py-1.5 transition-colors uppercase justify-center w-full shadow-sm">
                     <FileText size={12} /> ADD DESCRIPTION
@@ -1148,7 +1153,7 @@ export default function SalesInvoicesPage() {
             </div>
 
             {/* Right: Summary */}
-            <div className="w-72 flex flex-col items-end gap-2 text-xs font-semibold text-gray-700">
+            <div className="w-full md:w-72 flex flex-col items-end gap-2 text-xs font-semibold text-gray-700 mt-4 md:mt-0">
               <div className="flex items-center gap-3 w-full justify-end">
                 <label className="flex items-center gap-1.5 cursor-pointer mr-2">
                   <input type="checkbox" checked={roundOffEnabled} onChange={e => setRoundOffEnabled(e.target.checked)} className="w-3.5 h-3.5 accent-blue-500" />
@@ -1309,7 +1314,7 @@ export default function SalesInvoicesPage() {
       <div className="max-w-6xl mx-auto px-6 py-5 space-y-5">
 
         {/* ── Summary Strip ── */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             { label: "Total Sales",   value: `₹${totalAmt.toLocaleString("en-IN")}`,     color: "text-gray-700",    dot: "bg-gray-400" },
             { label: "Received",      value: `₹${receivedAmt.toLocaleString("en-IN")}`,  color: "text-emerald-600", dot: "bg-emerald-500" },
@@ -1401,7 +1406,7 @@ export default function SalesInvoicesPage() {
           </div>
         ) : (
           /* ── Table ── */
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 text-xs font-medium border-b border-gray-200 uppercase">

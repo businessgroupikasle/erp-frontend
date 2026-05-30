@@ -205,10 +205,19 @@ export default function SalesOrdersPage() {
       if (customerDropRef.current && !customerDropRef.current.contains(e.target as Node)) {
         setShowCustomerDrop(false);
       }
+      
+      // Close item drop if clicked outside
+      if (openItemDrop) {
+        const isInput = (e.target as HTMLElement).tagName === "INPUT" && (e.target as HTMLInputElement).placeholder === "Search item...";
+        const isDrop = (e.target as HTMLElement).closest(".item-dropdown-container");
+        if (!isInput && !isDrop) {
+          setOpenItemDrop(null);
+        }
+      }
     };
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, []);
+  }, [openItemDrop]);
 
   // ── Auto Computations ────────────────────────────────────────────────────────
 
@@ -576,7 +585,7 @@ export default function SalesOrdersPage() {
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {/* Customer + Order Details */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="grid grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
               {/* Left: Party + Phone */}
               <div className="space-y-4">
                 <div className="relative" ref={customerDropRef}>
@@ -683,7 +692,8 @@ export default function SalesOrdersPage() {
                 Price: {priceMode === "without_tax" ? "Excl. Tax" : "Incl. Tax"}
               </button>
             </div>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[768px]">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 text-xs border-b border-gray-100">
                   <th className="text-left px-4 py-2.5 w-10 font-medium">#</th>
@@ -712,7 +722,7 @@ export default function SalesOrdersPage() {
                           className="w-full px-3 py-1.5 border border-gray-200 rounded-md text-sm outline-none focus:border-orange-400"
                         />
                         {isItemDropOpen && (
-                          <div className="absolute left-4 right-4 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden max-h-44 overflow-y-auto">
+                          <div className="absolute left-4 right-4 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden max-h-44 overflow-y-auto item-dropdown-container">
                             {products.filter(p => p.name.toLowerCase().includes(it.itemSearch.toLowerCase())).length === 0 ? (
                               <div className="px-4 py-3 text-xs text-gray-400">No items found</div>
                             ) : (
@@ -803,6 +813,7 @@ export default function SalesOrdersPage() {
                 })}
               </tbody>
             </table>
+            </div>
             <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
               <button
                 type="button"
@@ -819,7 +830,7 @@ export default function SalesOrdersPage() {
           </div>
 
           {/* Notes + Summary */}
-          <div className="flex gap-4 items-start">
+          <div className="flex flex-col md:flex-row gap-4 items-start w-full">
             {/* Left: Add-ons */}
             <div className="flex-1 bg-white rounded-xl border border-gray-200 p-4 space-y-3">
               <div className="flex flex-wrap gap-2">
@@ -908,7 +919,7 @@ export default function SalesOrdersPage() {
             </div>
 
             {/* Right: Summary */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 w-64 shrink-0 space-y-2">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 w-full md:w-64 shrink-0 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500">Subtotal</span>
                 <span className="font-mono font-semibold text-gray-700">₹{totalAmount.toFixed(2)}</span>
@@ -1000,7 +1011,7 @@ export default function SalesOrdersPage() {
       <div className="max-w-6xl mx-auto px-6 py-5 space-y-5">
 
         {/* ── Summary Strip ── */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { label: "Total",    value: stats.total,   color: "text-gray-700",    dot: "bg-gray-400" },
             { label: "Open",     value: stats.open,    color: "text-blue-600",    dot: "bg-blue-500" },
@@ -1018,7 +1029,7 @@ export default function SalesOrdersPage() {
         </div>
 
         {/* ── Filters Row ── */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -1069,7 +1080,7 @@ export default function SalesOrdersPage() {
           </div>
         ) : (
           /* ── Table ── */
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 text-xs font-medium border-b border-gray-200 uppercase">

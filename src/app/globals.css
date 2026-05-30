@@ -51,6 +51,7 @@
 
 /* ─── Dark Mode Design Tokens ───────────────────────────────── */
 .dark {
+  color-scheme: dark;
   --background:        220 20% 8%;
   --surface:           220 20% 11%;
   --card:              220 20% 12%;
@@ -292,3 +293,163 @@ body {
     margin: 1.5cm;
   }
 }
+
+/* ─── Dark Mode Global Component Overrides ────────────────── */
+@layer components {
+  /* Surfaces & Backgrounds */
+  .dark .bg-white {
+    background-color: hsl(var(--card));
+  }
+  .dark .bg-gray-50,
+  .dark .bg-slate-50,
+  .dark .bg-\[\#F5F6FA\],
+  .dark .bg-\[\#FAF9FA\],
+  .dark .bg-\[\#FDFCFD\],
+  .dark .bg-slate-50\/50 {
+    background-color: hsl(var(--background));
+  }
+  .dark .bg-gray-100,
+  .dark .bg-slate-100 {
+    background-color: hsl(var(--muted));
+  }
+
+  /* Text Colors */
+  .dark .text-gray-900,
+  .dark .text-slate-900,
+  .dark .text-gray-800,
+  .dark .text-slate-800,
+  .dark .text-gray-700,
+  .dark .text-slate-700,
+  .dark .text-\[\#1A1A1A\] {
+    color: hsl(var(--foreground));
+  }
+  .dark .text-gray-600,
+  .dark .text-slate-600,
+  .dark .text-gray-500,
+  .dark .text-slate-500,
+  .dark .text-\[\#666\] {
+    color: hsl(var(--foreground-muted));
+  }
+  .dark .text-gray-400,
+  .dark .text-slate-400,
+  .dark .text-\[\#999\] {
+    color: hsl(var(--foreground-muted) / 0.6);
+  }
+
+  /* Borders & Dividers */
+  .dark .border-gray-100,
+  .dark .border-gray-200,
+  .dark .border-gray-300,
+  .dark .border-slate-100,
+  .dark .border-slate-200,
+  .dark .border-slate-300,
+  .dark .border-orange-100,
+  .dark .border-\[\#F0EAF0\],
+  .dark .border-\[\#FDFCFD\],
+  .dark .border-\[\#FAF9FA\],
+  .dark .border-\[\#DDD\] {
+    border-color: hsl(var(--border));
+  }
+  .dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+  .dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
+  .dark .divide-gray-300 > :not([hidden]) ~ :not([hidden]) {
+    border-color: hsl(var(--border));
+  }
+
+  /* Hover States */
+  .dark .hover\:bg-gray-50:hover,
+  .dark .hover\:bg-gray-100:hover,
+  .dark .hover\:bg-slate-50:hover,
+  .dark .hover\:bg-slate-100:hover,
+  .dark .hover\:bg-\[\#F5F1F5\]:hover,
+  .dark .hover\:bg-\[\#FAF9FA\]:hover,
+  .dark .hover\:bg-blue-50\/20:hover {
+    background-color: hsl(var(--muted));
+  }
+
+  /* Translucent Badges in Dark Mode */
+  .dark .bg-blue-50 {
+    background-color: rgba(59, 130, 246, 0.15);
+  }
+  .dark .bg-emerald-50 {
+    background-color: rgba(16, 185, 129, 0.15);
+  }
+  .dark .bg-rose-50 {
+    background-color: rgba(244, 63, 94, 0.15);
+  }
+  .dark .bg-orange-50 {
+    background-color: rgba(245, 130, 32, 0.15);
+  }
+  .dark .bg-orange-100 {
+    background-color: rgba(245, 130, 32, 0.25);
+  }
+  .dark .bg-purple-50 {
+    background-color: rgba(139, 92, 246, 0.15);
+  }
+  .dark .bg-amber-50 {
+    background-color: rgba(245, 158, 11, 0.15);
+  }
+  .dark .bg-yellow-50 {
+    background-color: rgba(234, 179, 8, 0.15);
+  }
+  .dark .bg-indigo-50 {
+    background-color: rgba(99, 102, 241, 0.15);
+  }
+  .dark .bg-sky-50 {
+    background-color: rgba(14, 165, 233, 0.15);
+  }
+
+  /* Opacity Background Overrides for Dark Mode */
+  .dark .bg-orange-50\/30 {
+    background-color: rgba(245, 130, 32, 0.04) !important;
+  }
+  .dark .bg-orange-50\/20 {
+    background-color: rgba(245, 130, 32, 0.03) !important;
+  }
+  .dark .bg-orange-50\/50 {
+    background-color: rgba(245, 130, 32, 0.06) !important;
+  }
+  .dark .hover\:bg-orange-50\/50:hover {
+    background-color: rgba(245, 130, 32, 0.08) !important;
+  }
+  .dark .hover\:bg-orange-50\/30:hover {
+    background-color: rgba(245, 130, 32, 0.06) !important;
+  }
+  .dark .bg-gray-50\/60,
+  .dark .bg-gray-50\/40,
+  .dark .bg-gray-50\/30,
+  .dark .bg-gray-50\/50 {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+  }
+  .dark .hover\:bg-gray-50\/50:hover,
+  .dark .hover\:bg-slate-50\/50:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+  }
+  .dark .hover\:bg-blue-50\/20:hover {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+  }
+
+  /* Inputs, selects, and textareas */
+  .dark input,
+  .dark select,
+  .dark textarea {
+    background-color: hsl(var(--input));
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--border));
+  }
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: hsl(var(--foreground-muted) / 0.5);
+  }
+  .dark option {
+    background-color: hsl(var(--card));
+    color: hsl(var(--foreground));
+  }
+
+  /* Disabled Utility Overrides */
+  .dark .disabled\:bg-gray-200:disabled {
+    background-color: hsl(var(--muted)) !important;
+    color: hsl(var(--foreground-muted) / 0.6) !important;
+  }
+}
+

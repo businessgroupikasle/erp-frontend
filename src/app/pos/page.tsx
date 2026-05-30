@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Plus, Minus, Trash2, Search, CreditCard, Banknote, QrCode,
   User, X, Percent, ShoppingBag, ArrowRight, Tag,
-  Building2, Store, Printer, RefreshCw,
+  Building2, Store, Printer, RefreshCw, ArrowLeft, ShoppingCart,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { customersApi, franchiseApi, accountsApi, posApi } from "@/lib/api";
@@ -282,6 +282,7 @@ export default function POSPage() {
     setPartySearch("");
     setDiscount("");
     setPaidAmount("");
+    setMobileActiveTab("products");
     searchRef.current?.focus();
   };
 
@@ -389,13 +390,15 @@ export default function POSPage() {
   // MAIN POS VIEW
   // ══════════════════════════════════════════════════════════════════════════
 
+  const [mobileActiveTab, setMobileActiveTab] = useState<"products" | "cart">("products");
+
   const activeTab = PARTY_TABS.find(t => t.type === partyType)!;
 
   return (
-    <div className="-m-6 flex h-[calc(100vh-3.5rem)] overflow-hidden bg-[#F5F6FA]">
+    <div className="-m-6 flex h-[calc(100vh-3.5rem)] overflow-hidden bg-[#F5F6FA] relative">
 
       {/* ── LEFT: Products ─────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className={clsx("flex-1 flex flex-col min-w-0 overflow-hidden relative", mobileActiveTab === "cart" && "hidden lg:flex")}>
 
         {/* Search bar */}
         <div className="bg-white border-b border-gray-200 px-4 py-3 shrink-0">
@@ -494,10 +497,32 @@ export default function POSPage() {
           <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500 font-mono">SPACE</kbd> Focus Search</span>
           <span className="ml-auto">{cart.length} items · {fmt(total)}</span>
         </div>
+
+        {/* Mobile Cart Toggle Button */}
+        <button
+          type="button"
+          onClick={() => setMobileActiveTab("cart")}
+          className="lg:hidden fixed bottom-14 right-6 z-50 flex items-center gap-2 bg-[#f58220] hover:bg-[#e8740e] text-white px-5 py-3.5 rounded-full shadow-2xl font-bold text-sm select-none active:scale-95 transition-all"
+        >
+          <ShoppingCart size={16} />
+          View Cart ({cart.length})
+        </button>
       </div>
 
       {/* ── RIGHT: Order Panel ─────────────────────────────────────────────── */}
-      <div className="w-80 xl:w-96 bg-white border-l border-gray-200 flex flex-col overflow-hidden shrink-0">
+      <div className={clsx("w-full lg:w-80 xl:w-96 bg-white border-l border-gray-200 flex flex-col overflow-hidden shrink-0", mobileActiveTab === "products" && "hidden lg:flex")}>
+
+        {/* Mobile Back Button */}
+        <div className="lg:hidden flex items-center justify-between border-b border-gray-150 px-4 py-2.5 shrink-0 bg-gray-50/80 backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={() => setMobileActiveTab("products")}
+            className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-700"
+          >
+            <ArrowLeft size={14} /> Back to Products
+          </button>
+          <span className="text-xs font-semibold text-gray-700">{cart.length} items in cart</span>
+        </div>
 
         {/* Party type tabs */}
         <div className="border-b border-gray-100 px-3 pt-3 pb-0 shrink-0">
@@ -738,7 +763,7 @@ export default function POSPage() {
           <button
             onClick={handleCheckout}
             disabled={cart.length === 0 || loading || !accountId}
-            className="w-full flex items-center justify-center gap-2 disabled:bg-gray-200 disabled:cursor-not-allowed text-white py-3 rounded-xl text-sm font-bold transition-all shadow-sm"
+            className="w-full flex items-center justify-center gap-2 disabled:bg-gray-200 disabled:text-gray-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 disabled:cursor-not-allowed text-white py-3 rounded-xl text-sm font-bold transition-all shadow-sm"
             style={cart.length > 0 && accountId ? { background: BRAND_ORANGE } : {}}
           >
             {loading ? (

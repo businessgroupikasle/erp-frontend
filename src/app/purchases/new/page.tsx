@@ -384,11 +384,12 @@ function NewPurchaseContent() {
           </div>
 
         {/* Right Sticky Sidebar */}
+
         <div className="col-span-12 lg:col-span-3">
           <div className="sticky top-24 space-y-8">
              <DocumentSummary />
              
-             {/* Dynamic Helper Card */}
+             {/* Dynamic Helper Card
              <div className="bg-slate-900 dark:bg-[#0F172A] rounded-[2.5rem] p-8 text-white shadow-2xl shadow-slate-200 dark:shadow-none relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-3xl rounded-full -mr-16 -mt-16" />
                 <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-400 mb-6 flex items-center gap-2">
@@ -414,6 +415,7 @@ function NewPurchaseContent() {
                    <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em]">Accounting Ready v2.0</p>
                  </div>
               </div>
+              */}
            </div>
         </div>
       </div>

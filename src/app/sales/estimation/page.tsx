@@ -278,8 +278,7 @@ export default function EstimationsPage() {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [activeItemIdx, setActiveItemIdx] = useState<number | null>(null);
 
-  // Item dropdown fixed position
-  const [itemDropRect, setItemDropRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
 
   // Custom calendar
   const [showCalendar, setShowCalendar] = useState(false);
@@ -343,7 +342,7 @@ export default function EstimationsPage() {
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  }, [openItemDrop]);
 
   // ── Computed totals ────────────────────────────────────────────────────────
   const withTax = priceMode === "with_tax";
@@ -643,7 +642,7 @@ export default function EstimationsPage() {
 
           {/* Customer + Meta info */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="grid grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
               {/* Left: Party + Phone */}
               <div className="space-y-4">
                 <div className="relative" ref={customerDropRef}>
@@ -763,7 +762,7 @@ export default function EstimationsPage() {
           </div>
 
           {/* Items Table */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50/60">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Items</span>
               <button
@@ -774,7 +773,8 @@ export default function EstimationsPage() {
                 Price: {priceMode === "without_tax" ? "Excl. Tax" : "Incl. Tax"}
               </button>
             </div>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[768px]">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 text-xs border-b border-gray-100">
                   <th className="text-left px-4 py-2.5 w-10 font-medium">#</th>
@@ -802,7 +802,7 @@ export default function EstimationsPage() {
                       </td>
                       <td className="px-4 py-2.5 relative align-top">
                         <input
-                          className="w-full px-3 py-1.5 border border-gray-200 rounded-md text-sm outline-none focus:border-orange-400"
+                          className="w-full px-3 py-1.5 border border-gray-200 rounded-md text-sm outline-none focus:border-orange-400 bg-white"
                           placeholder="Search item..."
                           value={item.itemSearch}
                           onChange={e => {
@@ -810,16 +810,13 @@ export default function EstimationsPage() {
                             updateItem(idx, "productId", "");
                             setOpenItemDrop(item.id);
                           }}
-                          onFocus={e => {
+                          onFocus={() => {
                             setOpenItemDrop(item.id);
-                            const rect = (e.target as HTMLElement).getBoundingClientRect();
-                            setItemDropRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: 320 });
                           }}
                         />
-                        {openItemDrop === item.id && itemDropRect && (
+                        {openItemDrop === item.id && (
                           <div
-                            className="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden flex flex-col item-dropdown-container"
-                            style={{ position: "fixed", top: itemDropRect.top + 4, left: itemDropRect.left, width: itemDropRect.width, zIndex: 9999 }}
+                            className="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden flex flex-col item-dropdown-container absolute left-4 right-4 top-full mt-1 z-50"
                           >
                             <button
                               type="button"
@@ -923,6 +920,7 @@ export default function EstimationsPage() {
                 })}
               </tbody>
             </table>
+            </div>
             <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
               <button
                 onClick={addRow}
@@ -938,7 +936,7 @@ export default function EstimationsPage() {
           </div>
 
           {/* Notes + Summary */}
-          <div className="flex gap-4 items-start">
+          <div className="flex flex-col md:flex-row gap-4 items-start w-full">
             <div className="flex-1 bg-white rounded-xl border border-gray-200 p-4 space-y-3">
               <div className="flex flex-wrap gap-2">
                 <button
@@ -997,7 +995,7 @@ export default function EstimationsPage() {
               )}
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-4 w-64 shrink-0 space-y-2">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 w-full md:w-64 shrink-0 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500">Subtotal</span>
                 <span className="font-semibold text-gray-700">₹{totalAmount.toFixed(2)}</span>
@@ -1315,7 +1313,7 @@ export default function EstimationsPage() {
       <div className="max-w-6xl mx-auto px-6 py-5 space-y-5">
 
         {/* ── Summary Strip ── */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             { label: "Total Estimations", value: `₹${totalQuotations.toLocaleString("en-IN")}`, color: "text-gray-700", dot: "bg-gray-400" },
             { label: "Converted",         value: `₹${totalConverted.toLocaleString("en-IN")}`,  color: "text-emerald-600", dot: "bg-emerald-500" },
@@ -1407,7 +1405,7 @@ export default function EstimationsPage() {
           </div>
         ) : (
           /* ── Table ── */
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 text-xs font-medium border-b border-gray-200 uppercase">

@@ -193,7 +193,7 @@ export default function BranchLedgerPage() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
+        <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-slate-50 dark:divide-slate-800/40">
           {/* Loading */}
           {loadingFranchises &&
             Array.from({ length: 4 }).map((_, i) => (
@@ -240,7 +240,7 @@ export default function BranchLedgerPage() {
                   onClick={() => setActiveFranchiseId(franchise.id)}
                   className={clsx(
                     "w-full text-left p-5 flex items-center gap-4 transition-all relative overflow-hidden group",
-                    isActive ? "bg-purple-50" : "hover:bg-slate-50/80"
+                    isActive ? "bg-purple-50 dark:bg-purple-950/20" : "hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
                   )}
                 >
                   {isActive && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-purple-500" />}
@@ -249,7 +249,7 @@ export default function BranchLedgerPage() {
                       "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all",
                       isActive
                         ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20"
-                        : "bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-purple-500 group-hover:shadow-sm"
+                        : "bg-slate-50 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 group-hover:bg-white dark:group-hover:bg-slate-800 group-hover:text-purple-500 group-hover:shadow-sm"
                     )}
                   >
                     <Building2 size={20} strokeWidth={isActive ? 2 : 1.5} />
@@ -258,16 +258,16 @@ export default function BranchLedgerPage() {
                     <h3
                       className={clsx(
                         "text-sm font-black truncate transition-colors",
-                        isActive ? "text-purple-700" : "text-slate-900 group-hover:text-purple-600"
+                        isActive ? "text-purple-700 dark:text-purple-300" : "text-slate-900 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400"
                       )}
                     >
                       {franchise.name}
                     </h3>
-                    <p className={clsx("text-[9px] uppercase tracking-[0.1em] mt-1 font-bold", isActive ? "text-purple-400" : "text-slate-400")}>
+                    <p className={clsx("text-[9px] uppercase tracking-[0.1em] mt-1 font-bold", isActive ? "text-purple-400 dark:text-purple-400" : "text-slate-400 dark:text-slate-500")}>
                       {franchise.location || "Branch Outlet"}
                     </p>
                   </div>
-                  <ChevronRight size={16} className={clsx("transition-transform group-hover:translate-x-1", isActive ? "text-purple-500" : "text-slate-300")} />
+                  <ChevronRight size={16} className={clsx("transition-transform group-hover:translate-x-1", isActive ? "text-purple-500" : "text-slate-300 dark:text-slate-500")} />
                 </button>
               );
             })}
@@ -279,29 +279,29 @@ export default function BranchLedgerPage() {
         {activeFranchise ? (
           <>
             {/* Ledger Header */}
-            <div className="p-8 border-b border-slate-100 flex flex-col xl:flex-row xl:items-start justify-between gap-8 bg-slate-50/30">
+            <div className="p-8 border-b border-slate-100 dark:border-slate-800/60 flex flex-col xl:flex-row xl:items-start justify-between gap-8 bg-slate-50/30 dark:bg-slate-900/20">
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
-                  <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] bg-purple-100 text-purple-600 border border-purple-200">
+                  <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/60">
                     ID: {activeFranchise.id}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
-                    <Calculator size={12} className="text-slate-300" />
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                    <Calculator size={12} className="text-slate-300 dark:text-slate-600" />
                     Absolute Ledger Truth
                   </span>
                 </div>
-                <h1 className="text-3xl font-black text-slate-900 truncate max-w-2xl mb-2 tracking-tight">
+                <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 truncate max-w-2xl mb-2 tracking-tight">
                   {activeFranchise.name}
                 </h1>
-                <p className="text-[11px] text-slate-500 font-medium max-w-lg leading-relaxed">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium max-w-lg leading-relaxed">
                   Balances calculate dynamically based solely on debits (orders placed) and credits (payments processed). Balances are never statically stored.
                 </p>
               </div>
 
-              <div className="flex items-center gap-6 shrink-0 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm min-w-[280px]">
-                <div className="flex-1 pr-6 border-r border-slate-100 text-right">
-                  <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1.5">
+              <div className="flex items-center gap-6 shrink-0 bg-white dark:bg-slate-900/50 p-4 rounded-3xl border border-slate-100 dark:border-slate-800/80 shadow-sm min-w-[280px]">
+                <div className="flex-1 pr-6 border-r border-slate-100 dark:border-slate-800/80 text-right">
+                  <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 mb-1.5">
                     Total Outstanding
                   </p>
                   {loadingLedger ? (
@@ -315,36 +315,36 @@ export default function BranchLedgerPage() {
                 </div>
                 <div className="flex flex-col gap-1 text-left min-w-[120px]">
                   <div>
-                    <span className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400 block">Credit Limit</span>
-                    <span className="text-xs font-extrabold text-slate-900">₹{activeFranchise.creditLimit?.toLocaleString() || 0}</span>
+                    <span className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500 block">Credit Limit</span>
+                    <span className="text-xs font-extrabold text-slate-900 dark:text-slate-100">₹{activeFranchise.creditLimit?.toLocaleString() || 0}</span>
                   </div>
                   <div className="mt-1">
-                    <span className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400 block">Wallet Balance</span>
-                    <span className="text-xs font-extrabold text-emerald-600">₹{activeFranchise.walletBalance?.toLocaleString() || 0}</span>
+                    <span className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500 block">Wallet Balance</span>
+                    <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400">₹{activeFranchise.walletBalance?.toLocaleString() || 0}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Ledger Table */}
-            <div className="flex-1 overflow-hidden flex flex-col bg-white">
-              <div className="overflow-x-auto flex-1">
+            <div className="flex-1 overflow-hidden flex flex-col bg-white dark:bg-transparent">
+              <div className="overflow-auto custom-scrollbar flex-1">
                 <table className="w-full text-left border-collapse min-w-[700px]">
-                  <thead className="sticky top-0 bg-slate-50/80 backdrop-blur-md z-10 border-b border-slate-100">
-                    <tr className="text-[10px] uppercase font-black tracking-widest text-slate-400">
+                  <thead className="sticky top-0 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md z-10 border-b border-slate-100 dark:border-slate-800">
+                    <tr className="text-[10px] uppercase font-black tracking-widest text-slate-400 dark:text-slate-500">
                       <th className="px-8 py-5">Date</th>
                       <th className="px-8 py-5">Reference</th>
                       <th className="px-8 py-5">Entry Type</th>
                       <th className="px-8 py-5 text-right">
-                        Debit <span className="text-red-400 ml-1">(+)</span>
+                        Debit <span className="text-red-400 dark:text-red-500 ml-1">(+)</span>
                       </th>
                       <th className="px-8 py-5 text-right">
-                        Credit <span className="text-emerald-400 ml-1">(-)</span>
+                        Credit <span className="text-emerald-400 dark:text-emerald-500 ml-1">(-)</span>
                       </th>
                       <th className="px-8 py-5 text-right">Running Balance</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-slate-50 dark:divide-slate-800/40">
                     {/* Loading skeleton */}
                     {loadingLedger &&
                       Array.from({ length: 5 }).map((_, i) => (
@@ -396,9 +396,9 @@ export default function BranchLedgerPage() {
                     {!loadingLedger &&
                       !ledgerError &&
                       ledgerLines.map((line) => (
-                        <tr key={line.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <tr key={line.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
                           <td className="px-8 py-5">
-                            <p className="font-bold text-slate-900 uppercase text-[11px] tracking-wide">
+                            <p className="font-bold text-slate-900 dark:text-slate-300 uppercase text-[11px] tracking-wide">
                               {new Date(line.date).toLocaleDateString("en-IN", {
                                 day: "2-digit",
                                 month: "short",
@@ -407,25 +407,25 @@ export default function BranchLedgerPage() {
                             </p>
                           </td>
                           <td className="px-8 py-5">
-                            <p className="font-black text-slate-700 text-xs">
+                            <p className="font-black text-slate-700 dark:text-slate-300 text-xs">
                               {line.ref || line.reference || line.description || "—"}
                             </p>
                           </td>
                           <td className="px-8 py-5">
                             {line.type === "ORDER" ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] bg-red-50 text-red-600">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400">
                                 <FileText size={12} /> Branch Order
                               </span>
                             ) : line.type === "PAYMENT" ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] bg-emerald-50 text-emerald-600">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400">
                                 <ArrowDownRight size={12} /> Payment Received
                               </span>
                             ) : line.type === "ADJUSTMENT" ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] bg-indigo-50 text-indigo-600">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] bg-indigo-50 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400">
                                 <Plus size={12} /> Adjustment
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] bg-slate-100 text-slate-600">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                                 {line.type || "System Entry"}
                               </span>
                             )}
@@ -452,7 +452,7 @@ export default function BranchLedgerPage() {
                             <span
                               className={clsx(
                                 "font-black text-sm tabular-nums",
-                                line.balance > 0 ? "text-slate-900" : "text-emerald-500"
+                                line.balance > 0 ? "text-slate-900 dark:text-slate-100" : "text-emerald-500 dark:text-emerald-400"
                               )}
                             >
                               ₹{line.balance.toLocaleString()}
@@ -466,11 +466,11 @@ export default function BranchLedgerPage() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-20 text-center text-slate-400 bg-slate-50/30">
-            <div className="w-24 h-24 bg-white rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-center mb-6">
-              <Building2 size={40} className="text-slate-300" strokeWidth={1} />
+          <div className="flex-1 flex flex-col items-center justify-center p-20 text-center text-slate-400 bg-slate-50/30 dark:bg-slate-900/20">
+            <div className="w-24 h-24 bg-white dark:bg-slate-900/50 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800/80 flex items-center justify-center mb-6">
+              <Building2 size={40} className="text-slate-300 dark:text-slate-500" strokeWidth={1} />
             </div>
-            <h3 className="text-lg font-black text-slate-900 mb-2">Select a Branch Record</h3>
+            <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 mb-2">Select a Branch Record</h3>
             <p className="text-xs max-w-sm mx-auto leading-relaxed">
               Choose a franchise branch from the sidebar to inspect their immutable source of truth ledger and outstanding settlement data.
             </p>

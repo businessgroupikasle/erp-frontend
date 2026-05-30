@@ -15,7 +15,7 @@ import { rawMaterialsApi, franchiseApi, vendorsApi, inventoryApi } from "@/lib/a
 import { ITEM_CATEGORIES, UNITS } from "@/lib/constants";
 import { clsx } from "clsx";
 import { useAuth } from "@/context/AuthContext";
-import Fuse from "fuse.js";
+// import Fuse from "fuse.js";
 import { toast } from "react-hot-toast";
 
 interface AddInventoryProductFormProps {

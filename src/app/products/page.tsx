@@ -71,7 +71,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Elegant Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-12 px-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-12 px-2">
         {[
           { label: "Total Items", value: products.length, color: "text-slate-900" },
           { label: "Available", value: activeCount, color: "text-emerald-500" },

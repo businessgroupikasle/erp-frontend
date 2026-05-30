@@ -220,7 +220,11 @@ export default function DealersClient() {
                         </div>
                         <div>
                           <p className="font-bold text-slate-900 dark:text-white">{dealer.name}</p>
-                          <span className="text-[9px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 mt-1 inline-block">
+                          <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded mt-1 inline-block ${
+                            dealer.status === 'ACTIVE' 
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' 
+                              : 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400'
+                          }`}>
                             {dealer.status}
                           </span>
                         </div>

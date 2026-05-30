@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
@@ -408,66 +408,66 @@ export default function PaymentInPage() {
   // ── CREATE VIEW ────────────────────────────────────────────────────────────
   if (view === "create") {
     return (
-      <div className="flex flex-col bg-[#f1f5f9] overflow-hidden text-slate-800" style={{ height: 'calc(100vh - 104px)' }}>
+      <div className="flex flex-col bg-[#f1f5f9] dark:bg-background overflow-hidden text-slate-800 dark:text-slate-100" style={{ height: 'calc(100vh - 104px)' }}>
 
         {/* Top bar */}
-        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-slate-800">Payment-In</h2>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Payment-In</h2>
           </div>
-          <span className="text-xs text-slate-500 font-mono">Receipt No: <strong className="text-[#f58220] font-bold">Auto</strong></span>
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">Receipt No: <strong className="text-[#f58220] font-bold">Auto</strong></span>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
           {/* Party + Date row */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-5 flex flex-wrap gap-4 items-start">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm px-6 py-5 flex flex-wrap gap-4 items-start">
 
             {/* Party dropdown */}
             <div className="relative" ref={customerDropRef}>
               <div
                 className={clsx(
-                  "flex items-center gap-1 min-w-[220px] bg-white border rounded px-3 py-2 cursor-pointer",
-                  showCustomerDrop ? "border-[#f58220]" : "border-slate-300"
+                  "flex items-center gap-1 min-w-[220px] bg-white dark:bg-slate-800 border rounded px-3 py-2 cursor-pointer",
+                  showCustomerDrop ? "border-[#f58220]" : "border-slate-300 dark:border-slate-700"
                 )}
                 onClick={() => setShowCustomerDrop(v => !v)}
               >
                 <div className="flex-1">
                   <div className="text-[10px] text-[#f58220] font-medium leading-none mb-0.5">Party *</div>
                   <input
-                    className="w-full text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400"
+                    className="w-full text-sm text-gray-700 dark:text-slate-100 outline-none bg-transparent placeholder-gray-400 dark:placeholder-gray-500"
                     placeholder="Search by Name/Phone"
                     value={customerSearch}
                     onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDrop(true); }}
                     onClick={e => { e.stopPropagation(); setShowCustomerDrop(true); }}
                   />
                 </div>
-                <ChevronDown size={14} className="text-gray-400 shrink-0" />
+                <ChevronDown size={14} className="text-gray-400 dark:text-slate-400 shrink-0" />
               </div>
 
               {showCustomerDrop && (
-                <div className="absolute top-full left-0 z-50 mt-1 w-72 bg-white border border-gray-200 rounded shadow-lg max-h-56 overflow-y-auto">
+                <div className="absolute top-full left-0 z-50 mt-1 w-72 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded shadow-lg max-h-56 overflow-y-auto">
                   <button
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#f58220] hover:bg-orange-50 border-b border-gray-100"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#f58220] hover:bg-orange-50 dark:hover:bg-slate-700 border-b border-gray-100 dark:border-slate-700"
                     onClick={() => setShowCustomerDrop(false)}
                   >
                     <Plus size={14} /> Add Party
                   </button>
                   {filteredCustomers.length === 0 ? (
-                    <div className="px-3 py-4 text-sm text-gray-400 text-center">No customers found</div>
+                    <div className="px-3 py-4 text-sm text-gray-400 dark:text-slate-400 text-center">No customers found</div>
                   ) : filteredCustomers.map(c => (
                     <button
                       key={c.id}
-                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 border-b border-gray-50 last:border-0"
+                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 border-b border-gray-50 dark:border-slate-700 last:border-0"
                       onClick={() => { setSelectedCustomer(c); setCustomerSearch(c.name); setShowCustomerDrop(false); }}
                     >
                       <div className="text-left">
-                        <div className="text-sm font-medium text-gray-800">{c.name}</div>
-                        <div className="text-xs text-gray-400">{c.phone || "—"}</div>
+                        <div className="text-sm font-medium text-gray-800 dark:text-slate-100">{c.name}</div>
+                        <div className="text-xs text-gray-400 dark:text-slate-400">{c.phone || "—"}</div>
                       </div>
                       {c.balance > 0 && (
-                        <div className="flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded">
+                        <div className="flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold px-2 py-0.5 rounded">
                           {c.balance} <Check size={10} />
                         </div>
                       )}
@@ -479,8 +479,8 @@ export default function PaymentInPage() {
 
             {/* Receipt No (auto) */}
             <div className="flex flex-col">
-              <div className="text-[10px] text-gray-500 mb-1">Receipt No</div>
-              <div className="bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-400 min-w-[120px]">Auto</div>
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 mb-1">Receipt No</div>
+              <div className="bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-gray-400 dark:text-slate-400 min-w-[120px]">Auto</div>
             </div>
 
             {/* Spacer */}
@@ -488,13 +488,13 @@ export default function PaymentInPage() {
 
             {/* Date */}
             <div className="flex flex-col items-end">
-              <div className="text-[10px] text-gray-500 mb-1">Receipt Date</div>
-              <div className="flex items-center gap-1 border border-gray-300 rounded px-3 py-2 bg-white">
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 mb-1">Receipt Date</div>
+              <div className="flex items-center gap-1 border border-gray-300 dark:border-slate-700 rounded px-3 py-2 bg-white dark:bg-slate-800">
                 <input
                   type="date"
                   value={receiptDate}
                   onChange={e => setReceiptDate(e.target.value)}
-                  className="text-sm text-gray-700 outline-none bg-transparent"
+                  className="text-sm text-gray-700 dark:text-slate-100 outline-none bg-transparent"
                 />
                 <Calendar size={13} className="text-[#f58220] shrink-0" />
               </div>
@@ -502,61 +502,61 @@ export default function PaymentInPage() {
           </div>
 
           {/* Amount + Mode */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
-            <div className="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-2">Payment Details</div>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 space-y-4">
+            <div className="text-sm font-semibold text-gray-700 dark:text-slate-200 border-b border-gray-100 dark:border-slate-800 pb-2">Payment Details</div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Amount */}
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Amount Received (₹) *</label>
-                <div className="flex items-center border border-gray-300 rounded bg-white overflow-hidden focus-within:border-[#f58220]">
-                  <span className="px-3 py-2 text-gray-400 text-sm border-r border-gray-200 bg-gray-50">₹</span>
+                <label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Amount Received (₹) *</label>
+                <div className="flex items-center border border-gray-300 dark:border-slate-700 rounded bg-white dark:bg-slate-800 overflow-hidden focus-within:border-[#f58220]">
+                  <span className="px-3 py-2 text-gray-400 dark:text-slate-400 text-sm border-r border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-850">₹</span>
                   <input
                     type="number"
                     min={0}
                     placeholder="0.00"
                     value={amount}
                     onChange={e => setAmount(e.target.value)}
-                    className="flex-1 px-3 py-2 text-sm text-gray-800 outline-none font-semibold"
+                    className="flex-1 px-3 py-2 text-sm text-gray-800 dark:text-slate-100 outline-none bg-transparent font-semibold"
                   />
                 </div>
               </div>
 
               {/* Payment Mode */}
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Payment Mode</label>
+                <label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Payment Mode</label>
                 <select
                   value={paymentMode}
                   onChange={e => setPaymentMode(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none bg-white focus:border-[#f58220]"
+                  className="w-full border border-gray-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-gray-700 dark:text-slate-100 outline-none bg-white dark:bg-slate-800 focus:border-[#f58220]"
                 >
-                  {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
+                  {PAYMENT_MODES.map(m => <option key={m} value={m} className="dark:bg-slate-800">{m}</option>)}
                 </select>
               </div>
 
               {/* Cheque No (shown if Cheque mode) */}
               {paymentMode === "Cheque" && (
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Cheque No.</label>
+                  <label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Cheque No.</label>
                   <input
                     type="text"
                     placeholder="Enter cheque number"
                     value={chequeNo}
                     onChange={e => setChequeNo(e.target.value)}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#f58220]"
+                    className="w-full border border-gray-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-gray-700 dark:text-slate-100 outline-none bg-white dark:bg-slate-800 focus:border-[#f58220]"
                   />
                 </div>
               )}
 
               {/* Description */}
               <div className={paymentMode === "Cheque" ? "md:col-span-2" : ""}>
-                <label className="text-xs text-gray-500 mb-1 block">Description / Narration</label>
+                <label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Description / Narration</label>
                 <input
                   type="text"
                   placeholder="Optional note..."
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#f58220]"
+                  className="w-full border border-gray-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-gray-700 dark:text-slate-100 outline-none bg-white dark:bg-slate-800 focus:border-[#f58220]"
                 />
               </div>
             </div>
@@ -572,8 +572,8 @@ export default function PaymentInPage() {
         </div>
 
         {/* Bottom action bar */}
-        <div className="bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-end gap-3 shrink-0 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]">
-          <button onClick={() => { resetForm(); setView("list"); }} className="px-4 py-1.5 text-sm text-gray-500 hover:text-gray-700">
+        <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-end gap-3 shrink-0 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]">
+          <button onClick={() => { resetForm(); setView("list"); }} className="px-4 py-1.5 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">
             Cancel
           </button>
 
@@ -591,12 +591,12 @@ export default function PaymentInPage() {
               </button>
             </div>
             {showShareDrop && (
-              <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-200 rounded shadow-lg text-sm min-w-[140px] z-50">
-                <button className="w-full px-4 py-2 text-left hover:bg-gray-50 text-gray-700 flex items-center gap-2">
+              <div className="absolute bottom-full right-0 mb-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded shadow-lg text-sm min-w-[140px] z-50">
+                <button className="w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-slate-750 text-gray-700 dark:text-slate-200 flex items-center gap-2">
                   <Printer size={13} /> Print
                 </button>
                 <button
-                  className="w-full px-4 py-2 text-left hover:bg-gray-50 text-gray-700"
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-slate-750 text-gray-700 dark:text-slate-200"
                   onClick={async () => { setShowShareDrop(false); await handleSave(); }}
                 >
                   Save &amp; New
@@ -608,7 +608,7 @@ export default function PaymentInPage() {
           <button
             onClick={() => handleSave(true)}
             disabled={saving}
-            className="px-4 py-1.5 text-sm font-semibold text-gray-600 hover:text-gray-800 bg-white border border-gray-200 rounded disabled:opacity-60"
+            className="px-4 py-1.5 text-sm font-semibold text-gray-600 dark:text-slate-300 hover:text-gray-800 dark:hover:text-white bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded disabled:opacity-60"
           >
             Save Draft
           </button>
@@ -647,7 +647,7 @@ export default function PaymentInPage() {
       <div className="max-w-6xl mx-auto px-6 py-5 space-y-5">
 
         {/* ── Summary Strip ── */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[
             { label: "Total Amount Received", value: `₹${totalAmount.toLocaleString("en-IN")}`, color: "text-gray-700", dot: "bg-gray-400" },
             { label: "Confirmed Payments",    value: `₹${totalReceived.toLocaleString("en-IN")}`,  color: "text-emerald-600", dot: "bg-emerald-500" },
@@ -738,7 +738,7 @@ export default function PaymentInPage() {
           </div>
         ) : (
           /* ── Table ── */
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 text-xs font-medium border-b border-gray-200 uppercase">

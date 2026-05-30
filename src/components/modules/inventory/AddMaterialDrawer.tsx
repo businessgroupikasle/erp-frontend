@@ -155,7 +155,7 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
 
       <div className="relative w-full max-w-2xl bg-white dark:bg-[#0f1117] h-full shadow-[-20px_0_50px_rgba(0,0,0,0.1)] animate-in slide-in-from-right duration-500 flex flex-col">
         {/* Header */}
-        <div className="bg-white/80 dark:bg-[#0f1117]/80 backdrop-blur-xl border-b border-slate-100 dark:border-white/5 p-8 flex items-center justify-between shrink-0">
+        <div className="bg-white/80 dark:bg-[#0f1117]/80 backdrop-blur-xl border-b border-slate-100 dark:border-white/5 p-5 sm:p-8 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-[2rem] bg-orange-500 flex items-center justify-center text-white shadow-xl shadow-orange-500/20">
               <Package size={28} />
@@ -171,7 +171,7 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-10 space-y-6 sm:space-y-10 custom-scrollbar">
           {error && (
             <div className="p-5 rounded-3xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 flex items-center gap-4 text-red-600 dark:text-red-400 text-[11px] font-black uppercase tracking-widest animate-in zoom-in-95">
               <AlertCircle size={20} />
@@ -210,7 +210,7 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Category</label>
                 <div className="relative">
@@ -239,7 +239,7 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 flex items-center gap-2">
                   <Barcode size={12} className="text-indigo-500" /> HSN Code
@@ -271,7 +271,7 @@ export default function AddMaterialDrawer({ isOpen, onClose, onSuccess }: AddMat
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white/80 dark:bg-[#0f1117]/80 backdrop-blur-2xl border-t border-slate-100 dark:border-white/5 p-10 flex gap-6 shrink-0">
+        <div className="sticky bottom-0 bg-white/80 dark:bg-[#0f1117]/80 backdrop-blur-2xl border-t border-slate-100 dark:border-white/5 p-5 sm:p-10 flex gap-3 sm:gap-6 shrink-0">
           <button
             type="button"
             onClick={onClose}
