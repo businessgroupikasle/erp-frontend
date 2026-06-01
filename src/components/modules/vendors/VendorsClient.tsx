@@ -388,378 +388,561 @@ export default function VendorsClient() {
         {selectedVendor ? (
           <>
             {/* Party Details Header */}
-            <div className="px-6 py-4 flex items-start justify-between border-b border-slate-200 dark:border-white/5 bg-white dark:bg-[#0b0c14]">
-              <div className="space-y-4 w-full">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">{selectedVendor.name}</h2>
-                    <button onClick={() => { setEditing(selectedVendor); setShowForm(true); }} className="text-orange-500 hover:text-orange-600 transition-colors">
-                      <Edit2 size={16} />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-4 text-slate-400">
-                    <button onClick={() => setIsSettingsOpen(true)} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><Settings2 size={18} /></button>
-                    <div className="relative filter-popover-container">
-                      <button onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><MoreVertical size={18} /></button>
-                      {/* More Options Menu */}
-                      {isMoreMenuOpen && (
-                        <div className="absolute top-full right-0 mt-2 w-60 bg-white rounded-xl shadow-xl border border-slate-200 dark:border-white/5 z-50 py-1.5">
-                          {[
-                            "Import from Excel",
-                            "Import from Phone",
-                            "Import Via Google Contacts",
-                            "Party Statement (Report)",
-                            "All Parties (Report)"
-                          ].map((item, i) => (
-                            <button key={i} className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                              {item}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+            <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200 dark:border-white/5 bg-white dark:bg-[#0b0c14]">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">{selectedVendor.name}</h2>
+                  <button onClick={() => { setEditing(selectedVendor); setShowForm(true); }} className="text-orange-500 hover:text-orange-600 transition-colors">
+                    <Edit2 size={16} />
+                  </button>
                 </div>
-                
-                <div className="grid grid-cols-3 gap-6 max-w-3xl">
-                  <div>
-                    <p className="text-[11px] text-slate-400 mb-0.5">Phone Number</p>
-                    <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300">{selectedVendorDetail?.contact || selectedVendor.contact || "—"}</p>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 font-bold">
+                  {selectedVendor.vendorCode || "V-NEW"}
+                </span>
+              </div>
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => { fetchVendorInvoices(selectedVendor.id); setShowPaymentModal(true); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
+                >
+                  <Wallet size={14} /> Record Payment
+                </button>
+                <div className="flex items-center gap-2 text-slate-400">
+                  <button onClick={() => setIsSettingsOpen(true)} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><Settings2 size={18} /></button>
+                  <div className="relative filter-popover-container">
+                    <button onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><MoreVertical size={18} /></button>
+                    {/* More Options Menu */}
+                    {isMoreMenuOpen && (
+                      <div className="absolute top-full right-0 mt-2 w-60 bg-white rounded-xl shadow-xl border border-slate-200 dark:border-white/5 z-50 py-1.5">
+                        {[
+                          "Import from Excel",
+                          "Import from Phone",
+                          "Import Via Google Contacts",
+                          "Party Statement (Report)",
+                          "All Parties (Report)"
+                        ].map((item, i) => (
+                          <button key={i} className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                            {item}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <p className="text-[11px] text-slate-400 mb-0.5">Email</p>
-                    <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300">{selectedVendorDetail?.email || selectedVendor.email || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-slate-400 mb-0.5">GSTIN</p>
-                    <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300">{selectedVendorDetail?.gstNumber || selectedVendor.gstNumber || "—"}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-[11px] text-slate-400 mb-0.5">Billing Address</p>
-                  <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300">{selectedVendorDetail?.address || selectedVendor.address || "—"}</p>
                 </div>
               </div>
             </div>
 
-            {/* Transactions Section */}
-            <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-[#0b0c14]">
-              {/* Section Header */}
-              <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 dark:border-white/5">
-                <h3 className="text-sm font-bold text-slate-700 dark:text-white">Transactions</h3>
-                <div className="flex items-center gap-3 text-slate-400">
-                  {isTransactionSearchOpen ? (
-                    <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-full px-3 py-1">
-                      <Search size={14} className="text-slate-400" />
-                      <input 
-                        type="text" 
-                        autoFocus
-                        placeholder="Search transactions..." 
-                        className="bg-transparent border-none text-xs w-32 focus:outline-none ml-2 text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
-                        value={transactionSearchQuery}
-                        onChange={(e) => setTransactionSearchQuery(e.target.value)}
-                        onBlur={() => !transactionSearchQuery && setIsTransactionSearchOpen(false)}
-                      />
-                    </div>
-                  ) : (
-                    <button onClick={() => setIsTransactionSearchOpen(true)} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><Search size={16} /></button>
+            {/* Tab Selection */}
+            <div className="flex gap-6 px-6 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-[#0b0c14] shrink-0">
+              {[
+                { id: 'OVERVIEW', label: 'Overview' },
+                { id: 'LEDGER', label: 'Ledger (Transactions)' },
+                { id: 'MATERIALS', label: 'Material History' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setSelectedTab(tab.id as any)}
+                  className={clsx(
+                    "text-xs font-bold uppercase tracking-wider pb-3 pt-3 border-b-2 transition-all",
+                    selectedTab === tab.id ? "border-orange-500 text-orange-600" : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                   )}
-                  <button className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><Printer size={16} /></button>
-                  <button className="text-emerald-600 hover:text-emerald-700 transition-colors"><FileText size={16} className="opacity-80" /></button>
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Contents */}
+            {selectedTab === 'OVERVIEW' && (
+              <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar bg-slate-50/50 dark:bg-[#0b0c14]">
+                {/* Financial Formula Card */}
+                <div className="bg-white dark:bg-card p-6 rounded-3xl border border-slate-100 dark:border-white/5 shadow-sm">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Outstanding Balance Formula</h4>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <p className={`text-2xl font-black ${Number(selectedVendor.balance) > 0 ? "text-rose-500" : Number(selectedVendor.balance) < 0 ? "text-emerald-500" : "text-slate-500"}`}>
+                        ₹ {Math.round(Math.abs(selectedVendor.balance || 0)).toLocaleString()}
+                        {Number(selectedVendor.balance) !== 0 && (
+                          <span className="text-xs font-bold uppercase tracking-wider ml-1.5 text-slate-400">
+                            {Number(selectedVendor.balance) > 0 ? "To Pay" : "Advance"}
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">Outstanding Balance</p>
+                    </div>
+                    <div className="text-2xl text-slate-300 font-light hidden md:block">=</div>
+                    <div>
+                      <p className="text-xl font-bold text-slate-700 dark:text-slate-300">
+                        ₹ {Math.round(selectedVendor.totalPurchased || 0).toLocaleString()}
+                      </p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">Total Purchases</p>
+                    </div>
+                    <div className="text-2xl text-slate-300 font-light hidden md:block">-</div>
+                    <div>
+                      <p className="text-xl font-bold text-slate-700 dark:text-slate-300">
+                        ₹ {Math.round(selectedVendor.totalPaid || 0).toLocaleString()}
+                      </p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">Payments Made</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Workflow Pipeline */}
+                <div className="bg-white dark:bg-card p-6 rounded-3xl border border-slate-100 dark:border-white/5 shadow-sm">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Procurement Workflow</h4>
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-2 text-center">
+                    <div className="flex flex-col items-center flex-1">
+                      <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                        <CheckCircle2 size={18} />
+                      </div>
+                      <p className="text-[10px] font-black text-slate-700 dark:text-slate-300 mt-2 uppercase tracking-wider">Vendor Onboarded</p>
+                      <p className="text-[9px] text-slate-400 mt-0.5">{selectedVendor.status || 'ACTIVE'}</p>
+                    </div>
+                    <div className="text-slate-300 font-light hidden md:block">&rarr;</div>
+                    <div className="flex flex-col items-center flex-1">
+                      <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+                        <Package size={18} />
+                      </div>
+                      <p className="text-[10px] font-black text-slate-700 dark:text-slate-300 mt-2 uppercase tracking-wider">POs Linked</p>
+                      <p className="text-[9px] text-slate-400 mt-0.5">{selectedVendorDetail?.orders?.length || 0} orders</p>
+                    </div>
+                    <div className="text-slate-300 font-light hidden md:block">&rarr;</div>
+                    <div className="flex flex-col items-center flex-1">
+                      <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                        <Truck size={18} />
+                      </div>
+                      <p className="text-[10px] font-black text-slate-700 dark:text-slate-300 mt-2 uppercase tracking-wider">GRN Linked</p>
+                      <p className="text-[9px] text-slate-400 mt-0.5">
+                        {selectedVendorDetail?.orders?.flatMap((o: any) => o.goodsReceipts || [])?.length || 0} received
+                      </p>
+                    </div>
+                    <div className="text-slate-300 font-light hidden md:block">&rarr;</div>
+                    <div className="flex flex-col items-center flex-1">
+                      <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                        <Receipt size={18} />
+                      </div>
+                      <p className="text-[10px] font-black text-slate-700 dark:text-slate-300 mt-2 uppercase tracking-wider">Bills Linked</p>
+                      <p className="text-[9px] text-slate-400 mt-0.5">{selectedVendorDetail?.invoices?.length || 0} invoices</p>
+                    </div>
+                    <div className="text-slate-300 font-light hidden md:block">&rarr;</div>
+                    <div className="flex flex-col items-center flex-1">
+                      <div className="w-10 h-10 rounded-full bg-violet-500 flex items-center justify-center text-white shadow-lg shadow-violet-500/20">
+                        <Wallet size={18} />
+                      </div>
+                      <p className="text-[10px] font-black text-slate-700 dark:text-slate-300 mt-2 uppercase tracking-wider">Payments Linked</p>
+                      <p className="text-[9px] text-slate-400 mt-0.5">₹ {Math.round(selectedVendor.totalPaid || 0).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Profile Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white dark:bg-card p-6 rounded-3xl border border-slate-100 dark:border-white/5 shadow-sm space-y-4">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Business Identity</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-black">Vendor Code</p>
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{selectedVendorDetail?.vendorCode || selectedVendor.vendorCode || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-black">GSTIN</p>
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{selectedVendorDetail?.gstNumber || selectedVendor.gstNumber || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-black">Material Category</p>
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{selectedVendorDetail?.category || selectedVendor.category || "General Supplier"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-black">Credit Period (Payment Terms)</p>
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                          {(() => {
+                            const terms = selectedVendorDetail?.paymentTerms || selectedVendor.paymentTerms;
+                            if (terms === 'NET_7') return '7 Days';
+                            if (terms === 'NET_30') return '30 Days';
+                            if (terms === 'ADVANCE') return 'Advance Payment';
+                            return 'Immediate';
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-card p-6 rounded-3xl border border-slate-100 dark:border-white/5 shadow-sm space-y-4">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact & Location</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-black">Phone Number</p>
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{selectedVendorDetail?.contact || selectedVendor.contact || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-black">Email Address</p>
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{selectedVendorDetail?.email || selectedVendor.email || "—"}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-[10px] text-slate-400 uppercase font-black">Registered Address</p>
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{selectedVendorDetail?.address || selectedVendor.address || "—"}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
 
-              {/* Transactions Table */}
-              <div className="flex-1 overflow-auto custom-scrollbar">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-white dark:bg-[#0b0c14] sticky top-0 z-10 border-b border-slate-200 dark:border-white/5">
-                    <tr>
-                      <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative filter-popover-container">
-                        <div className="flex items-center justify-between">
-                          Type
-                          <button onClick={() => setIsTypeFilterOpen(!isTypeFilterOpen)}>
-                            <Filter size={14} className="text-slate-400 hover:text-slate-700" />
-                          </button>
-                        </div>
-                        {/* Type Filter Popover */}
-                        {isTypeFilterOpen && (
-                          <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal">
-                            <div className="max-h-[240px] overflow-y-auto custom-scrollbar p-2 space-y-1">
-                              {transactionTypes.map(type => (
-                                <label key={type} className="flex items-start gap-2 p-1.5 hover:bg-slate-50 rounded cursor-pointer group">
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedTypes.includes(type)}
-                                    onChange={(e) => {
-                                      if (e.target.checked) setSelectedTypes([...selectedTypes, type]);
-                                      else setSelectedTypes(selectedTypes.filter(t => t !== type));
-                                    }}
-                                    className="mt-0.5 w-3.5 h-3.5 rounded border-slate-300 text-rose-500 focus:ring-rose-500 cursor-pointer"
-                                  />
-                                  <span className="text-[11px] leading-tight group-hover:text-slate-900">{type}</span>
-                                </label>
-                              ))}
-                            </div>
-                            <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
-                              <button
-                                onClick={() => { setSelectedTypes([]); setIsTypeFilterOpen(false); }}
-                                className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors"
-                              >
-                                Clear
-                              </button>
-                              <button
-                                onClick={() => setIsTypeFilterOpen(false)}
-                                className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm border-2 border-orange-500"
-                              >
-                                Apply
-                              </button>
-                            </div>
+            {selectedTab === 'LEDGER' && (
+              <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-[#0b0c14]">
+                {/* Section Header */}
+                <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 dark:border-white/5">
+                  <h3 className="text-sm font-bold text-slate-700 dark:text-white">Transactions Ledger</h3>
+                  <div className="flex items-center gap-3 text-slate-400">
+                    {isTransactionSearchOpen ? (
+                      <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-full px-3 py-1">
+                        <Search size={14} className="text-slate-400" />
+                        <input 
+                          type="text" 
+                          autoFocus
+                          placeholder="Search transactions..." 
+                          className="bg-transparent border-none text-xs w-32 focus:outline-none ml-2 text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
+                          value={transactionSearchQuery}
+                          onChange={(e) => setTransactionSearchQuery(e.target.value)}
+                          onBlur={() => !transactionSearchQuery && setIsTransactionSearchOpen(false)}
+                        />
+                      </div>
+                    ) : (
+                      <button onClick={() => setIsTransactionSearchOpen(true)} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><Search size={16} /></button>
+                    )}
+                    <button className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><Printer size={16} /></button>
+                    <button className="text-emerald-600 hover:text-emerald-700 transition-colors"><FileText size={16} className="opacity-80" /></button>
+                  </div>
+                </div>
+
+                {/* Transactions Table */}
+                <div className="flex-1 overflow-auto custom-scrollbar">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-white dark:bg-[#0b0c14] sticky top-0 z-10 border-b border-slate-200 dark:border-white/5">
+                      <tr>
+                        <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative filter-popover-container">
+                          <div className="flex items-center justify-between">
+                            Type
+                            <button onClick={() => setIsTypeFilterOpen(!isTypeFilterOpen)}>
+                              <Filter size={14} className="text-slate-400 hover:text-slate-700" />
+                            </button>
                           </div>
-                        )}
-                      </th>
-                      <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative">
-                        <div className="flex items-center justify-between">
-                          Number
-                          <button onClick={() => setIsNumberFilterOpen(!isNumberFilterOpen)}>
-                            <Filter size={14} className="text-slate-400 hover:text-slate-700" />
-                          </button>
-                        </div>
-                        {isNumberFilterOpen && (
-                          <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal">
-                            <div className="p-3 space-y-3">
-                              <div>
-                                <label className="text-[10px] font-bold text-slate-400">Select Category</label>
-                                <div className="relative mt-1">
-                                  <select
-                                    className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
-                                    value={numberFilter.category}
-                                    onChange={e => setNumberFilter({ ...numberFilter, category: e.target.value })}
-                                  >
-                                    <option>Contains</option>
-                                    <option>Exact match</option>
-                                  </select>
-                                  <ChevronDown size={14} className="absolute right-2 top-2 text-slate-400 pointer-events-none" />
-                                </div>
+                          {/* Type Filter Popover */}
+                          {isTypeFilterOpen && (
+                            <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal">
+                              <div className="max-h-[240px] overflow-y-auto custom-scrollbar p-2 space-y-1">
+                                {transactionTypes.map(type => (
+                                  <label key={type} className="flex items-start gap-2 p-1.5 hover:bg-slate-50 rounded cursor-pointer group">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedTypes.includes(type)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) setSelectedTypes([...selectedTypes, type]);
+                                        else setSelectedTypes(selectedTypes.filter(t => t !== type));
+                                      }}
+                                      className="mt-0.5 w-3.5 h-3.5 rounded border-slate-300 text-rose-500 focus:ring-rose-500 cursor-pointer"
+                                    />
+                                    <span className="text-[11px] leading-tight group-hover:text-slate-900">{type}</span>
+                                  </label>
+                                ))}
                               </div>
-                              <div>
-                                <label className="text-[10px] font-bold text-slate-400">Number</label>
-                                <input
-                                  type="text"
-                                  className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
-                                  value={numberFilter.value}
-                                  onChange={e => setNumberFilter({ ...numberFilter, value: e.target.value })}
-                                />
+                              <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
+                                <button
+                                  onClick={() => { setSelectedTypes([]); setIsTypeFilterOpen(false); }}
+                                  className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors"
+                                >
+                                  Clear
+                                </button>
+                                <button
+                                  onClick={() => setIsTypeFilterOpen(false)}
+                                  className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm border-2 border-orange-500"
+                                >
+                                  Apply
+                                </button>
                               </div>
                             </div>
-                            <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
-                              <button onClick={() => { setNumberFilter({ category: 'Contains', value: '' }); setIsNumberFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
-                              <button onClick={() => setIsNumberFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
-                            </div>
+                          )}
+                        </th>
+                        <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative">
+                          <div className="flex items-center justify-between">
+                            Number
+                            <button onClick={() => setIsNumberFilterOpen(!isNumberFilterOpen)}>
+                              <Filter size={14} className="text-slate-400 hover:text-slate-700" />
+                            </button>
                           </div>
-                        )}
-                      </th>
-                      <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative">
-                        <div className="flex items-center justify-between">
-                          <span className="flex items-center gap-1">Date <ChevronDown size={12} className="text-slate-400" /></span>
-                          <button onClick={() => setIsDateFilterOpen(!isDateFilterOpen)}>
-                            <Filter size={14} className="text-slate-400 hover:text-slate-700" />
-                          </button>
-                        </div>
-                        {isDateFilterOpen && (
-                          <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal">
-                            <div className="p-3 space-y-3">
-                              <div>
-                                <label className="text-[10px] font-bold text-slate-400">Select Category</label>
-                                <div className="relative mt-1">
-                                  <select
-                                    className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
-                                    value={dateFilter.category}
-                                    onChange={e => setDateFilter({ ...dateFilter, category: e.target.value })}
-                                  >
-                                    <option>Equal To</option>
-                                    <option>Less Than</option>
-                                    <option>Greater Than</option>
-                                    <option>Range</option>
-                                  </select>
-                                  <ChevronDown size={14} className="absolute right-2 top-2 text-slate-400 pointer-events-none" />
-                                </div>
-                              </div>
-                              <div>
-                                <label className="text-[10px] font-bold text-slate-400">{dateFilter.category === 'Range' ? 'Start Date' : 'Select Date'}</label>
-                                <div className="relative mt-1">
-                                  <input
-                                    type="date"
-                                    className="w-full border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                                    value={dateFilter.value}
-                                    onChange={e => setDateFilter({ ...dateFilter, value: e.target.value })}
-                                  />
-                                  <Calendar size={14} className="absolute right-2 top-1.5 text-blue-500 pointer-events-none" />
-                                </div>
-                              </div>
-                              {dateFilter.category === 'Range' && (
+                          {isNumberFilterOpen && (
+                            <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal">
+                              <div className="p-3 space-y-3">
                                 <div>
-                                  <label className="text-[10px] font-bold text-slate-400">End Date</label>
+                                  <label className="text-[10px] font-bold text-slate-400">Select Category</label>
+                                  <div className="relative mt-1">
+                                    <select
+                                      className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                      value={numberFilter.category}
+                                      onChange={e => setNumberFilter({ ...numberFilter, category: e.target.value })}
+                                    >
+                                      <option>Contains</option>
+                                      <option>Exact match</option>
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-2 top-2 text-slate-400 pointer-events-none" />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-bold text-slate-400">Number</label>
+                                  <input
+                                    type="text"
+                                    className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                    value={numberFilter.value}
+                                    onChange={e => setNumberFilter({ ...numberFilter, value: e.target.value })}
+                                  />
+                                </div>
+                              </div>
+                              <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
+                                <button onClick={() => { setNumberFilter({ category: 'Contains', value: '' }); setIsNumberFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
+                                <button onClick={() => setIsNumberFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
+                              </div>
+                            </div>
+                          )}
+                        </th>
+                        <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative">
+                          <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-1">Date <ChevronDown size={12} className="text-slate-400" /></span>
+                            <button onClick={() => setIsDateFilterOpen(!isDateFilterOpen)}>
+                              <Filter size={14} className="text-slate-400 hover:text-slate-700" />
+                            </button>
+                          </div>
+                          {isDateFilterOpen && (
+                            <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal">
+                              <div className="p-3 space-y-3">
+                                <div>
+                                  <label className="text-[10px] font-bold text-slate-400">Select Category</label>
+                                  <div className="relative mt-1">
+                                    <select
+                                      className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                      value={dateFilter.category}
+                                      onChange={e => setDateFilter({ ...dateFilter, category: e.target.value })}
+                                    >
+                                      <option>Equal To</option>
+                                      <option>Less Than</option>
+                                      <option>Greater Than</option>
+                                      <option>Range</option>
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-2 top-2 text-slate-400 pointer-events-none" />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-bold text-slate-400">{dateFilter.category === 'Range' ? 'Start Date' : 'Select Date'}</label>
                                   <div className="relative mt-1">
                                     <input
                                       type="date"
                                       className="w-full border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                                      value={dateFilter.endDate}
-                                      onChange={e => setDateFilter({ ...dateFilter, endDate: e.target.value })}
+                                      value={dateFilter.value}
+                                      onChange={e => setDateFilter({ ...dateFilter, value: e.target.value })}
                                     />
                                     <Calendar size={14} className="absolute right-2 top-1.5 text-blue-500 pointer-events-none" />
                                   </div>
                                 </div>
-                              )}
+                                {dateFilter.category === 'Range' && (
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-400">End Date</label>
+                                    <div className="relative mt-1">
+                                      <input
+                                        type="date"
+                                        className="w-full border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                                        value={dateFilter.endDate}
+                                        onChange={e => setDateFilter({ ...dateFilter, endDate: e.target.value })}
+                                      />
+                                      <Calendar size={14} className="absolute right-2 top-1.5 text-blue-500 pointer-events-none" />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
+                                <button onClick={() => { setDateFilter({ category: 'Equal To', value: '', endDate: '' }); setIsDateFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
+                                <button onClick={() => setIsDateFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
+                              </div>
                             </div>
-                            <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
-                              <button onClick={() => { setDateFilter({ category: 'Equal To', value: '', endDate: '' }); setIsDateFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
-                              <button onClick={() => setIsDateFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
-                            </div>
+                          )}
+                        </th>
+                        <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            Total
+                            <button onClick={() => setIsTotalFilterOpen(!isTotalFilterOpen)}>
+                              <Filter size={14} className="text-slate-400 hover:text-slate-700" />
+                            </button>
                           </div>
-                        )}
-                      </th>
-                      <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          Total
-                          <button onClick={() => setIsTotalFilterOpen(!isTotalFilterOpen)}>
-                            <Filter size={14} className="text-slate-400 hover:text-slate-700" />
-                          </button>
-                        </div>
-                        {isTotalFilterOpen && (
-                          <div className="absolute top-full right-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal text-left">
-                            <div className="p-3 space-y-3">
-                              <div>
-                                <label className="text-[10px] font-bold text-slate-400">Select Category</label>
-                                <div className="relative mt-1">
-                                  <select
-                                    className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
-                                    value={totalFilter.category}
-                                    onChange={e => setTotalFilter({ ...totalFilter, category: e.target.value })}
-                                  >
-                                    <option>Equal To</option>
-                                    <option>Less Than</option>
-                                    <option>Greater Than</option>
-                                    <option>Range</option>
-                                  </select>
-                                  <ChevronDown size={14} className="absolute right-2 top-2 text-slate-400 pointer-events-none" />
-                                </div>
-                              </div>
-                              <div>
-                                <label className="text-[10px] font-bold text-slate-400">{totalFilter.category === 'Range' ? 'Min Amount' : 'Amount'}</label>
-                                <input
-                                  type="number"
-                                  className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
-                                  value={totalFilter.value}
-                                  onChange={e => setTotalFilter({ ...totalFilter, value: e.target.value })}
-                                />
-                              </div>
-                              {totalFilter.category === 'Range' && (
+                          {isTotalFilterOpen && (
+                            <div className="absolute top-full right-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal text-left">
+                              <div className="p-3 space-y-3">
                                 <div>
-                                  <label className="text-[10px] font-bold text-slate-400">Max Amount</label>
+                                  <label className="text-[10px] font-bold text-slate-400">Select Category</label>
+                                  <div className="relative mt-1">
+                                    <select
+                                      className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                      value={totalFilter.category}
+                                      onChange={e => setTotalFilter({ ...totalFilter, category: e.target.value })}
+                                    >
+                                      <option>Equal To</option>
+                                      <option>Less Than</option>
+                                      <option>Greater Than</option>
+                                      <option>Range</option>
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-2 top-2 text-slate-400 pointer-events-none" />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-bold text-slate-400">{totalFilter.category === 'Range' ? 'Min Amount' : 'Amount'}</label>
                                   <input
                                     type="number"
                                     className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
-                                    value={totalFilter.endValue}
-                                    onChange={e => setTotalFilter({ ...totalFilter, endValue: e.target.value })}
+                                    value={totalFilter.value}
+                                    onChange={e => setTotalFilter({ ...totalFilter, value: e.target.value })}
                                   />
                                 </div>
-                              )}
+                                {totalFilter.category === 'Range' && (
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-400">Max Amount</label>
+                                    <input
+                                      type="number"
+                                      className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                      value={totalFilter.endValue}
+                                      onChange={e => setTotalFilter({ ...totalFilter, endValue: e.target.value })}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
+                                <button onClick={() => { setTotalFilter({ category: 'Equal To', value: '', endValue: '' }); setIsTotalFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
+                                <button onClick={() => setIsTotalFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
+                              </div>
                             </div>
-                            <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
-                              <button onClick={() => { setTotalFilter({ category: 'Equal To', value: '', endValue: '' }); setIsTotalFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
-                              <button onClick={() => setIsTotalFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
-                            </div>
+                          )}
+                        </th>
+                        <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            Balance
+                            <button onClick={() => setIsBalanceFilterOpen(!isBalanceFilterOpen)}>
+                              <Filter size={14} className="text-slate-400 hover:text-slate-700" />
+                            </button>
                           </div>
-                        )}
-                      </th>
-                      <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          Balance
-                          <button onClick={() => setIsBalanceFilterOpen(!isBalanceFilterOpen)}>
-                            <Filter size={14} className="text-slate-400 hover:text-slate-700" />
-                          </button>
-                        </div>
-                        {isBalanceFilterOpen && (
-                          <div className="absolute top-full right-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal text-left">
-                            <div className="p-3 space-y-3">
-                              <div>
-                                <label className="text-[10px] font-bold text-slate-400">Select Category</label>
-                                <div className="relative mt-1">
-                                  <select
-                                    className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
-                                    value={balanceFilter.category}
-                                    onChange={e => setBalanceFilter({ ...balanceFilter, category: e.target.value })}
-                                  >
-                                    <option>Equal To</option>
-                                    <option>Less Than</option>
-                                    <option>Greater Than</option>
-                                    <option>Range</option>
-                                  </select>
-                                  <ChevronDown size={14} className="absolute right-2 top-2 text-slate-400 pointer-events-none" />
-                                </div>
-                              </div>
-                              <div>
-                                <label className="text-[10px] font-bold text-slate-400">{balanceFilter.category === 'Range' ? 'Min Amount' : 'Amount'}</label>
-                                <input
-                                  type="number"
-                                  className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
-                                  value={balanceFilter.value}
-                                  onChange={e => setBalanceFilter({ ...balanceFilter, value: e.target.value })}
-                                />
-                              </div>
-                              {balanceFilter.category === 'Range' && (
+                          {isBalanceFilterOpen && (
+                            <div className="absolute top-full right-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal text-left">
+                              <div className="p-3 space-y-3">
                                 <div>
-                                  <label className="text-[10px] font-bold text-slate-400">Max Amount</label>
+                                  <label className="text-[10px] font-bold text-slate-400">Select Category</label>
+                                  <div className="relative mt-1">
+                                    <select
+                                      className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                      value={balanceFilter.category}
+                                      onChange={e => setBalanceFilter({ ...balanceFilter, category: e.target.value })}
+                                    >
+                                      <option>Equal To</option>
+                                      <option>Less Than</option>
+                                      <option>Greater Than</option>
+                                      <option>Range</option>
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-2 top-2 text-slate-400 pointer-events-none" />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-bold text-slate-400">{balanceFilter.category === 'Range' ? 'Min Amount' : 'Amount'}</label>
                                   <input
                                     type="number"
                                     className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
-                                    value={balanceFilter.endValue}
-                                    onChange={e => setBalanceFilter({ ...balanceFilter, endValue: e.target.value })}
+                                    value={balanceFilter.value}
+                                    onChange={e => setBalanceFilter({ ...balanceFilter, value: e.target.value })}
                                   />
                                 </div>
-                              )}
+                                {balanceFilter.category === 'Range' && (
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-400">Max Amount</label>
+                                    <input
+                                      type="number"
+                                      className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                      value={balanceFilter.endValue}
+                                      onChange={e => setBalanceFilter({ ...balanceFilter, endValue: e.target.value })}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
+                                <button onClick={() => { setBalanceFilter({ category: 'Equal To', value: '', endValue: '' }); setIsBalanceFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
+                                <button onClick={() => setIsBalanceFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
+                              </div>
                             </div>
-                            <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
-                              <button onClick={() => { setBalanceFilter({ category: 'Equal To', value: '', endValue: '' }); setIsBalanceFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
-                              <button onClick={() => setIsBalanceFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
-                            </div>
-                          </div>
-                        )}
-                      </th>
-                      <th className="w-10 px-2 py-3 border-b border-slate-200 dark:border-white/5"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                    {ledgerLoading ? (
-                      <tr><td colSpan={6} className="text-center py-10 text-slate-400 font-medium">Loading...</td></tr>
-                    ) : ledger.length === 0 ? (
-                      <tr><td colSpan={6} className="text-center py-10 text-slate-400 font-medium">No transactions found</td></tr>
-                    ) : (
-                      ledger.map(e => {
-                        const balance = e.runningBalance || e.balanceAfterTransaction || 0;
-                        return (
-                          <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group">
-                            <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">
-                              {e.referenceType === 'PAYMENT' ? 'Payment Out' : e.referenceType === 'PURCHASE' ? 'Purchase' : e.referenceType}
-                            </td>
-                            <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">{e.referenceId || "—"}</td>
-                            <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">{new Date(e.createdAt).toLocaleDateString()}</td>
-                            <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5 text-right">₹ {Math.round(e.amount).toLocaleString()}</td>
-                            <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5 text-right">₹ {Math.abs(Math.round(balance)).toLocaleString()} {balance >= 0 ? 'Cr' : 'Dr'}</td>
-                            <td className="px-2 py-4 text-center">
-                              <button className="text-slate-300 hover:text-slate-500">
-                                <MoreVertical size={14} />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                          )}
+                        </th>
+                        <th className="w-10 px-2 py-3 border-b border-slate-200 dark:border-white/5"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                      {ledgerLoading ? (
+                        <tr><td colSpan={6} className="text-center py-10 text-slate-400 font-medium">Loading...</td></tr>
+                      ) : ledger.length === 0 ? (
+                        <tr><td colSpan={6} className="text-center py-10 text-slate-400 font-medium">No transactions found</td></tr>
+                      ) : (
+                        ledger.map(e => {
+                          const balance = e.runningBalance || e.balanceAfterTransaction || 0;
+                          return (
+                            <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group">
+                              <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">
+                                {e.referenceType === 'PAYMENT' ? 'Payment Out' : e.referenceType === 'PURCHASE' ? 'Purchase' : e.referenceType}
+                              </td>
+                              <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">{e.referenceId || "—"}</td>
+                              <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">{new Date(e.createdAt).toLocaleDateString()}</td>
+                              <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5 text-right">₹ {Math.round(e.amount).toLocaleString()}</td>
+                              <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5 text-right">₹ {Math.abs(Math.round(balance)).toLocaleString()} {balance >= 0 ? 'Cr' : 'Dr'}</td>
+                              <td className="px-2 py-4 text-center">
+                                <button className="text-slate-300 hover:text-slate-500">
+                                  <MoreVertical size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
+
+            {selectedTab === 'MATERIALS' && (
+              <div className="flex-1 overflow-auto p-6 bg-slate-50/50 dark:bg-[#0b0c14] custom-scrollbar">
+                <div className="bg-white dark:bg-card rounded-3xl border border-slate-100 dark:border-white/5 shadow-sm overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-900/50">
+                        <th className="px-6 py-3 font-semibold text-xs text-slate-500">Material Name</th>
+                        <th className="px-6 py-3 font-semibold text-xs text-slate-500">Item Code</th>
+                        <th className="px-6 py-3 font-semibold text-xs text-slate-500">Unit</th>
+                        <th className="px-6 py-3 font-semibold text-xs text-slate-500 text-right">Vendor Price</th>
+                        <th className="px-6 py-3 font-semibold text-xs text-slate-500 text-right">Last Updated</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                      {selectedVendorDetail?.suppliedMaterials?.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="text-center py-10 text-slate-400 text-xs font-semibold">
+                            No materials linked to this vendor yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        selectedVendorDetail?.suppliedMaterials?.map((m: any) => (
+                          <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
+                            <td className="px-6 py-4 text-xs font-bold text-slate-800 dark:text-white">{m.material?.name || "—"}</td>
+                            <td className="px-6 py-4 text-xs text-slate-500">{m.material?.itemCode || m.material?.id?.slice(0, 8) || "—"}</td>
+                            <td className="px-6 py-4 text-xs text-slate-500">{m.material?.unit || "Units"}</td>
+                            <td className="px-6 py-4 text-xs font-semibold text-slate-800 dark:text-white text-right">₹ {m.price || m.material?.basePrice || 0}</td>
+                            <td className="px-6 py-4 text-xs text-slate-400 text-right">{m.lastUpdated ? new Date(m.lastUpdated).toLocaleDateString() : "—"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/30 dark:bg-[#0b0c14] relative">
