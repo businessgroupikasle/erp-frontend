@@ -19,6 +19,7 @@ const getEmptyForm = (partyType?: 'vendor' | 'customer') => ({
   contact: "",
   email: "",
   category: "",
+  paymentTerms: "IMMEDIATE",
   
   // GST & Address Tab
   gstNumber: "",
@@ -104,6 +105,8 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
           pincode: initialData.pinCode || initialData.pincode || "",
           openingBalance: Math.abs(bal) || "",
           openingBalanceType: mappedBalanceType,
+          category: initialData.category || "",
+          paymentTerms: initialData.paymentTerms || "IMMEDIATE",
         });
       } else {
         setForm(getEmptyForm(partyType));
@@ -141,7 +144,9 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
         openingBalance: finalOpeningBalance,
         openingBalanceType: form.openingBalanceType,
         asOfDate: form.asOfDate,
-        creditLimit: form.noCreditLimit ? null : (Number(form.customCreditLimit) || 0)
+        creditLimit: form.noCreditLimit ? null : (Number(form.customCreditLimit) || 0),
+        category: form.category,
+        paymentTerms: form.paymentTerms
       };
       
       await onSave(payload);
@@ -229,7 +234,7 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
                 <option>Composition Scheme</option>
               </select>
             </div>
-            <div className="col-span-2">
+            <div className={partyType === 'customer' ? "col-span-2" : ""}>
               <label className="block text-xs font-medium text-gray-500 mb-1.5">Email Address</label>
               <input 
                 placeholder="optional@gmail.com" 
@@ -238,6 +243,32 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400 transition-colors" 
               />
             </div>
+            {partyType === 'vendor' && (
+              <>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Material Category</label>
+                  <input 
+                    placeholder="e.g. Raw Material, Packaging" 
+                    value={form.category} 
+                    onChange={(e) => setForm({...form, category: e.target.value})} 
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400 transition-colors" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Credit Period (Payment Terms)</label>
+                  <select 
+                    value={form.paymentTerms} 
+                    onChange={(e) => setForm({...form, paymentTerms: e.target.value})} 
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white transition-colors"
+                  >
+                    <option value="IMMEDIATE">Immediate (0 Days)</option>
+                    <option value="NET_7">7 Days (Net 7)</option>
+                    <option value="NET_30">30 Days (Net 30)</option>
+                    <option value="ADVANCE">Advance Payment</option>
+                  </select>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Tabs Navigation */}

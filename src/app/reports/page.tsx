@@ -1447,7 +1447,16 @@ export default function CentralReports() {
     indirectExpenses: true,
   });
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const r = params.get("report");
+      if (r) {
+        setSelectedReport(r);
+      }
+    }
+  }, []);
 
   // Reload whenever report or date range changes
   useEffect(() => {

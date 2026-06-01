@@ -38,6 +38,9 @@ export const rawMaterialsApi = {
 // --- Inventory & Stock ---
 export const inventoryApi = {
   getInventory: (franchiseId?: string) => api.get('/api/inventory', { params: { franchiseId } }),
+  getRawMaterialStockSummary: (franchiseId?: string) => api.get('/api/inventory/raw-materials/summary', { params: { franchiseId } }),
+  getRawMaterialConsumption: (franchiseId?: string) => api.get('/api/inventory/raw-materials/consumption', { params: { franchiseId } }),
+  getRawMaterialLedger: (itemId?: string, franchiseId?: string) => api.get('/api/inventory/raw-materials/ledger', { params: { itemId, franchiseId } }),
   getItem: (id: string) => api.get(`/api/inventory/items/${id}`),
   createItem: (data: any) => api.post('/api/inventory/items', data),
   stockIn: (data: { itemId: string, quantity: number, type: string, note?: string }) =>

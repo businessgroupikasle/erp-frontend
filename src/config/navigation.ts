@@ -28,8 +28,10 @@ import {
   FileClock,
   Wallet,
   FilePlus2,
+  Barcode,
+  MapPin,
+  Lock,
 } from "lucide-react";
-import { title } from "process";
 
 export interface MenuItem {
   icon: any;
@@ -59,51 +61,210 @@ const ALL_ROLES = ["SUPER_ADMIN", "FRANCHISE_ADMIN"];
 // ─── SUPER_ADMIN (HQ CONTROL CENTER) ──────────────────────────────────────────
 export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
   {
-    title: "OVERVIEW",
+    title: "DASHBOARD",
     items: [
       {
         icon: LayoutDashboard,
-        label: "Dashboard",
+        label: "Executive Dashboard",
         href: "/",
         roles: SUPER_ONLY,
       },
-    ],
-  },
-  {
-    title: "MANUFACTURING",
-    items: [
       {
-        icon: ChefHat,
-        label: "Production",
+        icon: Wallet,
+        label: "Cash Overview",
+        href: "/accounting/cash-flow",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Factory,
+        label: "Production Overview",
         href: "/production",
         roles: SUPER_ONLY,
       },
       {
+        icon: AlertTriangle,
+        label: "Inventory Alerts",
+        href: "/alerts",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: BarChart3,
+        label: "Franchise Performance",
+        href: "/franchise/analytics",
+        roles: SUPER_ONLY,
+      },
+    ],
+  },
+  {
+    title: "PROCUREMENT",
+    items: [
+      {
+        icon: Users,
+        label: "Vendors",
+        href: "/vendors",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: ClipboardList,
+        label: "Purchase Orders",
+        href: "/purchases/orders",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: PackageCheck,
+        label: "GRN",
+        href: "/purchases/inward",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Receipt,
+        label: "Purchase Bills",
+        href: "/purchases/invoices",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: CreditCard,
+        label: "Vendor Payments",
+        href: "/vendors/payments",
+        roles: SUPER_ONLY,
+      },
+    ],
+  },
+  {
+    title: "FORMULATION",
+    items: [
+      {
         icon: ChefHat,
-        label: "Production Batches",
+        label: "Recipe Master",
+        href: "/production/recipes",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Layers,
+        label: "Formula Scaling",
+        href: "/production/formula-scaling",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Calculator,
+        label: "Recipe Costing",
+        href: "/production/recipe-costing",
+        roles: SUPER_ONLY,
+      },
+    ],
+  },
+  {
+    title: "PRODUCTION",
+    items: [
+      {
+        icon: ClipboardList,
+        label: "Production Planning",
+        href: "/production/planning",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Factory,
+        label: "Batch Manufacturing",
         href: "/production/batches",
         roles: SUPER_ONLY,
       },
-    ],
-  },
-  {
-    title: "REPORT",
-    items: [
       {
-        icon: BarChart3,
-        label: "Reports",
-        href: "/reports",
+        icon: UserCheck,
+        label: "QC",
+        href: "/purchases/qc",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Undo2,
+        label: "Wastage",
+        href: "/production/wastage",
         roles: SUPER_ONLY,
       },
     ],
   },
   {
-    title: "RECIPE MANAGEMENT",
+    title: "PACKAGING",
+    items: [
+      {
+        icon: ClipboardList,
+        label: "Packaging Queue",
+        href: "/packaging/queue",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Barcode,
+        label: "Labels & Barcodes",
+        href: "/packaging/labels",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Package,
+        label: "Carton Packing",
+        href: "/packaging/carton",
+        roles: SUPER_ONLY,
+      },
+    ],
+  },
+  {
+    title: "INVENTORY",
     items: [
       {
         icon: Layers,
-        label: "Recipes",
-        href: "/production/recipes",
+        label: "Raw Material Stock",
+        href: "/inventory/raw-material-stock",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: ClipboardList,
+        label: "Raw Material Consumption",
+        href: "/inventory/raw-material-consumption",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: FileText,
+        label: "Raw Material Ledger",
+        href: "/inventory/raw-material-ledger",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Package,
+        label: "Finished Goods",
+        href: "/inventory/stock?type=FINISHED",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Clock,
+        label: "Expiry Tracking",
+        href: "/production/batches",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Send,
+        label: "Stock Transfer",
+        href: "/franchise/transfers",
+        roles: SUPER_ONLY,
+      },
+    ],
+  },
+  {
+    title: "DISPATCH",
+    items: [
+      {
+        icon: FileText,
+        label: "Delivery Challan",
+        href: "/sales/delivery-challan",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Truck,
+        label: "Transit Stock",
+        href: "/delivery?status=IN_TRANSIT",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: MapPin,
+        label: "Dispatch Tracking",
+        href: "/delivery",
         roles: SUPER_ONLY,
       },
     ],
@@ -113,226 +274,176 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     items: [
       {
         icon: Calculator,
-        label: "Estimation",
+        label: "Estimate",
         href: "/sales/estimation",
         roles: SUPER_ONLY,
-        isNew: true,
-      },
-      {
-        icon: Receipt,
-        label: "Invoices",
-        href: "/sales/invoices",
-        roles: SUPER_ONLY,
-        isNew: true,
-      },
-      {
-        icon: FileClock,
-        label: "Delivery Challan",
-        href: "/sales/delivery-challan",
-        roles: SUPER_ONLY,
-        isNew: true,
       },
       {
         icon: ClipboardList,
-        label: "Sales Order",
+        label: "Sales Orders",
         href: "/sales/orders",
         roles: SUPER_ONLY,
-        isNew: true,
-      },
-      {
-        icon: Wallet,
-        label: "Payment-In",
-        href: "/sales/payment-in",
-        roles: SUPER_ONLY,
-        isNew: true,
       },
       {
         icon: FilePlus2,
         label: "Proforma Invoice",
         href: "/sales/proforma-invoice",
         roles: SUPER_ONLY,
-        isNew: true,
       },
       {
-        icon: Undo2,
-        label: "Sales Return / Credit Note",
-        href: "/sales/returns",
+        icon: Receipt,
+        label: "Tax Invoice",
+        href: "/sales/invoices",
         roles: SUPER_ONLY,
-        isNew: true,
       },
       {
-        icon: ShoppingCart,
-        label: "HQ POS",
-        href: "/pos",
+        icon: Wallet,
+        label: "Customer Payments",
+        href: "/sales/payment-in",
         roles: SUPER_ONLY,
-        isNew: true,
       },
     ],
   },
   {
-    title: "PURCHASE & EXPENSE",
+    title: "POS",
     items: [
       {
-        icon: Receipt,
-        label: "Purchase Bills",
-        href: "/purchases/invoices",
+        icon: Store,
+        label: "Counter Billing",
+        href: "/pos",
         roles: SUPER_ONLY,
-        isNew: true,
+      },
+      {
+        icon: Undo2,
+        label: "Returns",
+        href: "/sales/returns",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Clock,
+        label: "Day Closing",
+        href: "/pos/settlement",
+        roles: SUPER_ONLY,
+      },
+    ],
+  },
+  {
+    title: "FRANCHISE",
+    items: [
+      {
+        icon: Package,
+        label: "Outlet Inventory",
+        href: "/franchise/stock",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: ShoppingCart,
+        label: "Outlet Sales",
+        href: "/franchise-orders",
+        roles: SUPER_ONLY,
       },
       {
         icon: CreditCard,
-        label: "Payment-Out",
-        href: "/purchases/payout-receipts",
+        label: "Settlement",
+        href: "/franchise/payments",
         roles: SUPER_ONLY,
-        isNew: true,
+      },
+      {
+        icon: Landmark,
+        label: "Outstanding",
+        href: "/accounting/ledgers",
+        roles: SUPER_ONLY,
+      },
+    ],
+  },
+  {
+    title: "ACCOUNTS",
+    items: [
+      {
+        icon: Wallet,
+        label: "Cash Flow",
+        href: "/accounting/cash-flow",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Landmark,
+        label: "Receivables",
+        href: "/accounting/ledgers?type=receivables",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Landmark,
+        label: "Payables",
+        href: "/accounting/ledgers?type=payables",
+        roles: SUPER_ONLY,
       },
       {
         icon: TrendingUp,
         label: "Expenses",
         href: "/accounting/expenses",
         roles: SUPER_ONLY,
-        isNew: true,
-      },
-      {
-        icon: ClipboardList,
-        label: "Purchase Order",
-        href: "/purchases/orders",
-        roles: SUPER_ONLY,
-        isNew: true,
-      },
-      {
-        icon: Undo2,
-        label: "Purchase Return / Dr. Note",
-        href: "/purchases/debit-notes",
-        roles: SUPER_ONLY,
-        isNew: true,
       },
     ],
   },
   {
-    title: "PROCUREMENT",
+    title: "REPORTS",
     items: [
       {
-        icon: Users,
-        label: "Parties",
-        href: "/vendors",
+        icon: BarChart3,
+        label: "Production",
+        href: "/reports?report=Stock summary",
         roles: SUPER_ONLY,
       },
       {
-        icon: Send,
-        label: "Whatsapp Connect",
-        href: "/vendors/whatsapp",
+        icon: BarChart3,
+        label: "Inventory",
+        href: "/reports?report=Stock summary",
         roles: SUPER_ONLY,
       },
       {
-        icon: Truck,
-        label: "Purchase Inward (GRN)",
-        href: "/purchases/inward",
+        icon: BarChart3,
+        label: "Financial",
+        href: "/reports?report=Profit And Loss",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: BarChart3,
+        label: "Franchise",
+        href: "/reports?report=Party Statement",
         roles: SUPER_ONLY,
       },
     ],
   },
-  {
-    title: "INVENTORY",
-    items: [
-      {
-        icon: Building2,
-        label: "Warehouses Hub",
-        href: "/inventory/warehouses",
-        roles: SUPER_ONLY,
-        // isNew: true,
-      },
-      {
-        icon: Landmark,
-        label: "Central Warehouse",
-        href: "/inventory/stock",
-        roles: SUPER_ONLY,
-      },
-      {
-        icon: Clock,
-        label: "Expiry Tracking",
-        href: "/production/batches",
-        roles: SUPER_ONLY,
-      },
-    ],
-  },
-  {
-    title: "FINANCE",
-    items: [
-      {
-        icon: Landmark,
-        label: "Business Accounts",
-        href: "/banking/accounts",
-        roles: SUPER_ONLY,
-      },
-      {
-        icon: CreditCard,
-        label: "Direct Payments",
-        href: "/accounting/payments",
-        roles: SUPER_ONLY,
-      },
-      {
-        icon: TrendingUp,
-        label: "HQ Expenses",
-        href: "/accounting/expenses",
-        roles: SUPER_ONLY,
-      },
-      {
-        icon: FileText,
-        label: "Cheque Registry",
-        href: "/accounting/cheques",
-        roles: SUPER_ONLY,
-      },
-    ],
-  },
-  {
-    title: "FRANCHISE MANAGEMENT",
-    items: [
-      {
-        icon: Building2,
-        label: "Manage Branches",
-        href: "/franchise",
-        roles: SUPER_ONLY,
-      },
-      {
-        icon: Send,
-        label: "Branch Orders",
-        href: "/franchise-orders",
-        roles: SUPER_ONLY,
-      },
-      {
-        icon: Users,
-        label: "Branch Settlement",
-        href: "/accounting/ledgers",
-        roles: SUPER_ONLY,
-      },
-      {
-        icon: Users,
-        label: "Dealers Oversight",
-        href: "/franchise/dealers",
-        roles: SUPER_ONLY,
-      },
-    ],
-  },
-
   {
     title: "SYSTEM",
     items: [
       {
-        icon: UserCheck,
-        label: "User Governance",
+        icon: User,
+        label: "Users",
         href: "/admin/users",
         roles: SUPER_ONLY,
       },
       {
-        icon: ClipboardList,
+        icon: UserCheck,
+        label: "Roles",
+        href: "/admin/users",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: Lock,
+        label: "Permissions",
+        href: "/admin/users",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: FileClock,
         label: "Audit Logs",
         href: "/audit/logs",
         roles: SUPER_ONLY,
       },
       {
         icon: Settings,
-        label: "Global Settings",
+        label: "Settings",
         href: "/settings/user/profile",
         roles: SUPER_ONLY,
       },

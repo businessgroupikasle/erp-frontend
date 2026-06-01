@@ -21,7 +21,7 @@ import {
   Plus as PlusIcon,
   Scan as ScanIcon
 } from "lucide-react";
-import { purchaseOrdersApi, grnApi, purchaseReturnsApi, vendorsApi } from "@/lib/api";
+import { purchaseOrdersApi, grnApi, purchaseReturnsApi, vendorsApi, inventoryApi } from "@/lib/api";
 import { clsx } from "clsx";
 
 interface POItem {
@@ -52,6 +52,8 @@ interface GRNItem {
   vendorBatchNo?: string;
   mfgDate?: string;
   expDate?: string;
+  lotNumber?: string;
+  warehouseId?: string;
   inventoryItem?: { name: string; unit: string };
 }
 
@@ -67,6 +69,28 @@ export default function GRNPage() {
   const [submitting, setSubmitting] = useState(false);
   const [approvedId, setApprovedId] = useState<string | null>(null);
   const [poSearch, setPoSearch] = useState("");
+  const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
+  const [defaultWarehouseId, setDefaultWarehouseId] = useState<string>("");
+
+  // Fetch Warehouses on mount
+  useEffect(() => {
+    inventoryApi.getWarehouses()
+      .then(res => {
+        const list = res.data || [];
+        setWarehouses(list);
+        if (list.length > 0) {
+          setDefaultWarehouseId(list[0].id);
+        }
+      })
+      .catch(err => {
+        console.error("Failed to fetch warehouses:", err);
+      });
+  }, []);
+
+  const handleDefaultWarehouseChange = (whId: string) => {
+    setDefaultWarehouseId(whId);
+    setGrnItems(prev => prev.map(item => ({ ...item, warehouseId: whId })));
+  };
 
   // Scanner Simulator States
   const [showScanner, setShowScanner] = useState(false);
@@ -113,6 +137,8 @@ export default function GRNPage() {
         vendorBatchNo: "",
         mfgDate: "",
         expDate: "",
+        lotNumber: "",
+        warehouseId: defaultWarehouseId || "",
         inventoryItem: item.inventoryItem,
       }))
     );
@@ -147,6 +173,14 @@ export default function GRNPage() {
 
   const handleCreateAndApprove = async () => {
     if (!selectedPO) return;
+
+    // Verify that a warehouse is selected for all items
+    const missingWarehouse = grnItems.some(item => !item.warehouseId);
+    if (missingWarehouse) {
+      toast.error("Please select a destination warehouse for all items.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       // 1. Create and Approve GRN (Impacts Inventory)
@@ -406,12 +440,27 @@ export default function GRNPage() {
               PO Reference: <span className="font-black text-orange-600">{selectedPO?.poNumber}</span> • Vendor: <span className="font-black text-gray-900 dark:text-gray-200">{selectedPO?.vendor.name}</span>
             </p>
           </div>
-          <button
-            onClick={() => setStep(1)}
-            className="px-6 py-3 border-2 border-gray-100 dark:border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5 transition-all relative z-10"
-          >
-            Change PO Source
-          </button>
+          <div className="flex flex-col md:flex-row md:items-center gap-4 relative z-10">
+            <div className="flex flex-col">
+              <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Default Warehouse</label>
+              <select
+                value={defaultWarehouseId}
+                onChange={e => handleDefaultWarehouseChange(e.target.value)}
+                className="border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-900 outline-none focus:border-orange-500"
+              >
+                <option value="">Select Warehouse</option>
+                {warehouses.map(w => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={() => setStep(1)}
+              className="px-6 py-3 border-2 border-gray-100 dark:border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5 transition-all self-end"
+            >
+              Change PO Source
+            </button>
+          </div>
         </div>
 
         <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-xl shadow-black/[0.02] overflow-hidden">
@@ -420,6 +469,7 @@ export default function GRNPage() {
               <tr>
                 <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Material</th>
                 <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Traceability</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Warehouse</th>
                 <th className="px-8 py-5 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Ordered</th>
                 <th className="px-8 py-5 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Received</th>
                 <th className="px-8 py-5 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Rejected</th>
@@ -438,12 +488,55 @@ export default function GRNPage() {
                     </td>
                     <td className="px-8 py-6">
                       <div className="space-y-2">
-                        <input type="text" placeholder="Batch/Lot No." value={item.vendorBatchNo} onChange={e => updateItemStr(idx, "vendorBatchNo", e.target.value)} className="w-32 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-xs outline-none focus:border-orange-500" />
                         <div className="flex gap-2">
-                          <input type="date" title="Mfg Date" value={item.mfgDate} onChange={e => updateItemStr(idx, "mfgDate", e.target.value)} className="w-32 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-[10px] outline-none" />
-                          <input type="date" title="Exp Date" value={item.expDate} onChange={e => updateItemStr(idx, "expDate", e.target.value)} className="w-32 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-[10px] outline-none" />
+                          <input
+                            type="text"
+                            placeholder="Batch No."
+                            value={item.vendorBatchNo || ""}
+                            onChange={e => updateItemStr(idx, "vendorBatchNo", e.target.value)}
+                            className="w-32 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-xs outline-none focus:border-orange-500 text-gray-900 dark:text-white"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Lot Number"
+                            value={item.lotNumber || ""}
+                            onChange={e => updateItemStr(idx, "lotNumber", e.target.value)}
+                            className="w-32 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-xs outline-none focus:border-orange-500 text-gray-900 dark:text-white"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <div className="flex flex-col">
+                            <label className="text-[8px] text-gray-400 font-bold uppercase ml-1 mb-0.5">Mfg Date</label>
+                            <input
+                              type="date"
+                              value={item.mfgDate || ""}
+                              onChange={e => updateItemStr(idx, "mfgDate", e.target.value)}
+                              className="w-32 px-2 py-1 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-[10px] outline-none text-gray-900 dark:text-white"
+                            />
+                          </div>
+                          <div className="flex flex-col">
+                            <label className="text-[8px] text-gray-400 font-bold uppercase ml-1 mb-0.5">Exp Date</label>
+                            <input
+                              type="date"
+                              value={item.expDate || ""}
+                              onChange={e => updateItemStr(idx, "expDate", e.target.value)}
+                              className="w-32 px-2 py-1 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-[10px] outline-none text-gray-900 dark:text-white"
+                            />
+                          </div>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <select
+                        value={item.warehouseId || ""}
+                        onChange={e => updateItemStr(idx, "warehouseId", e.target.value)}
+                        className="w-44 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-xs outline-none focus:border-orange-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-900"
+                      >
+                        <option value="">Select Warehouse</option>
+                        {warehouses.map(w => (
+                          <option key={w.id} value={w.id}>{w.name}</option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-8 py-6 text-center">
                       <span className="px-3 py-1.5 bg-gray-50 dark:bg-white/5 rounded-lg text-xs font-black text-gray-400 uppercase">{item.quantity}</span>
