@@ -23,6 +23,12 @@ export const salesApi = {
   createSalesOrder: (data: any) => api.post('/api/sales/orders', data),
   updateSalesOrder: (id: string, data: any) => api.patch(`/api/sales/orders/${id}`, data),
 
+  getDeliveryChallans: (params?: any) => api.get('/api/sales/delivery-challans', { params }),
+  getDeliveryChallanById: (id: string) => api.get(`/api/sales/delivery-challans/${id}`),
+  createDeliveryChallan: (data: any) => api.post('/api/sales/delivery-challans', data),
+  updateDeliveryChallan: (id: string, data: any) => api.patch(`/api/sales/delivery-challans/${id}`, data),
+
+
   getReturns: (params?: any) => api.get('/api/sales/returns', { params }),
   createReturn: (data: any) => api.post('/api/sales/returns', data),
   updateReturnStatus: (id: string, status: string, approvedBy?: string) => 

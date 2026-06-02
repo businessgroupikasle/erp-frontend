@@ -67,9 +67,21 @@ export const productionApi = {
   stopBatch: (id: string) => api.post(`/api/production/${id}/stop`),
   approveBatch: (id: string, data?: { actualYield?: number }) => api.post(`/api/production/${id}/approve`, data),
   updateStatus: (id: string, status: string) => api.patch(`/api/production/${id}/status`, { status }),
+  getPendingQC: (franchiseId?: string) => api.get('/api/production/batches-pending-qc', { params: { franchiseId } }),
+  inspectBatch: (id: string, data: any) => api.post(`/api/production/batches/${id}/qc`, data),
+  packageBatch: (id: string, data: any) => api.post(`/api/production/batches/${id}/package`, data),
+  getPackagings: (franchiseId?: string) => api.get('/api/production/packagings', { params: { franchiseId } }),
+  getAllBatches: (franchiseId?: string) => api.get('/api/production/batches-all', { params: { franchiseId } }),
 };
 
 export const productBatchesApi = {
   getAll: (params: { productId?: string; franchiseId?: string } = {}) =>
     api.get('/api/production/batches', { params }),
+};
+
+export const wasteApi = {
+  getAll: () => api.get('/api/waste'),
+  getSummary: () => api.get('/api/waste/summary'),
+  create: (data: { itemId: string; quantity: number; reason: string; note?: string; franchiseId: string }) =>
+    api.post('/api/waste', data),
 };

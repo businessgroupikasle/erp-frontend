@@ -9,9 +9,8 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { clsx } from "clsx";
-import { customersApi, productsFullApi } from "@/lib/api";
+import { customersApi, productsFullApi, franchiseApi, salesApi } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
-import api from "@/lib/api/base";
 
 // ── Constants (Unified with Invoice Page) ────────────────────────────────────
 
@@ -79,6 +78,7 @@ interface LineItem {
   rate: number;
   taxPct: number;
   taxLabel: string;
+  batchNumber: string;
   remarks: string;
 }
 
@@ -92,6 +92,7 @@ function makeItem(): LineItem {
     rate: 0,
     taxPct: 0,
     taxLabel: "NONE",
+    batchNumber: "",
     remarks: "",
   };
 }
@@ -119,6 +120,7 @@ export default function DeliveryChallanPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [customers, setCustomers] = useState<any[]>([]);
+  const [franchises, setFranchises] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
 
   // List filter state
@@ -134,10 +136,15 @@ export default function DeliveryChallanPage() {
   });
 
   // Active Challan Form State
+  const [destType, setDestType] = useState<"CUSTOMER" | "FRANCHISE">("CUSTOMER");
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [selectedFranchise, setSelectedFranchise] = useState<any>(null);
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
   const [customerPhone, setCustomerPhone] = useState("");
+  const [sourceFranchiseId, setSourceFranchiseId] = useState("hq-001");
+  const [vehicleNo, setVehicleNo] = useState("");
+  const [driverName, setDriverName] = useState("");
   const [challanNo, setChallanNo] = useState<string>("1");
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [dueDate, setDueDate] = useState(() => new Date().toISOString().split("T")[0]);
@@ -172,10 +179,11 @@ export default function DeliveryChallanPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [cRes, pRes, dcRes] = await Promise.allSettled([
+      const [cRes, pRes, fRes, dcRes] = await Promise.allSettled([
         customersApi.getAll(),
         productsFullApi.getAll(),
-        api.get("/api/sales/delivery-challans").catch(() => ({ data: [] })),
+        franchiseApi.getAll(),
+        salesApi.getDeliveryChallans(),
       ]);
 
       let apiChallans = dcRes.status === "fulfilled" ? (dcRes.value as any).data || [] : [];
@@ -197,6 +205,7 @@ export default function DeliveryChallanPage() {
       setChallans(apiChallans);
       if (cRes.status === "fulfilled") setCustomers((cRes.value as any).data || []);
       if (pRes.status === "fulfilled") setProducts((pRes.value as any).data || []);
+      if (fRes.status === "fulfilled") setFranchises((fRes.value as any).data || []);
     } finally {
       setLoading(false);
     }
@@ -248,9 +257,15 @@ export default function DeliveryChallanPage() {
   // ── Actions ──────────────────────────────────────────────────────────────────
 
   const selectCustomer = (c: any) => {
-    setSelectedCustomer(c);
-    setCustomerSearch(c.name);
-    setCustomerPhone(c.phone || "");
+    if (destType === "CUSTOMER") {
+      setSelectedCustomer(c);
+      setCustomerSearch(c.name);
+      setCustomerPhone(c.phone || "");
+    } else {
+      setSelectedFranchise(c);
+      setCustomerSearch(c.name);
+      setCustomerPhone(c.phone || "");
+    }
     setShowCustomerDrop(false);
   };
 
@@ -286,8 +301,12 @@ export default function DeliveryChallanPage() {
   const resetForm = () => {
     setDraftId(null);
     setSelectedCustomer(null);
+    setSelectedFranchise(null);
     setCustomerSearch("");
     setCustomerPhone("");
+    setSourceFranchiseId("hq-001");
+    setVehicleNo("");
+    setDriverName("");
     setInvoiceDate(new Date().toISOString().split("T")[0]);
     setDueDate(new Date().toISOString().split("T")[0]);
     setStateOfSupply("");
@@ -301,8 +320,12 @@ export default function DeliveryChallanPage() {
   };
 
   const handleSave = async (status: "DRAFT" | "OPEN") => {
-    if (!selectedCustomer && status === "OPEN") {
+    if (destType === "CUSTOMER" && !selectedCustomer && status === "OPEN") {
       showToast("Please select a customer", "error");
+      return;
+    }
+    if (destType === "FRANCHISE" && !selectedFranchise && status === "OPEN") {
+      showToast("Please select a franchise destination", "error");
       return;
     }
     const validItems = items.filter(it => it.itemSearch.trim() !== "" && it.qty > 0);
@@ -311,16 +334,14 @@ export default function DeliveryChallanPage() {
       return;
     }
 
-    // Auto draft on blank cancel
-    if (status === "DRAFT" && !selectedCustomer && validItems.length === 0) {
-      setView("list");
-      resetForm();
-      return;
-    }
-
     setSaving(true);
     const apiPayload = {
-      customerId: selectedCustomer?.id || undefined,
+      customerId: destType === "CUSTOMER" ? (selectedCustomer?.id || undefined) : undefined,
+      franchiseId: destType === "FRANCHISE" ? (selectedFranchise?.id || undefined) : undefined,
+      sourceFranchiseId,
+      vehicleNo: vehicleNo || undefined,
+      driverName: driverName || undefined,
+      status,
       challanDate: invoiceDate,
       dueDate,
       stateOfSupply: stateOfSupply || undefined,
@@ -329,6 +350,7 @@ export default function DeliveryChallanPage() {
       items: validItems.map(it => ({
         productId: it.productId || undefined,
         productName: it.itemSearch,
+        batchNumber: it.batchNumber || undefined,
         quantity: it.qty,
         unit: it.unit,
         rate: it.rate,
@@ -337,7 +359,7 @@ export default function DeliveryChallanPage() {
     };
 
     try {
-      await api.post("/api/sales/delivery-challans", apiPayload);
+      await salesApi.createDeliveryChallan(apiPayload);
       showToast("Delivery Challan saved successfully", "success");
       fetchData();
       setView("list");
@@ -586,7 +608,17 @@ export default function DeliveryChallanPage() {
             <div className="grid grid-cols-2 gap-8">
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Party *</label>
+                  <div className="flex items-center gap-4 mb-1.5">
+                    <label className="text-xs font-medium text-gray-500">Destination *</label>
+                    <div className="flex items-center gap-3 text-xs">
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" checked={destType === "CUSTOMER"} onChange={() => { setDestType("CUSTOMER"); setCustomerSearch(""); setSelectedCustomer(null); }} className="accent-orange-500" /> Customer
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" checked={destType === "FRANCHISE"} onChange={() => { setDestType("FRANCHISE"); setCustomerSearch(""); setSelectedFranchise(null); }} className="accent-orange-500" /> Franchise
+                      </label>
+                    </div>
+                  </div>
                   <div className="relative" ref={customerDropRef}>
                     <div
                       className={clsx(
@@ -597,7 +629,7 @@ export default function DeliveryChallanPage() {
                     >
                       <input
                         className="flex-1 text-sm text-gray-700 outline-none bg-transparent placeholder-gray-400"
-                        placeholder="Select / Search Party"
+                        placeholder={`Select / Search ${destType === "CUSTOMER" ? "Customer" : "Franchise"}`}
                         value={customerSearch}
                         onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDrop(true); }}
                         onClick={e => { e.stopPropagation(); setShowCustomerDrop(true); }}
@@ -607,13 +639,13 @@ export default function DeliveryChallanPage() {
                     {showCustomerDrop && (
                       <div className="absolute top-full left-0 z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
                         <div className="max-h-56 overflow-y-auto">
-                          {filteredCustomers.length === 0 ? (
-                            <div className="px-4 py-4 text-xs text-gray-400 text-center">No customers found</div>
-                          ) : filteredCustomers.map(c => (
+                          {(destType === "CUSTOMER" ? filteredCustomers : franchises.filter(f => !customerSearch || f.name.toLowerCase().includes(customerSearch.toLowerCase()))).length === 0 ? (
+                            <div className="px-4 py-4 text-xs text-gray-400 text-center">No results found</div>
+                          ) : (destType === "CUSTOMER" ? filteredCustomers : franchises.filter(f => !customerSearch || f.name.toLowerCase().includes(customerSearch.toLowerCase()))).map(c => (
                             <button key={c.id} type="button" className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-orange-50 border-b border-gray-50 last:border-0 transition-colors" onClick={() => selectCustomer(c)}>
                               <div className="text-left">
                                 <div className="text-sm font-medium text-gray-800">{c.name}</div>
-                                <div className="text-xs text-gray-400">{c.phone || "—"}</div>
+                                <div className="text-xs text-gray-400">{c.phone || c.email || "—"}</div>
                               </div>
                             </button>
                           ))}
@@ -622,13 +654,32 @@ export default function DeliveryChallanPage() {
                     )}
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
-                  <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400" placeholder="Customer Phone" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
+                    <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400" placeholder="Phone Number" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Source Branch</label>
+                    <select value={sourceFranchiseId} onChange={e => setSourceFranchiseId(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white">
+                      <option value="hq-001">HQ / Main Warehouse</option>
+                      {franchises.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                    </select>
+                  </div>
                 </div>
               </div>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Vehicle Number</label>
+                    <input className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400" placeholder="e.g. MH 12 AB 1234" value={vehicleNo} onChange={e => setVehicleNo(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Driver Name</label>
+                    <input className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white placeholder-gray-400" placeholder="Driver Name" value={driverName} onChange={e => setDriverName(e.target.value)} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-1">
                   <span className="text-xs font-medium text-gray-500">Challan Date</span>
                   <input type="date" className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-orange-400 bg-white" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} />
                 </div>
@@ -661,10 +712,11 @@ export default function DeliveryChallanPage() {
                   <tr className="bg-gray-50 text-gray-500 font-semibold text-xs border-b border-gray-200 uppercase">
                     <th className="text-left px-4 py-2.5 w-10">#</th>
                     <th className="text-left px-4 py-2.5">Item</th>
+                    <th className="text-left px-3 py-2.5 w-32">Batch No</th>
                     <th className="text-center px-3 py-2.5 w-20">Qty</th>
                     <th className="text-center px-3 py-2.5 w-24">Unit</th>
                     <th className="text-right px-3 py-2.5 w-28">Price/Unit</th>
-                    <th className="text-center px-3 py-2.5 w-36">Tax</th>
+                    <th className="text-center px-3 py-2.5 w-28">Tax</th>
                     <th className="text-right px-3 py-2.5 w-28">Amount</th>
                     <th className="w-10"></th>
                   </tr>
@@ -692,6 +744,7 @@ export default function DeliveryChallanPage() {
                           )}
                           <input value={it.remarks} onChange={e => updateItem(idx, "remarks", e.target.value)} placeholder="Add brief details..." className="w-full text-xs text-gray-400 outline-none bg-transparent mt-1 focus:text-gray-600" />
                         </td>
+                        <td className="px-3 py-2.5"><input value={it.batchNumber} onChange={e => updateItem(idx, "batchNumber", e.target.value)} placeholder="Batch..." className="w-full text-sm outline-none bg-transparent text-gray-700" /></td>
                         <td className="px-3 py-2.5"><input type="number" min={1} value={it.qty} onChange={e => updateItem(idx, "qty", Number(e.target.value) || 0)} className="w-full text-sm text-center outline-none bg-transparent text-gray-700" /></td>
                         <td className="px-3 py-2.5"><select value={it.unit} onChange={e => updateItem(idx, "unit", e.target.value)} className="w-full text-xs text-gray-700 outline-none bg-transparent cursor-pointer">{UNITS.map(u => <option key={u.code} value={u.code}>{u.short}</option>)}</select></td>
                         <td className="px-3 py-2.5"><input type="number" min={0} value={it.rate || ""} onChange={e => updateItem(idx, "rate", Number(e.target.value) || 0)} className="w-full text-sm text-right outline-none bg-transparent text-gray-700" placeholder="0.00" /></td>
@@ -894,10 +947,20 @@ export default function DeliveryChallanPage() {
                           )}
                           {dc.status === "OPEN" && (
                             <button
-                              onClick={() => convertToSale(dc)}
-                              className="px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              onClick={async () => {
+                                if(window.confirm("Confirm delivery? This will add items to the destination inventory.")) {
+                                  try {
+                                    await salesApi.updateDeliveryChallan(dc.id, { status: "CLOSED" });
+                                    showToast("Delivery Challan closed successfully", "success");
+                                    fetchData();
+                                  } catch (e: any) {
+                                    showToast(e.response?.data?.error || "Error closing challan", "error");
+                                  }
+                                }
+                              }}
+                              className="px-2.5 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                             >
-                              Convert
+                              Receive
                             </button>
                           )}
                           {dc.status === "CLOSED" && (
