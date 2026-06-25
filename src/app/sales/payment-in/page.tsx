@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
@@ -9,6 +9,7 @@ import {
 import { clsx } from "clsx";
 import { customersApi } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
+import { formatERPNumber } from "@/lib/utils";
 import api from "@/lib/api/base";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -769,7 +770,7 @@ export default function PaymentInPage() {
                         {p.createdAt ? new Date(p.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                       </td>
                       <td className="px-4 py-3 font-mono font-semibold text-gray-800 text-xs">
-                        {p.paymentNumber || "—"}
+                        {p.paymentNumber ? formatERPNumber("RCPT", p.paymentNumber, p.createdAt) : "—"}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span className="font-medium text-gray-800">

@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { customersApi, productsFullApi, draftsApi } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
+import { formatERPNumber } from "@/lib/utils";
 import api from "@/lib/api/base";
 import AddPartyModal from "@/components/modals/AddPartyModal";
 import AddInventoryProductForm from "@/components/modules/inventory/AddInventoryProductForm";
@@ -91,6 +92,8 @@ interface LineItem {
   conversions?: any[];
   availableStock?: number;
   basePrice: number;
+  batchNumber?: string;
+  batches?: any[];
 }
 
 function makeItem(): LineItem {
@@ -105,6 +108,8 @@ function makeItem(): LineItem {
     discountPct: 0,
     taxPct: 0,
     taxLabel: "NONE",
+    batchNumber: "",
+    batches: [],
   };
 }
 
@@ -490,7 +495,15 @@ export default function SalesInvoicesPage() {
     setShowCustomerDrop(false);
   };
 
-  const selectProduct = (idx: number, p: any) => {
+  const selectProduct = async (idx: number, p: any) => {
+    let productBatches: any[] = [];
+    try {
+      const res = await api.get(`/api/production/batches?productId=${p.id}`);
+      productBatches = res.data || [];
+    } catch (err) {
+      console.error("Failed to fetch product batches", err);
+    }
+
     setItems(prev => prev.map((it, i) =>
       i === idx ? {
         ...it,
@@ -504,6 +517,8 @@ export default function SalesInvoicesPage() {
         baseUnit: p.baseUnit,
         conversions: p.conversions || [],
         availableStock: p.currentStock || 0,
+        batches: productBatches,
+        batchNumber: productBatches.length > 0 ? productBatches[0].batchCode : "",
       } : it
     ));
     setOpenItemDrop(null);
@@ -622,6 +637,7 @@ export default function SalesInvoicesPage() {
           rate: i.rate,
           gst: i.taxPct,
           discount: i.discountPct,
+          batchNumber: i.batchNumber || undefined
         })),
         receivedAmount,
         paymentMode: paymentType === "CASH" ? "CASH" : "CREDIT",
@@ -682,9 +698,9 @@ export default function SalesInvoicesPage() {
     <body><h2>Tax Invoice — ${inv.order?.invoiceNum || "Lite Sale"}</h2>
     <p>Customer: ${inv.order?.customer?.name || "Walk-In Customer"}</p>
     <p>Date: ${new Date(inv.createdAt).toLocaleDateString()}</p>
-    <table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Tax</th><th>Amount</th></tr></thead>
+    <table><thead><tr><th>Item</th><th>Batch No.</th><th>Qty</th><th>Rate</th><th>Tax</th><th>Amount</th></tr></thead>
     <tbody>${(inv.order?.orderItems || []).map((it: any) =>
-      `<tr><td>${it.product?.name || "Unknown Item"}</td><td>${it.quantity}</td><td>₹${it.price}</td><td>₹${(it.taxAmount || 0).toFixed(2)}</td><td>₹${(it.totalAmount || 0).toFixed(2)}</td></tr>`
+      `<tr><td>${it.product?.name || "Unknown Item"}</td><td>${it.batchNumber || "—"}</td><td>${it.quantity}</td><td>₹${it.price}</td><td>₹${(it.taxAmount || 0).toFixed(2)}</td><td>₹${(it.totalAmount || 0).toFixed(2)}</td></tr>`
     ).join("")}</tbody></table>
     <div style="text-align:right;margin-top:20px">
       <strong>Total: ₹${(inv.finalAmount || 0).toFixed(2)}</strong>
@@ -888,6 +904,7 @@ export default function SalesInvoicesPage() {
                   <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase">
                     <th className="w-8 px-3 py-2.5 text-center">#</th>
                     <th className="px-3 py-2.5 text-left">Item</th>
+                    <th className="w-28 px-2 py-2.5 text-center">Batch No.</th>
                     <th className="w-16 px-2 py-2.5 text-center">Qty</th>
                     <th className="w-20 px-2 py-2.5 text-center">Unit</th>
                     <th className="w-24 px-3 py-2.5 text-right">Price/Unit</th>
@@ -987,6 +1004,32 @@ export default function SalesInvoicesPage() {
                                 )}
                               </div>
                             </div>
+                          )}
+                        </td>
+
+                        {/* BATCH NO */}
+                        <td className="px-2 py-2.5">
+                          {item.batches && item.batches.length > 0 ? (
+                            <select
+                              value={item.batchNumber || ""}
+                              onChange={e => updateItem(idx, "batchNumber", e.target.value)}
+                              className="w-full text-xs text-gray-700 outline-none bg-transparent cursor-pointer border border-gray-200 rounded px-1 py-0.5"
+                            >
+                              <option value="">Select Batch</option>
+                              {item.batches.map((b: any) => (
+                                <option key={b.id} value={b.batchCode}>
+                                  {b.batchCode}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder="Batch No."
+                              value={item.batchNumber || ""}
+                              onChange={e => updateItem(idx, "batchNumber", e.target.value)}
+                              className="w-full text-xs text-gray-700 text-center outline-none bg-transparent placeholder-gray-400 border border-gray-200 rounded px-1 py-0.5"
+                            />
                           )}
                         </td>
 
@@ -1436,7 +1479,7 @@ export default function SalesInvoicesPage() {
                         {new Date(inv.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
                       <td className="px-4 py-3 font-mono font-semibold text-gray-800 text-xs">
-                        {inv.order?.invoiceNum || "Lite Sale"}
+                        {inv.order?.invoiceNum ? formatERPNumber("INV", inv.order.invoiceNum, inv.createdAt) : "Lite Sale"}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span className="font-medium text-gray-800">

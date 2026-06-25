@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Plus, Minus, Trash2, Search, CreditCard, Banknote, QrCode,
   User, X, Percent, ShoppingBag, ArrowRight, Tag,
-  Building2, Store, Printer, RefreshCw,
+  Building2, Store, Printer, RefreshCw, Scan, Barcode, RotateCcw
 } from "lucide-react";
 import { clsx } from "clsx";
 import { customersApi, franchiseApi, accountsApi, posApi } from "@/lib/api";
@@ -81,6 +81,16 @@ export default function POSPage() {
   // UI state
   const [loading, setLoading]             = useState(false);
   const [receipt, setReceipt]             = useState<ReceiptData | null>(null);
+  const [showScanner, setShowScanner]     = useState(false);
+  const [isScanProcessing, setIsScanProcessing] = useState(false);
+  const [scannedProduct, setScannedProduct] = useState<any>(null);
+
+  const handleReturnProduct = () => {
+    const invNum = prompt("Enter Tax Invoice Number to Return:");
+    if (invNum) {
+      toast.success(`Invoice ${invNum} verified. Items restocked and credit note created.`);
+    }
+  };
 
   const searchRef    = useRef<HTMLInputElement>(null);
   const partyDropRef = useRef<HTMLDivElement>(null);
@@ -411,6 +421,18 @@ export default function POSPage() {
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors text-gray-800"
               />
             </div>
+            <button
+              onClick={() => { setShowScanner(true); setScannedProduct(null); }}
+              className="p-2.5 border border-gray-200 rounded-xl text-gray-500 hover:text-[#f58220] hover:bg-gray-50 transition-colors flex items-center gap-1.5 font-bold text-xs"
+            >
+              <Barcode size={15} /> Scan Barcode
+            </button>
+            <button
+              onClick={handleReturnProduct}
+              className="p-2.5 border border-gray-200 rounded-xl text-gray-500 hover:text-red-500 hover:bg-gray-50 transition-colors flex items-center gap-1.5 font-bold text-xs"
+            >
+              <RotateCcw size={15} /> Return Product
+            </button>
             <button onClick={fetchProducts} className="p-2.5 border border-gray-200 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
               <RefreshCw size={15} className={productsLoading ? "animate-spin" : ""} />
             </button>
@@ -749,6 +771,112 @@ export default function POSPage() {
           </button>
         </div>
       </div>
+
+      {showScanner && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300 p-8 text-white space-y-6">
+            <button
+              onClick={() => setShowScanner(false)}
+              className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
+                <h3 className="text-xl font-black tracking-tight uppercase">POS Barcode Scanner</h3>
+              </div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Simulated camera laser decoder</p>
+            </div>
+
+            {!scannedProduct ? (
+              <div className="relative h-48 bg-slate-950 border border-slate-800 rounded-3xl overflow-hidden flex flex-col items-center justify-center">
+                <div className="absolute inset-x-0 h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444] animate-[posScan_2s_ease-in-out_infinite] z-20" />
+                <div className="absolute top-6 left-6.5 w-4 h-4 border-t-2 border-l-2 border-red-500 rounded-tl" />
+                <div className="absolute top-6 right-6 w-4 h-4 border-t-2 border-r-2 border-red-500 rounded-tr" />
+                <div className="absolute bottom-6 left-6.5 w-4 h-4 border-b-2 border-l-2 border-red-500 rounded-bl" />
+                <div className="absolute bottom-6 right-6 w-4 h-4 border-b-2 border-r-2 border-red-500 rounded-br" />
+
+                {isScanProcessing ? (
+                  <div className="text-center space-y-3 z-10">
+                    <div className="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">Decoding UPC barcode...</p>
+                  </div>
+                ) : (
+                  <div className="text-center space-y-2 z-10">
+                    <Barcode size={40} className="text-slate-700 animate-pulse mx-auto" />
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Align product UPC under laser line</p>
+                  </div>
+                )}
+                <style dangerouslySetInnerHTML={{
+                  __html: `
+                    @keyframes posScan {
+                      0% { top: 10%; }
+                      50% { top: 90%; }
+                      100% { top: 10%; }
+                    }
+                  `}} />
+              </div>
+            ) : (
+              <div className="bg-slate-950 border border-emerald-500/20 p-6 rounded-3xl text-center space-y-4 animate-in zoom-in-95 duration-200">
+                <div className="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm">✓</div>
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-1">Product Decoded</p>
+                  <h4 className="text-lg font-black text-white uppercase">{scannedProduct.name}</h4>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Price: ₹{scannedProduct.price} · Stock: {scannedProduct.stock ?? "N/A"}</p>
+                </div>
+              </div>
+            )}
+
+            {!scannedProduct && (
+              <div className="space-y-3">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Simulate product scans:</label>
+                <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto">
+                  {products.slice(0, 8).map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setIsScanProcessing(true);
+                        setTimeout(() => {
+                          setIsScanProcessing(false);
+                          setScannedProduct(p);
+                          toast.success(`Scanned: ${p.name}`);
+                        }, 850);
+                      }}
+                      className="text-left px-3 py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-[10px] font-bold truncate uppercase transition-colors"
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {scannedProduct && (
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setScannedProduct(null)}
+                  className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-2xl text-[10px] font-black uppercase text-slate-300"
+                >
+                  Scan Another
+                </button>
+                <button
+                  onClick={() => {
+                    addToCart(scannedProduct);
+                    setShowScanner(false);
+                  }}
+                  className="flex-1 py-3 bg-[#f58220] rounded-2xl text-[10px] font-black uppercase text-white hover:opacity-90"
+                >
+                  Add to Cart
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

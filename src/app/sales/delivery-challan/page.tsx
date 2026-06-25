@@ -11,6 +11,7 @@ import {
 import { clsx } from "clsx";
 import { customersApi, productsFullApi, franchiseApi, salesApi } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
+import { formatERPNumber } from "@/lib/utils";
 
 // ── Constants (Unified with Invoice Page) ────────────────────────────────────
 
@@ -202,7 +203,42 @@ export default function DeliveryChallanPage() {
         console.error("Failed to load local storage challans", e);
       }
 
-      setChallans(apiChallans);
+      // Resolve lists
+      const customerList = cRes.status === "fulfilled" ? (cRes.value as any).data || [] : [];
+      const franchiseList = fRes.status === "fulfilled" ? (fRes.value as any).data || [] : [];
+
+      // Map to frontend structure
+      const mappedChallans = apiChallans.map((dc: any) => {
+        let name = dc.customerName;
+        let phone = dc.customerPhone || "";
+        if (dc.customerId) {
+          const c = customerList.find((x: any) => x.id === dc.customerId);
+          if (c) {
+            name = c.name;
+            phone = c.phone || phone;
+          } else if (dc.customer) {
+            name = dc.customer.name;
+            phone = dc.customer.phone || phone;
+          }
+        } else if (dc.franchiseId) {
+          const f = franchiseList.find((x: any) => x.id === dc.franchiseId);
+          if (f) {
+            name = f.name;
+            phone = f.phone || phone;
+          }
+        }
+        return {
+          ...dc,
+          challanNo: formatERPNumber("DC", dc.challanNo || dc.challanNumber || dc.id, dc.createdAt || dc.challanDate),
+          invoiceDate: dc.invoiceDate || (dc.challanDate ? dc.challanDate.split("T")[0] : new Date().toISOString().split("T")[0]),
+          dueDate: dc.dueDate ? dc.dueDate.split("T")[0] : dc.invoiceDate || new Date().toISOString().split("T")[0],
+          customerName: name || "Unknown Party",
+          customerPhone: phone,
+          finalAmount: dc.finalAmount || dc.totalAmount || 0,
+        };
+      });
+
+      setChallans(mappedChallans);
       if (cRes.status === "fulfilled") setCustomers((cRes.value as any).data || []);
       if (pRes.status === "fulfilled") setProducts((pRes.value as any).data || []);
       if (fRes.status === "fulfilled") setFranchises((fRes.value as any).data || []);
@@ -375,9 +411,25 @@ export default function DeliveryChallanPage() {
     setDraftId(dc.id);
     setChallanNo(dc.challanNo);
     const raw = dc._rawState || {};
-    setSelectedCustomer(raw.selectedCustomer || null);
+    
+    // Resolve destination type
+    if (dc.franchiseId) {
+      setDestType("FRANCHISE");
+      const f = franchises.find(x => x.id === dc.franchiseId);
+      setSelectedFranchise(f || null);
+      setSelectedCustomer(null);
+    } else {
+      setDestType("CUSTOMER");
+      const c = customers.find(x => x.id === dc.customerId);
+      setSelectedCustomer(c || null);
+      setSelectedFranchise(null);
+    }
+
     setCustomerSearch(raw.customerSearch || dc.customerName);
     setCustomerPhone(raw.customerPhone || dc.customerPhone || "");
+    setVehicleNo(raw.vehicleNo || dc.vehicleNo || "");
+    setDriverName(raw.driverName || dc.driverName || "");
+    setSourceFranchiseId(raw.sourceFranchiseId || dc.sourceFranchiseId || "hq-001");
     setInvoiceDate(raw.invoiceDate || dc.invoiceDate);
     setDueDate(raw.dueDate || dc.dueDate);
     setStateOfSupply(raw.stateOfSupply || dc.stateOfSupply || "");
@@ -478,12 +530,20 @@ export default function DeliveryChallanPage() {
         </div>
         <div class="meta">
           <div class="box">
-            <div class="box-title">Deliver To</div>
+            <div class="box-title">Deliver To (Target)</div>
             <strong>${dc.customerName}</strong><br/>
             ${dc.customerPhone ? `Phone: ${dc.customerPhone}<br/>` : ""}
             ${dc.stateOfSupply ? `State of Supply: ${dc.stateOfSupply}` : ""}
           </div>
           <div class="box">
+            <div class="box-title">Dispatch Details</div>
+            Source: <strong>${dc.sourceFranchiseId === 'hq-001' ? 'HQ / Main Warehouse' : dc.sourceFranchiseId || 'HQ / Main Warehouse'}</strong><br/>
+            Vehicle No: <strong>${dc.vehicleNo || 'N/A'}</strong><br/>
+            Driver Name: <strong>${dc.driverName || 'N/A'}</strong>
+          </div>
+        </div>
+        <div class="meta" style="margin-top: 10px;">
+          <div class="box" style="grid-column: span 2;">
             <div class="box-title">Terms & Notes</div>
             ${dc._rawState?.description || dc.remarks || "No custom details provided."}
           </div>

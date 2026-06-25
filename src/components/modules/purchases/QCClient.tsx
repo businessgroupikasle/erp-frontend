@@ -582,20 +582,27 @@ export default function QCClient() {
                     <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4 flex items-center gap-2">
                       <RefreshCw className="w-4 h-4 text-[#F97316]" /> Final Status Decision
                     </h3>
-                    <div className="flex gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <button
                         onClick={() => setProdInspection({...prodInspection, qcStatus: 'APPROVED'})}
-                        className={`flex-1 py-4 rounded-2xl border text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${prodInspection.qcStatus === 'APPROVED' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-lg' : 'bg-slate-950 border-slate-850 text-slate-500 hover:border-slate-800'}`}
+                        className={`py-4 rounded-2xl border text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${prodInspection.qcStatus === 'APPROVED' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-lg' : 'bg-slate-950 border-slate-850 text-slate-500 hover:border-slate-800'}`}
                       >
                         <CheckCircle2 size={16} />
-                        Pass & release stock
+                        Pass & Release
+                      </button>
+                      <button
+                        onClick={() => setProdInspection({...prodInspection, qcStatus: 'REWORK'})}
+                        className={`py-4 rounded-2xl border text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${prodInspection.qcStatus === 'REWORK' ? 'bg-sky-500/10 border-sky-500 text-sky-400 shadow-lg' : 'bg-slate-950 border-slate-850 text-slate-500 hover:border-slate-800'}`}
+                      >
+                        <RefreshCw size={16} />
+                        Send for Rework
                       </button>
                       <button
                         onClick={() => setProdInspection({...prodInspection, qcStatus: 'REJECTED'})}
-                        className={`flex-1 py-4 rounded-2xl border text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${prodInspection.qcStatus === 'REJECTED' ? 'bg-rose-500/10 border-rose-500 text-rose-400 shadow-lg' : 'bg-slate-950 border-slate-850 text-slate-500 hover:border-slate-800'}`}
+                        className={`py-4 rounded-2xl border text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${prodInspection.qcStatus === 'REJECTED' ? 'bg-rose-500/10 border-rose-500 text-rose-400 shadow-lg' : 'bg-slate-950 border-slate-850 text-slate-500 hover:border-slate-800'}`}
                       >
                         <XCircle size={16} />
-                        Reject batch completely
+                        Reject Batch
                       </button>
                     </div>
                   </section>

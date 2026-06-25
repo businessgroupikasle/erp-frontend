@@ -31,6 +31,7 @@ import {
   Barcode,
   MapPin,
   Lock,
+  ShieldAlert,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -113,7 +114,7 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       {
         icon: PackageCheck,
         label: "GRN",
-        href: "/purchases/inward",
+        href: "/purchases/grn",
         roles: SUPER_ONLY,
       },
       {
@@ -180,6 +181,13 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         href: "/production/wastage",
         roles: SUPER_ONLY,
       },
+      {
+        icon: ShieldAlert,
+        label: "Batch Recall",
+        href: "/production/batch-recall",
+        roles: SUPER_ONLY,
+        isNew: true,
+      },
     ],
   },
   {
@@ -210,7 +218,7 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     items: [
       {
         icon: Layers,
-        label: "Raw Material Stock",
+        label: "Raw Materials",
         href: "/inventory/raw-material-stock",
         roles: SUPER_ONLY,
       },
@@ -383,6 +391,12 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         href: "/accounting/expenses",
         roles: SUPER_ONLY,
       },
+      {
+        icon: Landmark,
+        label: "Bank Accounts",
+        href: "/accounting/chart",
+        roles: SUPER_ONLY,
+      },
     ],
   },
   {
@@ -433,6 +447,12 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         icon: Lock,
         label: "Permissions",
         href: "/admin/users",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: UserCheck,
+        label: "Approval Workflows",
+        href: "/admin/approvals",
         roles: SUPER_ONLY,
       },
       {

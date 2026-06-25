@@ -8,6 +8,7 @@ import {
 import { clsx } from "clsx";
 import { productBatchesApi, productsFullApi, franchiseApi } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { formatERPNumber } from "@/lib/utils";
 
 type ExpiryStatus = "EXPIRED" | "EXPIRING_SOON" | "VALID";
 
@@ -235,7 +236,7 @@ export default function ProductBatchesPage() {
                   >
                     {/* Batch Code */}
                     <p className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-wider font-mono">
-                      {batch.batchCode ?? "—"}
+                      {batch.batchCode ? formatERPNumber("BT", batch.batchCode, batch.createdAt) : "—"}
                     </p>
 
                     {/* Product */}

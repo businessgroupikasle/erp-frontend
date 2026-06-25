@@ -58,7 +58,7 @@ const FALLBACK_COMPANY = {
   state: "Tamil Nadu"
 };
 
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatERPNumber } from "@/lib/utils";
 
 
 export default function PurchaseOrdersClient() {
@@ -304,7 +304,7 @@ export default function PurchaseOrdersClient() {
                 return (
                   <tr key={po.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors group">
                     <td className="px-6 py-4">
-                      <p className="text-xs font-black text-gray-900 dark:text-white uppercase">PO-{po.poNumber?.split('-').pop() || po.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="text-xs font-black text-gray-900 dark:text-white uppercase">{formatERPNumber("PO", po.poNumber || po.id, po.createdAt)}</p>
                       <p className="text-[10px] text-gray-400 mt-1">{format(new Date(po.createdAt), "dd MMM yyyy")}</p>
                     </td>
                     <td className="px-6 py-4">
@@ -581,7 +581,7 @@ export default function PurchaseOrdersClient() {
                     <ShoppingCart size={22} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">PO-{viewingDetailsPO.poNumber?.split('-').pop() || viewingDetailsPO.id.slice(0, 8).toUpperCase()}</h2>
+                    <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">{formatERPNumber("PO", viewingDetailsPO.poNumber || viewingDetailsPO.id, viewingDetailsPO.createdAt)}</h2>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{viewingDetailsPO.vendor?.name}</p>
                   </div>
                 </div>

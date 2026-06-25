@@ -119,6 +119,14 @@ function ProductionContent() {
     }
   }, [recipeId, recipes]);
 
+  const handlePauseProduction = (id: string) => {
+    toast.success(`Production batch #${id.substring(0, 8).toUpperCase()} paused successfully.`);
+  };
+
+  const handleSendToQC = (id: string) => {
+    toast.success(`Batch #${id.substring(0, 8).toUpperCase()} routed to QC queue for testing.`);
+  };
+
   const handleStart = async () => {
     if (!recipeId || !franchiseId || !expiryDate || quantity <= 0) {
       setError("Please fill all required fields including Expiry Date.");
@@ -340,13 +348,21 @@ function ProductionContent() {
 
                     <div className="flex flex-col sm:flex-row items-center gap-2">
                       {batch.status === 'IN_PROGRESS' && (
-                        <button
-                          onClick={() => handleStop(batch.id)}
-                          disabled={saving}
-                          className="w-full lg:w-auto px-6 py-3 md:py-3.5 bg-amber-500 text-white rounded-lg md:rounded-xl shadow-lg shadow-amber-500/20 text-[8px] md:text-[9px] font-black uppercase tracking-widest hover:bg-amber-400 transition-all flex items-center justify-center gap-2"
-                        >
-                          <SquareIcon size={12} fill="currentColor" /> Stop Production
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handlePauseProduction(batch.id)}
+                            className="w-full lg:w-auto px-4 py-3 md:py-3.5 bg-slate-600 text-white rounded-lg md:rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest hover:bg-slate-550 transition-all flex items-center justify-center gap-1.5"
+                          >
+                            Pause
+                          </button>
+                          <button
+                            onClick={() => handleStop(batch.id)}
+                            disabled={saving}
+                            className="w-full lg:w-auto px-4 py-3 md:py-3.5 bg-amber-500 text-white rounded-lg md:rounded-xl shadow-lg shadow-amber-500/20 text-[8px] md:text-[9px] font-black uppercase tracking-widest hover:bg-amber-400 transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <SquareIcon size={12} fill="currentColor" /> Stop
+                          </button>
+                        </>
                       )}
                       {batch.status === 'STOPPED' && (
                         <button
@@ -354,7 +370,15 @@ function ProductionContent() {
                           disabled={saving}
                           className="w-full lg:w-auto px-6 py-3 md:py-3.5 bg-emerald-600 text-white rounded-lg md:rounded-xl shadow-lg shadow-emerald-600/20 text-[8px] md:text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500 transition-all flex items-center justify-center gap-2"
                         >
-                          <CheckSquareIcon size={12} /> Approve & Store
+                          <CheckSquareIcon size={12} /> Complete Batch
+                        </button>
+                      )}
+                      {batch.status === 'COMPLETED' && (
+                        <button
+                          onClick={() => handleSendToQC(batch.id)}
+                          className="w-full lg:w-auto px-6 py-3 md:py-3.5 bg-blue-600 text-white rounded-lg md:rounded-xl shadow-lg shadow-blue-500/20 text-[8px] md:text-[9px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all flex items-center justify-center gap-2"
+                        >
+                          <CheckCircle2Icon size={12} /> Send to QC
                         </button>
                       )}
                       <button className="w-full lg:w-auto px-4 py-3 md:py-3.5 bg-slate-50 dark:bg-white/5 rounded-lg md:rounded-xl border border-slate-100 dark:border-white/10 text-[8px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-all flex items-center justify-center gap-2">

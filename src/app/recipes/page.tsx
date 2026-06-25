@@ -13,6 +13,8 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/context/ToastContext";
 import { Modal } from "@/components/ui/Modal";
 
+const formatCurrency = (n: number) => "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 export default function RecipesPage() {
   const router = useRouter();
   const { showToast } = useToast();
@@ -29,6 +31,11 @@ export default function RecipesPage() {
   const [activeSearchIdx, setActiveSearchIdx] = useState<number | null>(null);
   const [materialSearchQuery, setMaterialSearchQuery] = useState("");
   const [editingRecipe, setEditingRecipe] = useState<any>(null);
+
+  // Scaling Modal State
+  const [showScaleModal, setShowScaleModal] = useState(false);
+  const [scalingRecipe, setScalingRecipe] = useState<any>(null);
+  const [scaleTargetYield, setScaleTargetYield] = useState<number>(1);
   const [formData, setFormData] = useState({
     productId: "",
     name: "",
@@ -159,6 +166,22 @@ export default function RecipesPage() {
     setFormData({ ...formData, items: newItems });
   };
 
+  const handleOpenScale = (recipe: any) => {
+    setScalingRecipe(recipe);
+    setScaleTargetYield(recipe.yieldQty);
+    setShowScaleModal(true);
+  };
+
+  const getMaterialCost = (materialId: string) => {
+    const mat = materials.find(m => m.id === materialId);
+    return mat?.costPrice || mat?.basePrice || 0;
+  };
+
+  const getMaterialName = (materialId: string) => {
+    const mat = materials.find(m => m.id === materialId);
+    return mat?.name || "Unknown Material";
+  };
+
   const downloadRecipePDF = (recipe: any) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -259,6 +282,30 @@ export default function RecipesPage() {
     printWindow.document.write(html);
     printWindow.document.close();
   };
+  const scaleMultiplier = scalingRecipe ? scaleTargetYield / scalingRecipe.yieldQty : 1;
+
+  const scaledItems = scalingRecipe?.recipeItems?.map((item: any) => {
+    const unitCost = getMaterialCost(item.inventoryItemId);
+    const originalQty = item.quantityRequired;
+    const scaledQty = originalQty * scaleMultiplier;
+    const lineCost = scaledQty * unitCost;
+    return {
+      name: getMaterialName(item.inventoryItemId),
+      originalQty,
+      scaledQty,
+      unit: item.unit || "KG",
+      unitCost,
+      lineCost
+    };
+  }) || [];
+
+  const totalScaledCost = scaledItems.reduce((sum: number, item: any) => sum + item.lineCost, 0);
+  const totalInputQty = scaledItems.reduce((sum: number, item: any) => sum + item.scaledQty, 0);
+  
+  const originalUnitWeightMatch = scalingRecipe?.instructions?.match(/\[unitWeight:([\d.]+)\]/);
+  const originalUnitWeight = originalUnitWeightMatch ? Number(originalUnitWeightMatch[1]) : 1;
+  const totalOutputWeight = scaleTargetYield * originalUnitWeight;
+  const yieldPct = totalInputQty > 0 ? (totalOutputWeight / totalInputQty) * 100 : 100;
 
   return (
     <>
@@ -381,6 +428,13 @@ export default function RecipesPage() {
                             title="Start Production"
                           >
                             <Play size={16} fill="currentColor" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenScale(recipe); }}
+                            className="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-xl transition-all"
+                            title="Scale & Costing Calculator"
+                          >
+                            <Scale size={16} />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); downloadRecipePDF(recipe); }}
@@ -687,7 +741,93 @@ export default function RecipesPage() {
           )}
         </div>
       </Modal>
+
+      {/* Formula Scaling & Costing Modal */}
+      <Modal
+        isOpen={showScaleModal}
+        onClose={() => setShowScaleModal(false)}
+        title={`Formula Scaling & Costing Calculator`}
+        size="lg"
+        footer={
+          <div className="flex justify-end w-full">
+            <button
+              onClick={() => setShowScaleModal(false)}
+              className="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-black text-sm hover:bg-slate-800 transition-all"
+            >
+              Close Calculator
+            </button>
+          </div>
+        }
+      >
+        {scalingRecipe && (
+          <div className="space-y-6 text-slate-900 dark:text-white">
+            <div className="bg-orange-50 dark:bg-orange-500/5 p-5 rounded-2xl border border-orange-100 dark:border-orange-500/20">
+              <h3 className="text-sm font-black text-orange-800 dark:text-orange-400 uppercase tracking-wider">{scalingRecipe.name}</h3>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1 uppercase">Finished Product: {scalingRecipe.product?.name}</p>
+            </div>
+
+            {/* Scaling Inputs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5">
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-2">Original Batch Yield</label>
+                <div className="text-lg font-black text-slate-700 dark:text-slate-300">{scalingRecipe.yieldQty} Units</div>
+              </div>
+              <div className="bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-orange-500/20">
+                <label className="text-[10px] font-black text-orange-500 dark:text-orange-400 tracking-widest block mb-1">Target Yield (Units)</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={scaleTargetYield}
+                  onChange={(e) => setScaleTargetYield(Math.max(1, Number(e.target.value)))}
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl p-2 text-sm font-black outline-none focus:ring-2 focus:ring-orange-500/20 text-slate-900"
+                />
+              </div>
+            </div>
+
+            {/* Costing Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-emerald-50 dark:bg-emerald-500/5 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
+                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Scaled Cost</p>
+                <p className="text-xl font-black text-emerald-600">{formatCurrency(totalScaledCost)}</p>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-500/5 p-4 rounded-2xl border border-blue-100 dark:border-blue-500/20">
+                <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1">Cost Per Yield Unit</p>
+                <p className="text-xl font-black text-blue-600">{formatCurrency(scaleTargetYield > 0 ? totalScaledCost / scaleTargetYield : 0)}</p>
+              </div>
+              <div className="bg-amber-50 dark:bg-amber-500/5 p-4 rounded-2xl border border-amber-100 dark:border-amber-500/20">
+                <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1">Yield Efficiency</p>
+                <p className="text-xl font-black text-amber-600">{yieldPct.toFixed(1)}%</p>
+              </div>
+            </div>
+
+            {/* Ingredients table */}
+            <div className="border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-white/5 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-white/5">
+                    <th className="px-4 py-2">Ingredient</th>
+                    <th className="px-4 py-2 text-center">Base Qty</th>
+                    <th className="px-4 py-2 text-center">Scaled Qty</th>
+                    <th className="px-4 py-2 text-right">Unit Cost</th>
+                    <th className="px-4 py-2 text-right">Scaled Cost</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {scaledItems.map((item: any, i: number) => (
+                    <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01]">
+                      <td className="px-4 py-2.5">{item.name}</td>
+                      <td className="px-4 py-2.5 text-center">{item.originalQty} {item.unit}</td>
+                      <td className="px-4 py-2.5 text-center text-orange-600 font-black">{item.scaledQty.toFixed(2)} {item.unit}</td>
+                      <td className="px-4 py-2.5 text-right">{formatCurrency(item.unitCost)} / {item.unit}</td>
+                      <td className="px-4 py-2.5 text-right text-emerald-600 font-black">{formatCurrency(item.lineCost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </Modal>
     </>
-  )
-    ;
+  );
 }
