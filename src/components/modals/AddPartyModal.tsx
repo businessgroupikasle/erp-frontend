@@ -118,6 +118,83 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
   if (!isOpen) return null;
 
   const handleConfirm = async () => {
+    const trimmedName = form.name.trim();
+    if (!trimmedName) {
+      toast.error(partyType === 'vendor' ? "Vendor Name is required." : "Party Name is required.");
+      return;
+    }
+
+    const nameRegex = /^[A-Za-z0-9\s&.,\-()]+$/;
+    if (!nameRegex.test(trimmedName)) {
+      toast.error(
+        partyType === 'vendor'
+          ? "Vendor Name must only contain alphanumeric characters, spaces, and standard symbols (& . , - ())."
+          : "Party Name must only contain alphanumeric characters, spaces, and standard symbols (& . , - ())."
+      );
+      return;
+    }
+
+    if (!form.contact) {
+      if (partyType === 'vendor') {
+        toast.error("Contact Number is required.");
+        return;
+      }
+    } else {
+      if (!/^\d{10}$/.test(form.contact)) {
+        toast.error("Contact Number must be a valid 10-digit number.");
+        return;
+      }
+    }
+
+    if (form.email) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        toast.error("Please enter a valid email address.");
+        return;
+      }
+    }
+
+    if (partyType === 'vendor') {
+      if (!form.billingAddress || !form.billingAddress.trim()) {
+        toast.error("Registered Office Address is required.");
+        return;
+      }
+    }
+
+    // Opening Balance validation (must be non-negative)
+    if (form.openingBalance !== "") {
+      const openingBalNum = Number(form.openingBalance);
+      if (isNaN(openingBalNum) || openingBalNum < 0) {
+        toast.error("Opening Balance must be a non-negative number.");
+        return;
+      }
+    }
+
+    // As Of Date validation (must not be in the future)
+    if (form.asOfDate) {
+      const selectedDate = new Date(form.asOfDate);
+      const today = new Date();
+      selectedDate.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      if (selectedDate > today) {
+        toast.error("As Of Date cannot be in the future.");
+        return;
+      }
+    }
+
+    // Credit Limit validation (must be non-negative and is required if Custom Limit is selected)
+    if (!form.noCreditLimit) {
+      const limitStr = String(form.customCreditLimit).trim();
+      if (limitStr === "") {
+        toast.error("Credit Limit is required when Custom Limit is selected.");
+        return;
+      }
+      const limitNum = Number(limitStr);
+      if (isNaN(limitNum) || limitNum < 0) {
+        toast.error("Credit Limit must be a non-negative number.");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       let finalOpeningBalance = Number(form.openingBalance) || 0;
@@ -130,7 +207,7 @@ export default function AddPartyModal({ isOpen, onClose, onSave, initialData, ti
       }
 
       const payload = {
-        name: form.name,
+        name: trimmedName,
         contact: form.contact,
         email: form.email,
         address: form.billingAddress,

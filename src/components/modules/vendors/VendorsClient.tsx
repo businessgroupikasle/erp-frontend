@@ -66,6 +66,20 @@ export default function VendorsClient() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
 
+  // Advanced Filters State
+  const [isLedgerFilterPanelOpen, setIsLedgerFilterPanelOpen] = useState(false);
+  const [ledgerSearchQuery, setLedgerSearchQuery] = useState("");
+  const [ledgerTypeFilter, setLedgerTypeFilter] = useState("ALL");
+  const [ledgerFromDate, setLedgerFromDate] = useState("");
+  const [ledgerToDate, setLedgerToDate] = useState("");
+  const [ledgerMinAmount, setLedgerMinAmount] = useState("");
+  const [ledgerMaxAmount, setLedgerMaxAmount] = useState("");
+  const [ledgerBalanceType, setLedgerBalanceType] = useState("ALL");
+
+  // Print & Export Dropdown States
+  const [isPrintDropdownOpen, setIsPrintDropdownOpen] = useState(false);
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -74,6 +88,8 @@ export default function VendorsClient() {
         setIsTypeFilterOpen(false);
         setIsBalanceFilterOpen(false);
         setIsMoreMenuOpen(false);
+        setIsPrintDropdownOpen(false);
+        setIsExportDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -109,13 +125,14 @@ export default function VendorsClient() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [nextPaymentNumber, setNextPaymentNumber] = useState('');
   const [paymentForm, setPaymentForm] = useState({
     amount: "",
     note: "",
     type: "PAYMENT" as "PAYMENT" | "ADVANCE",
     accountId: "",
     paymentMode: "CASH",
-    referenceId: "",
+    transactionRef: "",
     vendorInvoiceId: "",
     date: new Date().toISOString().split('T')[0]
   });
@@ -206,11 +223,358 @@ export default function VendorsClient() {
 
   const selectedVendor = useMemo(() => vendors.find(v => v.id === selectedVendorId) || null, [vendors, selectedVendorId]);
 
+  // -- Ledger Filtering, Totals, Print & Export --
+  const filteredLedger = useMemo(() => {
+    let result = [...ledger];
+
+    // 1. Search Query
+    if (ledgerSearchQuery.trim()) {
+      const q = ledgerSearchQuery.toLowerCase().trim();
+      result = result.filter(e => {
+        const matchTxId = e.id?.toLowerCase().includes(q);
+        const matchRefId = e.referenceId?.toLowerCase().includes(q);
+        const matchNote = e.note?.toLowerCase().includes(q);
+        const matchAmount = String(e.amount).includes(q);
+        const matchVendor = selectedVendorDetail?.name?.toLowerCase().includes(q);
+        return matchTxId || matchRefId || matchNote || matchAmount || matchVendor;
+      });
+    }
+
+    // 2. Transaction Type (Advanced Filter Panel)
+    if (ledgerTypeFilter !== "ALL") {
+      result = result.filter(e => e.referenceType === ledgerTypeFilter);
+    }
+
+    // 3. Date Range (Advanced Filter Panel)
+    if (ledgerFromDate) {
+      const from = new Date(ledgerFromDate);
+      from.setHours(0,0,0,0);
+      result = result.filter(e => new Date(e.createdAt) >= from);
+    }
+    if (ledgerToDate) {
+      const to = new Date(ledgerToDate);
+      to.setHours(23,59,59,999);
+      result = result.filter(e => new Date(e.createdAt) <= to);
+    }
+
+    // 4. Amount Range (Advanced Filter Panel)
+    if (ledgerMinAmount) {
+      result = result.filter(e => e.amount >= Number(ledgerMinAmount));
+    }
+    if (ledgerMaxAmount) {
+      result = result.filter(e => e.amount <= Number(ledgerMaxAmount));
+    }
+
+    // 5. Balance Type (Advanced Filter Panel)
+    if (ledgerBalanceType !== "ALL") {
+      result = result.filter(e => e.type === ledgerBalanceType);
+    }
+
+    // 6. Inline Type Filter (from table header popover)
+    if (selectedTypes.length > 0) {
+      result = result.filter(e => {
+        const cleanRefType = e.referenceType === 'PAYMENT' ? 'Payment Out' : e.referenceType === 'PURCHASE' ? 'Purchase' : e.referenceType === 'OPENING_BALANCE' ? 'Opening Balance' : e.referenceType;
+        return selectedTypes.includes(cleanRefType);
+      });
+    }
+
+    // 7. Inline Ref No Filter (from table header popover)
+    if (numberFilter.value.trim()) {
+      const val = numberFilter.value.toLowerCase().trim();
+      result = result.filter(e => {
+        const refId = (e.referenceId || '').toLowerCase();
+        return numberFilter.category === 'Exact match' ? refId === val : refId.includes(val);
+      });
+    }
+
+    // 8. Inline Date Filter (from table header popover)
+    if (dateFilter.value) {
+      const targetDate = new Date(dateFilter.value);
+      targetDate.setHours(0,0,0,0);
+      if (dateFilter.category === 'Range' && dateFilter.endDate) {
+        const end = new Date(dateFilter.endDate);
+        end.setHours(23,59,59,999);
+        result = result.filter(e => {
+          const d = new Date(e.createdAt);
+          return d >= targetDate && d <= end;
+        });
+      } else if (dateFilter.category === 'Greater Than') {
+        result = result.filter(e => new Date(e.createdAt) > targetDate);
+      } else if (dateFilter.category === 'Less Than') {
+        result = result.filter(e => new Date(e.createdAt) < targetDate);
+      } else {
+        result = result.filter(e => {
+          const d = new Date(e.createdAt);
+          return d.getFullYear() === targetDate.getFullYear() && d.getMonth() === targetDate.getMonth() && d.getDate() === targetDate.getDate();
+        });
+      }
+    }
+
+    // 9. Inline Balance Filter (from table header popover)
+    if (balanceFilter.value) {
+      const val = Number(balanceFilter.value);
+      result = result.filter(e => {
+        const balance = e.runningBalance || e.balanceAfterTransaction || 0;
+        const absBal = Math.abs(balance);
+        if (balanceFilter.category === 'Range' && balanceFilter.endValue) {
+          const end = Number(balanceFilter.endValue);
+          return absBal >= val && absBal <= end;
+        } else if (balanceFilter.category === 'Greater Than') {
+          return absBal > val;
+        } else if (balanceFilter.category === 'Less Than') {
+          return absBal < val;
+        } else {
+          return absBal === val;
+        }
+      });
+    }
+
+    return result;
+  }, [ledger, ledgerSearchQuery, ledgerTypeFilter, ledgerFromDate, ledgerToDate, ledgerMinAmount, ledgerMaxAmount, ledgerBalanceType, selectedVendorDetail, selectedTypes, numberFilter, dateFilter, balanceFilter]);
+
+  const ledgerTotals = useMemo(() => {
+    let totalDebit = 0;
+    let totalCredit = 0;
+    for (const e of filteredLedger) {
+      if (e.type === 'DEBIT') totalDebit += e.amount;
+      if (e.type === 'CREDIT') totalCredit += e.amount;
+    }
+    const closingBalance = totalCredit - totalDebit;
+    return { totalDebit, totalCredit, closingBalance };
+  }, [filteredLedger]);
+
+  const handlePrintLedger = (range: 'all' | 'filtered') => {
+    if (!selectedVendorDetail) return;
+    
+    const targetData = range === 'all' ? ledger : filteredLedger;
+    if (targetData.length === 0) {
+      showToast("No transactions found to print.", "error");
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast("Pop-up blocked. Please allow pop-ups to print.", "error");
+      return;
+    }
+
+    const fromDateStr = ledgerFromDate && range === 'filtered' ? new Date(ledgerFromDate).toLocaleDateString() : 'All Dates';
+    const toDateStr = ledgerToDate && range === 'filtered' ? new Date(ledgerToDate).toLocaleDateString() : 'Present';
+
+    let printDebitTotal = 0;
+    let printCreditTotal = 0;
+    for (const e of targetData) {
+      if (e.type === 'DEBIT') printDebitTotal += e.amount;
+      if (e.type === 'CREDIT') printCreditTotal += e.amount;
+    }
+    const printClosingBalance = printCreditTotal - printDebitTotal;
+
+    const rowsHtml = [...targetData].reverse().map(e => {
+      const balance = e.runningBalance || e.balanceAfterTransaction || 0;
+      return `
+        <tr>
+          <td>${new Date(e.createdAt).toLocaleDateString()}</td>
+          <td>${e.referenceType === 'PAYMENT' ? 'Payment Out' : e.referenceType === 'PURCHASE' ? 'Purchase' : e.referenceType === 'OPENING_BALANCE' ? 'Opening Balance' : e.referenceType}</td>
+          <td>${e.referenceId || '—'}</td>
+          <td>${e.note || '—'}</td>
+          <td class="text-right color-debit">${e.type === 'DEBIT' ? '₹ ' + Math.round(e.amount).toLocaleString() : '₹ 0'}</td>
+          <td class="text-right color-credit">${e.type === 'CREDIT' ? '₹ ' + Math.round(e.amount).toLocaleString() : '₹ 0'}</td>
+          <td class="text-right">₹ ${Math.abs(Math.round(balance)).toLocaleString()} ${balance >= 0 ? 'Cr' : 'Dr'}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Vendor Ledger - ${selectedVendorDetail.name}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1e293b; margin: 40px; line-height: 1.4; }
+            .header-container { display: flex; justify-content: space-between; border-bottom: 2px solid #f97316; padding-bottom: 10px; margin-bottom: 20px; }
+            .company-info h1 { margin: 0; font-size: 24px; font-weight: 800; color: #0f172a; }
+            .company-info p { margin: 2px 0; font-size: 11px; color: #64748b; }
+            .title-info { text-align: right; }
+            .title-info h2 { margin: 0; font-size: 20px; font-weight: 700; color: #f97316; }
+            .title-info p { margin: 2px 0; font-size: 11px; color: #64748b; }
+            
+            .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; font-size: 13px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
+            .meta-grid div p { margin: 4px 0; }
+            .meta-grid div p strong { color: #0f172a; }
+
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
+            th { background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px 8px; font-weight: 700; text-align: left; color: #475569; }
+            td { border: 1px solid #cbd5e1; padding: 8px; color: #334155; }
+            tr:nth-child(even) { background-color: #f8fafc; }
+            
+            .text-right { text-align: right; }
+            .color-debit { color: #ef4444; font-weight: 600; }
+            .color-credit { color: #10b981; font-weight: 600; }
+
+            .footer-summary { display: flex; justify-content: flex-end; margin-top: 20px; }
+            .summary-table { width: 320px; font-size: 13px; font-weight: bold; border-collapse: collapse; }
+            .summary-table td { padding: 6px 12px; border: none; }
+            .summary-table tr.total-border { border-top: 1.5px solid #cbd5e1; border-bottom: 3.5px double #0f172a; }
+            
+            @media print {
+              body { margin: 20px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header-container">
+            <div class="company-info">
+              <h1>Acme Industrial Corporation</h1>
+              <p>Industrial Zone, Phase 1, New Delhi - 110020</p>
+              <p>Email: accounts@acmeindustrial.com | Tel: +91 11 4567 8900</p>
+            </div>
+            <div class="title-info">
+              <h2>VENDOR LEDGER</h2>
+              <p>Printed On: ${new Date().toLocaleString()}</p>
+              <p>Printed By: Administrator</p>
+            </div>
+          </div>
+          
+          <div class="meta-grid">
+            <div>
+              <p><strong>Vendor Name:</strong> ${selectedVendorDetail.name}</p>
+              <p><strong>Vendor Code:</strong> ${selectedVendorDetail.vendorCode || '—'}</p>
+              <p><strong>GSTIN:</strong> ${selectedVendorDetail.gstNumber || '—'}</p>
+            </div>
+            <div>
+              <p><strong>Period:</strong> ${fromDateStr} to ${toDateStr}</p>
+              <p><strong>Contact:</strong> ${selectedVendorDetail.contact || '—'}</p>
+              <p><strong>Outstanding Balance:</strong> ₹ ${Math.abs(Math.round(printClosingBalance)).toLocaleString()} ${printClosingBalance >= 0 ? 'Cr' : 'Dr'}</p>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Reference</th>
+                <th>Description</th>
+                <th style="text-align: right;">Debit</th>
+                <th style="text-align: right;">Credit</th>
+                <th style="text-align: right;">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <div class="footer-summary">
+            <table class="summary-table">
+              <tr>
+                <td>Total Debit:</td>
+                <td style="text-align: right; color: #ef4444;">₹ ${Math.round(printDebitTotal).toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td>Total Credit:</td>
+                <td style="text-align: right; color: #10b981;">₹ ${Math.round(printCreditTotal).toLocaleString()}</td>
+              </tr>
+              <tr class="total-border">
+                <td>Closing Balance:</td>
+                <td style="text-align: right;">₹ ${Math.abs(Math.round(printClosingBalance)).toLocaleString()} ${printClosingBalance >= 0 ? 'Cr' : 'Dr'}</td>
+              </tr>
+            </table>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  const handleExportLedger = (format: 'csv' | 'xlsx', range: 'all' | 'filtered') => {
+    if (!selectedVendorDetail) return;
+    
+    const targetData = range === 'all' ? ledger : filteredLedger;
+    if (targetData.length === 0) {
+      showToast("No data to export.", "error");
+      return;
+    }
+
+    const headers = ['Date', 'Type', 'Reference', 'Description', 'Debit', 'Credit', 'Balance'];
+    
+    let runningDebit = 0;
+    let runningCredit = 0;
+    
+    const rows = [...targetData].reverse().map(e => {
+      const balance = e.runningBalance || e.balanceAfterTransaction || 0;
+      const debitVal = e.type === 'DEBIT' ? Math.round(e.amount) : 0;
+      const creditVal = e.type === 'CREDIT' ? Math.round(e.amount) : 0;
+      runningDebit += debitVal;
+      runningCredit += creditVal;
+      
+      return [
+        new Date(e.createdAt).toLocaleDateString(),
+        e.referenceType === 'PAYMENT' ? 'Payment Out' : e.referenceType === 'PURCHASE' ? 'Purchase' : e.referenceType === 'OPENING_BALANCE' ? 'Opening Balance' : e.referenceType,
+        e.referenceId || '',
+        e.note || '',
+        debitVal,
+        creditVal,
+        `${Math.abs(Math.round(balance))} ${balance >= 0 ? 'Cr' : 'Dr'}`
+      ];
+    });
+
+    rows.push([
+      'Totals',
+      '',
+      '',
+      '',
+      runningDebit,
+      runningCredit,
+      `${Math.abs(Math.round(runningCredit - runningDebit))} ${(runningCredit - runningDebit) >= 0 ? 'Cr' : 'Dr'}`
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(val => {
+        const str = String(val);
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      }).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    
+    const vendorCleanName = selectedVendorDetail.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const todayStr = new Date().toISOString().split('T')[0];
+    const filename = `Vendor_Ledger_${vendorCleanName}_${todayStr}.${format}`;
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(`Exported ${format.toUpperCase()} successfully`, "success");
+  };
+
   // -- Actions --
 
   const handlePayment = async () => {
+    const isRefRequired = paymentForm.paymentMode !== 'CASH';
     if (!selectedVendorId || !paymentForm.amount || !paymentForm.accountId) {
       showToast("Please select an account and amount", "error");
+      return;
+    }
+    if (isRefRequired && !paymentForm.transactionRef.trim()) {
+      showToast("Reference Number is required for non-cash payments", "error");
       return;
     }
     setSaving(true);
@@ -221,11 +585,8 @@ export default function VendorsClient() {
         note: paymentForm.note || `${paymentForm.type} Settlement`,
         accountId: paymentForm.accountId,
         vendorInvoiceId: paymentForm.vendorInvoiceId || undefined,
-        paymentMode: (() => {
-          const type = accounts.find(a => a.id === paymentForm.accountId)?.type;
-          if (type === 'BANK') return 'BANK_TRANSFER';
-          return type || 'CASH';
-        })()
+        paymentMode: paymentForm.paymentMode,
+        transactionRef: paymentForm.transactionRef.trim() || undefined
       });
       showToast("Financial settlement recorded", "success");
       setShowPaymentModal(false);
@@ -402,7 +763,15 @@ export default function VendorsClient() {
               </div>
               <div className="flex items-center gap-4">
                 <button 
-                  onClick={() => { fetchVendorInvoices(selectedVendor.id); setShowPaymentModal(true); }}
+                  onClick={async () => {
+                    fetchVendorInvoices(selectedVendor.id);
+                    setPaymentForm(prev => ({ ...prev, transactionRef: '', vendorInvoiceId: '', amount: '', note: '' }));
+                    try {
+                      const res = await vendorsApi.getNextPaymentNumber();
+                      setNextPaymentNumber(res.data?.nextPaymentNumber || '');
+                    } catch { setNextPaymentNumber(''); }
+                    setShowPaymentModal(true);
+                  }}
                   className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
                 >
                   <Wallet size={14} /> Record Payment
@@ -591,29 +960,215 @@ export default function VendorsClient() {
             {selectedTab === 'LEDGER' && (
               <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-[#0b0c14]">
                 {/* Section Header */}
-                <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 dark:border-white/5">
+                <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 dark:border-white/5 relative z-30">
                   <h3 className="text-sm font-bold text-slate-700 dark:text-white">Transactions Ledger</h3>
-                  <div className="flex items-center gap-3 text-slate-400">
-                    {isTransactionSearchOpen ? (
-                      <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-full px-3 py-1">
-                        <Search size={14} className="text-slate-400" />
-                        <input 
-                          type="text" 
-                          autoFocus
-                          placeholder="Search transactions..." 
-                          className="bg-transparent border-none text-xs w-32 focus:outline-none ml-2 text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
-                          value={transactionSearchQuery}
-                          onChange={(e) => setTransactionSearchQuery(e.target.value)}
-                          onBlur={() => !transactionSearchQuery && setIsTransactionSearchOpen(false)}
-                        />
-                      </div>
-                    ) : (
-                      <button onClick={() => setIsTransactionSearchOpen(true)} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><Search size={16} /></button>
-                    )}
-                    <button className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><Printer size={16} /></button>
-                    <button className="text-emerald-600 hover:text-emerald-700 transition-colors"><FileText size={16} className="opacity-80" /></button>
+                  <div className="flex items-center gap-4 text-slate-400">
+                    {/* Search / Advanced Filter Toggle */}
+                    <button 
+                      onClick={() => setIsLedgerFilterPanelOpen(!isLedgerFilterPanelOpen)} 
+                      className={`transition-colors p-1 rounded-lg ${isLedgerFilterPanelOpen ? 'bg-orange-500/10 text-orange-500' : 'hover:text-slate-600 dark:hover:text-slate-200'}`}
+                      title="Advanced Filters & Search"
+                    >
+                      <Search size={16} />
+                    </button>
+                    
+                    {/* Print Dropdown */}
+                    <div className="relative filter-popover-container">
+                      <button 
+                        onClick={() => { setIsPrintDropdownOpen(!isPrintDropdownOpen); setIsExportDropdownOpen(false); }} 
+                        className={`transition-colors p-1 rounded-lg ${isPrintDropdownOpen ? 'bg-orange-500/10 text-orange-500' : 'hover:text-slate-600 dark:hover:text-slate-200'}`}
+                        title="Print Ledger"
+                      >
+                        <Printer size={16} />
+                      </button>
+                      {isPrintDropdownOpen && (
+                        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl shadow-xl z-50 py-1 font-normal text-slate-700 dark:text-slate-300">
+                          <div className="px-3 py-1.5 border-b border-slate-100 dark:border-white/5">
+                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Print Options</span>
+                          </div>
+                          <button onClick={() => { handlePrintLedger('filtered'); setIsPrintDropdownOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-white/5 text-xs flex items-center gap-2">
+                            <span>Print Filtered Results</span>
+                          </button>
+                          <button onClick={() => { handlePrintLedger('all'); setIsPrintDropdownOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-white/5 text-xs flex items-center gap-2">
+                            <span>Print All Transactions</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Export Dropdown */}
+                    <div className="relative filter-popover-container">
+                      <button 
+                        onClick={() => { setIsExportDropdownOpen(!isExportDropdownOpen); setIsPrintDropdownOpen(false); }} 
+                        className={`transition-colors p-1 rounded-lg text-emerald-600 ${isExportDropdownOpen ? 'bg-emerald-500/10' : 'hover:text-emerald-700'}`}
+                        title="Export Ledger"
+                      >
+                        <FileText size={16} className="opacity-80" />
+                      </button>
+                      {isExportDropdownOpen && (
+                        <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl shadow-xl z-50 py-1 font-normal text-slate-700 dark:text-slate-300">
+                          <div className="px-3 py-1.5 border-b border-slate-100 dark:border-white/5">
+                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Export Options</span>
+                          </div>
+                          
+                          {/* Filtered options */}
+                          <div className="p-1">
+                            <button onClick={() => { handleExportLedger('xlsx', 'filtered'); setIsExportDropdownOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-white/5 rounded-lg text-xs flex items-center justify-between">
+                              <span>Export Filtered to Excel</span>
+                              <span className="text-[10px] text-slate-400 font-mono">.xlsx</span>
+                            </button>
+                            <button onClick={() => { handleExportLedger('csv', 'filtered'); setIsExportDropdownOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-white/5 rounded-lg text-xs flex items-center justify-between">
+                              <span>Export Filtered to CSV</span>
+                              <span className="text-[10px] text-slate-400 font-mono">.csv</span>
+                            </button>
+                            <button onClick={() => { handlePrintLedger('filtered'); setIsExportDropdownOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-white/5 rounded-lg text-xs flex items-center justify-between">
+                              <span>Export Filtered to PDF</span>
+                              <span className="text-[10px] text-slate-400 font-mono">.pdf</span>
+                            </button>
+                          </div>
+
+                          <div className="border-t border-slate-100 dark:border-white/5 my-1"></div>
+
+                          {/* All options */}
+                          <div className="p-1">
+                            <button onClick={() => { handleExportLedger('xlsx', 'all'); setIsExportDropdownOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-white/5 rounded-lg text-xs flex items-center justify-between">
+                              <span>Export All to Excel</span>
+                              <span className="text-[10px] text-slate-400 font-mono">.xlsx</span>
+                            </button>
+                            <button onClick={() => { handleExportLedger('csv', 'all'); setIsExportDropdownOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-white/5 rounded-lg text-xs flex items-center justify-between">
+                              <span>Export All to CSV</span>
+                              <span className="text-[10px] text-slate-400 font-mono">.csv</span>
+                            </button>
+                            <button onClick={() => { handlePrintLedger('all'); setIsExportDropdownOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-white/5 rounded-lg text-xs flex items-center justify-between">
+                              <span>Export All to PDF</span>
+                              <span className="text-[10px] text-slate-400 font-mono">.pdf</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {/* Advanced Filter Panel */}
+                {isLedgerFilterPanelOpen && (
+                  <div className="px-6 py-4 bg-slate-50 dark:bg-white/[0.02] border-b border-slate-200 dark:border-white/5 space-y-4 relative z-20">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      {/* Search Input */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Search Query</label>
+                        <input
+                          type="text"
+                          placeholder="Search number, description, amount..."
+                          className="w-full mt-1 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 dark:bg-[#0b0c14] focus:outline-none focus:border-slate-300"
+                          value={ledgerSearchQuery}
+                          onChange={e => setLedgerSearchQuery(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Transaction Type */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Transaction Type</label>
+                        <select
+                          className="w-full mt-1 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 dark:bg-[#0b0c14] focus:outline-none focus:border-slate-300"
+                          value={ledgerTypeFilter}
+                          onChange={e => setLedgerTypeFilter(e.target.value)}
+                        >
+                          <option value="ALL">All Types</option>
+                          <option value="OPENING_BALANCE">Opening Balance</option>
+                          <option value="PURCHASE">Purchase</option>
+                          <option value="PAYMENT">Payment Out</option>
+                        </select>
+                      </div>
+
+                      {/* Date Range */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">From Date</label>
+                        <input
+                          type="date"
+                          className="w-full mt-1 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 dark:bg-[#0b0c14] focus:outline-none focus:border-slate-300"
+                          value={ledgerFromDate}
+                          onChange={e => setLedgerFromDate(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">To Date</label>
+                        <input
+                          type="date"
+                          className="w-full mt-1 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 dark:bg-[#0b0c14] focus:outline-none focus:border-slate-300"
+                          value={ledgerToDate}
+                          onChange={e => setLedgerToDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      {/* Amount Range */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Min Amount</label>
+                        <input
+                          type="number"
+                          placeholder="Min amount"
+                          className="w-full mt-1 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 dark:bg-[#0b0c14] focus:outline-none focus:border-slate-300"
+                          value={ledgerMinAmount}
+                          onChange={e => setLedgerMinAmount(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Max Amount</label>
+                        <input
+                          type="number"
+                          placeholder="Max amount"
+                          className="w-full mt-1 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 dark:bg-[#0b0c14] focus:outline-none focus:border-slate-300"
+                          value={ledgerMaxAmount}
+                          onChange={e => setLedgerMaxAmount(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Balance Type (Debit / Credit) */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Balance Type</label>
+                        <select
+                          className="w-full mt-1 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 dark:bg-[#0b0c14] focus:outline-none focus:border-slate-300"
+                          value={ledgerBalanceType}
+                          onChange={e => setLedgerBalanceType(e.target.value)}
+                        >
+                          <option value="ALL">All Balances</option>
+                          <option value="DEBIT">Debit Only</option>
+                          <option value="CREDIT">Credit Only</option>
+                        </select>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-end gap-2">
+                        <button
+                          onClick={() => {
+                            setLedgerSearchQuery("");
+                            setLedgerTypeFilter("ALL");
+                            setLedgerFromDate("");
+                            setLedgerToDate("");
+                            setLedgerMinAmount("");
+                            setLedgerMaxAmount("");
+                            setLedgerBalanceType("ALL");
+                            setSelectedTypes([]);
+                            setNumberFilter({ category: 'Contains', value: '' });
+                            setDateFilter({ category: 'Equal To', value: '', endDate: '' });
+                            setBalanceFilter({ category: 'Equal To', value: '', endValue: '' });
+                          }}
+                          className="flex-1 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition-colors"
+                        >
+                          Reset All
+                        </button>
+                        <button
+                          onClick={() => setIsLedgerFilterPanelOpen(false)}
+                          className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm border border-orange-500"
+                        >
+                          Apply / Close
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Transactions Table */}
                 <div className="flex-1 overflow-auto custom-scrollbar">
@@ -629,10 +1184,10 @@ export default function VendorsClient() {
                           </div>
                           {/* Type Filter Popover */}
                           {isTypeFilterOpen && (
-                            <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal">
+                            <div className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-[#1a1c28] rounded-xl shadow-xl border border-slate-100 dark:border-white/10 z-50 overflow-hidden flex flex-col font-normal text-slate-700 dark:text-slate-300 normal-case tracking-normal">
                               <div className="max-h-[240px] overflow-y-auto custom-scrollbar p-2 space-y-1">
                                 {transactionTypes.map(type => (
-                                  <label key={type} className="flex items-start gap-2 p-1.5 hover:bg-slate-50 rounded cursor-pointer group">
+                                  <label key={type} className="flex items-start gap-2 p-1.5 hover:bg-slate-50 dark:hover:bg-white/5 rounded cursor-pointer group">
                                     <input
                                       type="checkbox"
                                       checked={selectedTypes.includes(type)}
@@ -642,14 +1197,14 @@ export default function VendorsClient() {
                                       }}
                                       className="mt-0.5 w-3.5 h-3.5 rounded border-slate-300 text-rose-500 focus:ring-rose-500 cursor-pointer"
                                     />
-                                    <span className="text-[11px] leading-tight group-hover:text-slate-900">{type}</span>
+                                    <span className="text-[11px] leading-tight group-hover:text-slate-900 dark:group-hover:text-white">{type}</span>
                                   </label>
                                 ))}
                               </div>
-                              <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
+                              <div className="p-2 border-t border-slate-100 dark:border-white/10 flex items-center gap-2 bg-white dark:bg-[#1a1c28]">
                                 <button
                                   onClick={() => { setSelectedTypes([]); setIsTypeFilterOpen(false); }}
-                                  className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors"
+                                  className="flex-1 py-1.5 bg-white dark:bg-white/10 border-2 border-slate-900 dark:border-white/20 hover:bg-slate-50 dark:hover:bg-white/20 text-slate-900 dark:text-white rounded-lg text-xs font-bold transition-colors"
                                 >
                                   Clear
                                 </button>
@@ -665,19 +1220,19 @@ export default function VendorsClient() {
                         </th>
                         <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative">
                           <div className="flex items-center justify-between">
-                            Number
+                            Ref No
                             <button onClick={() => setIsNumberFilterOpen(!isNumberFilterOpen)}>
                               <Filter size={14} className="text-slate-400 hover:text-slate-700" />
                             </button>
                           </div>
                           {isNumberFilterOpen && (
-                            <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal">
+                            <div className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-[#1a1c28] rounded-xl shadow-xl border border-slate-100 dark:border-white/10 z-50 overflow-hidden flex flex-col font-normal text-slate-700 dark:text-slate-300 normal-case tracking-normal">
                               <div className="p-3 space-y-3">
                                 <div>
                                   <label className="text-[10px] font-bold text-slate-400">Select Category</label>
                                   <div className="relative mt-1">
                                     <select
-                                      className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                      className="w-full appearance-none bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-slate-300"
                                       value={numberFilter.category}
                                       onChange={e => setNumberFilter({ ...numberFilter, category: e.target.value })}
                                     >
@@ -691,14 +1246,14 @@ export default function VendorsClient() {
                                   <label className="text-[10px] font-bold text-slate-400">Number</label>
                                   <input
                                     type="text"
-                                    className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                    className="w-full mt-1 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 dark:bg-white/10 focus:outline-none focus:border-slate-300"
                                     value={numberFilter.value}
                                     onChange={e => setNumberFilter({ ...numberFilter, value: e.target.value })}
                                   />
                                 </div>
                               </div>
-                              <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
-                                <button onClick={() => { setNumberFilter({ category: 'Contains', value: '' }); setIsNumberFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
+                              <div className="p-2 border-t border-slate-100 dark:border-white/10 flex items-center gap-2 bg-white dark:bg-[#1a1c28]">
+                                <button onClick={() => { setNumberFilter({ category: 'Contains', value: '' }); setIsNumberFilterOpen(false) }} className="flex-1 py-1.5 bg-white dark:bg-white/10 border-2 border-slate-900 dark:border-white/20 hover:bg-slate-50 dark:hover:bg-white/20 text-slate-900 dark:text-white rounded-lg text-xs font-bold transition-colors">Clear</button>
                                 <button onClick={() => setIsNumberFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
                               </div>
                             </div>
@@ -712,13 +1267,13 @@ export default function VendorsClient() {
                             </button>
                           </div>
                           {isDateFilterOpen && (
-                            <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal">
+                            <div className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-[#1a1c28] rounded-xl shadow-xl border border-slate-100 dark:border-white/10 z-50 overflow-hidden flex flex-col font-normal text-slate-700 dark:text-slate-300 normal-case tracking-normal">
                               <div className="p-3 space-y-3">
                                 <div>
                                   <label className="text-[10px] font-bold text-slate-400">Select Category</label>
                                   <div className="relative mt-1">
                                     <select
-                                      className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                      className="w-full appearance-none bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-slate-300"
                                       value={dateFilter.category}
                                       onChange={e => setDateFilter({ ...dateFilter, category: e.target.value })}
                                     >
@@ -735,7 +1290,7 @@ export default function VendorsClient() {
                                   <div className="relative mt-1">
                                     <input
                                       type="date"
-                                      className="w-full border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                                      className="w-full border border-slate-200 dark:border-white/10 dark:bg-white/10 dark:text-slate-200 rounded-lg pl-3 pr-8 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                                       value={dateFilter.value}
                                       onChange={e => setDateFilter({ ...dateFilter, value: e.target.value })}
                                     />
@@ -748,7 +1303,7 @@ export default function VendorsClient() {
                                     <div className="relative mt-1">
                                       <input
                                         type="date"
-                                        className="w-full border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                                        className="w-full border border-slate-200 dark:border-white/10 dark:bg-white/10 dark:text-slate-200 rounded-lg pl-3 pr-8 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                                         value={dateFilter.endDate}
                                         onChange={e => setDateFilter({ ...dateFilter, endDate: e.target.value })}
                                       />
@@ -757,66 +1312,21 @@ export default function VendorsClient() {
                                   </div>
                                 )}
                               </div>
-                              <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
-                                <button onClick={() => { setDateFilter({ category: 'Equal To', value: '', endDate: '' }); setIsDateFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
+                              <div className="p-2 border-t border-slate-100 dark:border-white/10 flex items-center gap-2 bg-white dark:bg-[#1a1c28]">
+                                <button onClick={() => { setDateFilter({ category: 'Equal To', value: '', endDate: '' }); setIsDateFilterOpen(false) }} className="flex-1 py-1.5 bg-white dark:bg-white/10 border-2 border-slate-900 dark:border-white/20 hover:bg-slate-50 dark:hover:bg-white/20 text-slate-900 dark:text-white rounded-lg text-xs font-bold transition-colors">Clear</button>
                                 <button onClick={() => setIsDateFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
                               </div>
                             </div>
                           )}
                         </th>
+                        <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative">
+                          Description
+                        </th>
                         <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            Total
-                            <button onClick={() => setIsTotalFilterOpen(!isTotalFilterOpen)}>
-                              <Filter size={14} className="text-slate-400 hover:text-slate-700" />
-                            </button>
-                          </div>
-                          {isTotalFilterOpen && (
-                            <div className="absolute top-full right-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal text-left">
-                              <div className="p-3 space-y-3">
-                                <div>
-                                  <label className="text-[10px] font-bold text-slate-400">Select Category</label>
-                                  <div className="relative mt-1">
-                                    <select
-                                      className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
-                                      value={totalFilter.category}
-                                      onChange={e => setTotalFilter({ ...totalFilter, category: e.target.value })}
-                                    >
-                                      <option>Equal To</option>
-                                      <option>Less Than</option>
-                                      <option>Greater Than</option>
-                                      <option>Range</option>
-                                    </select>
-                                    <ChevronDown size={14} className="absolute right-2 top-2 text-slate-400 pointer-events-none" />
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="text-[10px] font-bold text-slate-400">{totalFilter.category === 'Range' ? 'Min Amount' : 'Amount'}</label>
-                                  <input
-                                    type="number"
-                                    className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
-                                    value={totalFilter.value}
-                                    onChange={e => setTotalFilter({ ...totalFilter, value: e.target.value })}
-                                  />
-                                </div>
-                                {totalFilter.category === 'Range' && (
-                                  <div>
-                                    <label className="text-[10px] font-bold text-slate-400">Max Amount</label>
-                                    <input
-                                      type="number"
-                                      className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
-                                      value={totalFilter.endValue}
-                                      onChange={e => setTotalFilter({ ...totalFilter, endValue: e.target.value })}
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
-                                <button onClick={() => { setTotalFilter({ category: 'Equal To', value: '', endValue: '' }); setIsTotalFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
-                                <button onClick={() => setIsTotalFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
-                              </div>
-                            </div>
-                          )}
+                          Debit
+                        </th>
+                        <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative text-right">
+                          Credit
                         </th>
                         <th className="px-6 py-3 font-semibold text-xs text-slate-500 border-r border-slate-100 dark:border-white/5 relative text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -826,13 +1336,13 @@ export default function VendorsClient() {
                             </button>
                           </div>
                           {isBalanceFilterOpen && (
-                            <div className="absolute top-full right-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden flex flex-col font-normal text-slate-700 normal-case tracking-normal text-left">
+                            <div className="absolute top-full right-0 mt-1 w-56 bg-white dark:bg-[#1a1c28] rounded-xl shadow-xl border border-slate-100 dark:border-white/10 z-50 overflow-hidden flex flex-col font-normal text-slate-700 dark:text-slate-300 normal-case tracking-normal text-left">
                               <div className="p-3 space-y-3">
                                 <div>
                                   <label className="text-[10px] font-bold text-slate-400">Select Category</label>
                                   <div className="relative mt-1">
                                     <select
-                                      className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                      className="w-full appearance-none bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-slate-300"
                                       value={balanceFilter.category}
                                       onChange={e => setBalanceFilter({ ...balanceFilter, category: e.target.value })}
                                     >
@@ -848,7 +1358,7 @@ export default function VendorsClient() {
                                   <label className="text-[10px] font-bold text-slate-400">{balanceFilter.category === 'Range' ? 'Min Amount' : 'Amount'}</label>
                                   <input
                                     type="number"
-                                    className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                    className="w-full mt-1 border border-slate-200 dark:border-white/10 dark:bg-white/10 dark:text-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
                                     value={balanceFilter.value}
                                     onChange={e => setBalanceFilter({ ...balanceFilter, value: e.target.value })}
                                   />
@@ -858,15 +1368,15 @@ export default function VendorsClient() {
                                     <label className="text-[10px] font-bold text-slate-400">Max Amount</label>
                                     <input
                                       type="number"
-                                      className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
+                                      className="w-full mt-1 border border-slate-200 dark:border-white/10 dark:bg-white/10 dark:text-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-slate-300"
                                       value={balanceFilter.endValue}
                                       onChange={e => setBalanceFilter({ ...balanceFilter, endValue: e.target.value })}
                                     />
                                   </div>
                                 )}
                               </div>
-                              <div className="p-2 border-t border-slate-100 flex items-center gap-2 bg-white">
-                                <button onClick={() => { setBalanceFilter({ category: 'Equal To', value: '', endValue: '' }); setIsBalanceFilterOpen(false) }} className="flex-1 py-1.5 bg-white border-2 border-slate-900 hover:bg-slate-50 text-slate-900 rounded-lg text-xs font-bold transition-colors">Clear</button>
+                              <div className="p-2 border-t border-slate-100 dark:border-white/10 flex items-center gap-2 bg-white dark:bg-[#1a1c28]">
+                                <button onClick={() => { setBalanceFilter({ category: 'Equal To', value: '', endValue: '' }); setIsBalanceFilterOpen(false) }} className="flex-1 py-1.5 bg-white dark:bg-white/10 border-2 border-slate-900 dark:border-white/20 hover:bg-slate-50 dark:hover:bg-white/20 text-slate-900 dark:text-white rounded-lg text-xs font-bold transition-colors">Clear</button>
                                 <button onClick={() => setIsBalanceFilterOpen(false)} className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white border-2 border-orange-500 rounded-lg text-xs font-bold transition-colors shadow-sm">Apply</button>
                               </div>
                             </div>
@@ -877,21 +1387,37 @@ export default function VendorsClient() {
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                       {ledgerLoading ? (
-                        <tr><td colSpan={6} className="text-center py-10 text-slate-400 font-medium">Loading...</td></tr>
-                      ) : ledger.length === 0 ? (
-                        <tr><td colSpan={6} className="text-center py-10 text-slate-400 font-medium">No transactions found</td></tr>
+                        <tr><td colSpan={8} className="text-center py-10 text-slate-400 font-medium">Loading...</td></tr>
+                      ) : filteredLedger.length === 0 ? (
+                        <tr><td colSpan={8} className="text-center py-10 text-slate-400 font-medium">No transactions found</td></tr>
                       ) : (
-                        ledger.map(e => {
+                        filteredLedger.map(e => {
                           const balance = e.runningBalance || e.balanceAfterTransaction || 0;
+                          const cleanRefType = e.referenceType === 'PAYMENT' ? 'Payment Out' : e.referenceType === 'PURCHASE' ? 'Purchase' : e.referenceType === 'OPENING_BALANCE' ? 'Opening Balance' : e.referenceType;
                           return (
                             <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group">
                               <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">
-                                {e.referenceType === 'PAYMENT' ? 'Payment Out' : e.referenceType === 'PURCHASE' ? 'Purchase' : e.referenceType}
+                                {cleanRefType}
                               </td>
-                              <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">{e.referenceId || "—"}</td>
+                              <td className="px-6 py-4 text-xs font-mono font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">
+                                {e.paymentNumber || e.referenceId || "—"}
+                              </td>
                               <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">{new Date(e.createdAt).toLocaleDateString()}</td>
-                              <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5 text-right">₹ {Math.round(e.amount).toLocaleString()}</td>
-                              <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5 text-right">₹ {Math.abs(Math.round(balance)).toLocaleString()} {balance >= 0 ? 'Cr' : 'Dr'}</td>
+                              <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5">
+                                <div>{e.note || "—"}</div>
+                                {e.transactionRef && (
+                                  <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Ref: {e.transactionRef}</div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 text-xs font-semibold text-red-600 dark:text-red-400 border-r border-slate-100 dark:border-white/5 text-right">
+                                {e.type === 'DEBIT' ? `₹ ${Math.round(e.amount).toLocaleString()}` : '₹ 0'}
+                              </td>
+                              <td className="px-6 py-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border-r border-slate-100 dark:border-white/5 text-right">
+                                {e.type === 'CREDIT' ? `₹ ${Math.round(e.amount).toLocaleString()}` : '₹ 0'}
+                              </td>
+                              <td className="px-6 py-4 text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-white/5 text-right">
+                                ₹ {Math.abs(Math.round(balance)).toLocaleString()} {balance >= 0 ? 'Cr' : 'Dr'}
+                              </td>
                               <td className="px-2 py-4 text-center">
                                 <button className="text-slate-300 hover:text-slate-500">
                                   <MoreVertical size={14} />
@@ -902,6 +1428,21 @@ export default function VendorsClient() {
                         })
                       )}
                     </tbody>
+                    <tfoot className="bg-slate-50 dark:bg-slate-900/50 font-bold border-t border-slate-200 dark:border-white/5 sticky bottom-0">
+                      <tr>
+                        <td colSpan={4} className="px-6 py-4 text-xs font-black text-slate-700 dark:text-slate-300 text-right">Totals:</td>
+                        <td className="px-6 py-4 text-xs font-black text-red-600 dark:text-red-400 text-right">
+                          ₹ {Math.round(ledgerTotals.totalDebit).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 text-xs font-black text-emerald-600 dark:text-emerald-400 text-right">
+                          ₹ {Math.round(ledgerTotals.totalCredit).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 text-xs font-black text-slate-800 dark:text-white text-right">
+                          ₹ {Math.abs(Math.round(ledgerTotals.closingBalance)).toLocaleString()} {ledgerTotals.closingBalance >= 0 ? 'Cr' : 'Dr'}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </div>
@@ -992,99 +1533,229 @@ export default function VendorsClient() {
 
       {showPaymentModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6">
-            <h2 className="text-lg font-black text-gray-900 dark:text-white">Record Transaction</h2>
-            <div className="p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl flex border border-slate-200 dark:border-white/5">
-              <button onClick={() => setPaymentForm({ ...paymentForm, type: 'PAYMENT' })} className={clsx("flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all", paymentForm.type === 'PAYMENT' ? "bg-white dark:bg-slate-700 text-orange-600 dark:text-white shadow-sm" : "text-slate-500")}>Pay Due</button>
-              <button onClick={() => setPaymentForm({ ...paymentForm, type: 'ADVANCE' })} className={clsx("flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all", paymentForm.type === 'ADVANCE' ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm" : "text-slate-500")}>Advance</button>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Transaction Amount</label>
-              <div className="relative group">
-                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl font-black text-slate-300">₹</span>
-                <input value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value.replace(/[^0-9.]/g, '') })} placeholder="0.00" className="w-full pl-12 pr-6 py-5 text-3xl font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-white/5 rounded-2xl outline-none focus:ring-4 ring-orange-500/10" />
+          <div className="bg-white dark:bg-[#12141c] rounded-[2.5rem] shadow-2xl w-full max-w-4xl flex flex-col" style={{maxHeight: '92vh'}}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-8 pt-6 pb-4 border-b border-slate-100 dark:border-white/5 shrink-0">
+              <div>
+                <h2 className="text-base font-black text-gray-900 dark:text-white">Record Transaction</h2>
+                <p className="text-[10px] text-slate-400 font-medium mt-0.5">{selectedVendor?.name}</p>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Debit From Account</label>
-                {accounts.length === 0 ? (
-                  <div className="px-4 py-2 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl">
-                    <p className="text-[9px] font-bold text-rose-600 dark:text-rose-400">No accounts found. Create one in <span className="underline cursor-pointer" onClick={() => router.push('/banking/accounts')}>Banking</span></p>
-                  </div>
-                ) : (
-                  <select value={paymentForm.accountId} onChange={e => setPaymentForm({ ...paymentForm, accountId: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none">
-                    {accounts.map(a => <option key={a.id} value={a.id}>{a.name} (₹{Math.round(a.balance).toLocaleString()})</option>)}
-                  </select>
-                )}
-              </div>
-              <div className="space-y-1">
-                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Payment Mode</label>
-                <select value={paymentForm.paymentMode} onChange={e => setPaymentForm({ ...paymentForm, paymentMode: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none">
-                  <option value="CASH">Cash</option>
-                  <option value="BANK_TRANSFER">Bank Transfer</option>
-                  <option value="UPI">UPI / Digital</option>
-                  <option value="CHEQUE">Cheque</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Reference No.</label>
-                <input placeholder="TXN-123456" value={paymentForm.referenceId} onChange={e => setPaymentForm({ ...paymentForm, referenceId: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
-              </div>
-              {paymentForm.type === 'PAYMENT' && (
-                <div className="space-y-1 col-span-2">
-                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Allocate to Invoice (Recommended)</label>
-                  <select
-                    value={paymentForm.vendorInvoiceId}
-                    onChange={e => {
-                      const inv = vendorInvoices.find(i => i.id === e.target.value);
-                      setPaymentForm({
-                        ...paymentForm,
-                        vendorInvoiceId: e.target.value,
-                        amount: inv ? inv.amount.toString() : paymentForm.amount
-                      });
-                    }}
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none"
-                  >
-                    <option value="">Direct Payment (Unallocated)</option>
-                    {vendorInvoices.map(inv => (
-                      <option key={inv.id} value={inv.id}>{inv.invoiceNumber} (₹{inv.amount.toLocaleString()}) - {inv.status}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div className="space-y-1">
-                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Transaction Date</label>
-                <input type="date" value={paymentForm.date} onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Remarks / Internal Notes</label>
-              <input placeholder="Note for accounting..." value={paymentForm.note} onChange={e => setPaymentForm({ ...paymentForm, note: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
-            </div>
-            {amountNum > 0 && (
-              <div className="p-4 bg-orange-500/5 border border-orange-500/10 rounded-2xl space-y-2">
-                <p className="text-[8px] font-black text-orange-600 uppercase tracking-widest flex items-center gap-1.5"><Zap size={10} /> Live Impact Preview</p>
-                <div className="grid grid-cols-2 gap-4 text-[10px] font-black">
-                  <div><p className="text-[7px] text-slate-500 uppercase">Vendor Position</p><span>₹{Math.round(paymentForm.type === 'PAYMENT' ? Math.max(0, (selectedVendor?.due || 0) - amountNum) : (selectedVendor?.advance || 0) + amountNum).toLocaleString()}</span></div>
-                  <div><p className="text-[7px] text-slate-500 uppercase">Account Balance</p><span className="text-rose-500">₹{Math.round(accountBalance - amountNum).toLocaleString()}</span></div>
-                </div>
-              </div>
-            )}
-            <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-white/5">
-              <button onClick={() => setShowPaymentModal(false)} className="px-5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded-lg transition-all">Cancel</button>
-              <button
-                onClick={handlePayment}
-                className={clsx(
-                  "flex-1 px-8 py-2.5 rounded-lg text-xs font-bold uppercase transition-all shadow-lg",
-                  saving || !amountNum || !paymentForm.accountId
-                    ? "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none"
-                    : "bg-orange-500 text-white shadow-orange-500/20 hover:bg-orange-600 active:scale-95"
-                )}
-                disabled={saving || !amountNum || !paymentForm.accountId}
-              >
-                {saving ? "Processing..." : "Confirm Settlement"}
+              <button onClick={() => setShowPaymentModal(false)} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors">
+                <X size={18} />
               </button>
+            </div>
+
+            {/* Scrollable body */}
+            <div className="overflow-y-auto flex-1 px-8 py-5 custom-scrollbar">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4 flex flex-col">
+                <div className="space-y-3">
+                  <div className="p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl flex border border-slate-200 dark:border-white/5">
+                    <button onClick={() => setPaymentForm({ ...paymentForm, type: 'PAYMENT' })} className={clsx("flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all", paymentForm.type === 'PAYMENT' ? "bg-white dark:bg-slate-700 text-orange-600 dark:text-white shadow-sm" : "text-slate-500")}>Pay Due</button>
+                    <button onClick={() => setPaymentForm({ ...paymentForm, type: 'ADVANCE' })} className={clsx("flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all", paymentForm.type === 'ADVANCE' ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm" : "text-slate-500")}>Advance</button>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Transaction Amount</label>
+                    <div className="relative">
+                      <span className="absolute left-5 top-1/2 -translate-y-1/2 text-lg font-black text-slate-300">₹</span>
+                      <input value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value.replace(/[^0-9.]/g, '') })} placeholder="0.00" className="w-full pl-11 pr-5 py-4 text-2xl font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-white/5 rounded-2xl outline-none focus:ring-4 ring-orange-500/10" />
+                    </div>
+                  </div>
+                </div>
+
+                {amountNum > 0 ? (() => {
+                  const outstandingBefore = Math.max(0, selectedVendor?.balance || 0);
+                  const outstandingAfter = paymentForm.type === 'PAYMENT'
+                    ? Math.max(0, outstandingBefore - amountNum)
+                    : outstandingBefore;
+                  const advanceBefore = Math.abs(Math.min(0, selectedVendor?.balance || 0));
+                  const advanceAfter = paymentForm.type === 'ADVANCE' ? advanceBefore + amountNum : advanceBefore;
+                  const isOverdraft = amountNum > accountBalance;
+                  return (
+                    <div className={`p-4 border rounded-2xl space-y-2.5 shrink-0 ${isOverdraft ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30' : 'bg-orange-500/5 border-orange-500/10'}`}>
+                      <p className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 ${isOverdraft ? 'text-rose-600' : 'text-orange-600'}`}>
+                        <Zap size={10} /> {isOverdraft ? '⚠ Insufficient Balance' : 'Payment Summary'}
+                      </p>
+                      {paymentForm.type === 'PAYMENT' ? (
+                        <div className="space-y-1 text-[10px]">
+                          <div className="flex justify-between"><span className="text-slate-500">Outstanding Before</span><span className="font-black text-slate-700 dark:text-slate-300">₹{outstandingBefore.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-slate-500">Payment Amount</span><span className="font-black text-orange-600">− ₹{amountNum.toLocaleString()}</span></div>
+                          <div className="flex justify-between border-t border-orange-500/20 pt-1"><span className="text-slate-500 font-bold">Outstanding After</span><span className="font-black text-emerald-600">₹{outstandingAfter.toLocaleString()}</span></div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1 text-[10px]">
+                          <div className="flex justify-between"><span className="text-slate-500">Current Advance</span><span className="font-black text-slate-700 dark:text-slate-300">₹{advanceBefore.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-slate-500">New Advance</span><span className="font-black text-indigo-600">+ ₹{amountNum.toLocaleString()}</span></div>
+                          <div className="flex justify-between border-t border-indigo-500/20 pt-1"><span className="text-slate-500 font-bold">Total Advance</span><span className="font-black text-indigo-600">₹{advanceAfter.toLocaleString()}</span></div>
+                        </div>
+                      )}
+                      {isOverdraft && <p className="text-[9px] text-rose-600 font-bold">Payment exceeds account balance by ₹{(amountNum - accountBalance).toLocaleString()}</p>}
+                    </div>
+                  );
+                })() : (
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/10 border border-dashed border-slate-200 dark:border-white/5 rounded-2xl flex flex-col items-center justify-center h-[110px] shrink-0 gap-1">
+                    <Zap size={16} className="text-slate-300" />
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Enter amount to see payment summary</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-3">
+                {/* Transaction ID (Auto-generated, read-only) */}
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Transaction ID <span className="text-slate-300 font-normal normal-case tracking-normal">(Auto-generated · Read Only)</span></label>
+                  <div className={`w-full px-4 py-3 border border-dashed rounded-xl text-sm font-black font-mono select-all transition-colors ${
+                    nextPaymentNumber
+                      ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-400'
+                      : 'bg-slate-100 dark:bg-slate-800/60 border-slate-300 dark:border-white/10 text-slate-400 animate-pulse'
+                  }`}>
+                    {nextPaymentNumber || 'Generating…'}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1 col-span-2">
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Debit From Account</label>
+                    {accounts.length === 0 ? (
+                      <div className="px-4 py-2 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl">
+                        <p className="text-[9px] font-bold text-rose-600 dark:text-rose-400">No accounts found. Create one in <span className="underline cursor-pointer" onClick={() => router.push('/banking/accounts')}>Banking</span></p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <select value={paymentForm.accountId} onChange={e => setPaymentForm({ ...paymentForm, accountId: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none">
+                          {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                        </select>
+                        {selectedAccount && (
+                          <div className={`flex items-center justify-between px-4 py-2 rounded-xl text-[10px] font-black ${amountNum > accountBalance ? 'bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-600' : 'bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700'}`}>
+                            <span className="uppercase tracking-wider">Available Balance</span>
+                            <span className="text-sm">₹{Math.round(accountBalance).toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Payment Mode</label>
+                    <select value={paymentForm.paymentMode} onChange={e => setPaymentForm({ ...paymentForm, paymentMode: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none">
+                      <option value="CASH">Cash</option>
+                      <option value="UPI">UPI</option>
+                      <option value="BANK_TRANSFER">Bank Transfer</option>
+                      <option value="CHEQUE">Cheque</option>
+                      <option value="NEFT">NEFT</option>
+                      <option value="RTGS">RTGS</option>
+                      <option value="IMPS">IMPS</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Transaction Date</label>
+                    <input type="date" value={paymentForm.date} onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
+                  </div>
+
+                  {/* Reference Number - fixed label, mode-aware placeholder & required */}
+                  <div className="space-y-1 col-span-2">
+                    {(() => {
+                      const modePlaceholder: Record<string, string> = {
+                        CASH:          'Optional',
+                        UPI:           'Enter UPI Reference ID (e.g. UPI987654321)',
+                        BANK_TRANSFER: 'Enter UTR Number (e.g. UTR5485454)',
+                        NEFT:          'Enter UTR Number (e.g. HDFC2026062600001)',
+                        RTGS:          'Enter UTR Number (e.g. SBIN20260626XXXXX)',
+                        IMPS:          'Enter IMPS Reference No. (e.g. IMPS987654321)',
+                        CHEQUE:        'Enter Cheque Number (e.g. CHQ-001234)',
+                      };
+                      const isRequired = paymentForm.paymentMode !== 'CASH';
+                      const isEmpty = !paymentForm.transactionRef.trim();
+                      const isError = isRequired && isEmpty;
+                      const placeholder = modePlaceholder[paymentForm.paymentMode] || 'Optional';
+                      return (
+                        <>
+                          <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">
+                            Reference Number {isRequired && <span className="text-rose-500">*</span>}
+                          </label>
+                          <input
+                            placeholder={placeholder}
+                            value={paymentForm.transactionRef}
+                            onChange={e => setPaymentForm({ ...paymentForm, transactionRef: e.target.value })}
+                            className={`w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 border rounded-xl text-sm font-bold outline-none transition-colors ${
+                              isError ? 'border-rose-300 dark:border-rose-500/50 ring-1 ring-rose-500/20' : 'border-slate-200 dark:border-white/10'
+                            }`}
+                          />
+                          {isError && <p className="text-[9px] text-rose-500 font-bold ml-1 mt-0.5">Required — enter the bank/payment reference number</p>}
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Allocate to Invoice */}
+                  <div className="space-y-1 col-span-2">
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">
+                      Settle Against Invoice
+                    </label>
+                    {paymentForm.type === 'PAYMENT' ? (
+                      loadingInvoices ? (
+                        <div className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-400 animate-pulse">Loading invoices...</div>
+                      ) : (
+                        <select
+                          value={paymentForm.vendorInvoiceId}
+                          onChange={e => {
+                            const inv = vendorInvoices.find(i => i.id === e.target.value);
+                            setPaymentForm({ ...paymentForm, vendorInvoiceId: e.target.value, amount: inv ? inv.amount.toString() : paymentForm.amount });
+                          }}
+                          className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none"
+                        >
+                          <option value="">— Direct Payment (Unallocated)</option>
+                          {vendorInvoices.length === 0 ? (
+                            <option disabled>No outstanding invoices</option>
+                          ) : vendorInvoices.map(inv => (
+                            <option key={inv.id} value={inv.id}>
+                              {inv.invoiceNumber}    ₹{Math.round(inv.amount).toLocaleString()}   [{inv.status}]
+                            </option>
+                          ))}
+                        </select>
+                      )
+                    ) : (
+                      <div className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-white/5 rounded-xl text-xs font-bold text-slate-400 select-none">
+                        Advances are not linked to invoices
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-3">Remarks / Internal Notes</label>
+                  <input placeholder="Note for accounting..." value={paymentForm.note} onChange={e => setPaymentForm({ ...paymentForm, note: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold outline-none" />
+                </div>
+              </div>
+            </div>{/* end grid */}
+            </div>{/* end scrollable body */}
+
+            {/* Sticky Footer */}
+            <div className="flex items-center justify-between px-8 py-4 border-t border-slate-100 dark:border-white/5 shrink-0 bg-white dark:bg-[#12141c] rounded-b-[2.5rem]">
+              <p className="text-[10px] text-slate-400 font-medium">
+                {paymentForm.paymentMode !== 'CASH' && !paymentForm.transactionRef.trim()
+                  ? <span className="text-rose-500 font-bold">⚠ Reference number required</span>
+                  : amountNum > accountBalance
+                  ? <span className="text-rose-500 font-bold">⚠ Amount exceeds account balance</span>
+                  : <span className="text-emerald-600 font-bold">✓ Ready to confirm</span>}
+              </p>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setShowPaymentModal(false)} className="px-5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all">Cancel</button>
+                <button
+                  onClick={handlePayment}
+                  className={clsx(
+                    "px-8 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg",
+                    saving || !amountNum || !paymentForm.accountId || (paymentForm.paymentMode !== 'CASH' && !paymentForm.transactionRef.trim())
+                      ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                      : "bg-orange-500 text-white shadow-orange-500/20 hover:bg-orange-600 active:scale-95"
+                  )}
+                  disabled={saving || !amountNum || !paymentForm.accountId || (paymentForm.paymentMode !== 'CASH' && !paymentForm.transactionRef.trim())}
+                >
+                  {saving ? "Processing…" : "Confirm Settlement"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

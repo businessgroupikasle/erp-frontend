@@ -68,14 +68,46 @@ export default function VendorFormModal({ isOpen, onClose, onSuccess }: VendorFo
   };
 
   const handleSave = async () => {
-    if (!form.name || !form.contact) {
-      showToast("Vendor name and contact are required", "error");
+    const trimmedName = form.name.trim();
+    if (!trimmedName) {
+      showToast("Vendor Name is required.", "error");
+      return;
+    }
+
+    const nameRegex = /^[A-Za-z0-9\s&.,\-()]+$/;
+    if (!nameRegex.test(trimmedName)) {
+      showToast("Vendor Name must only contain alphanumeric characters, spaces, and standard symbols (& . , - ()).", "error");
+      return;
+    }
+
+    if (!form.contact) {
+      showToast("Contact Number is required.", "error");
+      return;
+    }
+
+    if (!/^\d{10}$/.test(form.contact)) {
+      showToast("Contact Number must be a valid 10-digit number.", "error");
+      return;
+    }
+
+    if (form.email) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        showToast("Please enter a valid email address.", "error");
+        return;
+      }
+    }
+
+    if (!form.address || !form.address.trim()) {
+      showToast("Business Address is required.", "error");
       return;
     }
 
     setSaving(true);
     try {
-      const response = await vendorsApi.create(form);
+      const response = await vendorsApi.create({
+        ...form,
+        name: trimmedName
+      });
       const v = response.data;
       
       // Map to context-friendly structure
