@@ -210,12 +210,12 @@ export default function BillingSection({
               )}
             </div>
 
-            <button 
-              onClick={onAddTarget}
+            <Link 
+              href={targetType === "client" ? "/customers" : "/vendors"}
               className="text-[10px] font-black text-[#7C3AED] uppercase tracking-widest hover:underline flex items-center gap-2 mt-4"
             >
-              <Plus size={14} /> Add New Vendor
-            </button>
+              <Plus size={14} /> Add New {targetType === "client" ? "Client" : "Vendor"}
+            </Link>
             
             {/* Background pattern */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(#7C3AED_1px,transparent_1px)] [background-size:10px_10px]" />
