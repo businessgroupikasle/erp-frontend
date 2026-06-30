@@ -100,9 +100,9 @@ export default function BatchRecallPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#090a0f]">
+      <div className="flex h-[50vh] items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-12 h-12 border-4 border-[#F97316] border-t-transparent rounded-full animate-spin" />
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading Batch Registry...</p>
         </div>
       </div>
@@ -110,16 +110,16 @@ export default function BatchRecallPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#090a0f] p-4 md:p-8 space-y-6 md:space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-white/5 pb-6">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-rose-500 rounded-2xl shadow-lg shadow-rose-500/20 text-white">
+          <div className="p-3 bg-[#F97316] rounded-2xl shadow-lg shadow-[#F97316]/20 text-white">
             <ShieldAlert size={24} />
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">
-              Batch <span className="text-rose-500">Recall</span>
+              Batch <span className="text-[#F97316]">Recall</span>
             </h1>
             <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
               Food Safety Traceability & Defective Batch Management
@@ -133,13 +133,13 @@ export default function BatchRecallPage() {
             placeholder="Search batch code or product..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-2xl text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 transition-all"
+            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#12141c] border border-slate-200 dark:border-white/10 rounded-2xl text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:border-[#F97316] focus:ring-2 focus:ring-[#F97316]/20 transition-all"
           />
         </div>
       </div>
 
       {/* Recall Workflow Steps */}
-      <div className="bg-white dark:bg-[#12141c] p-6 rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 shadow-sm">
+      <div className="bg-white dark:bg-[#12141c] p-6 rounded-3xl border border-slate-200/50 dark:border-white/5 shadow-sm">
         <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Recall Workflow Pipeline</h3>
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 lg:gap-2">
           {STEPS.map((step, idx) => {
@@ -154,7 +154,7 @@ export default function BatchRecallPage() {
                   className={clsx(
                     "flex items-center gap-3 px-4 py-3 rounded-2xl border w-full lg:w-auto transition-all",
                     isDone && "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-500/30 text-emerald-600",
-                    isCurrent && "bg-rose-50 dark:bg-rose-500/10 border-rose-500/30 text-rose-600 animate-pulse",
+                    isCurrent && "bg-orange-500/10 dark:bg-[#F97316]/10 border-[#F97316]/30 text-orange-600 animate-pulse",
                     !isDone && !isCurrent && "bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/[0.02] text-slate-400"
                   )}
                 >
@@ -172,10 +172,10 @@ export default function BatchRecallPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Batch Selection List */}
-        <div className="xl:col-span-5 bg-white dark:bg-[#12141c] rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 shadow-sm overflow-hidden">
+        <div className="xl:col-span-5 bg-white dark:bg-[#12141c] rounded-3xl border border-slate-200/50 dark:border-white/5 shadow-sm overflow-hidden">
           <div className="p-5 border-b border-slate-100 dark:border-white/5">
             <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
-              <Package size={14} className="text-rose-500" /> Batch Registry
+              <Package size={14} className="text-[#F97316]" /> Batch Registry
             </h3>
             <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">{filtered.length} batches found</p>
           </div>
@@ -193,7 +193,7 @@ export default function BatchRecallPage() {
                   className={clsx(
                     "p-4 cursor-pointer transition-all flex items-center justify-between",
                     selectedBatch?.id === batch.id
-                      ? "bg-rose-50/50 dark:bg-rose-500/5 border-l-4 border-rose-500"
+                      ? "bg-orange-500/10/50 dark:bg-[#F97316]/5 border-l-4 border-[#F97316]"
                       : "hover:bg-slate-50 dark:hover:bg-white/[0.02]"
                   )}
                 >
@@ -208,7 +208,7 @@ export default function BatchRecallPage() {
                     <span className={clsx(
                       "text-[8px] font-black uppercase px-2 py-0.5 rounded-lg",
                       batch.qcStatus === "APPROVED" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10" :
-                      batch.qcStatus === "REJECTED" ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10" :
+                      batch.qcStatus === "REJECTED" ? "bg-orange-500/10 text-orange-600 dark:bg-[#F97316]/10" :
                       "bg-amber-50 text-amber-600 dark:bg-amber-500/10"
                     )}>{batch.qcStatus}</span>
                     <ChevronRight size={14} className="text-slate-300" />
@@ -224,7 +224,7 @@ export default function BatchRecallPage() {
           {selectedBatch ? (
             <>
               {/* Batch Detail Card */}
-              <div className="bg-white dark:bg-[#12141c] p-6 rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 shadow-sm space-y-5">
+              <div className="bg-white dark:bg-[#12141c] p-6 rounded-3xl border border-slate-200/50 dark:border-white/5 shadow-sm space-y-5">
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-3">
                   <div>
                     <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{selectedBatch.batchCode}</h3>
@@ -233,7 +233,7 @@ export default function BatchRecallPage() {
                   <button
                     onClick={initiateRecall}
                     disabled={recallActive}
-                    className="px-5 py-2.5 bg-rose-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 hover:scale-105 transition-all shadow-lg shadow-rose-500/20 active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                    className="px-5 py-2.5 bg-[#F97316] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-600 hover:scale-105 transition-all shadow-lg shadow-[#F97316]/20 active:scale-95 disabled:opacity-50 flex items-center gap-2"
                   >
                     <ShieldAlert size={14} />
                     {recallActive ? "Recall In Progress..." : "Initiate Recall"}
@@ -265,7 +265,7 @@ export default function BatchRecallPage() {
                       { label: "Return Quantity", desc: "Collected stock from affected outlets", icon: RefreshCw },
                     ].map((t, i) => (
                       <div key={i} className="flex items-start gap-3 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl border border-slate-100 dark:border-white/[0.02]">
-                        <div className="p-1.5 bg-white dark:bg-[#12141c] rounded-xl text-rose-500 border border-slate-200/50 dark:border-white/5 shrink-0">
+                        <div className="p-1.5 bg-white dark:bg-[#12141c] rounded-xl text-[#F97316] border border-slate-200/50 dark:border-white/5 shrink-0">
                           <t.icon size={14} />
                         </div>
                         <div>
@@ -280,9 +280,9 @@ export default function BatchRecallPage() {
 
               {/* Live Recall Log */}
               {recallLog.length > 0 && (
-                <div className="bg-white dark:bg-[#12141c] p-6 rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 shadow-sm space-y-3">
-                  <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                <div className="bg-white dark:bg-[#12141c] p-6 rounded-3xl border border-slate-200/50 dark:border-white/5 shadow-sm space-y-3">
+                  <h4 className="text-[10px] font-black text-[#F97316] uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#F97316] animate-pulse" />
                     Live Recall Audit Log
                   </h4>
                   <div className="space-y-2 max-h-[200px] overflow-y-auto">
@@ -296,7 +296,7 @@ export default function BatchRecallPage() {
               )}
             </>
           ) : (
-            <div className="bg-white dark:bg-[#12141c] p-12 rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 shadow-sm flex flex-col items-center justify-center text-center min-h-[400px]">
+            <div className="bg-white dark:bg-[#12141c] p-12 rounded-3xl border border-slate-200/50 dark:border-white/5 shadow-sm flex flex-col items-center justify-center text-center min-h-[400px]">
               <ShieldAlert size={56} className="text-slate-200 dark:text-slate-800 mb-4" />
               <h4 className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Recall Inspector Idle</h4>
               <p className="text-[11px] text-slate-400 mt-2 max-w-xs leading-relaxed">

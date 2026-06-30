@@ -1,7 +1,8 @@
 "use client";
 
-import React from 'react';
-import { Printer, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Printer, X, QrCode } from 'lucide-react';
 
 interface GSTInvoiceProps {
   order: any;
@@ -17,7 +18,30 @@ interface GSTInvoiceProps {
   onClose: () => void;
 }
 
+// Basic number to words converter for INR
+function numberToWords(num: number): string {
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  if ((num = Math.floor(num)) === 0) return 'Zero';
+
+  const n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+  if (!n) return '';
+
+  let str = '';
+  str += (Number(n[1]) !== 0) ? (a[Number(n[1])] || b[n[1][0] as any] + ' ' + a[n[1][1] as any]) + 'Crore ' : '';
+  str += (Number(n[2]) !== 0) ? (a[Number(n[2])] || b[n[2][0] as any] + ' ' + a[n[2][1] as any]) + 'Lakh ' : '';
+  str += (Number(n[3]) !== 0) ? (a[Number(n[3])] || b[n[3][0] as any] + ' ' + a[n[3][1] as any]) + 'Thousand ' : '';
+  str += (Number(n[4]) !== 0) ? (a[Number(n[4])] || b[n[4][0] as any] + ' ' + a[n[4][1] as any]) + 'Hundred ' : '';
+  str += (Number(n[5]) !== 0) ? ((str != '') ? 'And ' : '') + (a[Number(n[5])] || b[n[5][0] as any] + ' ' + a[n[5][1] as any]) : '';
+  
+  return str.trim();
+}
+
 export default function GSTInvoice({ order, vendor, companyDetails, onClose }: GSTInvoiceProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const safe = (val: any) => Number(val) || 0;
   const items = (order.poItems || order.items || []) as any[];
   const round = (n: number) => Math.round(n * 100) / 100;
@@ -32,9 +56,12 @@ export default function GSTInvoice({ order, vendor, companyDetails, onClose }: G
       : vendorState.includes(companyState) || companyState.includes(vendorState);
 
   const taxableSubtotal = items.reduce((s: number, it: any) => s + safe(it.quantity) * safe(it.price), 0);
+  const discount = safe(order.discount || 0);
+  const taxableAfterDiscount = Math.max(0, taxableSubtotal - discount);
 
   const taxBreakdown = items.reduce(
     (acc: any, it: any) => {
+      // Assuming discount is proportional, but for simple invoice we calculate tax on base price
       const amt = safe(it.quantity) * safe(it.price);
       const tax = amt * (safe(it.gstRate) / 100);
       if (isSameState) {
@@ -48,256 +75,266 @@ export default function GSTInvoice({ order, vendor, companyDetails, onClose }: G
     { cgst: 0, sgst: 0, igst: 0 }
   );
 
-  const totalTax = round(taxBreakdown.cgst + taxBreakdown.sgst + taxBreakdown.igst);
-  const grandTotal = round(taxableSubtotal + totalTax);
-  const totalPaid = safe(order.paid || order.advancePaid);
-  const balance = Math.max(0, round(grandTotal - totalPaid));
+  // Re-adjust tax if there was an order-level discount
+  let finalCgst = taxBreakdown.cgst;
+  let finalSgst = taxBreakdown.sgst;
+  let finalIgst = taxBreakdown.igst;
+  
+  if (discount > 0 && taxableSubtotal > 0) {
+    const ratio = taxableAfterDiscount / taxableSubtotal;
+    finalCgst = round(finalCgst * ratio);
+    finalSgst = round(finalSgst * ratio);
+    finalIgst = round(finalIgst * ratio);
+  }
+
+  const totalTax = round(finalCgst + finalSgst + finalIgst);
+  const grandTotal = round(taxableAfterDiscount + totalTax);
 
   const invoiceNo =
     order.poNumber ||
     `INV-${new Date().getFullYear()}-${order.id?.slice(-4).toUpperCase() || '0001'}`;
-  const invoiceDate = new Date(order.createdAt || Date.now()).toLocaleDateString('en-GB');
-  const paymentStatus =
-    balance <= 0.01 && grandTotal > 0 ? 'PAID' : totalPaid > 0 ? 'PARTIAL' : 'UNPAID';
+    
+  const invoiceDate = new Date(order.createdAt || Date.now());
+  const dueDate = new Date(invoiceDate);
+  dueDate.setDate(dueDate.getDate() + 15); // 15 days due
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/70 p-4 md:p-8 overflow-y-auto print:p-0 print:bg-white">
+  const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/70 p-4 md:p-8 overflow-y-auto print:p-0 print:bg-white">
       {/* Action Bar */}
       <div className="fixed top-4 right-6 flex gap-2 print:hidden z-[110]">
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm font-medium shadow hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-2 bg-[#F97316] text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow hover:bg-orange-600 transition-colors"
         >
-          <Printer size={14} /> Print / Save PDF
+          <Printer size={16} /> Print Invoice
         </button>
         <button
           onClick={onClose}
-          className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded text-sm font-medium shadow hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-2 bg-white text-gray-700 px-4 py-2.5 rounded-xl text-sm font-bold shadow hover:bg-gray-50 transition-colors"
         >
-          <X size={14} /> Close
+          <X size={16} /> Close
         </button>
       </div>
 
-      {/* Invoice Document */}
-      <div className="w-full max-w-3xl bg-white text-gray-900 shadow-lg my-14 print:my-0 print:shadow-none border border-gray-300 text-sm">
-
-        {/* ── Header ── */}
-        <div className="p-6 border-b-2 border-gray-800">
-          <div className="flex justify-between items-start gap-4">
-            <div className="flex-1">
-              <p className="text-lg font-bold text-gray-900 leading-tight">{companyDetails.name}</p>
-              <p className="text-xs text-gray-600 mt-1 leading-relaxed whitespace-pre-line">{companyDetails.address}</p>
-              <p className="text-xs text-gray-700 mt-1">
-                <span className="font-semibold">GSTIN:</span> {companyDetails.gstin}
-              </p>
-              {companyDetails.phone && (
-                <p className="text-xs text-gray-600">Ph: {companyDetails.phone}</p>
-              )}
-              {companyDetails.email && (
-                <p className="text-xs text-gray-600">Email: {companyDetails.email}</p>
-              )}
-            </div>
-
-            <div className="text-right shrink-0">
-              <div className="inline-block border-2 border-gray-800 px-4 py-1 mb-3">
-                <span className="font-bold text-base tracking-widest uppercase">Tax Invoice</span>
-              </div>
-              <table className="text-xs ml-auto">
-                <tbody>
-                  <tr>
-                    <td className="pr-3 text-gray-500 py-0.5">Invoice No.</td>
-                    <td className="font-semibold py-0.5">{invoiceNo}</td>
-                  </tr>
-                  <tr>
-                    <td className="pr-3 text-gray-500 py-0.5">Date</td>
-                    <td className="font-semibold py-0.5">{invoiceDate}</td>
-                  </tr>
-                  <tr>
-                    <td className="pr-3 text-gray-500 py-0.5">Status</td>
-                    <td
-                      className={`font-bold py-0.5 ${
-                        paymentStatus === 'PAID'
-                          ? 'text-green-700'
-                          : paymentStatus === 'PARTIAL'
-                          ? 'text-blue-700'
-                          : 'text-red-700'
-                      }`}
-                    >
-                      {paymentStatus}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+      {/* Invoice Document (A4 format) */}
+      <div className="w-full max-w-[210mm] min-h-[297mm] bg-white text-gray-800 shadow-2xl my-10 print:my-0 print:shadow-none p-10 md:p-14 relative">
+        
+        {/* Header */}
+        <div className="flex justify-between items-start mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-[#F97316] mb-8">Invoice</h1>
+            <table className="text-xs border-separate border-spacing-y-2">
+              <tbody>
+                <tr>
+                  <td className="text-gray-500 w-24">Invoice#</td>
+                  <td className="font-semibold text-gray-900">{invoiceNo}</td>
+                </tr>
+                <tr>
+                  <td className="text-gray-500">Invoice Date</td>
+                  <td className="font-semibold text-gray-900">{fmtDate(invoiceDate)}</td>
+                </tr>
+                <tr>
+                  <td className="text-gray-500">Due Date</td>
+                  <td className="font-semibold text-gray-900">{fmtDate(dueDate)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="text-right flex items-center justify-end gap-3">
+            <img src="/logo.png" alt="Kiddos Food Logo" className="h-12 w-auto max-w-[160px] object-contain object-right" />
           </div>
         </div>
 
-        {/* ── Bill From / Bill To ── */}
-        <div className="grid grid-cols-2 border-b border-gray-300">
-          <div className="p-4 border-r border-gray-300">
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-              Bill From
-            </p>
-            <p className="font-semibold text-gray-900">{companyDetails.name}</p>
-            <p className="text-xs text-gray-600 mt-0.5 leading-relaxed whitespace-pre-line">
+        {/* Billed By / Billed To */}
+        <div className="flex gap-4 mb-3">
+          <div className="flex-1 bg-[#f8f9fa] p-6 rounded-xl">
+            <h3 className="text-[#F97316] font-semibold text-lg mb-2">Billed by</h3>
+            <p className="font-bold text-gray-900 text-sm mb-1">{companyDetails.name}</p>
+            <p className="text-xs text-gray-600 mb-4 leading-relaxed max-w-[200px]">
               {companyDetails.address}
             </p>
-            <p className="text-xs text-gray-700 mt-1">
-              GSTIN: <span className="font-medium">{companyDetails.gstin || '-'}</span>
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Place of Supply: {companyDetails.state || '-'}
-            </p>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-bold text-gray-900">GSTIN</span>
+              <span className="text-gray-600 font-mono">{companyDetails.gstin}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs mt-1">
+              <span className="font-bold text-gray-900">PAN</span>
+              <span className="text-gray-600 font-mono">ABCDE1234F</span>
+            </div>
           </div>
-
-          <div className="p-4">
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-              Bill To (Vendor)
+          
+          <div className="flex-1 bg-[#f8f9fa] p-6 rounded-xl">
+            <h3 className="text-[#F97316] font-semibold text-lg mb-2">Billed to</h3>
+            <p className="font-bold text-gray-900 text-sm mb-1">{vendor?.name || 'Customer'}</p>
+            <p className="text-xs text-gray-600 mb-4 leading-relaxed max-w-[200px]">
+              {vendor?.address || 'No address provided'}
             </p>
-            <p className="font-semibold text-gray-900">{vendor?.name || '-'}</p>
-            <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
-              {vendor?.address || '-'}
-            </p>
-            <p className="text-xs text-gray-700 mt-1">
-              GSTIN: <span className="font-medium">{vendor?.gstin || 'NOT PROVIDED'}</span>
-            </p>
-            <p className="text-xs text-gray-600 mt-0.5">
-              Contact: {vendor?.contact || vendor?.phone || '-'}
-            </p>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-bold text-gray-900">GSTIN</span>
+              <span className="text-gray-600 font-mono">{vendor?.gstin || '-'}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs mt-1">
+              <span className="font-bold text-gray-900">PAN</span>
+              <span className="text-gray-600 font-mono">{vendor?.pan || '-'}</span>
+            </div>
           </div>
         </div>
 
-        {/* ── Items Table ── */}
-        <table className="w-full text-xs border-collapse border-b border-gray-800">
+        {/* Place of Supply */}
+        <div className="flex justify-between px-6 text-xs mb-8 text-gray-500">
+          <div>
+            Place of Supply <span className="font-bold text-gray-900 ml-2">{vendorState || companyDetails.state || "Karnataka"}</span>
+          </div>
+          <div>
+            Country of Supply <span className="font-bold text-gray-900 ml-2">India</span>
+          </div>
+        </div>
+
+        {/* Items Table */}
+        <table className="w-full text-xs mb-10 border-collapse">
           <thead>
-            <tr className="bg-gray-100 border-y border-gray-800">
-              <th className="text-center py-2 px-2 border-r border-gray-300 w-8 font-bold">#</th>
-              <th className="text-left py-2 px-3 border-r border-gray-300 font-bold">
-                Item Description
+            <tr className="bg-[#F97316] text-white">
+              <th className="py-3 px-4 text-left font-medium rounded-tl-lg w-1/3">Item #/Item description</th>
+              <th className="py-3 px-2 text-center font-medium">HSN</th>
+              <th className="py-3 px-2 text-right font-medium">Qty.</th>
+              <th className="py-3 px-2 text-right font-medium">GST</th>
+              <th className="py-3 px-4 text-right font-medium">Taxable Amount</th>
+              <th className="py-3 px-4 text-right font-medium">
+                {isSameState ? 'CGST+SGST' : 'IGST'}
               </th>
-              <th className="text-center py-2 px-2 border-r border-gray-300 w-20 font-bold">
-                HSN Code
-              </th>
-              <th className="text-right py-2 px-2 border-r border-gray-300 w-24 font-bold">
-                Qty
-              </th>
-              <th className="text-right py-2 px-3 border-r border-gray-300 w-24 font-bold">
-                Rate (₹)
-              </th>
-              <th className="text-center py-2 px-2 border-r border-gray-300 w-14 font-bold">
-                GST %
-              </th>
-              <th className="text-right py-2 px-3 w-24 font-bold">Amount (₹)</th>
+              <th className="py-3 px-4 text-right font-medium rounded-tr-lg">Amount</th>
             </tr>
           </thead>
           <tbody>
             {items.map((item: any, idx: number) => {
-              const itemName =
-                item.itemName || item.inventoryItem?.name || `Material #${idx + 1}`;
-              const itemUnit = item.inventoryItem?.unit || item.unit || 'unit';
+              const itemName = item.itemName || item.inventoryItem?.name || `Product / Material #${idx + 1}`;
+              const qty = safe(item.quantity);
+              const price = safe(item.price);
+              const taxable = qty * price;
+              const tax = taxable * (safe(item.gstRate) / 100);
+              
               return (
-                <tr key={idx} className="border-b border-gray-200">
-                  <td className="py-2.5 px-2 border-r border-gray-200 text-center text-gray-500">
-                    {idx + 1}
+                <tr key={idx} className="bg-gray-50/50 border-b-4 border-white">
+                  <td className="py-3 px-4 text-gray-900 font-medium">
+                    {idx + 1}. {itemName}
                   </td>
-                  <td className="py-2.5 px-3 border-r border-gray-200">
-                    <div className="font-black text-gray-900 uppercase text-xs tracking-tight">{itemName}</div>
-                  </td>
-                  <td className="py-2.5 px-2 border-r border-gray-200 text-center text-gray-500 font-mono">
-                    {item.hsnCode || '-'}
-                  </td>
-                  <td className="py-2.5 px-2 border-r border-gray-200 text-right">
-                    {safe(item.quantity)} {itemUnit}
-                  </td>
-                  <td className="py-2.5 px-3 border-r border-gray-200 text-right">
-                    {fmt(safe(item.price))}
-                  </td>
-                  <td className="py-2.5 px-2 border-r border-gray-200 text-center text-gray-600">
-                    {safe(item.gstRate)}%
-                  </td>
-                  <td className="py-2.5 px-3 text-right font-semibold">
-                    {fmt(safe(item.quantity) * safe(item.price))}
-                  </td>
+                  <td className="py-3 px-2 text-center text-gray-600 font-mono text-[11px] truncate max-w-[70px]" title={item.hsnCode || '—'}>{item.hsnCode || '—'}</td>
+                  <td className="py-3 px-2 text-right text-gray-600">{qty}</td>
+                  <td className="py-3 px-2 text-right text-gray-600">{safe(item.gstRate)}%</td>
+                  <td className="py-3 px-4 text-right text-gray-600">₹ {fmt(taxable)}</td>
+                  <td className="py-3 px-4 text-right text-gray-600">₹ {fmt(tax)}</td>
+                  <td className="py-3 px-4 text-right text-gray-900 font-medium">₹ {fmt(taxable + tax)}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
 
-        {/* ── Footer: Terms + Tax Summary ── */}
-        <div className="flex border-b border-gray-300">
-          {/* Terms & Conditions */}
-          <div className="flex-1 p-4 border-r border-gray-300">
-            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-2">
-              Terms &amp; Conditions
-            </p>
-            <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside leading-relaxed">
-              <li>Payment is expected within established vendor terms.</li>
-              <li>HSN Classification is based on material category.</li>
-              <li>Goods received must match the PO quality standards.</li>
-            </ol>
+        {/* Lower Section */}
+        <div className="flex gap-8">
+          
+          {/* Left: Bank & Terms */}
+          <div className="flex-1">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-[#F97316] font-semibold text-base mb-3">Bank & Payment Details</h3>
+                <table className="text-xs border-separate border-spacing-y-1.5">
+                  <tbody>
+                    <tr><td className="text-gray-500 w-32">Account Holder Name</td><td className="text-gray-900 font-medium">{companyDetails.name}</td></tr>
+                    <tr><td className="text-gray-500">Account Number</td><td className="text-gray-900 font-medium font-mono">45366287987</td></tr>
+                    <tr><td className="text-gray-500">IFSC</td><td className="text-gray-900 font-medium font-mono">HDFC0018159</td></tr>
+                    <tr><td className="text-gray-500">Account Type</td><td className="text-gray-900 font-medium">Savings</td></tr>
+                    <tr><td className="text-gray-500">Bank</td><td className="text-gray-900 font-medium">HDFC Bank</td></tr>
+                    <tr><td className="text-gray-500">UPI</td><td className="text-gray-900 font-medium">payment@hdfc</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-[10px] text-gray-400">UPI - Scan to Pay</span>
+                <div className="w-24 h-24 bg-gray-100 flex items-center justify-center rounded">
+                  <QrCode size={80} className="text-gray-900" />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-[#F97316] font-semibold text-base mb-2">Terms and Conditions</h3>
+              <ol className="list-decimal list-inside text-xs text-gray-600 space-y-1.5 leading-relaxed">
+                <li>Please pay within 15 days from the date of invoice. Overdue interest @ 14% will be charged on delayed payments.</li>
+                <li>Please quote invoice number when remitting funds.</li>
+              </ol>
+            </div>
+
+            <div className="mt-6">
+              <h3 className="text-[#F97316] font-semibold text-base mb-2">Additional Notes</h3>
+              <p className="text-[10px] text-gray-500 leading-relaxed">
+                Goods once sold will not be taken back. This is a computer generated invoice and does not require physical signature. 
+                All disputes are subject to the local jurisdiction only. E. & O.E.
+              </p>
+            </div>
           </div>
 
-          {/* Tax Summary */}
-          <div className="w-60 shrink-0">
-            <table className="w-full text-xs">
-              <tbody>
-                <tr className="border-b border-gray-200">
-                  <td className="py-2 px-4 text-gray-500">Taxable Amount</td>
-                  <td className="py-2 px-4 text-right font-medium">₹{fmt(taxableSubtotal)}</td>
-                </tr>
-                {isSameState ? (
-                  <>
-                    <tr className="border-b border-gray-200">
-                      <td className="py-2 px-4 text-gray-500">CGST Output</td>
-                      <td className="py-2 px-4 text-right font-medium">₹{fmt(taxBreakdown.cgst)}</td>
-                    </tr>
-                    <tr className="border-b border-gray-200">
-                      <td className="py-2 px-4 text-gray-500">SGST Output</td>
-                      <td className="py-2 px-4 text-right font-medium">₹{fmt(taxBreakdown.sgst)}</td>
-                    </tr>
-                  </>
-                ) : (
-                  <tr className="border-b border-gray-200">
-                    <td className="py-2 px-4 text-gray-500">IGST</td>
-                    <td className="py-2 px-4 text-right font-medium">₹{fmt(taxBreakdown.igst)}</td>
-                  </tr>
-                )}
-                <tr className="border-b-2 border-gray-800 bg-gray-100 font-bold">
-                  <td className="py-2 px-4">Grand Total</td>
-                  <td className="py-2 px-4 text-right">₹{fmt(grandTotal)}</td>
-                </tr>
-                <tr className="border-b border-gray-200 text-green-700">
-                  <td className="py-2 px-4">Amount Paid</td>
-                  <td className="py-2 px-4 text-right font-medium">₹{fmt(totalPaid)}</td>
-                </tr>
-                <tr className={balance > 0.01 ? 'text-red-700 font-bold' : 'text-green-700 font-bold'}>
-                  <td className="py-2 px-4">Balance Due</td>
-                  <td className="py-2 px-4 text-right">₹{fmt(balance)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+          {/* Right: Summary */}
+          <div className="w-[300px] shrink-0 pt-1">
+            <div className="flex justify-between py-2 border-b border-gray-100 text-sm">
+              <span className="text-gray-600">Sub Total</span>
+              <span className="font-semibold text-gray-900">₹{fmt(taxableSubtotal)}</span>
+            </div>
+            {discount > 0 && (
+              <div className="flex justify-between py-2 border-b border-gray-100 text-sm">
+                <span className="text-emerald-500">Discount</span>
+                <span className="font-semibold text-emerald-500">- ₹{fmt(discount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between py-2 border-b border-gray-100 text-sm">
+              <span className="text-gray-600">Taxable Amount</span>
+              <span className="font-semibold text-gray-900">₹{fmt(taxableAfterDiscount)}</span>
+            </div>
+            {isSameState ? (
+              <>
+                <div className="flex justify-between py-2 border-b border-gray-100 text-sm">
+                  <span className="text-gray-600">CGST</span>
+                  <span className="font-semibold text-gray-900">₹{fmt(finalCgst)}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100 text-sm">
+                  <span className="text-gray-600">SGST</span>
+                  <span className="font-semibold text-gray-900">₹{fmt(finalSgst)}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between py-2 border-b border-gray-100 text-sm">
+                <span className="text-gray-600">IGST</span>
+                <span className="font-semibold text-gray-900">₹{fmt(finalIgst)}</span>
+              </div>
+            )}
+            
+            <div className="flex justify-between py-4 border-b-2 border-gray-100 mt-2">
+              <span className="text-xl font-medium text-gray-600">Total</span>
+              <span className="text-2xl font-bold text-gray-900">₹{fmt(grandTotal)}</span>
+            </div>
 
-        {/* ── Signature Row ── */}
-        <div className="flex border-b border-gray-300 text-xs">
-          <div className="flex-1 p-4 border-r border-gray-300 text-gray-400 italic">
-            <p>This is a computer generated document.</p>
-            <p className="mt-0.5">
-              Generated on:{' '}
-              {new Date().toLocaleDateString('en-GB')}{' '}
-              {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-            </p>
-          </div>
-          <div className="w-60 shrink-0 p-4 text-center">
-            <p className="text-gray-500 mb-8 text-xs">For {companyDetails.name}</p>
-            <div className="border-t border-gray-400 pt-1">
-              <p className="text-gray-500 text-xs">Authorized Signatory</p>
+            <div className="py-4 border-b border-gray-100">
+              <p className="text-[10px] text-gray-400 mb-1">Invoice Total (in words)</p>
+              <p className="font-semibold text-gray-800 text-sm leading-snug">
+                {numberToWords(grandTotal)} Rupees Only
+              </p>
             </div>
           </div>
         </div>
+
+        {/* Footer */}
+        <div className="absolute bottom-10 left-10 right-10 pt-4 border-t border-gray-200">
+          <p className="text-[10px] text-gray-500 font-medium">
+            For any enquiries, email us on <span className="font-bold text-gray-800">{companyDetails.email || "support@kiddosfood.com"}</span> or call us on <span className="font-bold text-gray-800">{companyDetails.phone || "+91 98765 43210"}</span>
+          </p>
+        </div>
+
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

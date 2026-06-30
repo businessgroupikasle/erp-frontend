@@ -7,9 +7,5 @@ export const metadata = {
 };
 
 export default function QCPage() {
-  return (
-    <main className="min-h-screen bg-[#0a0a0c]">
-      <QCClient />
-    </main>
-  );
+  return <QCClient />;
 }

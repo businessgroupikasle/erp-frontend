@@ -15,6 +15,7 @@ import { formatERPNumber } from "@/lib/utils";
 import api from "@/lib/api/base";
 import AddPartyModal from "@/components/modals/AddPartyModal";
 import AddInventoryProductForm from "@/components/modules/inventory/AddInventoryProductForm";
+import GSTInvoice from "@/components/documents/GSTInvoice";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -221,6 +222,7 @@ export default function SalesInvoicesPage() {
   // shared
   const [view, setView] = useState<"list" | "create">("list");
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [printingInvoice, setPrintingInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -732,27 +734,7 @@ export default function SalesInvoicesPage() {
   };
 
   const handlePrint = (inv: any) => {
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(`<html><head><title>Invoice</title>
-    <style>body{font-family:sans-serif;padding:40px;color:#1e293b}
-    table{width:100%;border-collapse:collapse;margin-top:20px}
-    th{background:#f8fafc;padding:10px;font-size:11px;text-align:left;border-bottom:1px solid #e2e8f0}
-    td{padding:10px;border-bottom:1px solid #f1f5f9;font-size:13px}
-    @media print{button{display:none}}</style></head>
-    <body><h2>Tax Invoice — ${inv.order?.invoiceNum || "Lite Sale"}</h2>
-    <p>Customer: ${inv.order?.customer?.name || "Walk-In Customer"}</p>
-    <p>Date: ${new Date(inv.createdAt).toLocaleDateString()}</p>
-    <table><thead><tr><th>Item</th><th>Batch No.</th><th>Qty</th><th>Rate</th><th>Tax</th><th>Amount</th></tr></thead>
-    <tbody>${(inv.order?.orderItems || []).map((it: any) =>
-      `<tr><td>${it.product?.name || "Unknown Item"}</td><td>${it.batchNumber || "—"}</td><td>${it.quantity}</td><td>₹${it.price}</td><td>₹${(it.taxAmount || 0).toFixed(2)}</td><td>₹${(it.totalAmount || 0).toFixed(2)}</td></tr>`
-    ).join("")}</tbody></table>
-    <div style="text-align:right;margin-top:20px">
-      <strong>Total: ₹${(inv.finalAmount || 0).toFixed(2)}</strong>
-    </div>
-    <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}</script>
-    </body></html>`);
-    w.document.close();
+    setPrintingInvoice(inv);
   };
 
   // ── Filtered list ──────────────────────────────────────────────────────────
@@ -1582,6 +1564,34 @@ export default function SalesInvoicesPage() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {printingInvoice && (
+          <GSTInvoice
+            order={{
+              ...printingInvoice,
+              id: printingInvoice.id,
+              poNumber: printingInvoice.order?.invoiceNum ? (printingInvoice.order.invoiceNum.startsWith('INV') ? printingInvoice.order.invoiceNum : `INV-${printingInvoice.order.invoiceNum}`) : undefined,
+              createdAt: printingInvoice.createdAt,
+              items: (printingInvoice.order?.orderItems || []).map((it: any) => ({
+                itemName: it.product?.name || "Unknown Item",
+                quantity: it.quantity,
+                price: it.price,
+                gstRate: it.taxAmount > 0 ? ((it.taxAmount / (it.quantity * it.price)) * 100).toFixed(0) : 0,
+                hsnCode: it.product?.hsnCode || '—'
+              }))
+            }}
+            vendor={printingInvoice.order?.customer || { name: 'Walk-In Customer' }}
+            companyDetails={{
+              name: 'Kiddos Food',
+              address: '123 Business Park, Block A\nBengaluru, Karnataka - 560001',
+              gstin: '29ABCDE1234F1Z5',
+              state: 'Karnataka',
+              email: 'hello@kiddosfood.com',
+              phone: '+91 98765 43210'
+            }}
+            onClose={() => setPrintingInvoice(null)}
+          />
         )}
       </div>
     </div>
