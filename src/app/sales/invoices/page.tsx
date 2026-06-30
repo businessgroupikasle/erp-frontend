@@ -1095,7 +1095,7 @@ export default function SalesInvoicesPage() {
                             className="w-full flex items-center justify-center gap-0.5 px-2 py-2.5 text-xs text-gray-700 hover:bg-gray-50"
                             onClick={e => {
                               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                              setUnitDropRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
+                              setUnitDropRect({ top: rect.bottom, left: rect.left });
                               setOpenUnitDrop(v => v === item.id ? null : item.id);
                             }}
                           >

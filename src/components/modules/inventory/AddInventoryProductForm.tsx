@@ -400,7 +400,7 @@ export default function AddInventoryProductForm({ onSuccess, onCancel, isModal }
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-24 px-4 sm:px-6">
+    <div className={clsx("max-w-6xl mx-auto pb-24 px-4 sm:px-6", isModal && "pt-8")}>
       {/* Hide native browser spinners for number inputs to prevent overlapping with custom overlays */}
       <style>{`
         input[type="number"]::-webkit-outer-spin-button,
