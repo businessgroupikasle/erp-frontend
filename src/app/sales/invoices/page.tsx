@@ -383,11 +383,12 @@ export default function SalesInvoicesPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [iRes, cRes, pRes, dRes] = await Promise.allSettled([
+      const [iRes, cRes, pRes, dRes, vRes] = await Promise.allSettled([
         api.get("/api/finance/invoices").catch(() => ({ data: [] })),
         customersApi.getAll(),
         productsFullApi.getAll(),
         draftsApi.getDrafts("invoice").catch(() => ({ data: [] })),
+        api.get("/api/vendors").catch(() => ({ data: [] })),
       ]);
       
       let apiInvoices = iRes.status === "fulfilled" ? (iRes.value as any).data || [] : [];
@@ -414,7 +415,22 @@ export default function SalesInvoicesPage() {
       }));
       
       setInvoices([...formattedDrafts, ...apiInvoices]);
-      if (cRes.status === "fulfilled") setCustomers((cRes.value as any).data || []);
+      
+      let allCustomers = cRes.status === "fulfilled" ? (cRes.value as any).data || [] : [];
+      let allVendors = vRes.status === "fulfilled" ? (vRes.value as any).data || [] : [];
+      
+      allVendors.forEach((v: any) => {
+        const exists = allCustomers.find((c: any) => 
+          (c.phone && c.phone === v.contact) || 
+          (c.email && c.email === v.email) || 
+          (c.name.toLowerCase() === v.name.toLowerCase())
+        );
+        if (!exists) {
+          allCustomers.push({ ...v, isVendorOnly: true, phone: v.contact });
+        }
+      });
+      setCustomers(allCustomers);
+
       if (pRes.status === "fulfilled") setProducts((pRes.value as any).data || []);
     } finally {
       setLoading(false);
@@ -623,6 +639,35 @@ export default function SalesInvoicesPage() {
 
     setSaving(true);
     try {
+      let finalCustomerId = selectedCustomer?.id;
+      
+      if (selectedCustomer?.isVendorOnly) {
+        try {
+          const res = await customersApi.create({
+            name: selectedCustomer.name,
+            phone: selectedCustomer.contact || selectedCustomer.phone,
+            email: selectedCustomer.email,
+            address: selectedCustomer.address,
+            gstNumber: selectedCustomer.gstNumber,
+            gstType: selectedCustomer.gstType,
+            category: selectedCustomer.category,
+          });
+          finalCustomerId = (res as any).data.id;
+          
+          // Update the list of customers so it isn't created again if they reuse the page
+          setCustomers(prev => {
+            const newList = prev.filter(c => c.id !== selectedCustomer.id);
+            newList.push((res as any).data);
+            return newList;
+          });
+          
+        } catch (e: any) {
+          showToast(e?.response?.data?.error || "Failed to link vendor to customer", "error");
+          setSaving(false);
+          return;
+        }
+      }
+
       const receivedAmount = (paymentType === "CASH") ? finalTotal : 0;
       const payload: any = {
         invoiceDate,
@@ -645,7 +690,7 @@ export default function SalesInvoicesPage() {
         termsAndConditions: termsText || undefined,
         description: description || undefined,
       };
-      if (selectedCustomer) payload.customerId = selectedCustomer.id;
+      if (finalCustomerId) payload.customerId = finalCustomerId;
 
       await api.post("/api/finance/invoices", payload);
       
@@ -939,7 +984,7 @@ export default function SalesInvoicesPage() {
                             onFocus={e => {
                               setOpenItemDrop(item.id);
                               const rect = (e.target as HTMLElement).getBoundingClientRect();
-                              setItemDropRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: 300 });
+                              setItemDropRect({ top: rect.bottom, left: rect.left, width: 300 });
                             }}
                           />
                           
@@ -981,6 +1026,7 @@ export default function SalesInvoicesPage() {
                                   e.preventDefault(); 
                                   setAddingItemIdx(idx);
                                   setShowAddItem(true); 
+                                  setOpenItemDrop(null);
                                 }}
                               >
                                 <Plus size={15} /> Add Item

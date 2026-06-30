@@ -15,7 +15,8 @@ import {
   Store,
   X as CloseIcon,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Search
 } from "lucide-react";
 
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -36,6 +37,7 @@ export default function Sidebar() {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const navRef = useRef<HTMLElement>(null);
 
   const checkScroll = useCallback(() => {
@@ -136,6 +138,24 @@ export default function Sidebar() {
           </button>
         </div>
 
+        {/* ── Search Bar ──────────────────────────────── */}
+        {!isCollapsed && (
+          <div className="px-4 py-3 border-b border-slate-100 dark:border-white/5 shrink-0 transition-all duration-300">
+            <div className="relative group">
+              <Search 
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" 
+                size={14} 
+              />
+              <input
+                type="text"
+                placeholder="Search sections..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-white/5 border-transparent rounded-lg pl-9 pr-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:bg-white dark:focus:bg-[#0b0c10] focus:border-primary/30 focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-300"
+              />
+            </div>
+          </div>
+        )}
 
         {/* ── Nav Wrapper ─────────────────────────────── */}
         <div className="relative flex-1 flex flex-col min-h-0">
@@ -160,7 +180,19 @@ export default function Sidebar() {
                 const filteredItems = section.items.filter(
                   (item) => !user || item.roles.includes(userRole)
                 );
-                if (filteredItems.length === 0) return null;
+                
+                const finalItems = filteredItems.filter(item => {
+                  if (!searchTerm) return true;
+                  const term = searchTerm.toLowerCase();
+                  if (section.title.toLowerCase().includes(term)) return true;
+                  if (item.label.toLowerCase().includes(term)) return true;
+                  if (item.children?.some(c => c.label.toLowerCase().includes(term))) return true;
+                  return false;
+                });
+
+                if (finalItems.length === 0) return null;
+
+                const isSectionCollapsed = collapsedSections.includes(section.title) && !searchTerm;
 
                 return (
                   <div key={section.title}>
@@ -180,7 +212,7 @@ export default function Sidebar() {
                           size={10} 
                           className={clsx(
                             "text-slate-300 dark:text-slate-700 transition-transform duration-300",
-                            collapsedSections.includes(section.title) ? "-rotate-90" : "rotate-0"
+                            isSectionCollapsed ? "-rotate-90" : "rotate-0"
                           )} 
                         />
                       </div>
@@ -192,13 +224,13 @@ export default function Sidebar() {
 
                     <div className={clsx(
                       "space-y-1 transition-all duration-300 overflow-hidden",
-                      collapsedSections.includes(section.title) ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"
+                      isSectionCollapsed ? "max-h-0 opacity-0" : "max-h-[2000px] opacity-100"
                     )}>
 
                     {/* Section Items */}
-                    {filteredItems.map((item) => {
+                    {finalItems.map((item) => {
                       const itemIcon = item.icon;
-                      const isExpanded = expandedMenus.includes(item.label);
+                      const isExpanded = expandedMenus.includes(item.label) || !!searchTerm;
                       const hasChildren = !!item.children?.length;
                       const isActive =
                         pathname === item.href ||
@@ -304,7 +336,16 @@ export default function Sidebar() {
                               {/* Connector Line */}
                               <div className="absolute left-[23px] top-0 bottom-4 w-px bg-slate-100 dark:bg-white/5" />
                               
-                              {item.children?.map((child) => (
+                              {item.children?.map((child) => {
+                                // hide children if they don't match the search term
+                                if (searchTerm) {
+                                  const term = searchTerm.toLowerCase();
+                                  const matchesChild = child.label.toLowerCase().includes(term);
+                                  const matchesItem = item.label.toLowerCase().includes(term);
+                                  const matchesSection = section.title.toLowerCase().includes(term);
+                                  if (!matchesChild && !matchesItem && !matchesSection) return null;
+                                }
+                                return (
                                 <Link
                                   key={child.href}
                                   href={child.href}
@@ -319,7 +360,8 @@ export default function Sidebar() {
                                   <span className="truncate">{child.label}</span>
 
                                 </Link>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
                         </div>

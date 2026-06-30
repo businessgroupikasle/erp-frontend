@@ -106,6 +106,8 @@ export default function POSPage() {
           id: p.id,
           name: p.name,
           price: p.inventoryBasePrice ?? p.basePrice ?? p.price ?? 0,
+          franchisePrice: p.franchisePrice,
+          dealerPrice: p.dealerPrice,
           taxPercent: p.taxPercent ?? p.gstRate ?? 0,
           category: p.category || p.categoryName || "General",
           stock: p.currentStock ?? p.stock ?? null,
@@ -186,14 +188,21 @@ export default function POSPage() {
 
   // ── Cart helpers ──────────────────────────────────────────────────────────
 
+  const getPrice = (p: any, type: string) => {
+    if (type === "DEALER" && p.dealerPrice != null) return p.dealerPrice;
+    if (type === "FRANCHISE" && p.franchisePrice != null) return p.franchisePrice;
+    return p.price || 0;
+  };
+
   const addToCart = (p: any) => {
     if (p.noPrice) { toast.error(`"${p.name}" has no selling price`); return; }
     const ex = cart.find(i => i.id === p.id);
     const cur = ex?.quantity || 0;
     if (p.stock !== null && cur >= p.stock) { toast.error(`Only ${p.stock} left in stock`); return; }
+    const actualPrice = getPrice(p, partyType);
     setCart(prev => ex
       ? prev.map(i => i.id === p.id ? { ...i, quantity: i.quantity + 1 } : i)
-      : [...prev, { id: p.id, name: p.name, price: p.price, quantity: 1, taxPercent: p.taxPercent, stock: p.stock }]
+      : [...prev, { id: p.id, name: p.name, price: actualPrice, quantity: 1, taxPercent: p.taxPercent, stock: p.stock }]
     );
   };
 
@@ -472,6 +481,7 @@ export default function POSPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {filtered.map(p => {
                 const inCart = cart.find(i => i.id === p.id);
+
                 return (
                   <button
                     key={p.id}
@@ -501,7 +511,7 @@ export default function POSPage() {
                     )}
 
                     <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-2 mb-1.5">{p.name}</p>
-                    <p className="text-sm font-bold mt-1" style={{ color: BRAND_ORANGE }}>₹{p.price.toLocaleString()}</p>
+                    <p className="text-sm font-bold mt-1" style={{ color: BRAND_ORANGE }}>₹{getPrice(p, partyType).toLocaleString()}</p>
                     {p.taxPercent > 0 && <p className="text-[10px] text-gray-400 mt-0.5">GST {p.taxPercent}%</p>}
                   </button>
                 );
@@ -530,7 +540,7 @@ export default function POSPage() {
               return (
                 <button
                   key={tab.type}
-                  onClick={() => { setPartyType(tab.type); setSelectedParty(null); setPartySearch(""); setPartyResults([]); }}
+                  onClick={() => { setPartyType(tab.type); setSelectedParty(null); setPartySearch(""); setPartyResults([]); setCart([]); }}
                   style={active ? { background: BRAND_ORANGE } : {}}
                   className={clsx(
                     "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-semibold transition-all",
