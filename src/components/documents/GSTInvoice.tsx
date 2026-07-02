@@ -145,6 +145,7 @@ export default function GSTInvoice({ order, vendor, companyDetails, onClose }: G
             </table>
           </div>
           <div className="text-right flex items-center justify-end gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="Kiddos Food Logo" className="h-12 w-auto max-w-[160px] object-contain object-right" />
           </div>
         </div>

@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { clsx } from "clsx";
-import { recipesApi, productsFullApi, rawMaterialsApi } from "@/lib/api";
+import { recipesApi, productsFullApi, rawMaterialsApi, productsApi } from "@/lib/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/context/ToastContext";
