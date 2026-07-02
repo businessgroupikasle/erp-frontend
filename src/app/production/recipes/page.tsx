@@ -16,6 +16,8 @@ import {
   AlertTriangle,
   Play,
 } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
+import { SlideOver } from "@/components/ui/SlideOver";
 import { clsx } from "clsx";
 import { recipesApi, rawMaterialsApi, productsApi } from "@/lib/api";
 import { toast } from "react-hot-toast";
@@ -30,9 +32,12 @@ interface RecipeItem {
 const UNITS = ["KG", "G", "L", "ML", "PCS", "PKT", "BOX", "DOZEN"];
 
 const emptyForm = {
+  recipeCode: "",
+  category: "",
   name: "",
   productId: "",
   yieldQty: 1,
+  yieldUnit: "units",
   instructions: "",
   items: [] as RecipeItem[],
 };
@@ -42,6 +47,7 @@ export default function RecipesPage() {
   const [recipes, setRecipes] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -51,18 +57,34 @@ export default function RecipesPage() {
   const [error, setError] = useState("");
   const [form, setForm] = useState({ ...emptyForm });
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [savingCategory, setSavingCategory] = useState(false);
+
+  const [isAddingMaterial, setIsAddingMaterial] = useState(false);
+  const [materialRowIdx, setMaterialRowIdx] = useState<number | null>(null);
+  const [newMaterial, setNewMaterial] = useState({ name: "", unit: "kg", costPrice: 0 });
+  const [savingMaterial, setSavingMaterial] = useState(false);
+  
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [newProduct, setNewProduct] = useState({ name: "", basePrice: 0, category: "FINISHED_GOOD", sku: "" });
+  const [savingProduct, setSavingProduct] = useState(false);
+
+  const uniqueCategories = categories.map(c => c.name);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [rRes, mRes, pRes] = await Promise.all([
+      const [rRes, mRes, pRes, cRes] = await Promise.all([
         recipesApi.getAll(),
         rawMaterialsApi.getAll(),
         productsApi.getAll(),
+        recipesApi.getCategories()
       ]);
       setRecipes(rRes.data ?? []);
       setMaterials(mRes.data ?? []);
       setProducts(pRes.data ?? []);
+      setCategories(cRes.data ?? []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -73,6 +95,7 @@ export default function RecipesPage() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const openCreate = () => {
+    setIsAddingCategory(false);
     setForm({ ...emptyForm });
     setEditingId(null);
     setError("");
@@ -80,10 +103,14 @@ export default function RecipesPage() {
   };
 
   const openEdit = (recipe: any) => {
+    setIsAddingCategory(false);
     setForm({
+      recipeCode: recipe.recipeCode ?? "",
+      category: recipe.category ?? "",
       name: recipe.name ?? "",
       productId: recipe.productId ?? "",
       yieldQty: recipe.yieldQty ?? 1,
+      yieldUnit: recipe.yieldUnit ?? "units",
       instructions: recipe.instructions ?? "",
       items: (recipe.recipeItems ?? []).map((i: any) => ({
         inventoryItemId: i.inventoryItemId,
@@ -104,9 +131,12 @@ export default function RecipesPage() {
     try {
       await recipesApi.upsert({
         ...(editingId ? { id: editingId } : {}),
+        recipeCode: form.recipeCode || undefined,
+        category: form.category || undefined,
         name: form.name,
         productId: form.productId || undefined,
         yieldQty: form.yieldQty,
+        yieldUnit: form.yieldUnit,
         instructions: form.instructions || undefined,
         items: form.items,
       });
@@ -117,6 +147,79 @@ export default function RecipesPage() {
       setError(e?.response?.data?.error ?? "Failed to save recipe.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    setSavingCategory(true);
+    try {
+      const res = await recipesApi.createCategory(newCategoryName.trim());
+      await fetchAll();
+      setForm(prev => ({ ...prev, category: res.data.name }));
+      setIsAddingCategory(false);
+      setNewCategoryName("");
+      toast.success("Category created");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to create category. It might already exist.");
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const handleCreateMaterial = async () => {
+    if (!newMaterial.name.trim()) return;
+    setSavingMaterial(true);
+    try {
+      const res = await rawMaterialsApi.create({
+        name: newMaterial.name.trim(),
+        unit: newMaterial.unit,
+        costPrice: newMaterial.costPrice
+      });
+      await fetchAll();
+      
+      if (materialRowIdx !== null) {
+        setForm(f => {
+          const newItems = [...f.items];
+          newItems[materialRowIdx].inventoryItemId = res.data.id;
+          return { ...f, items: newItems };
+        });
+      }
+      setIsAddingMaterial(false);
+      setNewMaterial({ name: "", unit: "kg", costPrice: 0 });
+      setMaterialRowIdx(null);
+      toast.success("Material created");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.response?.data?.error ?? "Failed to create material");
+    } finally {
+      setSavingMaterial(false);
+    }
+  };
+
+  const handleCreateProduct = async () => {
+    if (!newProduct.name.trim()) return;
+    setSavingProduct(true);
+    try {
+      const res = await productsApi.create({
+        name: newProduct.name.trim(),
+        basePrice: newProduct.basePrice,
+        category: newProduct.category,
+        sku: newProduct.sku || undefined
+      });
+      await fetchAll();
+      
+      setForm(f => ({ ...f, productId: res.data.id }));
+      
+      setIsAddingProduct(false);
+      setNewProduct({ name: "", basePrice: 0, category: "FINISHED_GOOD", sku: "" });
+      toast.success("Product created");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.response?.data?.error ?? "Failed to create product");
+    } finally {
+      setSavingProduct(false);
     }
   };
 
@@ -146,6 +249,12 @@ export default function RecipesPage() {
   };
 
   const updateItem = (idx: number, patch: Partial<RecipeItem>) => {
+    if (patch.inventoryItemId === "___NEW___") {
+      setMaterialRowIdx(idx);
+      setNewMaterial({ name: "", unit: "kg", costPrice: 0 });
+      setIsAddingMaterial(true);
+      return;
+    }
     setForm(f => ({
       ...f,
       items: f.items.map((item, i) => i === idx ? { ...item, ...patch } : item),
@@ -335,167 +444,367 @@ export default function RecipesPage() {
       )}
 
       {/* Create / Edit Modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in slide-in-from-bottom sm:zoom-in duration-300 text-slate-900">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setShowForm(false)} />
-          <div className="relative bg-white sm:rounded-[2rem] rounded-t-[2rem] shadow-2xl w-full sm:max-w-md border border-slate-100 p-4 sm:p-6 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <div className="flex items-center gap-3 mb-4 sm:mb-6">
-              <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 shrink-0">
-                <ChefHat size={16} className="sm:hidden" />
-                <ChefHat size={20} className="hidden sm:block" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-base sm:text-xl font-black tracking-tight uppercase leading-tight">{editingId ? "Edit Recipe" : "New Recipe"}</h2>
-                <p className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
-                  {editingId ? "Update formula and bill of materials" : "Define formula and bill of materials"}
-                </p>
-              </div>
-              <button onClick={() => setShowForm(false)} className="ml-auto p-1.5 sm:p-2 rounded-xl hover:bg-slate-50 text-slate-400 shrink-0">
-                <X size={16} />
-              </button>
+      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title={editingId ? "Edit Recipe" : "New Recipe"} size="2xl">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Recipe Name *</label>
+            <input
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="e.g. Khakhra Classic Mix"
+              className="w-full h-10 bg-slate-50 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-orange-500/50 transition-all placeholder:text-slate-400"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Recipe Code</label>
+              <input
+                value={form.recipeCode}
+                onChange={e => setForm(f => ({ ...f, recipeCode: e.target.value }))}
+                placeholder="e.g. REC001"
+                className="w-full h-10 bg-slate-50 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-orange-500/50 transition-all placeholder:text-slate-400"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Category</label>
+              <select
+                value={form.category}
+                onChange={(e) => {
+                  if (e.target.value === "___NEW___") {
+                    setIsAddingCategory(true);
+                  } else {
+                    setForm(f => ({ ...f, category: e.target.value }));
+                  }
+                }}
+                className="w-full h-10 bg-slate-50 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-orange-500/50 transition-all"
+              >
+                <option value="">Select Category</option>
+                {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="___NEW___">+ Add New Category</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Linked Product</label>
+              <select
+                value={form.productId}
+                onChange={e => {
+                  if (e.target.value === "___NEW_PRODUCT___") {
+                    setIsAddingProduct(true);
+                  } else {
+                    setForm(f => ({ ...f, productId: e.target.value }));
+                  }
+                }}
+                className="w-full h-10 bg-slate-50 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-orange-500/50 transition-all"
+              >
+                <option value="">None</option>
+                {products.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+                <option value="___NEW_PRODUCT___" className="font-bold text-orange-600">+ Add New Product</option>
+              </select>
             </div>
 
-            <div className="space-y-3 sm:space-y-5">
-              {/* Name */}
-              <div className="space-y-1">
-                <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Recipe Name *</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Yield *</label>
+              <div className="flex items-center gap-2">
                 <input
-                  value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="e.g. Khakhra Classic Mix"
-                  className="w-full h-9 sm:h-11 bg-slate-50 px-3 sm:px-4 rounded-xl font-bold text-xs outline-none focus:ring-2 sm:focus:ring-4 ring-orange-100 border border-slate-100 transition-all"
+                  type="number"
+                  min={1}
+                  value={form.yieldQty}
+                  onChange={e => setForm(f => ({ ...f, yieldQty: Math.max(1, parseInt(e.target.value) || 1) }))}
+                  className="flex-1 h-10 bg-slate-50 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-orange-500/50 transition-all"
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {/* Product */}
-                <div className="space-y-1">
-                  <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Linked Product</label>
-                  <select
-                    value={form.productId}
-                    onChange={e => setForm(f => ({ ...f, productId: e.target.value }))}
-                    className="w-full h-9 sm:h-11 bg-slate-50 px-2 sm:px-4 rounded-xl font-bold text-xs outline-none focus:ring-2 ring-orange-100 border border-slate-100 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="">None</option>
-                    {products.map((p: any) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Yield */}
-                <div className="space-y-1">
-                  <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Yield (units/batch) *</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={form.yieldQty}
-                    onChange={e => setForm(f => ({ ...f, yieldQty: Math.max(1, parseInt(e.target.value) || 1) }))}
-                    className="w-full h-9 sm:h-11 bg-slate-50 px-3 sm:px-4 rounded-xl font-bold text-xs outline-none focus:ring-2 ring-orange-100 border border-slate-100 transition-all"
-                  />
-                </div>
-              </div>
-
-              {/* Instructions */}
-              <div className="space-y-1">
-                <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Instructions</label>
-                <textarea
-                  value={form.instructions}
-                  onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))}
-                  rows={2}
-                  placeholder="Step-by-step production instructions..."
-                  className="w-full bg-slate-50 px-3 sm:px-4 py-2 sm:py-3 rounded-xl font-bold text-xs outline-none focus:ring-2 ring-orange-100 border border-slate-100 transition-all resize-none"
-                />
-              </div>
-
-              {/* Ingredients */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                    Ingredients / Bill of Materials *
-                  </label>
-                  <button
-                    onClick={addItem}
-                    className="flex items-center gap-1 text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-600 bg-orange-50 px-2.5 py-1.5 rounded-lg transition-colors"
-                  >
-                    <Plus size={10} /> Add Ingredient
-                  </button>
-                </div>
-
-                {form.items.length === 0 && (
-                  <div className="py-5 sm:py-8 text-center bg-slate-50 rounded-xl sm:rounded-2xl border-2 border-dashed border-slate-200">
-                    <ChefHat size={20} className="mx-auto text-slate-300 mb-1.5" />
-                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">No ingredients yet</p>
-                  </div>
-                )}
-
-                <div className="space-y-2 max-h-52 sm:max-h-64 overflow-y-auto pr-1 custom-scrollbar">
-                  {form.items.map((item, idx) => (
-                    <div key={idx} className="flex flex-wrap sm:flex-nowrap items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <select
-                        value={item.inventoryItemId}
-                        onChange={e => updateItem(idx, { inventoryItemId: e.target.value })}
-                        className="flex-1 min-w-0 h-9 bg-white border border-slate-200 px-3 rounded-lg font-bold text-[10px] outline-none focus:border-orange-400 cursor-pointer"
-                      >
-                        <option value="">Select ingredient...</option>
-                        {materials.map((m: any) => (
-                          <option key={m.id} value={m.id}>{m.name}</option>
-                        ))}
-                      </select>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min={0.001}
-                          step={0.001}
-                          value={item.quantityRequired}
-                          onChange={e => updateItem(idx, { quantityRequired: parseFloat(e.target.value) || 0 })}
-                          className="w-16 sm:w-20 h-9 bg-white border border-slate-200 px-2 rounded-lg font-black text-[11px] outline-none focus:border-orange-400 text-center"
-                        />
-                        <select
-                          value={item.unit}
-                          onChange={e => updateItem(idx, { unit: e.target.value })}
-                          className="w-16 sm:w-20 h-9 bg-white border border-slate-200 px-2 rounded-lg font-bold text-[10px] outline-none focus:border-orange-400 cursor-pointer"
-                        >
-                          {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                        </select>
-                        <button
-                          onClick={() => removeItem(idx)}
-                          className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
-                        >
-                          <Minus size={13} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {error && (
-                <div className="flex items-center gap-3 p-4 bg-rose-50 rounded-2xl border border-rose-100 animate-in slide-in-from-top-2">
-                  <AlertTriangle size={16} className="text-rose-500 shrink-0" />
-                  <p className="text-[10px] font-bold text-rose-600">{error}</p>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 sm:gap-3 pt-1 sm:pt-2">
-                <button
-                  onClick={() => setShowForm(false)}
-                  className="flex-1 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all"
+                <select
+                  value={form.yieldUnit || "units"}
+                  onChange={e => setForm(f => ({ ...f, yieldUnit: e.target.value }))}
+                  className="w-24 h-10 bg-slate-50 border-0 px-3 rounded-xl font-bold text-xs outline-none focus:ring-2 ring-orange-500/50 transition-all cursor-pointer uppercase"
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex-[2] py-3 sm:py-4 bg-orange-500 text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:bg-orange-400 transition-all flex items-center justify-center gap-2"
-                >
-                  {saving ? "Saving..." : <><Check size={13} /> {editingId ? "Update Recipe" : "Create Recipe"}</>}
-                </button>
+                  <option value="units">UNITS</option>
+                  <option value="kg">KG</option>
+                  <option value="g">G</option>
+                  <option value="L">L</option>
+                  <option value="ml">ML</option>
+                </select>
               </div>
             </div>
           </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Instructions</label>
+            <textarea
+              value={form.instructions}
+              onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))}
+              rows={2}
+              placeholder="Step-by-step production instructions..."
+              className="w-full h-20 bg-slate-50 border-0 px-4 py-3 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-orange-500/50 transition-all resize-none placeholder:text-slate-400"
+            />
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Ingredients / Bill of Materials *
+              </label>
+              <button
+                onClick={addItem}
+                className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-orange-500 hover:text-orange-600 bg-orange-50 hover:bg-orange-100 px-4 py-2 rounded-xl transition-colors"
+              >
+                <Plus size={14} strokeWidth={3} /> Add Ingredient
+              </button>
+            </div>
+
+            {form.items.length === 0 && (
+              <div className="py-8 text-center rounded-2xl border-2 border-dashed border-slate-200">
+                <ChefHat size={28} className="mx-auto text-slate-300 mb-2" />
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No ingredients yet</p>
+              </div>
+            )}
+
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+              {form.items.map((item, idx) => (
+                <div key={idx} className="flex flex-wrap sm:flex-nowrap items-end gap-3 p-4 bg-slate-50 rounded-2xl border-0">
+                  <div className="flex-1 space-y-1.5 min-w-[120px]">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Material</label>
+                    <select
+                      value={item.inventoryItemId}
+                      onChange={e => updateItem(idx, { inventoryItemId: e.target.value })}
+                      className="w-full h-10 bg-white border border-slate-100 px-3 rounded-lg font-bold text-xs outline-none focus:border-orange-400 cursor-pointer text-slate-700"
+                    >
+                      <option value="">Select...</option>
+                      {materials.map((m: any) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                      <option value="___NEW___" className="font-bold text-orange-600">+ Add New Material</option>
+                    </select>
+                  </div>
+                  
+                  <div className="w-20 space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Qty</label>
+                    <input
+                      type="number"
+                      min={0.001}
+                      step={0.001}
+                      value={item.quantityRequired}
+                      onChange={e => updateItem(idx, { quantityRequired: parseFloat(e.target.value) || 0 })}
+                      className="w-full h-10 bg-white border border-slate-100 px-2 rounded-lg font-black text-xs outline-none focus:border-orange-400 text-center"
+                    />
+                  </div>
+                  
+                  <div className="w-20 space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Unit</label>
+                    <select
+                      value={item.unit}
+                      onChange={e => updateItem(idx, { unit: e.target.value })}
+                      className="w-full h-10 bg-white border border-slate-100 px-2 rounded-lg font-bold text-[10px] uppercase outline-none focus:border-orange-400 cursor-pointer"
+                    >
+                      {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                  </div>
+                  
+                  <button
+                    onClick={() => removeItem(idx)}
+                    className="p-3 mb-[2px] text-slate-300 hover:text-red-500 hover:bg-white rounded-xl transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-3 p-4 bg-rose-50 rounded-2xl border border-rose-100">
+              <AlertTriangle size={16} className="text-rose-500 shrink-0" />
+              <p className="text-[10px] font-bold text-rose-600">{error}</p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-6">
+            <button
+              onClick={() => setShowForm(false)}
+              className="px-6 py-2.5 font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest text-[11px] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-[#F97316] text-white px-8 py-3 rounded-xl font-black text-xs hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 uppercase tracking-widest flex items-center gap-2"
+            >
+              {saving ? "Saving..." : <><Check size={14} strokeWidth={3} /> {editingId ? "Update Recipe" : "Create Recipe"}</>}
+            </button>
+          </div>
         </div>
-      )}
+      </Modal>
+
+      {/* Category Creation SlideOver */}
+      <SlideOver
+        isOpen={isAddingCategory}
+        onClose={() => {
+          setIsAddingCategory(false);
+          setNewCategoryName("");
+          if (form.category === "") {
+            setForm(prev => ({ ...prev, category: "" }));
+          }
+        }}
+        title="Add New Category"
+      >
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Category Name *</label>
+            <input
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="e.g. Beverages"
+              autoFocus
+              className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white placeholder:text-slate-400"
+            />
+          </div>
+          <button
+            onClick={handleCreateCategory}
+            disabled={savingCategory || !newCategoryName.trim()}
+            className="w-full bg-[#F97316] text-white px-8 py-4 rounded-xl font-black text-sm hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {savingCategory ? "Saving..." : "Create Category"}
+          </button>
+        </div>
+      </SlideOver>
+
+      {/* Material Creation SlideOver */}
+      <SlideOver
+        isOpen={isAddingMaterial}
+        onClose={() => {
+          setIsAddingMaterial(false);
+          setNewMaterial({ name: "", unit: "kg", costPrice: 0 });
+          setMaterialRowIdx(null);
+        }}
+        title="Add New Material"
+      >
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Material Name *</label>
+            <input
+              value={newMaterial.name}
+              onChange={(e) => setNewMaterial({ ...newMaterial, name: e.target.value })}
+              placeholder="e.g. Black Grams"
+              autoFocus
+              className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white placeholder:text-slate-400"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Unit</label>
+              <select
+                value={newMaterial.unit}
+                onChange={(e) => setNewMaterial({ ...newMaterial, unit: e.target.value })}
+                className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white uppercase"
+              >
+                <option value="kg">KG</option>
+                <option value="g">G</option>
+                <option value="L">L</option>
+                <option value="ml">ML</option>
+                <option value="units">UNITS</option>
+                <option value="pcs">PCS</option>
+              </select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Cost Price</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newMaterial.costPrice || ""}
+                onChange={(e) => setNewMaterial({ ...newMaterial, costPrice: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
+                className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+          
+          <button
+            onClick={handleCreateMaterial}
+            disabled={savingMaterial || !newMaterial.name.trim()}
+            className="w-full bg-[#F97316] text-white px-8 py-4 rounded-xl font-black text-sm hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {savingMaterial ? "Saving..." : "Create Material"}
+          </button>
+        </div>
+      </SlideOver>
+
+      {/* Product Creation SlideOver */}
+      <SlideOver
+        isOpen={isAddingProduct}
+        onClose={() => {
+          setIsAddingProduct(false);
+          setNewProduct({ name: "", basePrice: 0, category: "FINISHED_GOOD", sku: "" });
+        }}
+        title="Add New Linked Product"
+      >
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Product Name *</label>
+            <input
+              value={newProduct.name}
+              onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+              placeholder="e.g. Masala Dosa Batter"
+              autoFocus
+              className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white placeholder:text-slate-400"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Category</label>
+              <select
+                value={newProduct.category}
+                onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white"
+              >
+                <option value="FINISHED_GOOD">Finished Good</option>
+                <option value="SEMI_FINISHED">Semi Finished</option>
+              </select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Base Price</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newProduct.basePrice || ""}
+                onChange={(e) => setNewProduct({ ...newProduct, basePrice: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
+                className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">SKU (Optional)</label>
+            <input
+              value={newProduct.sku}
+              onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
+              placeholder="Auto-generated if empty"
+              className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white placeholder:text-slate-400"
+            />
+          </div>
+          
+          <button
+            onClick={handleCreateProduct}
+            disabled={savingProduct || !newProduct.name.trim()}
+            className="w-full bg-[#F97316] text-white px-8 py-4 rounded-xl font-black text-sm hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {savingProduct ? "Saving..." : "Create Product"}
+          </button>
+        </div>
+      </SlideOver>
     </div>
   );
 }
+

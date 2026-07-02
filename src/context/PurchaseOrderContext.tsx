@@ -86,10 +86,30 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
     { id: "1", materialId: "", name: "", quantity: 0, unit: "KG", price: 0, gstRate: 5 }
   ]);
   const [autoFilledIds, setAutoFilledIds] = useState<Set<string>>(new Set());
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('draftPurchaseOrder');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.selectedVendor) setSelectedVendor(parsed.selectedVendor);
+        if (parsed.items && parsed.items.length > 0) setItems(parsed.items);
+      } catch (e) {
+        console.error("Failed to parse draft PO", e);
+      }
+    }
+    setIsLoaded(true);
+  }, []);
 
   // When vendor changes, automatically show materials under that vendor in the items table
   useEffect(() => {
-    if (selectedVendor) {
+    if (selectedVendor && isLoaded) {
+      // Don't wipe the table if the user has already added items manually!
+      const hasManualItems = items.some(item => item.materialId !== "");
+      if (hasManualItems) return;
+
       if (selectedVendor.suppliedMaterials && selectedVendor.suppliedMaterials.length > 0) {
         // Deduplicate materials by materialId to prevent repeated rows
         const uniqueMaterials = [];
@@ -123,7 +143,7 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
   const [useAdvance, setUseAdvance] = useState(false);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [poNumber, setPoNumber] = useState("A00001");
+  const [poNumber, setPoNumber] = useState("PO-2026-00001");
   const [invoiceNo, setInvoiceNo] = useState("");
   const [quotationNo, setQuotationNo] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
@@ -147,6 +167,40 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
     due.setDate(due.getDate() + 15);
     setDueDate(due.toISOString().split('T')[0]);
   }, []);
+
+  // Load other draft fields from localStorage
+  useEffect(() => {
+    if (isLoaded) {
+      const saved = localStorage.getItem('draftPurchaseOrder');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.purchaseType) setPurchaseType(parsed.purchaseType);
+          if (parsed.warehouseId) setWarehouseId(parsed.warehouseId);
+          if (parsed.expectedDeliveryDate) setExpectedDeliveryDate(parsed.expectedDeliveryDate);
+          if (parsed.paymentTerms) setPaymentTerms(parsed.paymentTerms);
+          if (parsed.internalNotes) setInternalNotes(parsed.internalNotes);
+          if (parsed.vendorNotes) setVendorNotes(parsed.vendorNotes);
+        } catch (e) {}
+      }
+    }
+  }, [isLoaded]);
+
+  // Save draft to localStorage whenever fields change
+  useEffect(() => {
+    if (!isLoaded) return;
+    const draft = {
+      selectedVendor,
+      items,
+      purchaseType,
+      warehouseId,
+      expectedDeliveryDate,
+      paymentTerms,
+      internalNotes,
+      vendorNotes
+    };
+    localStorage.setItem('draftPurchaseOrder', JSON.stringify(draft));
+  }, [selectedVendor, items, purchaseType, warehouseId, expectedDeliveryDate, paymentTerms, internalNotes, vendorNotes, isLoaded]);
 
   const addItem = () => {
     setItems(prev => [

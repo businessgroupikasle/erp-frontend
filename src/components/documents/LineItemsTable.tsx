@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, Search, Package, IndianRupee, Zap, Info, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Search, Package, IndianRupee, Zap, Info, AlertTriangle, CheckCircle2, ChevronDown } from "lucide-react";
 import { usePurchaseOrder } from "@/context/PurchaseOrderContext";
 import { rawMaterialsApi } from "@/lib/api";
 import { clsx } from "clsx";
@@ -24,6 +24,30 @@ export default function LineItemsTable() {
       setSearchQuery("");
       prevActiveSearchId.current = activeSearchId;
     }
+  }, [activeSearchId]);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // If the click is on the input or its container, we don't want to close it here,
+      // because the input's own click/focus handlers will manage it.
+      // We check if the click target is within a .material-selector-container
+      const target = event.target as Element;
+      if (target.closest('.material-selector-container')) {
+        return;
+      }
+      
+      if (searchRef.current && !searchRef.current.contains(target as Node)) {
+        setActiveSearchId(null);
+      }
+    };
+
+    if (activeSearchId) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, [activeSearchId]);
 
   const [materialRefreshKey, setMaterialRefreshKey] = useState(0);
@@ -77,17 +101,17 @@ export default function LineItemsTable() {
 
   return (
     <div className="w-full">
-      <div className="overflow-x-auto">
+      <div className="w-full">
         <table className="w-full text-left border-collapse table-auto">
           <thead>
-            <tr className="bg-slate-50 dark:bg-slate-900/50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+            <tr className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-200 dark:border-slate-800">
               <th className="px-4 py-3 w-10 text-center">#</th>
               <th className="px-4 py-3">Material / Item Detail</th>
-              <th className="px-4 py-3 w-24 hidden md:table-cell">SKU</th>
-              <th className="px-4 py-3 w-20">Qty</th>
+              <th className="px-4 py-3 w-32 hidden md:table-cell">SKU</th>
+              <th className="px-4 py-3 w-24">Qty</th>
               <th className="px-4 py-3 w-20 hidden sm:table-cell">Unit</th>
-              <th className="px-4 py-3 w-28">Unit Price</th>
-              <th className="px-4 py-3 w-16 text-center hidden sm:table-cell">GST %</th>
+              <th className="px-4 py-3 w-32">Unit Price</th>
+              <th className="px-4 py-3 w-20 text-center hidden sm:table-cell">GST %</th>
               <th className="px-4 py-3 w-28 text-right">Line Total</th>
               <th className="px-4 py-3 w-12 text-center"></th>
             </tr>
@@ -100,36 +124,38 @@ export default function LineItemsTable() {
 
               return (
                 <tr key={item.id} className="group hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-all relative">
-                  <td className="px-6 py-4 align-middle text-[10px] font-black text-slate-300 group-hover:text-orange-500 transition-colors text-center">
+                  <td className="px-6 py-4 align-middle text-[10px] font-black text-slate-400 dark:text-slate-500 group-hover:text-orange-500 transition-colors text-center">
                     {String(index + 1).padStart(2, '0')}
                   </td>
                   <td className="px-4 py-4 align-top relative">
                     <div
                       className={clsx(
-                        "flex items-center gap-3 p-2 rounded-xl border border-transparent transition-all cursor-text relative z-50",
-                        !item.materialId ? "bg-slate-50/50 dark:bg-slate-950/50" : "bg-transparent"
+                        "material-selector-container flex items-center gap-3 p-2 rounded-xl border transition-all cursor-text relative z-50",
+                        !item.materialId 
+                          ? "bg-slate-50/50 dark:bg-slate-950/50 border-transparent focus-within:border-orange-100" 
+                          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-orange-300 shadow-sm"
                       )}
-                      onClick={() => !item.materialId && setActiveSearchId(item.id)}
+                      onClick={() => setActiveSearchId(item.id)}
                     >
-                      <Package size={14} className={item.materialId ? "text-orange-500" : "text-slate-300"} />
+                      <Package size={14} className={item.materialId ? "text-orange-500" : "text-slate-400 dark:text-slate-500"} />
                         <div className="flex flex-col flex-1 relative">
                           <input
                             type="text"
                             placeholder="Search Material..."
-                            className="w-full bg-transparent outline-none text-xs font-black text-slate-900 dark:text-white placeholder:text-slate-300 placeholder:font-bold uppercase tracking-tight"
+                            className="w-full bg-transparent outline-none text-xs font-black text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 placeholder:font-bold uppercase tracking-tight"
                             value={activeSearchId === item.id ? searchQuery : item.name}
-                            readOnly={!!item.materialId}
+                            readOnly={false}
                             onChange={(e) => {
-                               if (!item.materialId) {
-                                  setSearchQuery(e.target.value);
-                                  if (activeSearchId !== item.id) setActiveSearchId(item.id);
+                               setSearchQuery(e.target.value);
+                               if (item.materialId) {
+                                  updateItem(item.id, { materialId: "", name: "" });
+                                  setAutoFilledIds(prev => { const s = new Set(prev); s.delete(item.id); return s; });
                                }
+                               if (activeSearchId !== item.id) setActiveSearchId(item.id);
                             }}
                             onFocus={() => {
-                               if (!item.materialId) {
-                                  setActiveSearchId(item.id);
-                                  setSearchQuery("");
-                               }
+                               setActiveSearchId(item.id);
+                               setSearchQuery("");
                             }}
                             onKeyDown={(e) => handleKeyDown(e, item.id)}
                           />
@@ -144,22 +170,11 @@ export default function LineItemsTable() {
                                  {material.currentStock <= (material.minimumStock || 10) ? <AlertTriangle size={8} /> : <CheckCircle2 size={8} />}
                                  Stock: {material.currentStock} {item.unit}
                                </div>
-                               <span className="text-[8px] font-bold text-slate-400">HSN: {material.hsnCode || "N/A"}</span>
+                              <span className="text-[8px] font-bold text-slate-400">HSN: {material.hsnCode || "N/A"}</span>
                             </div>
                           )}
                         </div>
-                        {item.materialId && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateItem(item.id, { materialId: "", name: "" });
-                              setAutoFilledIds(prev => { const s = new Set(prev); s.delete(item.id); return s; });
-                            }}
-                            className="text-[9px] font-black text-slate-300 hover:text-red-500 uppercase tracking-widest transition-colors"
-                          >
-                            Clear
-                          </button>
-                        )}
+                        <ChevronDown size={14} className="text-slate-400 dark:text-slate-500 mr-1" />
 
                         {activeSearchId === item.id && (
                           <div className="absolute top-[calc(100%+8px)] left-0 w-[400px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-[100] overflow-hidden" ref={searchRef}>
@@ -250,34 +265,34 @@ export default function LineItemsTable() {
                     </div>
                   </td>
                   <td className="px-4 py-4 align-top hidden md:table-cell">
-                     <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-1 rounded dark:bg-slate-800">
+                     <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 bg-slate-50 px-2 py-1 rounded dark:bg-slate-800 whitespace-nowrap">
                         {material?.sku || "---"}
                      </span>
                   </td>
                   <td className="px-4 py-4 align-top">
                     <input
                       type="number"
-                      className="w-full p-2 bg-slate-50/50 dark:bg-slate-950 rounded-xl outline-none text-xs font-black text-center border-2 border-transparent focus:border-orange-100 focus:bg-white transition-all"
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-900 rounded-xl outline-none text-xs font-black text-center border border-slate-200 dark:border-slate-800 focus:border-orange-300 focus:bg-white transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       value={item.quantity === 0 ? "" : item.quantity}
                       onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
                       onKeyDown={(e) => handleKeyDown(e, item.id)}
                     />
                   </td>
                   <td className="px-4 py-4 align-top hidden sm:table-cell">
-                    <div className="p-2 text-[10px] font-black text-slate-400 text-center uppercase tracking-widest bg-slate-50/30 rounded-lg border border-slate-100">
+                    <div className="p-2 text-[10px] font-black text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest bg-slate-50/30 rounded-lg border border-slate-100 dark:border-slate-800">
                        {item.unit}
                     </div>
                   </td>
                   <td className="px-4 py-4 align-top">
                     <div className="relative group/price">
-                      <IndianRupee size={10} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
+                      <IndianRupee size={10} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                       <input
                         type="number"
                         className={clsx(
-                          "w-full pl-7 p-2 rounded-xl outline-none text-xs font-black border-2 transition-all",
+                          "w-full pl-7 p-2 rounded-xl outline-none text-xs font-black border transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                           autoFilledIds.has(item.id)
-                            ? "bg-orange-50/50 border-orange-100 text-orange-500 focus:bg-white"
-                            : "bg-slate-50/50 dark:bg-slate-950 border-transparent focus:border-orange-100 focus:bg-white"
+                            ? "bg-orange-50/50 border-orange-200 text-orange-500 focus:bg-white focus:border-orange-400"
+                            : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:border-orange-300 focus:bg-white"
                         )}
                         value={item.price === 0 ? "" : item.price}
                         onChange={(e) => {
@@ -293,17 +308,26 @@ export default function LineItemsTable() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-4 align-top text-center">
-                    <span className="text-xs font-black text-purple-600">
-                      {item.gstRate}%
-                    </span>
+                  <td className="px-2 py-4 align-top text-center">
+                    <select
+                      className="w-full p-2 bg-purple-50/50 dark:bg-purple-900/20 rounded-xl outline-none text-xs font-black text-purple-600 text-center border-2 border-transparent focus:border-purple-200 transition-all cursor-pointer appearance-none text-center-last"
+                      style={{ textAlignLast: 'center' }}
+                      value={item.gstRate}
+                      onChange={(e) => updateItem(item.id, { gstRate: parseFloat(e.target.value) || 0 })}
+                    >
+                      <option value="0">0%</option>
+                      <option value="5">5%</option>
+                      <option value="12">12%</option>
+                      <option value="18">18%</option>
+                      <option value="28">28%</option>
+                    </select>
                   </td>
                   <td className="px-4 py-4 align-top text-right">
                     <div className="flex flex-col items-end">
                        <span className="text-sm font-black text-slate-900 dark:text-white">
                          ₹{totalWithGst.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                        </span>
-                       <span className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">
+                       <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
                          Tax: ₹{(totalWithGst - amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                        </span>
                     </div>
@@ -311,7 +335,7 @@ export default function LineItemsTable() {
                   <td className="px-6 py-4 align-middle text-center">
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="p-2 text-slate-200 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                      className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -325,30 +349,13 @@ export default function LineItemsTable() {
 
       <button
         onClick={addItem}
-        className="w-full py-4 mt-4 bg-slate-50/50 dark:bg-slate-900/50 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl text-slate-400 font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-white hover:border-orange-400 hover:text-orange-500 transition-all group"
+        className="w-full py-4 mt-4 bg-slate-50/50 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 dark:text-slate-400 font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-white hover:border-orange-400 hover:text-orange-500 transition-all group"
       >
         <div className="w-8 h-8 rounded-full bg-white shadow-sm border border-slate-100 group-hover:border-orange-400 group-hover:bg-[#f58220] group-hover:text-white flex items-center justify-center transition-all">
           <Plus size={16} />
         </div>
         Add New Line Item
       </button>
-
-      {/* Keyboard Helper Footer */}
-      <div className="flex items-center gap-6 mt-6 px-4">
-         <div className="flex items-center gap-2">
-            <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded shadow-sm text-[10px] font-black text-slate-500">Space</kbd>
-            <span className="text-[10px] font-bold text-slate-400">Search Material</span>
-         </div>
-         <div className="flex items-center gap-2">
-            <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded shadow-sm text-[10px] font-black text-slate-500">Enter</kbd>
-            <span className="text-[10px] font-bold text-slate-400">Add New Row</span>
-         </div>
-         <div className="flex-1" />
-         <div className="flex items-center gap-2 text-slate-400">
-            <Info size={14} />
-            <span className="text-[10px] font-bold italic">All calculations are real-time & GST compliant</span>
-         </div>
-      </div>
 
       <AddMaterialDrawer 
         isOpen={showAddMaterialDrawer} 

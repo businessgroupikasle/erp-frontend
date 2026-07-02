@@ -235,7 +235,7 @@ export default function PurchaseOrdersClient() {
   const pendingCount = orders.filter((o) => o.status === "PENDING").length;
 
   return (
-    <div className={clsx("max-w-6xl mx-auto space-y-6", (showPaymentModal || viewingDetailsPO) && "relative z-[10000]")}>
+    <div className={clsx("w-full mx-auto space-y-6", (showPaymentModal || viewingDetailsPO) && "relative z-[10000]")}>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">

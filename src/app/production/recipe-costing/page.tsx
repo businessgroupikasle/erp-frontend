@@ -20,6 +20,7 @@ interface CostData {
   recipeId: string;
   recipeName: string;
   yieldQty: number;
+  yieldUnit?: string;
   totalCost: number;
   costPerYieldUnit: number;
   breakdown: CostBreakdown[];
@@ -152,16 +153,16 @@ export default function RecipeCostingPage() {
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Base Cost per Yield</span>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-black text-slate-900 dark:text-white">₹{costData.costPerYieldUnit.toFixed(2)}</span>
-                <span className="text-[10px] text-slate-500 font-bold">/ unit</span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase">/ {costData.yieldUnit || 'unit'}</span>
               </div>
-              <p className="text-[9px] text-slate-500 font-semibold uppercase">Recipe Yield: {costData.yieldQty} units</p>
+              <p className="text-[9px] text-slate-500 font-semibold uppercase">Recipe Yield: {costData.yieldQty} {costData.yieldUnit || 'units'}</p>
             </div>
 
             <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 rounded-3xl p-5 space-y-2 relative overflow-hidden">
               <span className="text-[9px] font-black text-[#F97316] uppercase tracking-widest">Simulated Unit Cost</span>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-black text-[#F97316]">₹{simulatedCostPerUnit.toFixed(2)}</span>
-                <span className="text-[10px] text-slate-500 font-bold">/ unit</span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase">/ {costData.yieldUnit || 'unit'}</span>
               </div>
               <p className="text-[9px] text-slate-500 font-semibold uppercase">Includes modifier: {costModifier > 0 ? `+${costModifier}%` : `${costModifier}%`}</p>
             </div>
@@ -170,7 +171,7 @@ export default function RecipeCostingPage() {
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sale Price</span>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-black text-slate-900 dark:text-white">₹{customSalePrice.toFixed(2)}</span>
-                <span className="text-[10px] text-slate-500 font-bold">/ unit</span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase">/ {costData.yieldUnit || 'unit'}</span>
               </div>
               <p className="text-[9px] text-slate-500 font-semibold uppercase">Base default: ₹{productSalePrice.toFixed(2)}</p>
             </div>

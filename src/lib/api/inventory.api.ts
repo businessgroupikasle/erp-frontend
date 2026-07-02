@@ -21,6 +21,8 @@ export const recipesApi = {
   upsert: (data: any) => api.post('/api/recipes', data),
   calculateCost: (id: string) => api.post(`/api/recipes/${id}/cost`),
   delete: (id: string) => api.delete(`/api/recipes/${id}`),
+  getCategories: () => api.get('/api/recipe-categories'),
+  createCategory: (name: string) => api.post('/api/recipe-categories', { name }),
 };
 
 // --- Raw Materials ---

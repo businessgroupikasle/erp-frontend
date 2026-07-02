@@ -8,20 +8,22 @@ import { clsx } from 'clsx';
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  hideHeader?: boolean;
 }
 
 const sizes = {
   sm: 'max-w-md',
   md: 'max-w-xl',
   lg: 'max-w-3xl',
-  xl: 'max-w-5xl'
+  xl: 'max-w-5xl',
+  '2xl': 'max-w-2xl'
 };
 
-export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, size = 'md', hideHeader }: ModalProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -62,15 +64,17 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
         sizes[size]
       )}>
         {/* Header */}
-        <div className="px-8 py-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
-          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{title}</h2>
-          <button 
-            onClick={onClose}
-            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 dark:text-slate-500 transition-all active:scale-95"
-          >
-            <X size={20} />
-          </button>
-        </div>
+        {!hideHeader && (
+          <div className="px-8 py-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{title}</h2>
+            <button 
+              onClick={onClose}
+              className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 dark:text-slate-500 transition-all active:scale-95"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        )}
 
         {/* Body */}
         <div className="px-8 py-8 overflow-y-auto custom-scrollbar flex-1">

@@ -223,18 +223,6 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         roles: SUPER_ONLY,
       },
       {
-        icon: ClipboardList,
-        label: "Raw Material Consumption",
-        href: "/inventory/raw-material-consumption",
-        roles: SUPER_ONLY,
-      },
-      {
-        icon: FileText,
-        label: "Raw Material Ledger",
-        href: "/inventory/raw-material-ledger",
-        roles: SUPER_ONLY,
-      },
-      {
         icon: Package,
         label: "Finished Goods",
         href: "/inventory/stock?type=FINISHED",
@@ -412,6 +400,12 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         icon: BarChart3,
         label: "Inventory",
         href: "/reports?report=Stock summary",
+        roles: SUPER_ONLY,
+      },
+      {
+        icon: FileText,
+        label: "Inventory Ledger",
+        href: "/inventory/raw-material-ledger",
         roles: SUPER_ONLY,
       },
       {

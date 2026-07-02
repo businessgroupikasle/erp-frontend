@@ -9,6 +9,7 @@ import { clsx } from "clsx";
 import { productBatchesApi, productsFullApi, franchiseApi } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { formatERPNumber } from "@/lib/utils";
+import RawMaterialConsumptionClient from "@/components/modules/inventory/RawMaterialConsumptionClient";
 
 type ExpiryStatus = "EXPIRED" | "EXPIRING_SOON" | "VALID";
 
@@ -35,6 +36,7 @@ export default function ProductBatchesPage() {
   const [loading, setLoading] = useState(true);
   const [productFilter, setProductFilter] = useState("");
   const [expiryFilter, setExpiryFilter] = useState<string>("ALL");
+  const [activeTab, setActiveTab] = useState<"REGISTRY" | "CONSUMPTION">("REGISTRY");
 
   // Fetch active franchises for Super Admin
   useEffect(() => {
@@ -96,7 +98,33 @@ export default function ProductBatchesPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 md:space-y-8 animate-in fade-in duration-700 px-4 sm:px-0">
+      
+      {/* Top Level Tabs */}
+      <div className="flex bg-slate-100 dark:bg-slate-800/50 p-1 rounded-xl w-fit mx-auto md:mx-0">
+        <button
+          onClick={() => setActiveTab("REGISTRY")}
+          className={clsx(
+            "px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
+            activeTab === "REGISTRY" ? "bg-white dark:bg-slate-900 shadow-sm text-emerald-600" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+          )}
+        >
+          Batch Registry
+        </button>
+        <button
+          onClick={() => setActiveTab("CONSUMPTION")}
+          className={clsx(
+            "px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
+            activeTab === "CONSUMPTION" ? "bg-white dark:bg-slate-900 shadow-sm text-emerald-600" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+          )}
+        >
+          Material Consumption
+        </button>
+      </div>
 
+      {activeTab === "CONSUMPTION" ? (
+        <RawMaterialConsumptionClient />
+      ) : (
+        <div className="space-y-4 md:space-y-8">
       {/* Header */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-3 md:py-4 border-b border-slate-200 dark:border-slate-800">
         <div>
@@ -296,6 +324,8 @@ export default function ProductBatchesPage() {
           </div>
         )}
       </div>
+        </div>
+      )}
     </div>
   );
 }

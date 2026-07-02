@@ -58,6 +58,10 @@ function NewPurchaseContent() {
       try {
         const response = await inventoryApi.getWarehouses();
         setWarehouses(response.data);
+        if (response.data && response.data.length > 0 && !warehouseId) {
+          const central = response.data.find((w: any) => w.name.toLowerCase().includes('central')) || response.data[0];
+          setWarehouseId(central.id);
+        }
       } catch (error) {
         console.error("Failed to fetch warehouses", error);
       }
@@ -218,33 +222,18 @@ function NewPurchaseContent() {
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
                   >
                     <option value="RAW_MATERIAL">Raw Material</option>
-                    <option value="PACKAGING">Packaging</option>
-                    <option value="ASSET">Asset</option>
-                    <option value="MISC">Misc</option>
+                    <option value="PACKAGING_MATERIAL">Packaging Material</option>
+                    <option value="CONSUMABLES">Consumables</option>
+                    <option value="FIXED_ASSET">Fixed Asset</option>
                   </select>
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-gray-500 flex items-center gap-1">
-                      <Warehouse size={11} /> Warehouse
-                    </label>
-                    <button
-                      onClick={() => setShowWarehouseModal(true)}
-                      className="text-[10px] font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-0.5"
-                    >
-                      <Plus size={10} strokeWidth={3} /> Add
-                    </button>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 flex items-center gap-1">
+                    <Warehouse size={11} /> Warehouse
+                  </label>
+                  <div className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 bg-gray-50 flex items-center justify-between">
+                    <span className="font-medium">Central Warehouse</span>
                   </div>
-                  <select
-                    value={warehouseId}
-                    onChange={(e) => setWarehouseId(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
-                  >
-                    <option value="">Select Warehouse</option>
-                    {warehouses.map(w => (
-                      <option key={w.id} value={w.id}>{w.name}</option>
-                    ))}
-                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5 flex items-center gap-1">
@@ -267,26 +256,20 @@ function NewPurchaseContent() {
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
                   >
                     <option value="IMMEDIATE">Immediate</option>
+                    <option value="ADVANCE_100">Advance Payment (100%)</option>
+                    <option value="ADVANCE_PARTIAL">Advance Payment (Partial)</option>
                     <option value="NET_7">Net 7 Days</option>
+                    <option value="NET_15">Net 15 Days</option>
                     <option value="NET_30">Net 30 Days</option>
-                    <option value="ADVANCE">Advance Required</option>
+                    <option value="NET_45">Net 45 Days</option>
+                    <option value="NET_60">Net 60 Days</option>
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-100">
+              <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">Document ID</label>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Purchase Order No.</label>
                   <div className="text-sm font-bold text-gray-800 font-mono">{poNumber}</div>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Vendor Invoice No</label>
-                  <input
-                    type="text"
-                    value={invoiceNo}
-                    onChange={(e) => setInvoiceNo(e.target.value)}
-                    placeholder="Reference #"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
-                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5">Purchase Date</label>
@@ -311,8 +294,8 @@ function NewPurchaseContent() {
             />
 
           {/* Section 3: Material Table & Accordions */}
-          <div className="bg-white dark:bg-[#0A0D14] rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-             <div className="flex bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+          <div className="bg-white dark:bg-[#0A0D14] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-visible">
+             <div className="flex bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 rounded-t-2xl overflow-hidden">
                 <button 
                   onClick={() => setActiveTab("items")}
                   className={clsx(
@@ -353,7 +336,7 @@ function NewPurchaseContent() {
                              value={internalNotes}
                              onChange={(e) => setInternalNotes(e.target.value)}
                              placeholder="Internal collaboration notes..."
-                             className="w-full min-h-[140px] p-5 bg-slate-50 dark:bg-slate-900 border-none rounded-[2rem] text-sm outline-none focus:ring-2 ring-purple-500/10"
+                             className="w-full min-h-[140px] p-5 bg-slate-50 dark:bg-slate-900 border-none rounded-xl text-sm outline-none focus:ring-2 ring-purple-500/10"
                            />
                         </div>
                         <div className="space-y-3">
@@ -362,7 +345,7 @@ function NewPurchaseContent() {
                              value={vendorNotes}
                              onChange={(e) => setVendorNotes(e.target.value)}
                              placeholder="Delivery instructions, terms, etc..."
-                             className="w-full min-h-[140px] p-5 bg-slate-50 dark:bg-slate-900 border-none rounded-[2rem] text-sm outline-none focus:ring-2 ring-purple-500/10"
+                             className="w-full min-h-[140px] p-5 bg-slate-50 dark:bg-slate-900 border-none rounded-xl text-sm outline-none focus:ring-2 ring-purple-500/10"
                            />
                         </div>
                      </div>
@@ -370,7 +353,7 @@ function NewPurchaseContent() {
                 )}
                 {activeTab === "attachments" && (
                    <div className="p-20 text-center flex flex-col items-center gap-6">
-                      <div className="w-20 h-20 rounded-[2rem] bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-300">
+                      <div className="w-20 h-20 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400">
                          <Plus size={40} />
                       </div>
                       <div className="space-y-2">
@@ -389,7 +372,7 @@ function NewPurchaseContent() {
              <DocumentSummary />
              
              {/* Dynamic Helper Card */}
-             <div className="bg-slate-900 dark:bg-[#0F172A] rounded-[2.5rem] p-8 text-white shadow-2xl shadow-slate-200 dark:shadow-none relative overflow-hidden">
+             <div className="bg-slate-900 dark:bg-[#0F172A] rounded-2xl p-8 text-white shadow-xl shadow-slate-200 dark:shadow-none relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-3xl rounded-full -mr-16 -mt-16" />
                 <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-400 mb-6 flex items-center gap-2">
                    <ShieldCheck size={12} /> Lifecycle Status
