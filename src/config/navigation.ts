@@ -77,12 +77,6 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
         roles: SUPER_ONLY,
       },
       {
-        icon: Factory,
-        label: "Production Overview",
-        href: "/production",
-        roles: SUPER_ONLY,
-      },
-      {
         icon: AlertTriangle,
         label: "Inventory Alerts",
         href: "/alerts",
@@ -160,7 +154,7 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       {
         icon: ClipboardList,
         label: "Production Planning",
-        href: "/production/planning",
+        href: "/production",
         roles: SUPER_ONLY,
       },
       {
@@ -231,7 +225,7 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
       {
         icon: Clock,
         label: "Expiry Tracking",
-        href: "/production/batches",
+        href: "/inventory/expiry-tracking",
         roles: SUPER_ONLY,
       },
       {
@@ -519,7 +513,7 @@ export const franchiseMenuSections: MenuSection[] = [
       {
         icon: Clock,
         label: "Expiry Tracking",
-        href: "/production/batches",
+        href: "/inventory/expiry-tracking",
         roles: FRANCHISE_ONLY,
       },
     ],

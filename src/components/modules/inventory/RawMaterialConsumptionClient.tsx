@@ -64,7 +64,8 @@ export default function RawMaterialConsumptionClient() {
     const matchType = typeFilter === "ALL" ||
       (typeFilter === "PRODUCTION" && it.consumptionType === "Production Consumption") ||
       (typeFilter === "DAMAGE" && it.consumptionType === "Damage") ||
-      (typeFilter === "EXPIRY" && it.consumptionType === "Expiry");
+      (typeFilter === "EXPIRY" && it.consumptionType === "Expiry") ||
+      (typeFilter === "MANUAL_ADJUSTMENT" && it.consumptionType === "Manual Adjustment");
 
     return matchSearch && matchType;
   });
@@ -133,10 +134,11 @@ export default function RawMaterialConsumptionClient() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50 dark:bg-white/5 p-2 rounded-[2rem] border border-slate-100 dark:border-white/5">
         <div className="flex gap-1 overflow-x-auto hide-scrollbar">
           {[
-            { id: "ALL", label: "All Outwards" },
+            { id: "ALL", label: "All Records" },
             { id: "PRODUCTION", label: "Production" },
             { id: "DAMAGE", label: "Damage" },
             { id: "EXPIRY", label: "Expiry" },
+            { id: "MANUAL_ADJUSTMENT", label: "Manual Adjustment" },
           ].map((cat) => (
             <button
               key={cat.id}
@@ -154,7 +156,7 @@ export default function RawMaterialConsumptionClient() {
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input
             type="text"
-            placeholder="Search SKU / Material / Notes..."
+            placeholder="Search Batch / Material / Reason..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-12 pr-6 py-3 bg-white dark:bg-slate-900 border-none rounded-xl outline-none text-xs font-bold shadow-sm"
@@ -168,50 +170,57 @@ export default function RawMaterialConsumptionClient() {
           <table className="w-full text-left table-fixed">
             <thead className="bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5">
               <tr className="text-slate-400">
-                <th className="w-[15%] px-8 py-4 text-[9px] font-black uppercase tracking-widest">Date</th>
-                <th className="w-[25%] px-6 py-4 text-[9px] font-black uppercase tracking-widest">Material Specs</th>
-                <th className="w-[15%] px-6 py-4 text-[9px] font-black uppercase tracking-widest text-center">Type</th>
-                <th className="w-[15%] px-6 py-4 text-[9px] font-black uppercase tracking-widest text-right">Quantity</th>
-                <th className="w-[15%] px-6 py-4 text-[9px] font-black uppercase tracking-widest text-right">Cost Value</th>
-                <th className="w-[15%] px-8 py-4 text-[9px] font-black uppercase tracking-widest">Notes</th>
+                <th className="w-[12%] px-8 py-4 text-[9px] font-black uppercase tracking-widest">Date</th>
+                <th className="w-[12%] px-6 py-4 text-[9px] font-black uppercase tracking-widest">Batch / Ref</th>
+                <th className="w-[20%] px-6 py-4 text-[9px] font-black uppercase tracking-widest">Material</th>
+                <th className="w-[12%] px-6 py-4 text-[9px] font-black uppercase tracking-widest text-right">Actual Qty</th>
+                <th className="w-[15%] px-6 py-4 text-[9px] font-black uppercase tracking-widest">Source</th>
+                <th className="w-[29%] px-8 py-4 text-[9px] font-black uppercase tracking-widest">Reason / Notes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-              {filtered.map((item) => (
-                <tr key={item.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all">
-                  <td className="px-8 py-4 text-xs font-bold text-slate-600 dark:text-slate-400">
-                    {new Date(item.date).toLocaleDateString(undefined, { dateStyle: "medium" })}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="min-w-0">
-                      <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-[12px] truncate leading-none mb-1">{item.itemName}</p>
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">{item.sku}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={clsx(
-                      "inline-block px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wider border",
-                      item.consumptionType === "Production Consumption" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-                      item.consumptionType === "Damage" ? "bg-amber-50 text-amber-600 border-amber-100" :
-                      "bg-red-50 text-red-600 border-red-100"
-                    )}>
-                      {item.consumptionType}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-slate-200">
-                      {item.quantity.toFixed(2)}
-                    </span>
-                    <span className="ml-1 text-[10px] text-slate-400 font-bold uppercase">{item.unit}</span>
-                  </td>
-                  <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white text-xs">
-                    ₹{item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                  <td className="px-8 py-4 text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
-                    {item.notes || "N/A"}
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((item) => {
+                const source = item.consumptionType || "Production";
+                let badgeColor = "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
+                
+                if (source === "Production Consumption" || source === "Production") badgeColor = "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400";
+                else if (source === "Damage" || source === "Wastage") badgeColor = "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400";
+                else if (source === "Expiry") badgeColor = "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400";
+                else if (source === "Manual Adjustment") badgeColor = "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400";
+
+                return (
+                  <tr key={item.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all">
+                    <td className="px-8 py-4 text-[11px] font-bold text-slate-500">
+                      {new Date(item.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                    </td>
+                    <td className="px-6 py-4 text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono uppercase tracking-wider">
+                      {source === "Production Consumption" ? "PRD" : source === "Damage" ? "WST" : source === "Expiry" ? "EXP" : "ADJ"}-{item.id.substring(0, 4)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="min-w-0">
+                        <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-[12px] truncate leading-none mb-1">{item.itemName}</p>
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">{item.sku}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className={clsx("text-sm font-extrabold", item.quantity < 0 ? "text-rose-500" : "text-slate-900 dark:text-slate-200")}>
+                        {item.quantity.toFixed(2)}
+                      </span>
+                      <span className="ml-1 text-[10px] text-slate-400 font-bold uppercase">{item.unit}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={clsx("px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded border", badgeColor)}>
+                        {source}
+                      </span>
+                    </td>
+                    <td className="px-8 py-4">
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
+                        {item.notes || (source === "Production Consumption" ? "Recipe" : source === "Damage" ? "Spillage" : "Stock Count")}
+                      </p>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           {filtered.length === 0 && (

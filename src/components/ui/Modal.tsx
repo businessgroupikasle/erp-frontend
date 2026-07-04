@@ -13,6 +13,7 @@ interface ModalProps {
   footer?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   hideHeader?: boolean;
+  zIndex?: number;
 }
 
 const sizes = {
@@ -23,7 +24,7 @@ const sizes = {
   '2xl': 'max-w-2xl'
 };
 
-export function Modal({ isOpen, onClose, title, children, footer, size = 'md', hideHeader }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, size = 'md', hideHeader, zIndex }: ModalProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -51,7 +52,10 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', h
   if (!isOpen || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 transition-all animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 transition-all animate-in fade-in duration-200"
+      style={{ zIndex: zIndex || 50 }}
+    >
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm" 

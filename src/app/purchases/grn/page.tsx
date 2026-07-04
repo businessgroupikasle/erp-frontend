@@ -308,8 +308,8 @@ export default function GRNPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
                   <tr>
-                    {["GRN #", "Vendor", "Reference PO", "Date", "Status", "Items"].map(h => (
-                      <th key={h} className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.15em]">{h}</th>
+                    {["GRN #", "Vendor", "Reference PO", "Date", "Status", "Items", "Actions"].map(h => (
+                      <th key={h} className={clsx("px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em]", h === "Actions" ? "text-right" : "text-left")}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -343,6 +343,14 @@ export default function GRNPage() {
                           ))}
                           {grn.items?.length > 2 && <span className="text-[10px] font-bold text-gray-400 ml-1">+{grn.items.length - 2}</span>}
                         </div>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <button
+                          onClick={() => router.push(`/purchases/invoices?grnId=${grn.id}`)}
+                          className="px-4 py-2 bg-slate-100 dark:bg-white/5 hover:bg-orange-50 dark:hover:bg-orange-500/10 text-slate-600 dark:text-slate-300 hover:text-orange-600 text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors border border-transparent hover:border-orange-200 dark:hover:border-orange-500/20"
+                        >
+                          Generate Bill
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -504,14 +512,10 @@ export default function GRNPage() {
                     </td>
                     <td className="px-8 py-6">
                       <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="Batch No."
-                            value={item.vendorBatchNo || ""}
-                            onChange={e => updateItemStr(idx, "vendorBatchNo", e.target.value)}
-                            className="w-32 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-xs outline-none focus:border-orange-500 text-gray-900 dark:text-white"
-                          />
+                        <div className="flex gap-2 items-center">
+                          <div className="w-32 px-3 py-2 bg-orange-50 dark:bg-orange-500/5 border border-orange-100 dark:border-orange-500/10 rounded-xl flex items-center justify-center cursor-not-allowed">
+                            <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Auto Batch</span>
+                          </div>
                           <input
                             type="text"
                             placeholder="Lot Number"

@@ -11,7 +11,7 @@ interface DocumentOptionsProps {
 }
 
 export default function DocumentOptions({ type }: DocumentOptionsProps) {
-  const { isValid, errors, isSubmitting, setIsSubmitting, selectedVendor, items, totals, notes } = usePurchaseOrder();
+  const { isValid, errors, isSubmitting, setIsSubmitting, selectedVendor, items, totals, notes, editId } = usePurchaseOrder();
   const router = useRouter();
 
   const handleCreatePO = async () => {
@@ -30,11 +30,23 @@ export default function DocumentOptions({ type }: DocumentOptionsProps) {
         }))
       };
       
-      await purchaseOrdersApi.create(payload);
+      if (editId) {
+        try {
+          await purchaseOrdersApi.delete(editId);
+        } catch (e) {
+          console.error("Failed to delete old PO", e);
+        }
+        await purchaseOrdersApi.create(payload);
+        toast.success("Purchase Order updated successfully!");
+      } else {
+        await purchaseOrdersApi.create(payload);
+        toast.success("Purchase Order created successfully!");
+      }
+      localStorage.removeItem('draftPurchaseOrder');
       router.push("/purchases/orders");
     } catch (error) {
       console.error("Failed to Create Purchase Order", error);
-      toast.error("Failed to create Purchase Order. Please check your inputs.");
+      toast.error(`Failed to ${editId ? 'update' : 'create'} Purchase Order. Please check your inputs.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -111,7 +123,7 @@ export default function DocumentOptions({ type }: DocumentOptionsProps) {
             ) : (
               <>
                 <Send size={18} />
-                Create Purchase Order
+                {editId ? "Update Purchase Order" : "Create Purchase Order"}
               </>
             )}
          </button>

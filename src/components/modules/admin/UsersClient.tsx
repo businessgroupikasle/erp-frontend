@@ -77,7 +77,7 @@ export default function UsersClient() {
     e.preventDefault();
     try {
       await userGovernanceApi.create(formData);
-      toast.success("Franchise Admin created successfully");
+      toast.success("User created successfully");
       setShowAddModal(false);
       setFormData({ fullName: "", email: "", phone: "", password: "", franchiseId: "", roleName: "FRANCHISE_ADMIN" });
       fetchUsers();
@@ -86,9 +86,20 @@ export default function UsersClient() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    try {
+      await userGovernanceApi.delete(id);
+      toast.success("User deleted successfully");
+      fetchUsers();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Failed to delete user");
+    }
+  };
+
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      await axios.patch(`${process.env.NEXT_PUBLIC_API_URL}/users/${id}`, { is_active: !currentStatus });
+      await userGovernanceApi.update(id, { is_active: !currentStatus });
       toast.success("User status updated");
       fetchUsers();
     } catch (error) {
@@ -111,7 +122,7 @@ export default function UsersClient() {
             User Management
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Create and manage Franchise Administrators
+            Create and manage system users
           </p>
         </div>
         <button
@@ -119,7 +130,7 @@ export default function UsersClient() {
           className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-95"
         >
           <UserPlus size={18} />
-          Add Franchise Admin
+          Add User
         </button>
       </div>
 
@@ -136,7 +147,7 @@ export default function UsersClient() {
           />
         </div>
         <div className="bg-orange-50 dark:bg-orange-500/5 border border-orange-100 dark:border-orange-500/10 rounded-2xl p-4 flex items-center justify-between">
-          <span className="text-sm font-bold text-orange-600 dark:text-orange-400">Total Admins</span>
+          <span className="text-sm font-bold text-orange-600 dark:text-orange-400">Total Users</span>
           <span className="text-2xl font-black text-orange-700 dark:text-orange-300">{users.length}</span>
         </div>
       </div>
@@ -208,7 +219,10 @@ export default function UsersClient() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg text-slate-400 hover:text-rose-500 transition-colors">
+                        <button 
+                          onClick={() => handleDelete(user.id)}
+                          className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg text-slate-400 hover:text-rose-500 transition-colors"
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -226,7 +240,7 @@ export default function UsersClient() {
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <h3 className="text-lg font-black text-slate-900 dark:text-white">New Franchise Admin</h3>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white">New System User</h3>
               <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-rose-500 transition-colors">
                 <XCircle size={20} />
               </button>
@@ -319,7 +333,7 @@ export default function UsersClient() {
                   type="submit"
                   className="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20"
                 >
-                  Create Admin
+                  Create User
                 </button>
               </div>
             </form>

@@ -104,12 +104,12 @@ export default function Sidebar() {
         <div
           className={clsx(
             "flex items-center border-b border-slate-100 dark:border-white/5 shrink-0 transition-all duration-300",
-            isCollapsed ? "px-2 py-4 justify-center" : "px-5 py-5 gap-3"
+            isCollapsed ? "px-2 py-4 justify-center" : "px-5 py-5 justify-between"
           )}
         >
           <div className={clsx(
-            "relative rounded-xl overflow-hidden shrink-0 shadow-lg transition-all duration-500",
-            isCollapsed ? "w-10 h-10" : "w-9 h-9"
+            "relative flex items-center justify-center transition-all duration-500",
+            isCollapsed ? "w-12 h-12" : "w-48 h-12"
           )}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -118,24 +118,16 @@ export default function Sidebar() {
               className="w-full h-full object-contain"
             />
           </div>
-          {(!isCollapsed || isMobileOpen) && (
-            <div className="flex-1 min-w-0 animate-in fade-in slide-in-from-left-2 duration-500">
-              <p className="text-[15px] font-black text-gray-900 dark:text-white truncate tracking-tight leading-tight">
-                Kiddos Food
-              </p>
-              <p className="text-[9px] text-primary font-black leading-tight mt-0.5 uppercase tracking-[0.2em]">
-                Control Center
-              </p>
-            </div>
-          )}
 
           {/* Mobile Close Button */}
-          <button
-            onClick={closeMobile}
-            className="lg:hidden p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-slate-400 hover:text-red-500 transition-colors"
-          >
-            <CloseIcon size={20} />
-          </button>
+          {(!isCollapsed || isMobileOpen) && (
+            <button
+              onClick={closeMobile}
+              className="lg:hidden p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-slate-400 hover:text-red-500 transition-colors shrink-0"
+            >
+              <CloseIcon size={20} />
+            </button>
+          )}
         </div>
 
         {/* ── Search Bar ──────────────────────────────── */}

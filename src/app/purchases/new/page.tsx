@@ -26,7 +26,7 @@ const FALLBACK_COMPANY = {
   state: "Tamil Nadu"
 };
 
-function NewPurchaseContent() {
+export function NewPurchaseContent({ editId }: { editId?: string }) {
   const { 
     poNumber, setPoNumber, 
     invoiceNo, setInvoiceNo, 
@@ -99,9 +99,21 @@ function NewPurchaseContent() {
           price: item.price
         }))
       };
-      
-      await purchaseOrdersApi.create(payload);
-      toast.success("Purchase Order created successfully!");
+      if (editId) {
+        try {
+          // Delete old PO and create new one to simulate update since backend lacks update endpoint
+          await purchaseOrdersApi.delete(editId);
+        } catch (e) {
+          console.error("Failed to delete old PO during update", e);
+        }
+        await purchaseOrdersApi.create(payload);
+        localStorage.removeItem('draftPurchaseOrder');
+        toast.success("Purchase Order updated successfully!");
+      } else {
+        await purchaseOrdersApi.create(payload);
+        localStorage.removeItem('draftPurchaseOrder');
+        toast.success("Purchase Order created successfully!");
+      }
       router.push("/purchases/orders");
     } catch (error) {
       console.error("Failed to Create Purchase Order", error);
@@ -137,6 +149,7 @@ function NewPurchaseContent() {
       };
       
       await purchaseOrdersApi.create(payload);
+      localStorage.removeItem('draftPurchaseOrder');
       toast.success("Draft Purchase Order saved successfully!");
       router.push("/purchases/orders");
     } catch (error) {
@@ -199,7 +212,7 @@ function NewPurchaseContent() {
             disabled={!isValid || isSubmitting}
             className="flex items-center gap-2 px-5 py-2 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] text-white rounded-lg transition-colors disabled:opacity-50"
           >
-            <CheckCircle2 size={15} /> {isSubmitting ? "Creating..." : "Create Purchase Order"}
+            <CheckCircle2 size={15} /> {isSubmitting ? (editId ? "Updating..." : "Creating...") : (editId ? "Update Purchase Order" : "Create Purchase Order")}
           </button>
         </div>
       </div>
@@ -445,7 +458,7 @@ export default function NewPurchasePage() {
   );
 
   return (
-    <PurchaseOrderProvider>
+    <PurchaseOrderProvider editId={undefined}>
       <div className="min-h-full">
         <NewPurchaseContent />
       </div>

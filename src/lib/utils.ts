@@ -12,7 +12,7 @@ export function formatCurrency(amount: number, currency: string = "₹") {
 }
 
 export function formatERPNumber(
-  prefix: "PO" | "GRN" | "BT" | "DC" | "INV" | "RCPT",
+  prefix: "PO" | "GRN" | "BT" | "DC" | "INV" | "RCPT" | "PRD",
   idOrCode: string | number | undefined,
   dateStr?: string
 ): string {

@@ -7,8 +7,10 @@ import {
   AlignLeft, FileText, ArrowLeft, Upload,
 } from "lucide-react";
 import { clsx } from "clsx";
-import { vendorsApi, vendorInvoicesApi } from "@/lib/api";
+import { vendorsApi, vendorInvoicesApi, grnApi, accountsApi } from "@/lib/api";
 import { toast } from "react-hot-toast";
+import { Modal } from "@/components/ui/Modal";
+
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -148,6 +150,16 @@ export default function PurchaseBillsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
+  // Payment Modal State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentBill, setPaymentBill] = useState<any>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentNote, setPaymentNote] = useState("");
+  const [paymentAccount, setPaymentAccount] = useState("");
+  const [paymentMode, setPaymentMode] = useState("CASH");
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+
   // form
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
   const [vendorSearch, setVendorSearch] = useState("");
@@ -169,6 +181,8 @@ export default function PurchaseBillsPage() {
   const [roundOffEnabled, setRoundOffEnabled] = useState(true);
   const [showShareDrop, setShowShareDrop] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [sourcePoId, setSourcePoId] = useState<string | null>(null);
+  const [sourceGrnId, setSourceGrnId] = useState<string | null>(null);
 
   const calendarRef = useRef<HTMLDivElement>(null);
   const vendorDropRef = useRef<HTMLDivElement>(null);
@@ -189,16 +203,57 @@ export default function PurchaseBillsPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [bRes, vRes] = await Promise.allSettled([
+      const [res, accRes, vRes] = await Promise.all([
         vendorInvoicesApi.getAll(),
-        vendorsApi.getAll(),
+        accountsApi.getAll().catch(() => ({ data: [] })),
+        vendorsApi.getAll()
       ]);
-      if (bRes.status === "fulfilled") setBills(bRes.value.data?.invoices || bRes.value.data || []);
-      if (vRes.status === "fulfilled") setVendors(vRes.value.data?.vendors || vRes.value.data || []);
+      setBills(res.data?.invoices || res.data || []);
+      setAccounts(accRes.data || []);
+      setVendors(vRes.data?.vendors || vRes.data || []);
     } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const grnId = urlParams.get('grnId');
+    if (grnId) {
+      grnApi.getById(grnId).then(res => {
+        const grn = res.data;
+        if (grn) {
+           setView("create");
+           if (grn.procurementOrder?.vendor) {
+              const v = grn.procurementOrder.vendor;
+              setSelectedVendor(v);
+              setVendorSearch(v.name);
+              setVendorPhone(v.contact || v.phone || "");
+              if (v.state) setStateOfSupply(v.state);
+           }
+           setSourcePoId(grn.poId);
+           setSourceGrnId(grn.id);
+           if (grn.items && grn.items.length > 0) {
+              const newItems = grn.items.map((item: any) => ({
+                 id: Math.random().toString(36).slice(2),
+                 name: item.inventoryItem?.name || "Material",
+                 qty: item.acceptedQty,
+                 unit: item.inventoryItem?.unit || "KGS",
+                 rate: item.price || 0,
+                 taxPct: 0,
+                 taxLabel: "NONE"
+              }));
+              setItems(newItems);
+           }
+           setDescription(`Auto-generated from GRN: ${grnId} / PO: ${grn.procurementOrder?.poNumber || ''}`);
+           setShowDesc(true);
+           toast.success("Bill auto-filled from GRN!");
+        }
+      }).catch(err => {
+         console.error("Failed to load GRN for auto-fill", err);
+      });
+    }
+  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -233,6 +288,7 @@ export default function PurchaseBillsPage() {
     setItems([makeItem(), makeItem()]); setPriceMode("without_tax");
     setTermsText(""); setShowTerms(false); setDescription(""); setShowDesc(false);
     setRoundOffEnabled(true); setView("create");
+    setSourcePoId(null); setSourceGrnId(null);
   };
 
   const handleSave = async () => {
@@ -243,6 +299,9 @@ export default function PurchaseBillsPage() {
     try {
       await vendorInvoicesApi.create({
         vendorId: selectedVendor.id,
+        poId: sourcePoId || undefined,
+        grnId: sourceGrnId || undefined,
+        invoiceNumber: billNumber !== "Auto" ? billNumber : `BILL-${Date.now().toString().slice(-6)}`,
         billDate,
         stateOfSupply: stateOfSupply || undefined,
         paymentType,
@@ -255,11 +314,45 @@ export default function PurchaseBillsPage() {
         description: description || undefined,
         roundOff,
       });
-      toast.success("Purchase bill saved");
-      fetchData(); setView("list");
+      toast.success("Bill saved successfully");
+      setView("list");
+      fetchData();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Failed to save bill");
     } finally { setSaving(false); }
+  };
+
+  const handleMakePayment = async () => {
+    if (!paymentBill || !paymentAccount) return toast.error("Please select an account.");
+    if (!paymentAmount || isNaN(Number(paymentAmount)) || Number(paymentAmount) <= 0) return toast.error("Valid amount required.");
+    
+    try {
+      setSubmittingPayment(true);
+      await vendorsApi.recordPayment(paymentBill.vendorId, {
+        amount: Number(paymentAmount),
+        note: paymentNote || `Payment for ${paymentBill.invoiceNumber || 'Bill'}`,
+        accountId: paymentAccount,
+        paymentMode,
+        type: "PAYMENT",
+        vendorInvoiceId: paymentBill.id
+      });
+      toast.success("Payment recorded successfully");
+      setShowPaymentModal(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to record payment");
+    } finally {
+      setSubmittingPayment(false);
+    }
+  };
+
+  const openPaymentModal = (bill: any) => {
+    setPaymentBill(bill);
+    setPaymentAmount(bill.amount?.toString() || "");
+    setPaymentNote(`Payment for ${bill.invoiceNumber || 'Bill'}`);
+    setPaymentMode("CASH");
+    if (accounts.length > 0) setPaymentAccount(accounts[0].id);
+    setShowPaymentModal(true);
   };
 
   const filteredVendors = vendors.filter(v =>
@@ -330,11 +423,17 @@ export default function PurchaseBillsPage() {
                           ) : filteredVendors.map(v => (
                             <button key={v.id}
                               className="w-full flex items-start px-3 py-2 hover:bg-orange-50/50 border-b border-gray-50 last:border-0 text-left"
-                              onClick={() => { setSelectedVendor(v); setVendorSearch(v.name); setVendorPhone(v.phone || ""); setShowVendorDrop(false); }}
+                              onClick={() => { 
+                                setSelectedVendor(v); 
+                                setVendorSearch(v.name); 
+                                setVendorPhone(v.contact || v.phone || ""); 
+                                if (v.state) setStateOfSupply(v.state);
+                                setShowVendorDrop(false); 
+                              }}
                             >
                               <div>
                                 <div className="text-sm font-medium text-gray-800">{v.name}</div>
-                                <div className="text-xs text-gray-400">{v.phone || "—"}</div>
+                                <div className="text-xs text-gray-400">{v.contact || v.phone || "—"}</div>
                               </div>
                             </button>
                           ))}
@@ -772,6 +871,11 @@ export default function PurchaseBillsPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {b.status === "PENDING" && (
+                            <button onClick={() => openPaymentModal(b)} className="px-3 py-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-semibold rounded text-xs transition-colors">
+                              Make Payment
+                            </button>
+                          )}
                           <button className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"><Printer className="h-4 w-4" /></button>
                           <button className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"><Share2 className="h-4 w-4" /></button>
                         </div>
@@ -784,6 +888,58 @@ export default function PurchaseBillsPage() {
           </div>
         )}
       </div>
+
+      <Modal 
+        isOpen={showPaymentModal} 
+        onClose={() => setShowPaymentModal(false)}
+        title="Make Payment"
+        size="md"
+        footer={
+          <>
+            <button onClick={() => setShowPaymentModal(false)} className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+            <button onClick={handleMakePayment} disabled={submittingPayment} className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-lg shadow disabled:opacity-50">
+              {submittingPayment ? "Processing..." : "Save Payment"}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Payment Amount</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+              <input type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)}
+                className="w-full pl-8 pr-4 py-2 border border-gray-200 rounded-lg outline-none focus:border-orange-500 bg-gray-50"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Payment Mode</label>
+              <select value={paymentMode} onChange={e => setPaymentMode(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-orange-500 bg-gray-50">
+                <option value="CASH">Cash</option>
+                <option value="BANK">Bank Transfer</option>
+                <option value="UPI">UPI</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Source Account</label>
+              <select value={paymentAccount} onChange={e => setPaymentAccount(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-orange-500 bg-gray-50">
+                <option value="">Select Account</option>
+                {accounts.map(a => (
+                  <option key={a.id} value={a.id}>{a.name} ({a.type})</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Note (Optional)</label>
+            <textarea value={paymentNote} onChange={e => setPaymentNote(e.target.value)} rows={2}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-orange-500 bg-gray-50 resize-none"
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

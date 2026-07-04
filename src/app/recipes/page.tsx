@@ -244,8 +244,12 @@ export default function RecipesPage() {
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { inventoryItemId: "", quantityRequired: 1, unit: "KG" }]
+      items: [...formData.items, { inventoryItemId: "", quantityRequired: "", unit: "KG" }]
     });
+    setTimeout(() => {
+      const el = document.getElementById('ingredients-container');
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 50);
   };
 
   const removeItem = (idx: number) => {
@@ -674,7 +678,7 @@ export default function RecipesPage() {
                   <input
                     type="number"
                     value={formData.yieldQty}
-                    onChange={(e) => setFormData({ ...formData, yieldQty: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, yieldQty: e.target.value === '' ? ('' as any) : Number(e.target.value) })}
                     className="flex-1 h-10 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white"
                   />
                   <select
@@ -696,10 +700,17 @@ export default function RecipesPage() {
             <div className="space-y-1.5">
               <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Instructions</label>
               <textarea
+                ref={(el) => {
+                  if (el) {
+                    el.style.height = 'auto';
+                    el.style.height = `${el.scrollHeight}px`;
+                  }
+                }}
                 value={formData.instructions}
                 onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+                rows={2}
                 placeholder="Step-by-step production instructions..."
-                className="w-full h-20 bg-slate-50 dark:bg-white/5 border-0 px-4 py-3 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500/50 transition-all resize-none text-slate-900 dark:text-white placeholder:text-slate-400"
+                className="w-full min-h-[5rem] bg-slate-50 dark:bg-white/5 border-0 px-4 py-3 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500/50 transition-all resize-none text-slate-900 dark:text-white placeholder:text-slate-400 overflow-hidden"
               />
             </div>
 
@@ -717,7 +728,7 @@ export default function RecipesPage() {
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No ingredients yet</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div id="ingredients-container" className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar scroll-smooth">
                   {formData.items.map((item, idx) => (
                     <div key={idx} className="flex items-end gap-3 bg-slate-50 dark:bg-white/5 p-4 rounded-2xl relative group">
                       <div className="flex-1 space-y-1.5 relative">
@@ -787,7 +798,7 @@ export default function RecipesPage() {
                         <input
                           type="number"
                           value={item.quantityRequired}
-                          onChange={(e) => updateItem(idx, 'quantityRequired', Number(e.target.value))}
+                          onChange={(e) => updateItem(idx, 'quantityRequired', e.target.value === '' ? '' : Number(e.target.value))}
                           className="w-full h-10 bg-white dark:bg-slate-900 border-0 px-2 rounded-lg text-xs font-black outline-none text-slate-900 dark:text-white text-center"
                         />
                       </div>
@@ -873,7 +884,7 @@ export default function RecipesPage() {
                   type="number"
                   min="1"
                   value={scaleTargetYield}
-                  onChange={(e) => setScaleTargetYield(Math.max(1, Number(e.target.value)))}
+                  onChange={(e) => setScaleTargetYield(e.target.value === '' ? ('' as any) : Number(e.target.value))}
                   className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl p-2 text-sm font-black outline-none focus:ring-2 focus:ring-orange-500/20 text-slate-900"
                 />
               </div>
@@ -977,35 +988,20 @@ export default function RecipesPage() {
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Unit</label>
-              <select
-                value={newMaterial.unit}
-                onChange={(e) => setNewMaterial({ ...newMaterial, unit: e.target.value })}
-                className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white uppercase"
-              >
-                <option value="kg">KG</option>
-                <option value="g">G</option>
-                <option value="L">L</option>
-                <option value="ml">ML</option>
-                <option value="units">UNITS</option>
-                <option value="pcs">PCS</option>
-              </select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Cost Price</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={newMaterial.costPrice || ""}
-                onChange={(e) => setNewMaterial({ ...newMaterial, costPrice: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-                className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white"
-              />
-            </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Unit</label>
+            <select
+              value={newMaterial.unit}
+              onChange={(e) => setNewMaterial({ ...newMaterial, unit: e.target.value })}
+              className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white uppercase"
+            >
+              <option value="kg">KG</option>
+              <option value="g">G</option>
+              <option value="L">L</option>
+              <option value="ml">ML</option>
+              <option value="units">UNITS</option>
+              <option value="pcs">PCS</option>
+            </select>
           </div>
           
           <button
@@ -1039,41 +1035,16 @@ export default function RecipesPage() {
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Category</label>
-              <select
-                value={newProduct.category}
-                onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-                className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white"
-              >
-                <option value="FINISHED_GOOD">Finished Good</option>
-                <option value="SEMI_FINISHED">Semi Finished</option>
-              </select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Base Price</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={newProduct.basePrice || ""}
-                onChange={(e) => setNewProduct({ ...newProduct, basePrice: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-                className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white"
-              />
-            </div>
-          </div>
-          
           <div className="space-y-2">
-            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">SKU (Optional)</label>
-            <input
-              value={newProduct.sku}
-              onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
-              placeholder="Auto-generated if empty"
-              className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white placeholder:text-slate-400"
-            />
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Category</label>
+            <select
+              value={newProduct.category}
+              onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+              className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white"
+            >
+              <option value="FINISHED_GOOD">Finished Good</option>
+              <option value="SEMI_FINISHED">Semi Finished</option>
+            </select>
           </div>
           
           <button

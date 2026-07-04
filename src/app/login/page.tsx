@@ -45,21 +45,18 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20 dark:border-slate-800/50 p-10 space-y-8">
-        <div className="text-center space-y-6">
+        <div className="text-center space-y-4">
           <div className="flex justify-center flex-col items-center">
-            <div className="relative w-48 h-20 mb-4 transform hover:scale-105 transition-transform duration-300">
+            <div className="relative w-64 h-24 mb-2 transform hover:scale-105 transition-transform duration-300">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo.png"
-                alt="Kiddos Foods Logo"
-                className="w-48 h-20 object-contain"
+                alt="Kiddos Food Logo"
+                className="w-full h-full object-contain"
               />
             </div>
           </div>
           <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-              CONTROL <span className="text-orange-500">PORTAL</span>
-            </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium text-sm tracking-wide">
               Integrated Food Enterprise Management
             </p>

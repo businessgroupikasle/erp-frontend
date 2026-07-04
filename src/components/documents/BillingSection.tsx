@@ -142,8 +142,8 @@ export default function BillingSection({
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter flex items-center gap-1"><Wallet size={8} /> Balance Due</span>
                   <span className={clsx(
                     "text-xs font-black",
-                    selectedVendor.balanceDue > 0 ? "text-red-500" : "text-green-600"
-                  )}>₹{selectedVendor.balanceDue.toLocaleString()}</span>
+                    (selectedVendor.balanceDue || 0) > 0 ? "text-red-500" : "text-green-600"
+                  )}>₹{(selectedVendor.balanceDue || 0).toLocaleString()}</span>
                </div>
                <div className="flex flex-col gap-0.5">
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter flex items-center gap-1"><BarChart3 size={8} /> Performance</span>
@@ -197,8 +197,8 @@ export default function BillingSection({
                              <div className="text-right">
                                 <span className={clsx(
                                   "text-[10px] font-black",
-                                  v.balanceDue > 0 ? "text-red-500" : "text-green-600"
-                                )}>₹{v.balanceDue.toLocaleString()}</span>
+                                  (v.balanceDue || 0) > 0 ? "text-red-500" : "text-green-600"
+                                )}>₹{(v.balanceDue || 0).toLocaleString()}</span>
                              </div>
                           </div>
                         ))

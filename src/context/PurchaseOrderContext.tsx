@@ -76,11 +76,12 @@ interface PurchaseOrderContextType {
   getVendorPrice: (materialId: string) => number | null;
   autoFilledIds: Set<string>;
   setAutoFilledIds: (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+  editId?: string;
 }
 
 const PurchaseOrderContext = createContext<PurchaseOrderContextType | undefined>(undefined);
 
-export function PurchaseOrderProvider({ children }: { children: React.ReactNode }) {
+export function PurchaseOrderProvider({ children, editId }: { children: React.ReactNode, editId?: string }) {
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [items, setItems] = useState<LineItem[]>([
     { id: "1", materialId: "", name: "", quantity: 0, unit: "KG", price: 0, gstRate: 5 }
@@ -88,20 +89,52 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
   const [autoFilledIds, setAutoFilledIds] = useState<Set<string>>(new Set());
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load draft from localStorage on mount
+  // Load draft from localStorage or fetch existing PO on mount
   useEffect(() => {
-    const saved = localStorage.getItem('draftPurchaseOrder');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.selectedVendor) setSelectedVendor(parsed.selectedVendor);
-        if (parsed.items && parsed.items.length > 0) setItems(parsed.items);
-      } catch (e) {
-        console.error("Failed to parse draft PO", e);
+    if (editId) {
+      // Fetch existing PO
+      import('@/lib/api').then(({ purchaseOrdersApi }) => {
+        purchaseOrdersApi.getById(editId).then((res) => {
+          const po = res.data;
+          if (po.vendor) setSelectedVendor(po.vendor);
+          if (po.poItems && po.poItems.length > 0) {
+            setItems(po.poItems.map((item: any) => ({
+              id: item.id || Math.random().toString(36).substr(2, 9),
+              materialId: item.inventoryItemId,
+              name: item.inventoryItem?.name || "",
+              quantity: item.quantity,
+              unit: item.inventoryItem?.unit || "KG",
+              price: item.price,
+              gstRate: item.gstRate || 5
+            })));
+          }
+          if (po.purchaseType) setPurchaseType(po.purchaseType);
+          if (po.warehouseId) setWarehouseId(po.warehouseId);
+          if (po.expectedDeliveryDate) setExpectedDeliveryDate(po.expectedDeliveryDate.split('T')[0]);
+          if (po.paymentTerms) setPaymentTerms(po.paymentTerms);
+          if (po.internalNotes) setInternalNotes(po.internalNotes);
+          if (po.vendorNotes) setVendorNotes(po.vendorNotes);
+          if (po.status) setPoStatus(po.status);
+          setIsLoaded(true);
+        }).catch(err => {
+          console.error("Failed to load PO for edit", err);
+          setIsLoaded(true);
+        });
+      });
+    } else {
+      const saved = localStorage.getItem('draftPurchaseOrder');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.selectedVendor) setSelectedVendor(parsed.selectedVendor);
+          if (parsed.items && parsed.items.length > 0) setItems(parsed.items);
+        } catch (e) {
+          console.error("Failed to parse draft PO", e);
+        }
       }
+      setIsLoaded(true);
     }
-    setIsLoaded(true);
-  }, []);
+  }, [editId]);
 
   // When vendor changes, automatically show materials under that vendor in the items table
   useEffect(() => {
@@ -293,6 +326,7 @@ export function PurchaseOrderProvider({ children }: { children: React.ReactNode 
       errors,
       isSubmitting,
       setIsSubmitting,
+      editId,
       poNumber,
       setPoNumber,
       invoiceNo,

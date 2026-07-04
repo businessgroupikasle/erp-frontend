@@ -5,12 +5,13 @@ import { createPortal } from "react-dom";
 import {
   ShoppingCart, Plus, Search, Filter, Calendar as CalendarIcon,
   ChevronDown, Store, Clock, CheckCircle2, XCircle, AlertCircle,
-  Trash2, Wallet, RefreshCw, ChevronLeft, ChevronRight, Download, X, Settings
+  Trash2, Wallet, RefreshCw, ChevronLeft, ChevronRight, Download, X, Settings, Pencil
 } from "lucide-react";
 import Link from "next/link";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday, startOfDay, isBefore } from "date-fns";
 import { vendorsApi, purchaseOrdersApi, rawMaterialsApi, settingsApi, accountsApi } from "../../../lib/api";
 import { clsx } from "clsx";
+import { Modal } from "@/components/ui/Modal";
 import GSTInvoice from "../../documents/GSTInvoice";
 import api from "../../../lib/api";
 import AddMaterialDrawer from "../inventory/AddMaterialDrawer";
@@ -89,6 +90,26 @@ export default function PurchaseOrdersClient() {
   const [profileRequiredForInvoice, setProfileRequiredForInvoice] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    confirmStyle?: string;
+    icon?: any;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    confirmStyle: "bg-orange-500 hover:bg-orange-600 shadow-orange-500/20",
+    icon: AlertCircle,
+    onConfirm: () => {}
+  });
+
+  const closeConfirm = () => setConfirmConfig({ ...confirmConfig, isOpen: false });
 
   useEffect(() => {
     if (showPaymentModal || viewingDetailsPO) {
@@ -193,34 +214,67 @@ export default function PurchaseOrdersClient() {
     }
   };
 
-  const handleCancel = async (id: string) => {
-    if (!confirm("Cancel this purchase order?")) return;
-    try {
-      await purchaseOrdersApi.cancel(id);
-      fetchAll();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error ?? "Failed to cancel PO");
-    }
+  const handleCancel = (id: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "Cancel Purchase Order",
+      message: "Are you sure you want to cancel this purchase order? This action cannot be undone.",
+      confirmText: "Yes, Cancel PO",
+      confirmStyle: "bg-rose-600 hover:bg-rose-700 shadow-rose-600/20 text-white",
+      icon: XCircle,
+      onConfirm: async () => {
+        closeConfirm();
+        try {
+          await purchaseOrdersApi.cancel(id);
+          toast.success("Purchase order cancelled successfully.");
+          fetchAll();
+        } catch (e: any) {
+          toast.error(e?.response?.data?.error ?? "Failed to cancel PO");
+        }
+      }
+    });
   };
 
-  const handleApprove = async (id: string) => {
-    if (!confirm("Approve this purchase order?")) return;
-    try {
-      await api.patch(`/api/purchase-orders/${id}/approve`);
-      fetchAll();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error ?? "Failed to approve PO");
-    }
+  const handleApprove = (id: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "Approve Purchase Order",
+      message: "Are you sure you want to approve this purchase order? Once approved, it can be sent to the vendor.",
+      confirmText: "Approve PO",
+      confirmStyle: "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20 text-white",
+      icon: CheckCircle2,
+      onConfirm: async () => {
+        closeConfirm();
+        try {
+          await api.patch(`/api/purchase-orders/${id}/approve`);
+          toast.success("Purchase order approved successfully.");
+          fetchAll();
+        } catch (e: any) {
+          toast.error(e?.response?.data?.error ?? "Failed to approve PO");
+        }
+      }
+    });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this purchase order?")) return;
-    try {
-      await purchaseOrdersApi.delete(id);
-      fetchAll();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error ?? "Failed to delete PO");
-    }
+  const handleDelete = (id: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "Delete Purchase Order",
+      message: "Are you sure you want to completely delete this purchase order? This will remove all associated data and cannot be recovered.",
+      confirmText: "Delete PO",
+      confirmStyle: "bg-rose-600 hover:bg-rose-700 shadow-rose-600/20 text-white",
+      icon: Trash2,
+      onConfirm: async () => {
+        closeConfirm();
+        try {
+          await purchaseOrdersApi.delete(id);
+          toast.success("Purchase order deleted successfully.");
+          fetchAll();
+        } catch (e: any) {
+          toast.error(e?.response?.data?.error ?? "Failed to delete PO");
+        }
+      }
+    });
   };
 
   const filtered = orders.filter((o) => {
@@ -246,7 +300,7 @@ export default function PurchaseOrdersClient() {
         <div className="flex gap-2">
           <button type="button" onClick={() => setShowSettings(true)} className="p-2 rounded-xl border border-gray-200 dark:border-white/10 group"><Settings size={16} className="text-gray-400 group-hover:text-orange-500 transition-colors" /></button>
           <button type="button" onClick={fetchAll} className="p-2 rounded-xl border border-gray-200 dark:border-white/10"><RefreshCw size={16} className="text-gray-400" /></button>
-          <Link href="/purchases/new" className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded-xl text-sm font-bold"><Plus size={16} /> New PO</Link>
+          <Link href="/purchases/new" onClick={() => localStorage.removeItem('draftPurchaseOrder')} className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded-xl text-sm font-bold"><Plus size={16} /> New PO</Link>
         </div>
       </div>
 
@@ -293,7 +347,7 @@ export default function PurchaseOrdersClient() {
                         <ShoppingCart size={32} />
                       </div>
                       <p className="text-sm font-bold text-slate-400">No Purchase Orders found.</p>
-                      <Link href="/purchases/new" className="text-xs font-black text-orange-500 uppercase tracking-widest mt-2">Create your first PO</Link>
+                      <Link href="/purchases/new" onClick={() => localStorage.removeItem('draftPurchaseOrder')} className="text-xs font-black text-orange-500 uppercase tracking-widest mt-2">Create your first PO</Link>
                     </div>
                   </td>
                 </tr>
@@ -395,6 +449,16 @@ export default function PurchaseOrdersClient() {
                           <button type="button" onClick={() => window.location.href = `/purchases/grn?poId=${po.id}`} className="px-3 py-1.5 bg-orange-50 dark:bg-orange-500/10 text-orange-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-orange-100 transition-all">Receive Goods</button>
                         )}
 
+                        <button
+                          type="button"
+                          onClick={() => {
+                            window.location.href = `/purchases/edit/${po.id}`;
+                          }}
+                          className="p-2 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-lg text-orange-500 transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil size={14} />
+                        </button>
                         <button
                           type="button"
                           onClick={() => {
@@ -712,6 +776,29 @@ export default function PurchaseOrdersClient() {
         </div>,
         document.body
       )}
+
+      {/* Custom Confirmation Modal */}
+      <Modal isOpen={confirmConfig.isOpen} onClose={closeConfirm} title={confirmConfig.title} size="sm">
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center border border-slate-100 dark:border-slate-800">
+            {confirmConfig.icon && <confirmConfig.icon size={28} className={confirmConfig.confirmStyle.includes("rose") ? "text-rose-500" : confirmConfig.confirmStyle.includes("emerald") ? "text-emerald-500" : "text-orange-500"} />}
+          </div>
+          <p className="text-sm font-bold text-slate-600 dark:text-slate-400">
+            {confirmConfig.message}
+          </p>
+        </div>
+        <div className="flex gap-3 mt-8">
+          <button onClick={closeConfirm} className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl transition-colors">
+            Cancel
+          </button>
+          <button 
+            onClick={confirmConfig.onConfirm}
+            className={clsx("flex-[2] py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg transition-all", confirmConfig.confirmStyle)}
+          >
+            {confirmConfig.confirmText}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

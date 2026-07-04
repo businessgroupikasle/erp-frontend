@@ -15,6 +15,7 @@ import {
   Check,
   AlertTriangle,
   Play,
+  Download,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { SlideOver } from "@/components/ui/SlideOver";
@@ -25,7 +26,7 @@ import { useRouter } from "next/navigation";
 
 interface RecipeItem {
   inventoryItemId: string;
-  quantityRequired: number;
+  quantityRequired: number | string;
   unit: string;
 }
 
@@ -150,6 +151,107 @@ export default function RecipesPage() {
     }
   };
 
+  const downloadRecipePDF = (recipe: any) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const instructions = (recipe.instructions || "")
+      .replace(/\[unitWeight:[\d.]+\]/, "")
+      .replace(/\[weightUnit:\w+\]/, "")
+      .trim();
+
+    const html = `
+      <html>
+        <head>
+          <title>Recipe - ${recipe.name}</title>
+          <style>
+            body { font-family: 'Inter', system-ui, sans-serif; padding: 40px; color: #1e293b; line-height: 1.5; }
+            .header { border-bottom: 4px solid #F97316; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .title-section h1 { font-size: 28px; font-weight: 900; margin: 0; color: #0f172a; text-transform: uppercase; letter-spacing: -0.02em; }
+            .product { color: #64748b; font-size: 14px; margin-top: 4px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; }
+            .date { font-size: 12px; color: #94a3b8; font-weight: bold; }
+            .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+            .stat-box { background: #f8fafc; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; }
+            .stat-label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.1em; }
+            .stat-value { font-size: 20px; font-weight: 900; color: #0f172a; }
+            .section-title { font-size: 12px; font-weight: 900; text-transform: uppercase; color: #F97316; margin-bottom: 16px; letter-spacing: 0.15em; display: flex; align-items: center; gap: 8px; }
+            .section-title::after { content: ""; flex: 1; height: 1px; background: #fee2e2; }
+            table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 40px; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
+            th { text-align: left; background: #f8fafc; padding: 14px 20px; font-size: 10px; font-weight: 800; text-transform: uppercase; color: #475569; letter-spacing: 0.05em; }
+            td { padding: 14px 20px; border-top: 1px solid #e2e8f0; font-size: 14px; font-weight: 600; color: #334155; }
+            .instructions-box { background: #fffaf5; padding: 30px; border-radius: 24px; border: 1px solid #fed7aa; }
+            .instructions-content { white-space: pre-wrap; line-height: 1.8; font-size: 14px; color: #431407; font-weight: 500; }
+            @media print {
+              body { padding: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title-section">
+              <h1>${recipe.name}</h1>
+              <div class="product">Finished Product: ${recipe.product?.name || 'N/A'}</div>
+            </div>
+            <div class="date">Generated: ${new Date().toLocaleDateString()}</div>
+          </div>
+          
+          <div class="stats">
+            <div class="stat-box">
+              <div class="stat-label">Yield Units</div>
+              <div class="stat-value">${recipe.yieldQty} Units</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Batch Configuration</div>
+              <div class="stat-value">${recipe.batchSize || '1'} ${recipe.recipeItems?.[0]?.unit || 'KG'}</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Total Components</div>
+              <div class="stat-value">${recipe.recipeItems?.length || 0} Materials</div>
+            </div>
+          </div>
+
+          <div class="section-title">Bill of Materials</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Ingredient / Raw Material</th>
+                <th style="text-align: center;">Required Quantity</th>
+                <th style="text-align: right;">Unit of Measure</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recipe.recipeItems?.map((item: any) => `
+                <tr>
+                  <td style="font-weight: 700; color: #1e293b;">${item.inventoryItem?.name || 'Unknown Material'}</td>
+                  <td style="text-align: center; font-weight: 700;">${item.quantityRequired}</td>
+                  <td style="text-align: right; color: #64748b; font-weight: 600;">${item.unit || 'KG'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div class="section-title">Production Methodology</div>
+          <div class="instructions-box">
+            <div class="instructions-content">${instructions || 'Standard production procedures apply.'}</div>
+          </div>
+
+          <script>
+            window.onload = () => {
+              setTimeout(() => {
+                window.print();
+                window.onafterprint = () => window.close();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) return;
     setSavingCategory(true);
@@ -240,8 +342,12 @@ export default function RecipesPage() {
   const addItem = () => {
     setForm(f => ({
       ...f,
-      items: [...f.items, { inventoryItemId: "", quantityRequired: 1, unit: "KG" }],
+      items: [...f.items, { inventoryItemId: "", quantityRequired: "", unit: "KG" }],
     }));
+    setTimeout(() => {
+      const el = document.getElementById('ingredients-container');
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 50);
   };
 
   const removeItem = (idx: number) => {
@@ -388,6 +494,13 @@ export default function RecipesPage() {
                       <Play size={13} fill="currentColor" />
                     </button>
                     <button
+                      onClick={e => { e.stopPropagation(); downloadRecipePDF(recipe); }}
+                      className="p-2 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      title="Download PDF"
+                    >
+                      <Download size={13} />
+                    </button>
+                    <button
                       onClick={e => { e.stopPropagation(); openEdit(recipe); }}
                       className="p-2 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
                       title="Edit"
@@ -515,7 +628,7 @@ export default function RecipesPage() {
                   type="number"
                   min={1}
                   value={form.yieldQty}
-                  onChange={e => setForm(f => ({ ...f, yieldQty: Math.max(1, parseInt(e.target.value) || 1) }))}
+                  onChange={e => setForm(f => ({ ...f, yieldQty: e.target.value === '' ? ('' as any) : (parseInt(e.target.value) || 0) }))}
                   className="flex-1 h-10 bg-slate-50 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-orange-500/50 transition-all"
                 />
                 <select
@@ -536,11 +649,17 @@ export default function RecipesPage() {
           <div className="space-y-1.5">
             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Instructions</label>
             <textarea
+              ref={(el) => {
+                if (el) {
+                  el.style.height = 'auto';
+                  el.style.height = `${el.scrollHeight}px`;
+                }
+              }}
               value={form.instructions}
               onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))}
               rows={2}
               placeholder="Step-by-step production instructions..."
-              className="w-full h-20 bg-slate-50 border-0 px-4 py-3 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-orange-500/50 transition-all resize-none placeholder:text-slate-400"
+              className="w-full min-h-[5rem] bg-slate-50 border-0 px-4 py-3 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-orange-500/50 transition-all resize-none placeholder:text-slate-400 overflow-hidden"
             />
           </div>
 
@@ -564,7 +683,7 @@ export default function RecipesPage() {
               </div>
             )}
 
-            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+            <div id="ingredients-container" className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar scroll-smooth">
               {form.items.map((item, idx) => (
                 <div key={idx} className="flex flex-wrap sm:flex-nowrap items-end gap-3 p-4 bg-slate-50 rounded-2xl border-0">
                   <div className="flex-1 space-y-1.5 min-w-[120px]">
@@ -589,7 +708,7 @@ export default function RecipesPage() {
                       min={0.001}
                       step={0.001}
                       value={item.quantityRequired}
-                      onChange={e => updateItem(idx, { quantityRequired: parseFloat(e.target.value) || 0 })}
+                      onChange={e => updateItem(idx, { quantityRequired: e.target.value === '' ? '' : (parseFloat(e.target.value) || 0) })}
                       className="w-full h-10 bg-white border border-slate-100 px-2 rounded-lg font-black text-xs outline-none focus:border-orange-400 text-center"
                     />
                   </div>
@@ -696,35 +815,20 @@ export default function RecipesPage() {
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Unit</label>
-              <select
-                value={newMaterial.unit}
-                onChange={(e) => setNewMaterial({ ...newMaterial, unit: e.target.value })}
-                className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white uppercase"
-              >
-                <option value="kg">KG</option>
-                <option value="g">G</option>
-                <option value="L">L</option>
-                <option value="ml">ML</option>
-                <option value="units">UNITS</option>
-                <option value="pcs">PCS</option>
-              </select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Cost Price</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={newMaterial.costPrice || ""}
-                onChange={(e) => setNewMaterial({ ...newMaterial, costPrice: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-                className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white"
-              />
-            </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Unit</label>
+            <select
+              value={newMaterial.unit}
+              onChange={(e) => setNewMaterial({ ...newMaterial, unit: e.target.value })}
+              className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white uppercase"
+            >
+              <option value="kg">KG</option>
+              <option value="g">G</option>
+              <option value="L">L</option>
+              <option value="ml">ML</option>
+              <option value="units">UNITS</option>
+              <option value="pcs">PCS</option>
+            </select>
           </div>
           
           <button
@@ -758,41 +862,16 @@ export default function RecipesPage() {
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Category</label>
-              <select
-                value={newProduct.category}
-                onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-                className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white"
-              >
-                <option value="FINISHED_GOOD">Finished Good</option>
-                <option value="SEMI_FINISHED">Semi Finished</option>
-              </select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Base Price</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={newProduct.basePrice || ""}
-                onChange={(e) => setNewProduct({ ...newProduct, basePrice: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-                className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white"
-              />
-            </div>
-          </div>
-          
           <div className="space-y-2">
-            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">SKU (Optional)</label>
-            <input
-              value={newProduct.sku}
-              onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
-              placeholder="Auto-generated if empty"
-              className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white placeholder:text-slate-400"
-            />
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Category</label>
+            <select
+              value={newProduct.category}
+              onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+              className="w-full h-12 bg-slate-50 dark:bg-white/5 border-0 px-4 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-slate-900 dark:text-white"
+            >
+              <option value="FINISHED_GOOD">Finished Good</option>
+              <option value="SEMI_FINISHED">Semi Finished</option>
+            </select>
           </div>
           
           <button

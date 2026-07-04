@@ -123,14 +123,18 @@ export default function LineItemsTable() {
               const material = materials.find(m => m.id === item.materialId);
 
               return (
-                <tr key={item.id} className="group hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-all relative">
+                <tr key={item.id} className={clsx(
+                  "group hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-all relative",
+                  activeSearchId === item.id ? "z-50" : "z-0"
+                )}>
                   <td className="px-6 py-4 align-middle text-[10px] font-black text-slate-400 dark:text-slate-500 group-hover:text-orange-500 transition-colors text-center">
                     {String(index + 1).padStart(2, '0')}
                   </td>
                   <td className="px-4 py-4 align-top relative">
                     <div
                       className={clsx(
-                        "material-selector-container flex items-center gap-3 p-2 rounded-xl border transition-all cursor-text relative z-50",
+                        "material-selector-container flex items-center gap-3 p-2 rounded-xl border transition-all cursor-text relative",
+                        activeSearchId === item.id ? "z-[100]" : "z-10",
                         !item.materialId 
                           ? "bg-slate-50/50 dark:bg-slate-950/50 border-transparent focus-within:border-orange-100" 
                           : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-orange-300 shadow-sm"
