@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
+import { SlideOver } from "@/components/ui/SlideOver";
 import { 
   Building2, Plus, X, MapPin, User, Phone, Edit2, Trash2, 
   RefreshCw, Search, Shield, Key, Eye, EyeOff, MoreVertical,
@@ -300,7 +301,7 @@ export default function FranchisePage() {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 py-6 border-b border-slate-200/60 dark:border-white/5">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-indigo-500 rounded-2xl shadow-xl shadow-indigo-500/20">
+            <div className="p-3 bg-orange-500 rounded-2xl shadow-xl shadow-orange-500/20">
               <Building2 size={24} className="text-white" />
             </div>
             <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
@@ -316,14 +317,14 @@ export default function FranchisePage() {
           <div className="flex gap-3">
             <button 
               onClick={fetchFranchises} 
-              className="p-3.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all shadow-sm"
+              className="p-3.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-slate-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all shadow-sm"
               title="Sync Branches"
             >
               <RefreshCw size={18} />
             </button>
             <button 
               onClick={openCreate} 
-              className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg shadow-indigo-500/20 transition-all active:scale-95"
+              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg shadow-orange-500/20 transition-all active:scale-95"
             >
               <Plus size={18} /> Add New Branch
             </button>
@@ -335,7 +336,7 @@ export default function FranchisePage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { label: "Total Outlets", val: franchises.length, color: "bg-blue-500" },
-          { label: "Active Branches", val: franchises.filter(f => f.status === 'ACTIVE').length, color: "bg-indigo-500" },
+          { label: "Active Branches", val: franchises.filter(f => f.status === 'ACTIVE').length, color: "bg-orange-500" },
           { label: "Planned Setup", val: franchises.filter(f => f.status === 'PENDING').length, color: "bg-amber-500" },
           { label: "Branch Administrators", val: franchises.reduce((acc, f) => acc + (f._count?.users || 0), 0), color: "bg-purple-500" },
         ].map((stat, i) => (
@@ -351,26 +352,26 @@ export default function FranchisePage() {
 
       {/* Search Input — Indigo focus indicators */}
       <div className="relative group">
-        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
         <input 
           value={search} 
           onChange={(e) => setSearch(e.target.value)} 
           placeholder="Filter by branch name, location, or owner..."
-          className="w-full pl-12 pr-6 py-4 text-sm bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400" 
+          className="w-full pl-12 pr-6 py-4 text-sm bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all shadow-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400" 
         />
       </div>
 
       {/* Franchise Grid */}
       {loading ? (
         <div className="py-32 flex flex-col items-center justify-center space-y-4">
-          <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+          <div className="w-12 h-12 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
           <p className="text-slate-400 text-sm font-bold tracking-widest uppercase">Fetching Data...</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-32 text-center bg-slate-50 dark:bg-white/[0.02] rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-white/5">
           <Building2 size={64} strokeWidth={1} className="mx-auto text-slate-200 dark:text-slate-800 mb-4" />
           <p className="text-slate-500 dark:text-slate-400 font-bold text-lg">No franchises found</p>
-          <button onClick={openCreate} className="mt-4 text-indigo-500 font-black hover:underline">Register your first outlet now</button>
+          <button onClick={openCreate} className="mt-4 text-orange-500 font-black hover:underline">Register your first outlet now</button>
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -380,14 +381,14 @@ export default function FranchisePage() {
             return (
               <div 
                 key={f.id} 
-                className="group rounded-[32px] border border-slate-100 dark:border-white/5 bg-white dark:bg-card/40 p-7 hover:shadow-2xl hover:shadow-indigo-500/5 transition-all duration-500 relative overflow-hidden"
+                className="group rounded-[32px] border border-slate-100 dark:border-white/5 bg-white dark:bg-card/40 p-7 hover:shadow-2xl hover:shadow-orange-500/5 transition-all duration-500 relative overflow-hidden"
               >
                 {/* Subtle back decorative glow */}
-                <div className="absolute top-[-10%] right-[-10%] w-48 h-48 rounded-full blur-3xl opacity-20 transition-all duration-700 bg-slate-100 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-950/20" />
+                <div className="absolute top-[-10%] right-[-10%] w-48 h-48 rounded-full blur-3xl opacity-20 transition-all duration-700 bg-slate-100 group-hover:bg-orange-100 dark:group-hover:bg-orange-950/20" />
                 
                 <div className="flex items-start justify-between relative z-10 mb-8">
-                  {/* Clean standard icon container using indigo shadow/gradient */}
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-indigo-500/30 text-white">
+                  {/* Clean standard icon container using orange shadow/gradient */}
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 bg-gradient-to-br from-orange-500 to-orange-600 shadow-orange-500/30 text-white">
                     <Building2 size={28} />
                   </div>
                   
@@ -407,7 +408,7 @@ export default function FranchisePage() {
                     </button>
                     <button 
                       onClick={() => handleVerifyAndRedirect(f)} 
-                      className="p-2.5 rounded-xl text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all active:scale-90"
+                      className="p-2.5 rounded-xl text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all active:scale-90"
                       title="View Dashboard"
                     >
                       <Eye size={18} />
@@ -416,7 +417,7 @@ export default function FranchisePage() {
                       <div className="flex gap-2">
                         <button 
                           onClick={() => openEdit(f)} 
-                          className="p-2.5 rounded-xl text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all active:scale-90" 
+                          className="p-2.5 rounded-xl text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all active:scale-90" 
                           title="Edit Branch Settings"
                         >
                           <Edit2 size={18} />
@@ -441,18 +442,18 @@ export default function FranchisePage() {
 
                 <div className="space-y-6 relative z-10">
                   <div>
-                    <h3 className="font-black text-xl tracking-tight transition-colors text-slate-900 dark:text-white group-hover:text-indigo-500">
+                    <h3 className="font-black text-xl tracking-tight transition-colors text-slate-900 dark:text-white group-hover:text-orange-500">
                       {f.name}
                     </h3>
                     <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest pl-0.5 mt-2">
-                      <MapPin size={14} className="text-indigo-500" /> {f.location}
+                      <MapPin size={14} className="text-orange-500" /> {f.location}
                     </div>
                   </div>
 
                   {/* Clean secondary info cards inside */}
                   <div className="p-5 rounded-2xl space-y-3 transition-all duration-500 border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/5 shadow-sm group-hover:shadow-md">
                     <div className="flex items-center gap-4 text-sm">
-                      <User size={14} className="text-indigo-500" />
+                      <User size={14} className="text-orange-500" />
                       <span className="font-bold text-slate-800 dark:text-slate-200 text-base">{f.ownerName}</span>
                     </div>
                     <div className="flex items-center gap-4 text-sm">
@@ -484,26 +485,17 @@ export default function FranchisePage() {
         </div>
       )}
 
-      {/* Redesigned Combined Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-card rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-100 dark:border-white/10">
-            <div className="p-8 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white">
-                  {editing ? "Franchise Settings" : "Add New Franchise"}
-                </h2>
-                <p className="text-sm text-slate-500 font-medium mt-1">Configure branch details and primary admin.</p>
-              </div>
-              <button 
-                onClick={() => { setShowForm(false); setShowAddUser(false); setEditingUser(null); }} 
-                className="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl transition-all"
-              >
-                <X size={20} className="text-slate-400" />
-              </button>
-            </div>
+      {/* SlideOver Form */}
+      <SlideOver
+        isOpen={showForm}
+        onClose={() => { setShowForm(false); setShowAddUser(false); setEditingUser(null); }}
+        title={editing ? "Franchise Settings" : "Add New Franchise"}
+      >
+        {showForm && (
+          <div className="flex flex-col min-h-[calc(100vh-8rem)]">
+            <p className="text-sm text-slate-500 font-medium mb-6">Configure branch details and primary admin.</p>
 
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div className="flex-1 space-y-6">
               {editing && (
                 <div className="flex gap-4 mb-8">
                   <button 
@@ -511,7 +503,7 @@ export default function FranchisePage() {
                     className={clsx(
                       "flex-1 py-3 rounded-2xl text-sm font-black transition-all border", 
                       activeTab === 'info' 
-                        ? "bg-indigo-50 border-indigo-500 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-500 dark:text-indigo-400" 
+                        ? "bg-orange-50 border-orange-500 text-orange-600 dark:bg-orange-950/20 dark:border-orange-500 dark:text-orange-400" 
                         : "bg-slate-50 dark:bg-white/5 text-slate-400 dark:text-slate-500 border-transparent"
                     )}
                   >
@@ -522,7 +514,7 @@ export default function FranchisePage() {
                     className={clsx(
                       "flex-1 py-3 rounded-2xl text-sm font-black transition-all border", 
                       activeTab === 'users' 
-                        ? "bg-indigo-50 border-indigo-500 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-500 dark:text-indigo-400" 
+                        ? "bg-orange-50 border-orange-500 text-orange-600 dark:bg-orange-950/20 dark:border-orange-500 dark:text-orange-400" 
                         : "bg-slate-50 dark:bg-white/5 text-slate-400 dark:text-slate-500 border-transparent"
                     )}
                   >
@@ -538,7 +530,7 @@ export default function FranchisePage() {
                     <input 
                       value={form.name} 
                       onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} 
-                      className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" 
                       placeholder="Branch Name" 
                     />
                   </div>
@@ -547,7 +539,7 @@ export default function FranchisePage() {
                     <input 
                       value={form.location} 
                       onChange={(e) => setForm(f => ({ ...f, location: e.target.value }))} 
-                      className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" 
                       placeholder="City / Area" 
                     />
                   </div>
@@ -557,7 +549,7 @@ export default function FranchisePage() {
                       <input 
                         value={form.ownerName} 
                         onChange={(e) => setForm(f => ({ ...f, ownerName: e.target.value }))} 
-                        className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                        className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" 
                         placeholder="Name" 
                       />
                     </div>
@@ -566,26 +558,26 @@ export default function FranchisePage() {
                       <input 
                         value={form.contactNum} 
                         onChange={(e) => setForm(f => ({ ...f, contactNum: e.target.value }))} 
-                        className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                        className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" 
                         placeholder="Phone" 
                       />
                     </div>
                   </div>
 
                   {!editing && (
-                    <div className="mt-8 p-6 bg-indigo-50/50 dark:bg-indigo-950/10 rounded-[2rem] border border-indigo-100 dark:border-indigo-900/30 space-y-4">
-                      <h4 className="font-black text-sm uppercase tracking-wider text-indigo-700 dark:text-indigo-400">Primary Admin Account</h4>
+                    <div className="mt-8 p-6 bg-orange-50/50 dark:bg-orange-950/10 rounded-[2rem] border border-orange-100 dark:border-orange-900/30 space-y-4">
+                      <h4 className="font-black text-sm uppercase tracking-wider text-orange-700 dark:text-orange-400">Primary Admin Account</h4>
                       <input 
                         value={form.adminUser.fullName} 
                         onChange={(e) => setForm(f => ({ ...f, adminUser: { ...f.adminUser, fullName: e.target.value } }))} 
-                        className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                        className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" 
                         placeholder="Full Name" 
                       />
                       <div className="grid grid-cols-2 gap-4">
                         <input 
                           value={form.adminUser.email} 
                           onChange={(e) => setForm(f => ({ ...f, adminUser: { ...f.adminUser, email: e.target.value } }))} 
-                          className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                          className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" 
                           placeholder="Login ID / Email" 
                         />
                         <input 
@@ -595,7 +587,7 @@ export default function FranchisePage() {
                             const pass = e.target.value;
                             setForm(prev => ({ ...prev, dashboardPassword: pass, adminUser: { ...prev.adminUser, password: pass } }));
                           }} 
-                          className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                          className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" 
                           placeholder="Password" 
                         />
                       </div>
@@ -617,7 +609,7 @@ export default function FranchisePage() {
                             setEditingUser(null);
                             setUserForm({ fullName: "", email: "", password: "", roleId: "FRANCHISE_ADMIN" });
                           }} 
-                          className="text-xs font-bold text-indigo-500 hover:underline"
+                          className="text-xs font-bold text-orange-500 hover:underline"
                         >
                           Back to List
                         </button>
@@ -629,7 +621,7 @@ export default function FranchisePage() {
                           <input 
                             value={userForm.fullName} 
                             onChange={(e) => setUserForm(u => ({ ...u, fullName: e.target.value }))} 
-                            className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                            className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" 
                             placeholder="e.g. John Doe" 
                           />
                         </div>
@@ -639,7 +631,7 @@ export default function FranchisePage() {
                           <input 
                             value={userForm.email} 
                             onChange={(e) => setUserForm(u => ({ ...u, email: e.target.value }))} 
-                            className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                            className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" 
                             placeholder="e.g. johndoe" 
                           />
                         </div>
@@ -651,7 +643,7 @@ export default function FranchisePage() {
                               type="password"
                               value={userForm.password} 
                               onChange={(e) => setUserForm(u => ({ ...u, password: e.target.value }))} 
-                              className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all" 
+                              className="w-full px-4 py-3 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" 
                               placeholder="Choose account password" 
                             />
                           </div>
@@ -668,7 +660,7 @@ export default function FranchisePage() {
                             setUserForm({ fullName: "", email: "", password: "", roleId: "FRANCHISE_ADMIN" });
                             setShowAddUser(true);
                           }} 
-                          className="text-xs font-black text-indigo-500 hover:underline"
+                          className="text-xs font-black text-orange-500 hover:underline"
                         >
                           + New Admin
                         </button>
@@ -698,7 +690,7 @@ export default function FranchisePage() {
                                         setUserForm({ fullName: u.fullName, email: u.email, password: "", roleId: u.role || "FRANCHISE_ADMIN" });
                                         setShowAddUser(true);
                                       }}
-                                      className="p-2 text-slate-400 hover:text-indigo-500 transition-colors"
+                                      className="p-2 text-slate-400 hover:text-orange-500 transition-colors"
                                       title="Edit Admin"
                                     >
                                       <Edit2 size={16} />
@@ -709,7 +701,7 @@ export default function FranchisePage() {
                                           setResettingPassword(u.id);
                                           setNewPassword("");
                                         }} 
-                                        className="p-2 text-slate-400 hover:text-indigo-500 transition-colors"
+                                        className="p-2 text-slate-400 hover:text-orange-500 transition-colors"
                                         title="Reset Password"
                                       >
                                         <Key size={16} />
@@ -726,12 +718,12 @@ export default function FranchisePage() {
                                       placeholder="New password"
                                       value={newPassword}
                                       onChange={(e) => setNewPassword(e.target.value)}
-                                      className="flex-1 px-3 py-2 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                                      className="flex-1 px-3 py-2 bg-white dark:bg-card border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-orange-500"
                                     />
                                     <button
                                       onClick={() => handlePasswordReset(u.id)}
                                       disabled={saving || !newPassword}
-                                      className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-100 dark:disabled:bg-white/5 disabled:text-slate-400 text-white rounded-xl text-xs font-black uppercase transition-all"
+                                      className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-100 dark:disabled:bg-white/5 disabled:text-slate-400 text-white rounded-xl text-xs font-black uppercase transition-all"
                                     >
                                       {saving ? "..." : "Save"}
                                     </button>
@@ -755,7 +747,7 @@ export default function FranchisePage() {
             </div>
 
             {/* Context aware buttons in footer */}
-            <div className="p-8 border-t border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-card/60 flex gap-3 justify-end">
+            <div className="mt-auto pt-6 border-t border-slate-100 dark:border-white/5 flex gap-3 justify-end pb-2">
               <button 
                 onClick={() => {
                   if (showAddUser) {
@@ -765,21 +757,21 @@ export default function FranchisePage() {
                     setShowForm(false);
                   }
                 }} 
-                className="px-8 py-4 font-black uppercase text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-all"
+                className="px-6 py-3 font-black uppercase text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-all"
               >
                 Cancel
               </button>
               <button 
                 onClick={showAddUser ? handleCreateUser : handleSave} 
                 disabled={saving || (showAddUser ? (!userForm.fullName || !userForm.email || (!editingUser && !userForm.password)) : (!form.name || !form.location))} 
-                className="px-12 py-4 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-100 dark:disabled:bg-white/5 disabled:text-slate-400 text-white rounded-2xl font-black uppercase text-sm shadow-xl shadow-indigo-500/20 transition-all active:scale-95"
+                className="px-8 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-100 dark:disabled:bg-white/5 disabled:text-slate-400 text-white rounded-2xl font-black uppercase text-sm shadow-xl shadow-orange-500/20 transition-all active:scale-95"
               >
-                {saving ? "..." : (showAddUser ? (editingUser ? "Update Admin" : "Create Admin") : "Save Franchise")}
+                {saving ? "..." : (showAddUser ? (editingUser ? "Update Admin" : "Create Admin") : "Save")}
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </SlideOver>
 
       {/* Delete Confirmation Modal — Redesigned */}
       {confirmDelete && (
@@ -790,7 +782,7 @@ export default function FranchisePage() {
             </div>
             <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Confirm Delete</h2>
             <p className="text-slate-500 dark:text-slate-400 font-medium mb-8">
-              Are you sure you want to delete <span className="text-indigo-500 font-bold">&quot;{confirmDelete.name}&quot;</span>?
+              Are you sure you want to delete <span className="text-orange-500 font-bold">&quot;{confirmDelete.name}&quot;</span>?
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)} className="flex-1 px-6 py-4 rounded-2xl text-sm font-black text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 transition-all">Cancel</button>
@@ -807,7 +799,7 @@ export default function FranchisePage() {
             {notification?.type === 'success' ? <CheckCircle2 size={40} /> : <AlertTriangle size={40} />}
           </div>
           <p className="text-slate-600 dark:text-slate-300 font-medium">{notification?.message}</p>
-          <button onClick={() => setNotification(null)} className="w-full py-4 bg-indigo-500 text-white rounded-2xl font-black uppercase text-sm shadow-xl shadow-indigo-500/10">Dismiss</button>
+          <button onClick={() => setNotification(null)} className="w-full py-4 bg-orange-500 text-white rounded-2xl font-black uppercase text-sm shadow-xl shadow-orange-500/10">Dismiss</button>
         </div>
       </Modal>
     </div>

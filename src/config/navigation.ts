@@ -321,6 +321,12 @@ export const SUPER_ADMIN_SIDEBAR: MenuSection[] = [
     title: "FRANCHISE",
     items: [
       {
+        icon: Building2,
+        label: "Franchise Management",
+        href: "/franchise",
+        roles: SUPER_ONLY,
+      },
+      {
         icon: Package,
         label: "Outlet Inventory",
         href: "/franchise/stock",
