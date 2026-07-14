@@ -1,7 +1,7 @@
 "use client";
 
 import { PurchaseOrderProvider } from "@/context/PurchaseOrderContext";
-import { NewPurchaseContent } from "@/app/purchases/new/page";
+import { NewPurchaseContent } from "@/components/modules/purchases/PurchaseFormContent";
 
 export default function EditPurchasePage({ params }: { params: { id: string } }) {
   return (

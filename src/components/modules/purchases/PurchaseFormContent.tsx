@@ -1,0 +1,446 @@
+"use client";
+
+import DocumentHeader from "@/components/documents/DocumentHeader";
+import BillingSection from "@/components/documents/BillingSection";
+import LineItemsTable from "@/components/documents/LineItemsTable";
+import DocumentSummary from "@/components/documents/DocumentSummary";
+import DocumentOptions from "@/components/documents/DocumentOptions";
+import { ChevronDown, Calendar, Plus, Warehouse, CreditCard, Tag, FileText, CheckCircle2, Package, ArrowRight, ShieldCheck, Info } from "lucide-react";
+import { PurchaseOrderProvider, usePurchaseOrder } from "@/context/PurchaseOrderContext";
+import { useState, useEffect } from "react";
+import { clsx } from "clsx";
+
+import VendorFormModal from "@/components/modals/VendorFormModal";
+import WarehouseFormSidebar from "@/components/modals/WarehouseFormSidebar";
+import { inventoryApi, purchaseOrdersApi, settingsApi } from "@/lib/api";
+import GSTInvoice from "@/components/documents/GSTInvoice";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
+
+const FALLBACK_COMPANY = {
+  name: "My Restaurant",
+  gstin: "",
+  address: "",
+  phone: "",
+  email: "",
+  state: "Tamil Nadu"
+};
+
+export function NewPurchaseContent({ editId }: { editId?: string }) {
+  const { 
+    poNumber, setPoNumber, 
+    invoiceNo, setInvoiceNo, 
+    purchaseDate, setPurchaseDate, 
+    dueDate, setDueDate,
+    expectedDeliveryDate, setExpectedDeliveryDate,
+    warehouseId, setWarehouseId,
+    purchaseType, setPurchaseType,
+    paymentTerms, setPaymentTerms,
+    poStatus,
+    internalNotes, setInternalNotes,
+    vendorNotes, setVendorNotes,
+    setSelectedVendor,
+    isValid, errors, isSubmitting, setIsSubmitting,
+    selectedVendor, items, totals, notes
+  } = usePurchaseOrder();
+  
+  const router = useRouter();
+
+  const [activeTab, setActiveTab] = useState<"items" | "notes" | "attachments">("items");
+  const [showVendorModal, setShowVendorModal] = useState(false);
+  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
+  const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([]);
+  const [companyProfile, setCompanyProfile] = useState<any>(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    const fetchWarehouses = async () => {
+      try {
+        const response = await inventoryApi.getWarehouses();
+        setWarehouses(response.data);
+        if (response.data && response.data.length > 0 && !warehouseId) {
+          const central = response.data.find((w: any) => w.name.toLowerCase().includes('central')) || response.data[0];
+          setWarehouseId(central.id);
+        }
+      } catch (error) {
+        console.error("Failed to fetch warehouses", error);
+      }
+    };
+    const fetchCompanyProfile = async () => {
+      try {
+        const response = await settingsApi.getCompanyProfile();
+        setCompanyProfile(response.data);
+      } catch (error) {
+        console.error("Failed to fetch company profile", error);
+      }
+    };
+    fetchWarehouses();
+    fetchCompanyProfile();
+  }, []);
+
+  const handleCreatePO = async () => {
+    if (!isValid) {
+      toast.error("Please fill in all required fields and resolve errors.");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        vendorId: selectedVendor!.id,
+        advancePaid: totals.appliedAdvance,
+        notes: notes || internalNotes,
+        warehouseId: warehouseId,
+        purchaseType: purchaseType,
+        expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate).toISOString() : undefined,
+        items: items.map(item => ({
+          inventoryItemId: item.materialId,
+          quantity: item.quantity,
+          price: item.price
+        }))
+      };
+      if (editId) {
+        try {
+          // Delete old PO and create new one to simulate update since backend lacks update endpoint
+          await purchaseOrdersApi.delete(editId);
+        } catch (e) {
+          console.error("Failed to delete old PO during update", e);
+        }
+        await purchaseOrdersApi.create(payload);
+        localStorage.removeItem('draftPurchaseOrder');
+        toast.success("Purchase Order updated successfully!");
+      } else {
+        await purchaseOrdersApi.create(payload);
+        localStorage.removeItem('draftPurchaseOrder');
+        toast.success("Purchase Order created successfully!");
+      }
+      router.push("/purchases/orders");
+    } catch (error) {
+      console.error("Failed to Create Purchase Order", error);
+      toast.error("Failed to create Purchase Order. Please check your inputs.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!selectedVendor) {
+      toast.error("Please select a vendor to save as draft.");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        vendorId: selectedVendor.id,
+        advancePaid: totals.appliedAdvance || 0,
+        notes: notes || internalNotes || "",
+        warehouseId: warehouseId || undefined,
+        purchaseType: purchaseType,
+        expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate).toISOString() : undefined,
+        status: "DRAFT",
+        items: items
+          .filter(item => item.materialId)
+          .map(item => ({
+            inventoryItemId: item.materialId,
+            quantity: item.quantity || 0,
+            price: item.price || 0
+          }))
+      };
+      
+      await purchaseOrdersApi.create(payload);
+      localStorage.removeItem('draftPurchaseOrder');
+      toast.success("Draft Purchase Order saved successfully!");
+      router.push("/purchases/orders");
+    } catch (error) {
+      console.error("Failed to save draft", error);
+      toast.error("Failed to save draft. Please check your inputs.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="bg-gray-50 min-h-full">
+      <VendorFormModal
+        isOpen={showVendorModal}
+        onClose={() => setShowVendorModal(false)}
+        onSuccess={(vendor) => { setSelectedVendor(vendor); }}
+      />
+      <WarehouseFormSidebar
+        isOpen={showWarehouseModal}
+        onClose={() => setShowWarehouseModal(false)}
+        onSuccess={(warehouse) => {
+          setWarehouses(prev => [...prev, warehouse]);
+          setWarehouseId(warehouse.id);
+        }}
+      />
+
+      {/* Top bar */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-orange-100 rounded-lg">
+            <Package size={18} className="text-orange-600" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-800">New Purchase Order</h1>
+            <p className="text-xs text-gray-400 font-mono">#{poNumber}</p>
+          </div>
+          <span className={clsx(
+            "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border",
+            poStatus === "DRAFT" ? "bg-gray-50 text-gray-500 border-gray-200" : "bg-orange-50 text-orange-600 border-orange-100"
+          )}>
+            {poStatus}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSaveDraft}
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm font-semibold border border-gray-200 hover:bg-gray-50 rounded-lg text-gray-600 transition-colors disabled:opacity-50"
+          >
+            Save Draft
+          </button>
+          <button
+            onClick={() => setShowPreview(true)}
+            className="px-4 py-2 text-sm font-semibold border border-gray-200 hover:bg-gray-50 rounded-lg text-gray-600 transition-colors flex items-center gap-1.5"
+          >
+            <FileText size={14} /> Preview
+          </button>
+          <button
+            onClick={handleCreatePO}
+            disabled={!isValid || isSubmitting}
+            className="flex items-center gap-2 px-5 py-2 text-sm font-bold bg-[#f58220] hover:bg-[#e8740e] text-white rounded-lg transition-colors disabled:opacity-50"
+          >
+            <CheckCircle2 size={15} /> {isSubmitting ? (editId ? "Updating..." : "Creating...") : (editId ? "Update Purchase Order" : "Create Purchase Order")}
+          </button>
+        </div>
+      </div>
+
+      <div className="p-5 space-y-4">
+        <div className="grid grid-cols-12 gap-5">
+          {/* Left Main Content */}
+          <div className="col-span-12 lg:col-span-9 space-y-4">
+
+            {/* Meta Information */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 flex items-center gap-1">
+                    <Tag size={11} /> Purchase Type
+                  </label>
+                  <select
+                    value={purchaseType}
+                    onChange={(e) => setPurchaseType(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
+                  >
+                    <option value="RAW_MATERIAL">Raw Material</option>
+                    <option value="PACKAGING_MATERIAL">Packaging Material</option>
+                    <option value="CONSUMABLES">Consumables</option>
+                    <option value="FIXED_ASSET">Fixed Asset</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 flex items-center gap-1">
+                    <Warehouse size={11} /> Warehouse
+                  </label>
+                  <div className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 bg-gray-50 flex items-center justify-between">
+                    <span className="font-medium">Central Warehouse</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 flex items-center gap-1">
+                    <Calendar size={11} /> Expected Delivery
+                  </label>
+                  <input
+                    type="date"
+                    value={expectedDeliveryDate}
+                    onChange={(e) => setExpectedDeliveryDate(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 flex items-center gap-1">
+                    <CreditCard size={11} /> Payment Terms
+                  </label>
+                  <select
+                    value={paymentTerms}
+                    onChange={(e) => setPaymentTerms(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
+                  >
+                    <option value="IMMEDIATE">Immediate</option>
+                    <option value="ADVANCE_100">Advance Payment (100%)</option>
+                    <option value="ADVANCE_PARTIAL">Advance Payment (Partial)</option>
+                    <option value="NET_7">Net 7 Days</option>
+                    <option value="NET_15">Net 15 Days</option>
+                    <option value="NET_30">Net 30 Days</option>
+                    <option value="NET_45">Net 45 Days</option>
+                    <option value="NET_60">Net 60 Days</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Purchase Order No.</label>
+                  <div className="text-sm font-bold text-gray-800 font-mono">{poNumber}</div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Purchase Date</label>
+                  <input
+                    type="date"
+                    value={purchaseDate}
+                    onChange={(e) => setPurchaseDate(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white outline-none focus:border-orange-400"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Vendor Selection */}
+            <BillingSection
+              fromLabel="Billed To (Entity)"
+              fromSubLabel="Your Details"
+              toLabel="Billed By (Vendor)"
+              toSubLabel="Vendor's Details"
+              targetType="vendor"
+              onAddTarget={() => setShowVendorModal(true)}
+            />
+
+          {/* Section 3: Material Table & Accordions */}
+          <div className="bg-white dark:bg-[#0A0D14] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-visible">
+             <div className="flex bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 rounded-t-2xl overflow-hidden">
+                <button 
+                  onClick={() => setActiveTab("items")}
+                  className={clsx(
+                    "px-6 py-3 text-xs font-semibold uppercase tracking-wide transition-all border-b-2",
+                    activeTab === "items" ? "border-orange-500 text-orange-600" : "border-transparent text-gray-400 hover:text-gray-600"
+                  )}
+                >
+                  Material Items
+                </button>
+                <button
+                  onClick={() => setActiveTab("notes")}
+                  className={clsx(
+                    "px-6 py-3 text-xs font-semibold uppercase tracking-wide transition-all border-b-2",
+                    activeTab === "notes" ? "border-orange-500 text-orange-600" : "border-transparent text-gray-400 hover:text-gray-600"
+                  )}
+                >
+                  Notes & Terms
+                </button>
+                <button 
+                  onClick={() => setActiveTab("attachments")}
+                  className={clsx(
+                    "px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2",
+                    activeTab === "attachments" ? "border-[#7C3AED] text-[#7C3AED]" : "border-transparent text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  Attachments
+                </button>
+             </div>
+
+             <div className="p-0">
+                {activeTab === "items" && <LineItemsTable />}
+                {activeTab === "notes" && (
+                  <div className="p-10 space-y-10">
+                     <div className="grid grid-cols-2 gap-10">
+                        <div className="space-y-3">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Internal Remarks</label>
+                           <textarea 
+                             value={internalNotes}
+                             onChange={(e) => setInternalNotes(e.target.value)}
+                             placeholder="Internal collaboration notes..."
+                             className="w-full min-h-[140px] p-5 bg-slate-50 dark:bg-slate-900 border-none rounded-xl text-sm outline-none focus:ring-2 ring-purple-500/10"
+                           />
+                        </div>
+                        <div className="space-y-3">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Supplier Instructions</label>
+                           <textarea 
+                             value={vendorNotes}
+                             onChange={(e) => setVendorNotes(e.target.value)}
+                             placeholder="Delivery instructions, terms, etc..."
+                             className="w-full min-h-[140px] p-5 bg-slate-50 dark:bg-slate-900 border-none rounded-xl text-sm outline-none focus:ring-2 ring-purple-500/10"
+                           />
+                        </div>
+                     </div>
+                  </div>
+                )}
+                {activeTab === "attachments" && (
+                   <div className="p-20 text-center flex flex-col items-center gap-6">
+                      <div className="w-20 h-20 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400">
+                         <Plus size={40} />
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">Upload Documents</h4>
+                        <p className="text-xs text-slate-400 font-medium">Click to upload or drag & drop Supplier Quotations, Invoices, or Specs</p>
+                      </div>
+                   </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+        {/* Right Sticky Sidebar */}
+        <div className="col-span-12 lg:col-span-3">
+          <div className="sticky top-24 space-y-8">
+             <DocumentSummary />
+             
+             {/* Dynamic Helper Card */}
+             <div className="bg-slate-900 dark:bg-[#0F172A] rounded-2xl p-8 text-white shadow-xl shadow-slate-200 dark:shadow-none relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-3xl rounded-full -mr-16 -mt-16" />
+                <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-400 mb-6 flex items-center gap-2">
+                   <ShieldCheck size={12} /> Lifecycle Status
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 cursor-pointer hover:border-orange-200 transition-all group">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-orange-400" />
+                      <span className="text-xs font-semibold text-gray-600">Mark Ordered</span>
+                    </div>
+                    <ArrowRight size={13} className="text-gray-300 group-hover:text-orange-500 transition-all" />
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 opacity-40 cursor-default">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-gray-400" />
+                      <span className="text-xs font-semibold text-gray-600">Pending GRN</span>
+                    </div>
+                    <Info size={13} className="text-gray-300" />
+                  </div>
+                </div>
+                <div className="mt-8 pt-6 border-t border-white/10 text-center">
+                   <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em]">Accounting Ready v2.0</p>
+                 </div>
+              </div>
+           </div>
+        </div>
+      </div>
+      </div>
+
+      {showPreview && (
+        <GSTInvoice
+          order={{
+            poNumber: poNumber || "DRAFT-00001",
+            createdAt: purchaseDate ? new Date(purchaseDate).toISOString() : new Date().toISOString(),
+            poItems: items.map((item, idx) => ({
+              itemName: item.name || `Material #${idx + 1}`,
+              quantity: item.quantity || 0,
+              price: item.price || 0,
+              gstRate: item.gstRate || 0,
+              unit: item.unit || "unit"
+            })),
+            advancePaid: totals.appliedAdvance || 0,
+            paid: totals.appliedAdvance || 0
+          }}
+          vendor={selectedVendor || {
+            name: "NO VENDOR SELECTED",
+            address: "Please select a vendor in the form",
+            gstin: "",
+            phone: ""
+          }}
+          companyDetails={companyProfile || FALLBACK_COMPANY}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
+    </div>
+  );
+}
+
