@@ -781,7 +781,7 @@ export default function PurchaseOrdersClient() {
       <Modal isOpen={confirmConfig.isOpen} onClose={closeConfirm} title={confirmConfig.title} size="sm">
         <div className="flex flex-col items-center text-center space-y-4">
           <div className="w-16 h-16 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center border border-slate-100 dark:border-slate-800">
-            {confirmConfig.icon && <confirmConfig.icon size={28} className={confirmConfig.confirmStyle.includes("rose") ? "text-rose-500" : confirmConfig.confirmStyle.includes("emerald") ? "text-emerald-500" : "text-orange-500"} />}
+            {confirmConfig.icon && <confirmConfig.icon size={28} className={confirmConfig.confirmStyle?.includes("rose") ? "text-rose-500" : confirmConfig.confirmStyle?.includes("emerald") ? "text-emerald-500" : "text-orange-500"} />}
           </div>
           <p className="text-sm font-bold text-slate-600 dark:text-slate-400">
             {confirmConfig.message}
